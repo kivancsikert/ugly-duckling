@@ -2,6 +2,7 @@
 
 #include <freertos/FreeRTOS.h>
 
+#include <drivers/MdnsDriver.hpp>
 #include <drivers/MqttDriver.hpp>
 #include <drivers/NtpDriver.hpp>
 #include <drivers/WiFiDriver.hpp>
@@ -22,9 +23,11 @@ private:
     EventGroupHandle_t eventGroup { xEventGroupCreate() };
     WiFiDriver wifiDriver;
     NtpDriver ntpDriver { eventGroup, NTP_SYNCED_BIT };
-    MqttDriver mqttDriver { wifiDriver };
+    MdnsDriver mdnsDriver { hostname, "FarmHub", "0.1", eventGroup, MDNS_CONFIGURED_BIT };
+    MqttDriver mqttDriver { mdnsDriver, wifiDriver };
 
     static const int NTP_SYNCED_BIT = 1;
+    static const int MDNS_CONFIGURED_BIT = 2;
 };
 
 }}    // namespace farmhub::device

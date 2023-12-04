@@ -64,9 +64,14 @@ public:
 
 protected:
     void run() override {
+        setup();
+
         while (true) {
             loop();
         }
+    }
+
+    virtual void setup() {
     }
 
     virtual void loop() = 0;
@@ -75,8 +80,9 @@ protected:
 class IntermittentLoopTask : public LoopTask {
 public:
     IntermittentLoopTask(const char* name, uint32_t stackSize = DEFAULT_STACK_SIZE, unsigned int priority = DEFAULT_PRIORITY)
-        : LoopTask(name, stackSize, priority){
+        : LoopTask(name, stackSize, priority) {
     }
+
 protected:
     void loop() override {
         auto interval = loopAndDelay();
