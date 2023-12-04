@@ -3,10 +3,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include <drivers/MqttDriver.hpp>
-#include <drivers/NtpDriver.hpp>
-#include <drivers/WiFiDriver.hpp>
-
+#include <Application.hpp>
 #include <Task.hpp>
 
 using namespace farmhub::device::drivers;
@@ -80,31 +77,26 @@ private:
     }
 };
 
-class Application {
+class BlinkerApplication : public Application {
 
 public:
-    Application(const String& hostname)
-        : hostname(hostname) {
+    BlinkerApplication(const String& hostname)
+        : Application(hostname) {
     }
 
 private:
-    const String hostname;
-
-    WiFiDriver wifiDriver;
-    NtpDriver ntpDriver;
-    MqttDriver mqttDriver { wifiDriver };
     BlinkLedTask blinkLedTask1 { GPIO_NUM_2, 2500 };
     BlinkLedTask blinkLedTask2 { GPIO_NUM_4, 1500 };
     ConsolePrinter consolePrinter;
 };
 
-Application* application;
+BlinkerApplication* application;
 
 void setup() {
     Serial.begin(115200);
     Serial.println("Starting up...");
 
-    application = new Application("test-mk6-3");
+    application = new BlinkerApplication("test-mk6-3");
 }
 
 void loop() {
