@@ -35,7 +35,7 @@ void blinkLED2(void* parameter) {
 
 WiFiManager wifiManager;
 
-void connectToWiFiTask(void* parameter) {
+void connectToWiFiTask(void* parameters) {
     // Explicitly set mode, ESP defaults to STA+AP
     WiFi.mode(WIFI_STA);
 
@@ -47,12 +47,31 @@ void connectToWiFiTask(void* parameter) {
     vTaskDelete(NULL);
 }
 
+void ensureTimeSyncTask(void* parameters) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    while (true) {
+        time_t now;
+        time(&now);
+        Serial.printf("Time: %d\n", now);
+        if (now > (2022 - 1970) * 365 * 24 * 60 * 60) {
+            Serial.println("Time configured, exiting task");
+            break;
+        }
+        Serial.println("No time yet");
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1000));
+    }
+
+    vTaskDelete(NULL);
+}
+
 void setup() {
     Serial.begin(115200);
     Serial.println("Starting up...");
 
     // TODO What's a good stack size here?
     xTaskCreate(connectToWiFiTask, "Connect to WiFi", 10000, NULL, 1, NULL);
+    xTaskCreate(ensureTimeSyncTask, "Ensure time sync", 10000, NULL, 1, NULL);
 
     WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
         Serial.println("WiFi: connected to " + WiFi.SSID());
@@ -77,6 +96,7 @@ void loop() {
     struct tm timeinfo;
     time(&now);
     localtime_r(&now, &timeinfo);
+    Serial.printf(", now: \033[33m%d\033[0m", now);
     Serial.print(&timeinfo, ", local time: \033[33m%A, %B %d %Y %H:%M:%S\033[0m");
 
     delay(100);
