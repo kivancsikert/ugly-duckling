@@ -2,14 +2,18 @@
 
 #include <time.h>
 
+#include <Event.hpp>
 #include <Task.hpp>
 
 namespace farmhub { namespace device { namespace drivers {
 
-class NtpDriver : Task {
+class NtpDriver
+    : Task,
+      public EventEmitter {
 public:
-    NtpDriver()
-        : Task("Ensure NTP sync") {
+    NtpDriver(EventGroupHandle_t eventGroup, int eventBit)
+        : Task("Ensure NTP sync")
+        , EventEmitter(eventGroup, eventBit) {
     }
 
 protected:
@@ -19,6 +23,7 @@ protected:
             time(&now);
             if (now > (2022 - 1970) * 365 * 24 * 60 * 60) {
                 Serial.println("Time configured, exiting task");
+                emitEvent();
                 break;
             }
             delayUntil(1000);

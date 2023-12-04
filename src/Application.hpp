@@ -19,9 +19,12 @@ public:
 private:
     const String hostname;
 
+    EventGroupHandle_t eventGroup { xEventGroupCreate() };
     WiFiDriver wifiDriver;
-    NtpDriver ntpDriver;
+    NtpDriver ntpDriver { eventGroup, NTP_SYNCED_BIT };
     MqttDriver mqttDriver { wifiDriver };
+
+    static const int NTP_SYNCED_BIT = 1;
 };
 
 }}    // namespace farmhub::device
