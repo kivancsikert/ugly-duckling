@@ -87,10 +87,24 @@ void setup() {
     xTaskCreate(blinkLED2, "LED2 Blink", 1000, NULL, 1, NULL);
 }
 
+String wifiStatus() {
+    switch (WiFi.status()) {
+        case WL_NO_SHIELD:        return "NO SHIELD";
+        case WL_IDLE_STATUS:      return "IDLE STATUS";
+        case WL_NO_SSID_AVAIL:    return "NO SSID AVAIL";
+        case WL_SCAN_COMPLETED:   return "SCAN COMPLETED";
+        case WL_CONNECTED:        return "CONNECTED";
+        case WL_CONNECT_FAILED:   return "CONNECT FAILED";
+        case WL_CONNECTION_LOST:  return "CONNECTION LOST";
+        case WL_DISCONNECTED:     return "DISCONNECTED";
+        default:                  return "UNKNOWN";
+    }
+}
+
 void loop() {
     Serial.print("\033[1G\033[0K");
     Serial.print("Uptime: \033[33m" + String(millis()) + "\033[0m ms");
-    Serial.print(", wifi connected: \033[33m" + String(WiFi.isConnected()) + "\033[0m ms");
+    Serial.print(", wifi: \033[33m" + wifiStatus() + "\033[0m");
 
     time_t now;
     struct tm timeinfo;
