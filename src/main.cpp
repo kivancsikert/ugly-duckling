@@ -83,10 +83,13 @@ private:
 class Application {
 
 public:
-    Application() {
+    Application(const String& hostname)
+        : hostname(hostname) {
     }
 
 private:
+    const String hostname;
+
     WiFiDriver wifiDriver;
     NtpDriver ntpDriver;
     MqttDriver mqttDriver { wifiDriver };
@@ -101,7 +104,7 @@ void setup() {
     Serial.begin(115200);
     Serial.println("Starting up...");
 
-    application = new Application();
+    application = new Application("test-mk6-3");
 }
 
 void loop() {
