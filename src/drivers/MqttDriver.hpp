@@ -8,15 +8,15 @@
 
 namespace farmhub { namespace device { namespace drivers {
 
-class MqttDriver : LoopTask {
+class MqttDriver : IntermittentLoopTask {
 public:
     MqttDriver(WiFiDriver& wifiDriver)
-        : LoopTask("Keep MQTT connected")
+        : IntermittentLoopTask("Keep MQTT connected")
         , wifiDriver(wifiDriver) {
     }
 
 protected:
-    int loop() override {
+    int loopAndDelay() override {
         if (mqttClient.connected()) {
             return MQTT_CONNECTED_CHECK_INTERVAL_IN_MS;
         }

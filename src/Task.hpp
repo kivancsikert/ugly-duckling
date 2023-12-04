@@ -65,12 +65,25 @@ public:
 protected:
     void run() override {
         while (true) {
-            auto delay = loop();
-            delayUntil(delay);
+            loop();
         }
     }
 
-    virtual int loop() = 0;
+    virtual void loop() = 0;
+};
+
+class IntermittentLoopTask : public LoopTask {
+public:
+    IntermittentLoopTask(const char* name, uint32_t stackSize = DEFAULT_STACK_SIZE, unsigned int priority = DEFAULT_PRIORITY)
+        : LoopTask(name, stackSize, priority){
+    }
+protected:
+    void loop() override {
+        auto interval = loopAndDelay();
+        delayUntil(interval);
+    }
+
+    virtual int loopAndDelay() = 0;
 };
 
 }}}    // namespace farmhub::device::drivers

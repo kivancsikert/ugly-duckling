@@ -21,11 +21,11 @@ public:
     }
 
 protected:
-    int loop() override {
+    void loop() override {
         digitalWrite(ledPin, HIGH);
         delayUntil(interval);
         digitalWrite(ledPin, LOW);
-        return interval;
+        delayUntil(interval);
     }
 
 private:
@@ -33,14 +33,14 @@ private:
     const int interval;
 };
 
-class ConsolePrinter : LoopTask {
+class ConsolePrinter : IntermittentLoopTask {
 public:
     ConsolePrinter()
-        : LoopTask("Console printer", 32768, 1) {
+        : IntermittentLoopTask("Console printer", 32768, 1) {
     }
 
 protected:
-    int loop() override {
+    int loopAndDelay() override {
         Serial.print("\033[1G\033[0K");
         Serial.print("Uptime: \033[33m" + String(millis()) + "\033[0m ms");
         Serial.print(", wifi: \033[33m" + wifiStatus() + "\033[0m");
