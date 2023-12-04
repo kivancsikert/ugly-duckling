@@ -21,10 +21,10 @@ private:
     const String hostname;
 
     EventGroupHandle_t eventGroup { xEventGroupCreate() };
-    WiFiDriver wifiDriver;
-    NtpDriver ntpDriver { eventGroup, NTP_SYNCED_BIT };
-    MdnsDriver mdnsDriver { hostname, "FarmHub", "0.1", eventGroup, MDNS_CONFIGURED_BIT };
-    MqttDriver mqttDriver { mdnsDriver, wifiDriver };
+    WiFiDriver wifi;
+    MdnsDriver mdns { hostname, "FarmHub", "0.1", eventGroup, MDNS_CONFIGURED_BIT };
+    NtpDriver ntp { mdns, eventGroup, NTP_SYNCED_BIT };
+    MqttDriver mqtt { mdns, wifi };
 
     static const int NTP_SYNCED_BIT = 1;
     static const int MDNS_CONFIGURED_BIT = 2;
