@@ -6,6 +6,7 @@
 #include <Application.hpp>
 #include <Task.hpp>
 
+using namespace farmhub::device;
 using namespace farmhub::device::drivers;
 
 class BlinkLedTask : public LoopTask {

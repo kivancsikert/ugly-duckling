@@ -6,7 +6,9 @@
 #include <drivers/NtpDriver.hpp>
 #include <drivers/WiFiDriver.hpp>
 
-namespace farmhub { namespace device { namespace drivers {
+namespace farmhub { namespace device {
+
+using namespace farmhub::device::drivers;
 
 class Application {
 public:
@@ -22,4 +24,4 @@ private:
     MqttDriver mqttDriver { wifiDriver };
 };
 
-}}}    // namespace farmhub::device::drivers
+}}    // namespace farmhub::device
