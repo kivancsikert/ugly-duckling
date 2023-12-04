@@ -1,8 +1,11 @@
 #include <Arduino.h>
 
 #include <WiFi.h>
+#include <WiFiClient.h>
 #include <WiFiManager.h>
 #include <WiFiMulti.h>
+
+#include <MQTT.h>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -65,6 +68,33 @@ void ensureTimeSyncTask(void* parameters) {
     vTaskDelete(NULL);
 }
 
+WiFiClient wifiClient;
+MQTTClient mqttClient;
+TaskHandle_t connectToMqttTaskHandle;
+void keepMqttConnected(void* parameters) {
+
+    while (true) {
+        if (mqttClient.connected()) {
+            // TODO Use some sane value here
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
+        }
+
+        if (!WiFi.isConnected()) {
+            // TODO Handle no WIFI
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
+        }
+
+        mqttClient.begin("bumblebee.local", 1883, wifiClient);
+        mqttClient.connect("esp32");
+        mqttClient.publish("test/esp32", "Hello from ESP32");
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    vTaskDelete(NULL);
+}
+
 void setup() {
     Serial.begin(115200);
     Serial.println("Starting up...");
@@ -72,11 +102,23 @@ void setup() {
     // TODO What's a good stack size here?
     xTaskCreate(connectToWiFiTask, "Connect to WiFi", 10000, NULL, 1, NULL);
     xTaskCreate(ensureTimeSyncTask, "Ensure time sync", 10000, NULL, 1, NULL);
+    xTaskCreate(keepMqttConnected, "Keep MQTT connected", 10000, NULL, 1, NULL);
 
-    WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
-        Serial.println("WiFi: connected to " + WiFi.SSID());
-    },
+    WiFi.onEvent(
+        [](WiFiEvent_t event, WiFiEventInfo_t info) {
+            Serial.println("Connected to WIFI: \033[32m" + String(WiFi.SSID()) + "\033[0m");
+        },
         ARDUINO_EVENT_WIFI_STA_CONNECTED);
+    WiFi.onEvent(
+        [](WiFiEvent_t event, WiFiEventInfo_t info) {
+            Serial.println("Disconnected from WIFI");
+        },
+        ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+    WiFi.onEvent(
+        [](WiFiEvent_t event, WiFiEventInfo_t info) {
+            Serial.println("Got IP: \033[32m" + WiFi.localIP().toString() + "\033[0m");
+        },
+        ARDUINO_EVENT_WIFI_STA_GOT_IP);
 
     // Initialize the LED pin as an output
     pinMode(ledPin1, OUTPUT);
@@ -89,15 +131,24 @@ void setup() {
 
 String wifiStatus() {
     switch (WiFi.status()) {
-        case WL_NO_SHIELD:        return "NO SHIELD";
-        case WL_IDLE_STATUS:      return "IDLE STATUS";
-        case WL_NO_SSID_AVAIL:    return "NO SSID AVAIL";
-        case WL_SCAN_COMPLETED:   return "SCAN COMPLETED";
-        case WL_CONNECTED:        return "CONNECTED";
-        case WL_CONNECT_FAILED:   return "CONNECT FAILED";
-        case WL_CONNECTION_LOST:  return "CONNECTION LOST";
-        case WL_DISCONNECTED:     return "DISCONNECTED";
-        default:                  return "UNKNOWN";
+        case WL_NO_SHIELD:
+            return "NO SHIELD";
+        case WL_IDLE_STATUS:
+            return "IDLE STATUS";
+        case WL_NO_SSID_AVAIL:
+            return "NO SSID AVAIL";
+        case WL_SCAN_COMPLETED:
+            return "SCAN COMPLETED";
+        case WL_CONNECTED:
+            return "CONNECTED";
+        case WL_CONNECT_FAILED:
+            return "CONNECT FAILED";
+        case WL_CONNECTION_LOST:
+            return "CONNECTION LOST";
+        case WL_DISCONNECTED:
+            return "DISCONNECTED";
+        default:
+            return "UNKNOWN";
     }
 }
 
