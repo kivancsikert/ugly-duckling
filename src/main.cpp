@@ -41,6 +41,9 @@ void connectToWiFiTask(void* parameter) {
 
     wifiManager.autoConnect("AutoConnectAP");
 
+    // TODO Use time server from MDNS
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+
     vTaskDelete(NULL);
 }
 
@@ -50,9 +53,6 @@ void setup() {
 
     // TODO What's a good stack size here?
     xTaskCreate(connectToWiFiTask, "Connect to WiFi", 10000, NULL, 1, NULL);
-
-    // TODO Use time server from MDNS
-    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 
     WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
         Serial.println("WiFi: connected to " + WiFi.SSID());
@@ -72,5 +72,12 @@ void loop() {
     Serial.print("\033[1G\033[0K");
     Serial.print("Uptime: \033[33m" + String(millis()) + "\033[0m ms");
     Serial.print(", wifi connected: \033[33m" + String(WiFi.isConnected()) + "\033[0m ms");
+
+    time_t now;
+    struct tm timeinfo;
+    time(&now);
+    localtime_r(&now, &timeinfo);
+    Serial.print(&timeinfo, ", local time: \033[33m%A, %B %d %Y %H:%M:%S\033[0m");
+
     delay(100);
 }
