@@ -17,12 +17,10 @@ protected:
         while (true) {
             time_t now;
             time(&now);
-            Serial.printf("Time: %d\n", now);
             if (now > (2022 - 1970) * 365 * 24 * 60 * 60) {
                 Serial.println("Time configured, exiting task");
                 break;
             }
-            Serial.println("No time yet");
             delayUntil(1000);
         }
     }
