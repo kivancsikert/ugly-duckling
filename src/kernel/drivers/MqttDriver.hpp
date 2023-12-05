@@ -79,11 +79,15 @@ protected:
         // TODO Figure out the right keep alive value
         mqttClient.setKeepAlive(60);
 
-        mqttClient.connect(clientId.c_str());
-        mqttClient.publish(topic + "/test", "Hello from ESP32");
-        Serial.println("MQTT: Connected");
-
-        return MQTT_CONNECTED_CHECK_INTERVAL_IN_MS;
+        // TODO Implement exponential backoff
+        if (mqttClient.connect(clientId.c_str())) {
+            mqttClient.publish(topic + "/test", "Hello from ESP32");
+            Serial.println("MQTT: Connected");
+            return MQTT_CONNECTED_CHECK_INTERVAL_IN_MS;
+        } else {
+            Serial.println("MQTT: Connection failed");
+            return MQTT_DISCONNECTED_CHECK_INTERVAL_IN_MS;
+        }
     }
 
 private:
@@ -101,7 +105,7 @@ private:
 
     // TODO Review these values
     static const int MQTT_CONNECTED_CHECK_INTERVAL_IN_MS = 1000;
-    static const int MQTT_NO_WIFI_CHECK_INTERVAL_IN_MS = 1000;
+    static const int MQTT_DISCONNECTED_CHECK_INTERVAL_IN_MS = 1000;
 };
 
 }}}    // namespace farmhub::kernel::drivers
