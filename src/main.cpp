@@ -45,12 +45,24 @@ protected:
         Serial.print("Uptime: \033[33m" + String(millis()) + "\033[0m ms");
         Serial.print(", wifi: \033[33m" + wifiStatus() + "\033[0m");
 
+        sntp_sync_status_t ntpStatus = sntp_get_sync_status();
         time_t now;
         struct tm timeinfo;
         time(&now);
         localtime_r(&now, &timeinfo);
         Serial.printf(", now: \033[33m%d\033[0m", now);
         Serial.print(&timeinfo, ", local time: \033[33m%A, %B %d %Y %H:%M:%S\033[0m");
+        switch (ntpStatus) {
+            case SNTP_SYNC_STATUS_RESET:
+                Serial.print(", ntp: \033[33mRESET\033[0m");
+                break;
+            case SNTP_SYNC_STATUS_COMPLETED:
+                Serial.print(", ntp: \033[33mCOMPLETED\033[0m");
+                break;
+            case SNTP_SYNC_STATUS_IN_PROGRESS:
+                Serial.print(", ntp: \033[33mIN PROGRESS\033[0m");
+                break;
+        }
 
         Serial.print(" ");
         return 100;
