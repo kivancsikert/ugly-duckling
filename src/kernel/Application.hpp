@@ -2,6 +2,7 @@
 
 #include <freertos/FreeRTOS.h>
 
+#include <kernel/drivers/FileSystemDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 #include <kernel/drivers/NtpDriver.hpp>
@@ -14,8 +15,8 @@ using namespace farmhub::kernel::drivers;
 class Application {
 public:
     Application(const String& hostname, const String& version)
-        : hostname(hostname),
-        version(version) {
+        : hostname(hostname)
+        , version(version) {
     }
 
 private:
@@ -23,6 +24,7 @@ private:
     const String version;
 
     EventGroupHandle_t eventGroup { xEventGroupCreate() };
+    FileSystemDriver fs;
     WiFiDriver wifi;
     MdnsDriver mdns { hostname, "ugly-duckling", version, eventGroup, MDNS_CONFIGURED_BIT };
     NtpDriver ntp { mdns, eventGroup, NTP_SYNCED_BIT };
@@ -32,4 +34,4 @@ private:
     static const int MDNS_CONFIGURED_BIT = 2;
 };
 
-}}
+}}    // namespace farmhub::kernel
