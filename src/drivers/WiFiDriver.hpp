@@ -22,9 +22,6 @@ protected:
         WiFi.mode(WIFI_STA);
 
         wifiManager.autoConnect("AutoConnectAP");
-
-        // TODO Use time server from MDNS
-        configTime(0, 0, "pool.ntp.org", "time.nist.gov");
     }
 
 public:
