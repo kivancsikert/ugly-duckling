@@ -27,10 +27,18 @@ namespace farmhub { namespace kernel { namespace drivers {
 class RtcDriver
     : public EventSource {
 public:
-    RtcDriver(WiFiDriver& wifi, MdnsDriver& mdns, EventGroupHandle_t eventGroup, int eventBit)
+    class Config : public NamedConfigurationSection {
+    public:
+        Config(ConfigurationSection* parent, const String& name)
+            : NamedConfigurationSection(parent, name) {
+        }
+
+        Property<String> host { this, "host", "" };
+    };
+
+    RtcDriver(WiFiDriver& wifi, MdnsDriver& mdns, EventGroupHandle_t eventGroup, int eventBit, Config& ntpConfig)
         : EventSource(eventGroup, eventBit)
-        , wifi(wifi)
-        , mdns(mdns) {
+        , ntpSyncTask(wifi, mdns, ntpConfig) {
     }
 
 private:
@@ -63,23 +71,28 @@ private:
 
     class NtpSyncTask : IntermittentLoopTask {
     public:
-        NtpSyncTask(WiFiDriver& wifi, MdnsDriver& mdns)
+        NtpSyncTask(WiFiDriver& wifi, MdnsDriver& mdns, Config& ntpConfig)
             : IntermittentLoopTask("Sync time with NTP server")
             , wifi(wifi)
-            , mdns(mdns) {
+            , mdns(mdns)
+            , ntpConfig(ntpConfig) {
         }
 
     protected:
         void setup() override {
-            // TODO Allow configuring NTP servers manually
-            mdns.await();
-            MdnsRecord ntpServer;
-            if (mdns.lookupService("ntp", "udp", &ntpServer)) {
-                Serial.println("NTP: using " + ntpServer.hostname + ":" + String(ntpServer.port) + " (" + ntpServer.ip.toString() + ")");
-                ntpClient = new NTPClient(udp, ntpServer.ip);
+            if (ntpConfig.host.get().length() > 0) {
+                Serial.println("NTP: using " + ntpConfig.host.get() + " from configuration");
+                ntpClient = new NTPClient(udp, ntpConfig.host.get().c_str());
             } else {
-                Serial.println("NTP: using default server");
-                ntpClient = new NTPClient(udp);
+                mdns.await();
+                MdnsRecord ntpServer;
+                if (mdns.lookupService("ntp", "udp", &ntpServer)) {
+                    Serial.println("NTP: using " + ntpServer.hostname + ":" + String(ntpServer.port) + " (" + ntpServer.ip.toString() + ") from mDNS");
+                    ntpClient = new NTPClient(udp, ntpServer.ip);
+                } else {
+                    Serial.println("NTP: using default server");
+                    ntpClient = new NTPClient(udp);
+                }
             }
 
             wifi.await();
@@ -131,15 +144,14 @@ private:
 
         WiFiDriver& wifi;
         MdnsDriver& mdns;
+        Config& ntpConfig;
+
         WiFiUDP udp;
         NTPClient* ntpClient;
     };
 
-    WiFiDriver& wifi;
-    MdnsDriver& mdns;
-
     SystemTimeCheckTask timeCheckTask { *this };
-    NtpSyncTask ntpSyncTask { wifi, mdns };
+    NtpSyncTask ntpSyncTask;
 };
 
 }}}    // namespace farmhub::kernel::drivers

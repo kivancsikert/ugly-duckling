@@ -1,9 +1,8 @@
 #include <Arduino.h>
 
 #include <kernel/Application.hpp>
+#include <kernel/FileSystem.hpp>
 #include <kernel/Task.hpp>
-
-#include <version.h>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
@@ -85,11 +84,19 @@ private:
     const String spinner { "-\\|/" };
 };
 
+class BlinkerDeviceConfiguration
+    : public DeviceConfiguration {
+public:
+    BlinkerDeviceConfiguration(FileSystem& fs)
+        : DeviceConfiguration(fs, "mk1") {
+    }
+};
+
 class BlinkerApplication : public Application {
 
 public:
-    BlinkerApplication(const String& hostname)
-        : Application(hostname, VERSION) {
+    BlinkerApplication(BlinkerDeviceConfiguration& deviceConfig)
+        : Application(deviceConfig) {
     }
 
 private:
@@ -98,13 +105,15 @@ private:
     ConsolePrinter consolePrinter;
 };
 
+BlinkerDeviceConfiguration* deviceConfig;
 BlinkerApplication* application;
 
 void setup() {
     Serial.begin(115200);
     Serial.println("Starting up...");
 
-    application = new BlinkerApplication("test-mk6-3");
+    deviceConfig = new BlinkerDeviceConfiguration(FileSystem::instance());
+    application = new BlinkerApplication(*deviceConfig);
 }
 
 void loop() {

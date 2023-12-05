@@ -3,6 +3,7 @@
 #include <MQTT.h>
 #include <WiFi.h>
 
+#include <kernel/Configuration.hpp>
 #include <kernel/Event.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
@@ -12,48 +13,90 @@ namespace farmhub { namespace kernel { namespace drivers {
 
 class MqttDriver : IntermittentLoopTask {
 public:
-    MqttDriver(MdnsDriver& mdns, WiFiDriver& wifi)
+    class Config : public NamedConfigurationSection {
+    public:
+        Config(ConfigurationSection* parent, const String& name)
+            : NamedConfigurationSection(parent, name) {
+        }
+
+        Property<String> host { this, "host", "" };
+        Property<unsigned int> port { this, "port", 1883 };
+        Property<String> clientId { this, "clientId", "" };
+        Property<String> topic { this, "topic", "" };
+    };
+
+    MqttDriver(WiFiDriver& wifi, MdnsDriver& mdns, Config& mqttConfig, const String& instanceName)
         : IntermittentLoopTask("Keep MQTT connected")
+        , wifi(wifi)
         , mdns(mdns)
-        , wifi(wifi) {
+        , mqttConfig(mqttConfig)
+        , instanceName(instanceName)
+        , clientId(getClientId(mqttConfig.clientId.get(), instanceName))
+        , topic(getTopic(mqttConfig.topic.get(), instanceName)) {
+    }
+
+    static String getClientId(const String& clientId, const String& instanceName) {
+        if (clientId.length() > 0) {
+            return clientId;
+        }
+        return "ugly-duckling-" + instanceName;
+    }
+
+    static String getTopic(const String& topic, const String& instanceName) {
+        if (topic.length() > 0) {
+            return topic;
+        }
+        return "devices/ugly-duckling/" + instanceName;
     }
 
 protected:
     void setup() {
-        // TODO Allow configuring MQTT servers manually
-        mdns.await();
-        // TODO Handle lookup failure
-        mdns.lookupService("mqtt", "tcp", &mqttServer);
-        Serial.println("MQTT: server: " + mqttServer.hostname + ":" + String(mqttServer.port) + " (" + mqttServer.ip.toString() + ")");
+        if (mqttConfig.host.get().length() > 0) {
+            mqttServer.hostname = mqttConfig.host.get();
+            mqttServer.port = mqttConfig.port.get();
+        } else {
+            mdns.await();
+            // TODO Handle lookup failure
+            mdns.lookupService("mqtt", "tcp", &mqttServer);
+        }
+        Serial.println("MQTT: server: " + mqttServer.hostname + ":" + String(mqttServer.port)
+            + ", client ID is '" + clientId + "', topic is '" + topic + "'");
     }
 
     int loopAndDelay() override {
+        wifi.await();
+
         if (mqttClient.connected()) {
             return MQTT_CONNECTED_CHECK_INTERVAL_IN_MS;
         }
         Serial.println("MQTT: Disconnected, reconnecting");
 
-        if (!WiFi.isConnected()) {
-            return MQTT_NO_WIFI_CHECK_INTERVAL_IN_MS;
+        if (mqttServer.ip == IPAddress()) {
+            mqttClient.begin(mqttServer.hostname.c_str(), mqttServer.port, wifi.getClient());
+        } else {
+            mqttClient.begin(mqttServer.ip.toString().c_str(), mqttServer.port, wifi.getClient());
         }
-
-        mqttClient.begin(mqttServer.ip, mqttServer.port, wifi.getClient());
         // TODO Figure out the right keep alive value
         mqttClient.setKeepAlive(60);
-        // TODO Use hostname as client ID
-        mqttClient.connect("esp32");
-        mqttClient.publish("test/esp32", "Hello from ESP32");
+
+        mqttClient.connect(clientId.c_str());
+        mqttClient.publish(topic + "/test", "Hello from ESP32");
         Serial.println("MQTT: Connected");
 
         return MQTT_CONNECTED_CHECK_INTERVAL_IN_MS;
     }
 
 private:
-    MdnsDriver& mdns;
-    MdnsRecord mqttServer;
-
     WiFiDriver& wifi;
+    MdnsDriver& mdns;
+    Config& mqttConfig;
+    const String instanceName;
+    const String clientId;
+    const String topic;
+    const String appConfigTopic = topic + "/config";
+    const String commandTopicPrefix = topic + "/commands/";
 
+    MdnsRecord mqttServer;
     MQTTClient mqttClient;
 
     // TODO Review these values
@@ -61,4 +104,4 @@ private:
     static const int MQTT_NO_WIFI_CHECK_INTERVAL_IN_MS = 1000;
 };
 
-}}}
+}}}    // namespace farmhub::kernel::drivers
