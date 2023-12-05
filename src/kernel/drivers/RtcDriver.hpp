@@ -14,7 +14,7 @@
 namespace farmhub { namespace kernel { namespace drivers {
 
 /**
- * @brief Ensures the system time is synchronized with an NTP server.
+ * @brief Ensures the real-time clock is properly set up and holds a real time.
  *
  * The driver runs two tasks:
  *
@@ -24,21 +24,21 @@ namespace farmhub { namespace kernel { namespace drivers {
  * - The second task configures the system time using the NTP server advertised by mDNS.
  *   This waits for mDNS to be ready, and then configures the system time.
  */
-class NtpDriver
+class RtcDriver
     : public EventSource {
 public:
-    NtpDriver(WiFiDriver& wifi, MdnsDriver& mdns, EventGroupHandle_t eventGroup, int eventBit)
+    RtcDriver(WiFiDriver& wifi, MdnsDriver& mdns, EventGroupHandle_t eventGroup, int eventBit)
         : EventSource(eventGroup, eventBit)
         , wifi(wifi)
         , mdns(mdns) {
     }
 
 private:
-    class TimeCheckTask : Task {
+    class SystemTimeCheckTask : Task {
     public:
-        TimeCheckTask(NtpDriver& ntp)
-            : Task("Check for synced time")
-            , ntp(ntp) {
+        SystemTimeCheckTask(RtcDriver& rtc)
+            : Task("Check if system time is set to an actual value")
+            , rtc(rtc) {
         }
 
     protected:
@@ -46,9 +46,11 @@ private:
             while (true) {
                 time_t now;
                 time(&now);
+                // The MCU boots with a timestamp of 0, so if the value is
+                // much higher, then it means the RTC is set.
                 if (now > (2022 - 1970) * 365 * 24 * 60 * 60) {
                     Serial.println("Time configured, exiting task");
-                    ntp.emitEvent();
+                    rtc.emitEvent();
                     break;
                 }
                 delayUntil(1000);
@@ -56,7 +58,7 @@ private:
         }
 
     private:
-        NtpDriver& ntp;
+        RtcDriver& rtc;
     };
 
     class NtpSyncTask : IntermittentLoopTask {
@@ -71,10 +73,10 @@ private:
         void setup() override {
             // TODO Allow configuring NTP servers manually
             mdns.await();
-            MdnsRecord mdnsRecord;
-            if (mdns.lookupService("ntp", "udp", &mdnsRecord)) {
-                Serial.println("NTP: using " + mdnsRecord.hostname + ":" + String(mdnsRecord.port) + " (" + mdnsRecord.ip.toString() + ")");
-                ntpClient = new NTPClient(udp, mdnsRecord.ip);
+            MdnsRecord ntpServer;
+            if (mdns.lookupService("ntp", "udp", &ntpServer)) {
+                Serial.println("NTP: using " + ntpServer.hostname + ":" + String(ntpServer.port) + " (" + ntpServer.ip.toString() + ")");
+                ntpClient = new NTPClient(udp, ntpServer.ip);
             } else {
                 Serial.println("NTP: using default server");
                 ntpClient = new NTPClient(udp);
@@ -112,7 +114,7 @@ private:
     WiFiDriver& wifi;
     MdnsDriver& mdns;
 
-    TimeCheckTask timeCheckTask { *this };
+    SystemTimeCheckTask timeCheckTask { *this };
     NtpSyncTask ntpSyncTask { wifi, mdns };
 };
 

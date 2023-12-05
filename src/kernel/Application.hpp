@@ -5,7 +5,7 @@
 #include <kernel/drivers/FileSystemDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
-#include <kernel/drivers/NtpDriver.hpp>
+#include <kernel/drivers/RtcDriver.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
 
 namespace farmhub { namespace kernel {
@@ -27,7 +27,7 @@ private:
     FileSystemDriver fs;
     WiFiDriver wifi { eventGroup, WIFI_CONFIGURED_BIT };
     MdnsDriver mdns { wifi, hostname, "ugly-duckling", version, eventGroup, MDNS_CONFIGURED_BIT };
-    NtpDriver ntp { wifi, mdns, eventGroup, NTP_SYNCED_BIT };
+    RtcDriver rtc { wifi, mdns, eventGroup, NTP_SYNCED_BIT };
     MqttDriver mqtt { mdns, wifi };
 
     static const int WIFI_CONFIGURED_BIT = 1;
