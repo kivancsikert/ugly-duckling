@@ -1,8 +1,5 @@
 #include <Arduino.h>
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-
 #include <kernel/Application.hpp>
 #include <kernel/Task.hpp>
 
@@ -42,15 +39,19 @@ public:
 protected:
     int loopAndDelay() override {
         Serial.print("\033[1G\033[0K");
-        Serial.print("Uptime: \033[33m" + String(millis()) + "\033[0m ms");
-        Serial.print(", wifi: \033[33m" + wifiStatus() + "\033[0m");
+
+        counter = (counter + 1) % spinner.length();
+        Serial.print("[" + spinner.substring(counter, counter + 1) + "] ");
+
+        Serial.print("WIFI: \033[33m" + wifiStatus() + "\033[0m");
+        Serial.print(", uptime: \033[33m" + String(millis()) + "\033[0m ms");
 
         time_t now;
         struct tm timeinfo;
         time(&now);
         localtime_r(&now, &timeinfo);
         Serial.printf(", now: \033[33m%d\033[0m", now);
-        Serial.print(&timeinfo, ", local time: \033[33m%A, %B %d %Y %H:%M:%S\033[0m");
+        Serial.print(&timeinfo, ", UTC: \033[33m%A, %B %d %Y %H:%M:%S\033[0m");
 
         Serial.print(" ");
         return 100;
@@ -79,6 +80,9 @@ private:
                 return "UNKNOWN";
         }
     }
+
+    int counter;
+    const String spinner { "-\\|/" };
 };
 
 class BlinkerApplication : public Application {
