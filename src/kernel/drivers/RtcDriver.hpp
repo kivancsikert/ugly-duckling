@@ -92,10 +92,8 @@ private:
 
         int loopAndDelay() override {
             if (ntpClient->forceUpdate()) {
-                struct timeval tv;
-                tv.tv_sec = ntpClient->getEpochTime();    // Set the seconds
-                tv.tv_usec = 0;                           // Set the microseconds to zero
-                settimeofday(&tv, NULL);                  // Set the system time
+                setOrAdjustTime(ntpClient->getEpochTime());
+
                 // We are good for a while now
                 return 60 * 60 * 1000;
             } else {
@@ -105,6 +103,32 @@ private:
         }
 
     private:
+        void setOrAdjustTime(long newEpochTime) {
+            // Threshold in seconds for deciding between settimeofday and adjtime
+            const long threshold = 30;
+
+            // Get current time
+            time_t now;
+            time(&now);
+
+            // Calculate the difference
+            long difference = newEpochTime - now;
+
+            if (abs(difference) > threshold) {
+                // If the difference is larger than the threshold, set the time directly
+                struct timeval tv = { .tv_sec = newEpochTime, .tv_usec = 0 };
+                settimeofday(&tv, NULL);
+                Serial.println("Set time to " + String(newEpochTime) + " (difference: " + String(difference));
+            } else if (difference != 0) {
+                // If the difference is smaller, adjust the time gradually
+                struct timeval adj = { .tv_sec = difference, .tv_usec = 0 };
+                adjtime(&adj, NULL);
+                Serial.println("Adjusted time by " + String(difference));
+            } else {
+                Serial.println("Time is already correct");
+            }
+        }
+
         WiFiDriver& wifi;
         MdnsDriver& mdns;
         WiFiUDP udp;
