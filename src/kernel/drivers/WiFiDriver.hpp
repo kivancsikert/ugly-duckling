@@ -22,6 +22,7 @@ protected:
         // Explicitly set mode, ESP defaults to STA+AP
         WiFi.mode(WIFI_STA);
 
+        // TODO Should we clear the event bit when disconnected?
         WiFi.onEvent(
             [this](WiFiEvent_t event, WiFiEventInfo_t info) {
                 Serial.println("WiFi: connected");

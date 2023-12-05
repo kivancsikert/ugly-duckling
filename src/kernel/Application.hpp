@@ -14,6 +14,8 @@ namespace farmhub { namespace kernel {
 
 using namespace farmhub::kernel::drivers;
 
+class Application;
+
 class DeviceConfiguration : public FileConfiguration {
 public:
     DeviceConfiguration(
@@ -63,6 +65,7 @@ private:
         }
         return macAddress;
     }
+    friend Application;
 };
 
 class Application {
@@ -70,6 +73,21 @@ public:
     Application(DeviceConfiguration& deviceConfig)
         : deviceConfig(loadConfig(deviceConfig))
         , version(VERSION) {
+
+        mqtt.publish(
+            "init",
+            [&](JsonObject& json) {
+                // TODO Remove redundanty mentions of "ugly-duckling"
+                json["type"] = "ugly-duckling";
+                json["model"] = deviceConfig.model.get();
+                json["instance"] = deviceConfig.instance.get();
+                json["mac"] = DeviceConfiguration::getMacAddress();
+                auto device = json.createNestedObject("deviceConfig");
+                deviceConfig.store(device, false);
+                json["app"] = "ugly-duckling";
+                json["version"] = version;
+                // json["wakeup"] = event.source;
+            });
     }
 
 private:
