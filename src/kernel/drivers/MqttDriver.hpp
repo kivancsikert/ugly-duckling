@@ -59,6 +59,15 @@ protected:
             // TODO Handle lookup failure
             mdns.lookupService("mqtt", "tcp", &mqttServer);
         }
+        // TODO Figure out the right keep alive value
+        mqttClient.setKeepAlive(180);
+
+        if (mqttServer.ip == IPAddress()) {
+            mqttClient.begin(mqttServer.hostname.c_str(), mqttServer.port, wifi.getClient());
+        } else {
+            mqttClient.begin(mqttServer.ip.toString().c_str(), mqttServer.port, wifi.getClient());
+        }
+
         Serial.println("MQTT: server: " + mqttServer.hostname + ":" + String(mqttServer.port)
             + ", client ID is '" + clientId + "', topic is '" + topic + "'");
     }
@@ -66,28 +75,21 @@ protected:
     int loopAndDelay() override {
         wifi.await();
 
-        if (mqttClient.connected()) {
-            return MQTT_CONNECTED_CHECK_INTERVAL_IN_MS;
-        }
-        Serial.println("MQTT: Disconnected, reconnecting");
+        if (!mqttClient.connected()) {
+            Serial.println("MQTT: Disconnected, reconnecting");
 
-        if (mqttServer.ip == IPAddress()) {
-            mqttClient.begin(mqttServer.hostname.c_str(), mqttServer.port, wifi.getClient());
-        } else {
-            mqttClient.begin(mqttServer.ip.toString().c_str(), mqttServer.port, wifi.getClient());
-        }
-        // TODO Figure out the right keep alive value
-        mqttClient.setKeepAlive(60);
-
-        // TODO Implement exponential backoff
-        if (mqttClient.connect(clientId.c_str())) {
-            mqttClient.publish(topic + "/test", "Hello from ESP32");
+            if (!mqttClient.connect(clientId.c_str())) {
+                Serial.println("MQTT: Connection failed");
+                // TODO Implement exponential backoff
+                return MQTT_DISCONNECTED_CHECK_INTERVAL_IN_MS;
+            }
             Serial.println("MQTT: Connected");
-            return MQTT_CONNECTED_CHECK_INTERVAL_IN_MS;
-        } else {
-            Serial.println("MQTT: Connection failed");
-            return MQTT_DISCONNECTED_CHECK_INTERVAL_IN_MS;
         }
+
+        // Should be connected here
+
+        mqttClient.loop();
+        return MQTT_LOOP_INTERVAL_IN_MS;
     }
 
 private:
@@ -104,7 +106,7 @@ private:
     MQTTClient mqttClient;
 
     // TODO Review these values
-    static const int MQTT_CONNECTED_CHECK_INTERVAL_IN_MS = 1000;
+    static const int MQTT_LOOP_INTERVAL_IN_MS = 1000;
     static const int MQTT_DISCONNECTED_CHECK_INTERVAL_IN_MS = 1000;
 };
 
