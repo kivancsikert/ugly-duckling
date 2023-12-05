@@ -25,6 +25,17 @@ public:
         Property<String> topic { this, "topic", "" };
     };
 
+    enum class Retention {
+        NoRetain,
+        Retain
+    };
+
+    enum class QoS {
+        AtMostOnce = 0,
+        AtLeastOnce = 1,
+        ExactlyOnce = 2
+    };
+
     MqttDriver(WiFiDriver& wifi, MdnsDriver& mdns, Config& mqttConfig, const String& instanceName)
         : IntermittentLoopTask("Keep MQTT connected")
         , wifi(wifi)
@@ -35,18 +46,15 @@ public:
         , topic(getTopic(mqttConfig.topic.get(), instanceName)) {
     }
 
-    static String getClientId(const String& clientId, const String& instanceName) {
-        if (clientId.length() > 0) {
-            return clientId;
+    bool subscribe(const String& suffix, QoS qos) {
+        String fullTopic = topic + "/" + suffix;
+        Serial.printf("Subscribing to MQTT topic '%s' with QOS = %d\n", fullTopic.c_str(), qos);
+        bool success = mqttClient.subscribe(fullTopic.c_str(), static_cast<int>(qos));
+        if (!success) {
+            Serial.printf("Error subscribing to MQTT topic '%s', error = %d\n",
+                fullTopic.c_str(), mqttClient.lastError());
         }
-        return "ugly-duckling-" + instanceName;
-    }
-
-    static String getTopic(const String& topic, const String& instanceName) {
-        if (topic.length() > 0) {
-            return topic;
-        }
-        return "devices/ugly-duckling/" + instanceName;
+        return success;
     }
 
 protected:
@@ -83,6 +91,9 @@ protected:
                 // TODO Implement exponential backoff
                 return MQTT_DISCONNECTED_CHECK_INTERVAL_IN_MS;
             }
+
+            subscribe("config", QoS::ExactlyOnce);
+            subscribe("commands/#", QoS::ExactlyOnce);
             Serial.println("MQTT: Connected");
         }
 
@@ -93,6 +104,20 @@ protected:
     }
 
 private:
+    static String getClientId(const String& clientId, const String& instanceName) {
+        if (clientId.length() > 0) {
+            return clientId;
+        }
+        return "ugly-duckling-" + instanceName;
+    }
+
+    static String getTopic(const String& topic, const String& instanceName) {
+        if (topic.length() > 0) {
+            return topic;
+        }
+        return "devices/ugly-duckling/" + instanceName;
+    }
+
     WiFiDriver& wifi;
     MdnsDriver& mdns;
     Config& mqttConfig;
