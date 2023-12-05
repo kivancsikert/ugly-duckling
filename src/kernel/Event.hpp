@@ -5,23 +5,6 @@
 
 namespace farmhub { namespace kernel {
 
-class Events {
-public:
-    Events(EventGroupHandle_t eventGroup, EventBits_t eventBits, bool waitForAll = true)
-        : eventGroup(eventGroup)
-        , eventBits(eventBits)
-        , waitForAll(waitForAll) {};
-
-    void waitFor(bool clearOnExit = false, int ticksToWait = portMAX_DELAY) {
-        xEventGroupWaitBits(eventGroup, eventBits, clearOnExit, waitForAll, ticksToWait);
-    }
-
-private:
-    const EventGroupHandle_t eventGroup;
-    const EventBits_t eventBits;
-    const bool waitForAll;
-};
-
 class EventSource {
 public:
     EventSource(EventGroupHandle_t eventGroup, int eventBit)
@@ -29,8 +12,8 @@ public:
         , eventBit(eventBit) {
     }
 
-    void waitFor(bool clearOnExit = false, int ticksToWait = portMAX_DELAY) {
-        xEventGroupWaitBits(eventGroup, asEventBits(), clearOnExit, true, ticksToWait);
+    void await(int ticksToWait = portMAX_DELAY) {
+        xEventGroupWaitBits(eventGroup, asEventBits(), false, true, ticksToWait);
     }
 
     EventBits_t inline asEventBits() {
@@ -42,9 +25,15 @@ protected:
         xEventGroupSetBits(eventGroup, asEventBits());
     }
 
+    void emitEventFromISR() {
+        int xHigherPriorityTaskWoken = pdFALSE;
+        xEventGroupSetBitsFromISR(eventGroup, asEventBits(), &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
+
 private:
     const EventGroupHandle_t eventGroup;
     const int eventBit;
 };
 
-}}
+}}    // namespace farmhub::kernel

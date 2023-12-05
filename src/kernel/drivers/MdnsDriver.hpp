@@ -3,7 +3,7 @@
 #include <kernel/Event.hpp>
 
 #include <ESPmDNS.h>
-#include <WiFi.h>
+#include <kernel/drivers/WiFiDriver.hpp>
 
 namespace farmhub { namespace kernel { namespace drivers {
 
@@ -13,34 +13,44 @@ struct MdnsRecord {
     int port;
 };
 
-class MdnsDriver : public EventSource {
+class MdnsDriver
+    : Task,
+      public EventSource {
 public:
     MdnsDriver(
+        WiFiDriver& wifi,
         const String& hostname,
         const String& instanceName,
         const String& version,
         EventGroupHandle_t eventGroup,
         int eventBit)
-        : EventSource(eventGroup, eventBit) {
-
-        WiFi.onEvent(
-            [this, hostname, instanceName, version](WiFiEvent_t event, WiFiEventInfo_t info) {
-                MDNS.begin(hostname.c_str());
-                MDNS.setInstanceName(instanceName);
-                Serial.println("Advertising mDNS service " + instanceName + " on " + hostname + ".local, version: " + version);
-                MDNS.addService("farmhub", "tcp", 80);
-                MDNS.addServiceTxt("farmhub", "tcp", "version", version);
-                Serial.println("mDNS: configured");
-                emitEvent();
-            },
-            ARDUINO_EVENT_WIFI_STA_GOT_IP);
+        : Task("mDNS")
+        , EventSource(eventGroup, eventBit)
+        , wifi(wifi)
+        , hostname(hostname)
+        , instanceName(instanceName)
+        , version(version) {
     }
 
     bool lookupService(const String& serviceName, const String& port, MdnsRecord* record) {
-        xSemaphoreTake(xMutex, portMAX_DELAY);
+        xSemaphoreTake(lookupMutex, portMAX_DELAY);
         auto result = lookupServiceUnderMutex(serviceName, port, record);
-        xSemaphoreGive(xMutex);
+        xSemaphoreGive(lookupMutex);
         return result;
+    }
+
+protected:
+    void run() override {
+        wifi.await();
+
+        MDNS.begin(hostname.c_str());
+        MDNS.setInstanceName(instanceName);
+        Serial.println("Advertising mDNS service " + instanceName + " on " + hostname + ".local, version: " + version);
+        MDNS.addService("farmhub", "tcp", 80);
+        MDNS.addServiceTxt("farmhub", "tcp", "version", version);
+        Serial.println("mDNS: configured");
+
+        emitEvent();
     }
 
 private:
@@ -64,7 +74,13 @@ private:
         return true;
     }
 
-    QueueHandle_t xMutex { xSemaphoreCreateMutex() };
+    QueueHandle_t lookupMutex { xSemaphoreCreateMutex() };
+
+    const String hostname;
+    const String instanceName;
+    const String version;
+
+    WiFiDriver& wifi;
 };
 
-}}}
+}}}    // namespace farmhub::kernel::drivers

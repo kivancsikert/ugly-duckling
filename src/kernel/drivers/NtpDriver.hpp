@@ -67,7 +67,7 @@ private:
             std::list<String> servers = fallbackNtpServers;
             MdnsRecord mdnsRecord;
             // TODO Allow configuring NTP servers manually
-            mdns.waitFor();
+            mdns.await();
             if (mdns.lookupService("ntp", "udp", &mdnsRecord)) {
                 Serial.println("NTP: configuring " + mdnsRecord.hostname + " (" + mdnsRecord.ip.toString() + ")");
                 servers.push_front(mdnsRecord.hostname);

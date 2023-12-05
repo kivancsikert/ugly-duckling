@@ -7,16 +7,26 @@
 
 namespace farmhub { namespace kernel { namespace drivers {
 
-class WiFiDriver : Task {
+class WiFiDriver
+    : Task,
+      public EventSource {
 public:
-    WiFiDriver()
-        : Task("Connect to WiFi") {
+    WiFiDriver(EventGroupHandle_t eventGroup, int eventBit)
+        : EventSource(eventGroup, eventBit)
+        , Task("Connect to WiFi") {
     }
 
 protected:
     void run() override {
         // Explicitly set mode, ESP defaults to STA+AP
         WiFi.mode(WIFI_STA);
+
+        WiFi.onEvent(
+            [this](WiFiEvent_t event, WiFiEventInfo_t info) {
+                Serial.println("WiFi: connected");
+                emitEventFromISR();
+            },
+            ARDUINO_EVENT_WIFI_STA_CONNECTED);
 
         wifiManager.autoConnect("AutoConnectAP");
     }
@@ -31,4 +41,4 @@ private:
     WiFiClient wifiClient;
 };
 
-}}}
+}}}    // namespace farmhub::kernel::drivers

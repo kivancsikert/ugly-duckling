@@ -21,7 +21,7 @@ public:
 protected:
     void setup() {
         // TODO Allow configuring MQTT servers manually
-        mdns.waitFor();
+        mdns.await();
         // TODO Handle lookup failure
         mdns.lookupService("mqtt", "tcp", &mqttServer);
         Serial.println("MQTT: server: " + mqttServer.hostname + ":" + String(mqttServer.port) + " (" + mqttServer.ip.toString() + ")");
