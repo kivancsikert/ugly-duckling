@@ -1,12 +1,15 @@
 #pragma once
 
-#include <list>
+#include <WiFiUdp.h>
 #include <time.h>
+
+#include <NTPClient.h>
 
 #include <kernel/Event.hpp>
 #include <kernel/Task.hpp>
 
 #include <kernel/drivers/MdnsDriver.hpp>
+#include <kernel/drivers/WiFiDriver.hpp>
 
 namespace farmhub { namespace kernel { namespace drivers {
 
@@ -24,8 +27,9 @@ namespace farmhub { namespace kernel { namespace drivers {
 class NtpDriver
     : public EventSource {
 public:
-    NtpDriver(MdnsDriver& mdns, EventGroupHandle_t eventGroup, int eventBit)
+    NtpDriver(WiFiDriver& wifi, MdnsDriver& mdns, EventGroupHandle_t eventGroup, int eventBit)
         : EventSource(eventGroup, eventBit)
+        , wifi(wifi)
         , mdns(mdns) {
     }
 
@@ -55,42 +59,61 @@ private:
         NtpDriver& ntp;
     };
 
-    class NtpSyncTask : Task {
+    class NtpSyncTask : IntermittentLoopTask {
     public:
-        NtpSyncTask(MdnsDriver& mdns)
-            : Task("Sync time with NTP server")
+        NtpSyncTask(WiFiDriver& wifi, MdnsDriver& mdns)
+            : IntermittentLoopTask("Sync time with NTP server")
+            , wifi(wifi)
             , mdns(mdns) {
         }
 
     protected:
-        void run() override {
-            std::list<String> servers = fallbackNtpServers;
-            MdnsRecord mdnsRecord;
+        void setup() override {
             // TODO Allow configuring NTP servers manually
             mdns.await();
+            MdnsRecord mdnsRecord;
             if (mdns.lookupService("ntp", "udp", &mdnsRecord)) {
-                Serial.println("NTP: configuring " + mdnsRecord.hostname + " (" + mdnsRecord.ip.toString() + ")");
-                servers.push_front(mdnsRecord.hostname);
+                Serial.println("NTP: using " + mdnsRecord.hostname + ":" + String(mdnsRecord.port) + " (" + mdnsRecord.ip.toString() + ")");
+                ntpClient = new NTPClient(udp, mdnsRecord.ip);
+            } else {
+                Serial.println("NTP: using default server");
+                ntpClient = new NTPClient(udp);
             }
 
-            auto server = servers.begin();
-            configure(*server++, *server++, *server++);
+            wifi.await();
+
+            // TODO Use built in configTime() instead
+            //      We are using the external NTP client library, because the built in configTime() does not
+            //      reliably update the time for some reason.
+            ntpClient->begin();
+        }
+
+        int loopAndDelay() override {
+            if (ntpClient->forceUpdate()) {
+                struct timeval tv;
+                tv.tv_sec = ntpClient->getEpochTime();    // Set the seconds
+                tv.tv_usec = 0;                           // Set the microseconds to zero
+                settimeofday(&tv, NULL);                  // Set the system time
+                // We are good for a while now
+                return 60 * 60 * 1000;
+            } else {
+                // Attempt a retry
+                return 10 * 1000;
+            }
         }
 
     private:
-        void configure(const String& server1, const String& server2, const String& server3) {
-            Serial.println("NTP: configuring " + server1 + ", " + server2 + ", " + server3);
-            configTime(0, 0, server1.c_str(), server2.c_str(), server3.c_str());
-        }
-
+        WiFiDriver& wifi;
         MdnsDriver& mdns;
-        const std::list<String> fallbackNtpServers { { "pool.ntp.org", "time.nist.gov", "time.google.com" } };
+        WiFiUDP udp;
+        NTPClient* ntpClient;
     };
 
+    WiFiDriver& wifi;
     MdnsDriver& mdns;
 
     TimeCheckTask timeCheckTask { *this };
-    NtpSyncTask ntpSyncTask { mdns };
+    NtpSyncTask ntpSyncTask { wifi, mdns };
 };
 
-}}}
+}}}    // namespace farmhub::kernel::drivers

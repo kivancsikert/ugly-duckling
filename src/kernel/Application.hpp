@@ -27,7 +27,7 @@ private:
     FileSystemDriver fs;
     WiFiDriver wifi { eventGroup, WIFI_CONFIGURED_BIT };
     MdnsDriver mdns { wifi, hostname, "ugly-duckling", version, eventGroup, MDNS_CONFIGURED_BIT };
-    NtpDriver ntp { mdns, eventGroup, NTP_SYNCED_BIT };
+    NtpDriver ntp { wifi, mdns, eventGroup, NTP_SYNCED_BIT };
     MqttDriver mqtt { mdns, wifi };
 
     static const int WIFI_CONFIGURED_BIT = 1;
