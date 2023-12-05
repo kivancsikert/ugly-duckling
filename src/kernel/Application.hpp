@@ -2,7 +2,6 @@
 
 #include <freertos/FreeRTOS.h>
 
-#include <kernel/drivers/FileSystemDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
@@ -24,7 +23,6 @@ private:
     const String version;
 
     EventGroupHandle_t eventGroup { xEventGroupCreate() };
-    FileSystemDriver fs;
     WiFiDriver wifi { eventGroup, WIFI_CONFIGURED_BIT };
     MdnsDriver mdns { wifi, hostname, "ugly-duckling", version, eventGroup, MDNS_CONFIGURED_BIT };
     RtcDriver rtc { wifi, mdns, eventGroup, NTP_SYNCED_BIT };
