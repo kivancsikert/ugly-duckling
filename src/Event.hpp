@@ -22,9 +22,9 @@ private:
     const bool waitForAll;
 };
 
-class EventEmitter {
+class EventSource {
 public:
-    EventEmitter(EventGroupHandle_t eventGroup, int eventBit)
+    EventSource(EventGroupHandle_t eventGroup, int eventBit)
         : eventGroup(eventGroup)
         , eventBit(eventBit) {
     }

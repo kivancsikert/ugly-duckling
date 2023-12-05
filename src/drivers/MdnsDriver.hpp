@@ -13,7 +13,7 @@ struct MdnsRecord {
     int port;
 };
 
-class MdnsDriver : public EventEmitter {
+class MdnsDriver : public EventSource {
 public:
     MdnsDriver(
         const String& hostname,
@@ -21,7 +21,7 @@ public:
         const String& version,
         EventGroupHandle_t eventGroup,
         int eventBit)
-        : EventEmitter(eventGroup, eventBit) {
+        : EventSource(eventGroup, eventBit) {
 
         WiFi.onEvent(
             [this, hostname, instanceName, version](WiFiEvent_t event, WiFiEventInfo_t info) {

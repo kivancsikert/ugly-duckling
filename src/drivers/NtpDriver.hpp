@@ -22,10 +22,10 @@ namespace farmhub { namespace device { namespace drivers {
  *   This waits for mDNS to be ready, and then configures the system time.
  */
 class NtpDriver
-    : public EventEmitter {
+    : public EventSource {
 public:
     NtpDriver(MdnsDriver& mdns, EventGroupHandle_t eventGroup, int eventBit)
-        : EventEmitter(eventGroup, eventBit)
+        : EventSource(eventGroup, eventBit)
         , mdns(mdns) {
     }
 
