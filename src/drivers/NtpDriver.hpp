@@ -1,5 +1,6 @@
 #pragma once
 
+#include <list>
 #include <time.h>
 
 #include <Event.hpp>
@@ -63,19 +64,27 @@ private:
 
     protected:
         void run() override {
-            Serial.println("NTP: Waiting for mDNS to be ready");
+            std::list<String> servers = fallbackNtpServers;
+            MdnsRecord mdnsRecord;
+            // TODO Allow configuring NTP servers manually
             mdns.waitFor();
-            Serial.println("NTP: mDNS is ready");
-            // TODO Handle lookup failure
-            MdnsRecord ntpServer;
-            if (mdns.lookupService("ntp", "udp", &ntpServer)) {
-                Serial.println("NTP: configuring " + ntpServer.hostname + " (" + ntpServer.ip.toString() + ")");
-                configTime(0, 0, ntpServer.hostname.c_str());
+            if (mdns.lookupService("ntp", "udp", &mdnsRecord)) {
+                Serial.println("NTP: configuring " + mdnsRecord.hostname + " (" + mdnsRecord.ip.toString() + ")");
+                servers.push_front(mdnsRecord.hostname);
             }
+
+            auto server = servers.begin();
+            configure(*server++, *server++, *server++);
         }
 
     private:
+        void configure(const String& server1, const String& server2, const String& server3) {
+            Serial.println("NTP: configuring " + server1 + ", " + server2 + ", " + server3);
+            configTime(0, 0, server1.c_str(), server2.c_str(), server3.c_str());
+        }
+
         MdnsDriver& mdns;
+        const std::list<String> fallbackNtpServers { { "pool.ntp.org", "time.nist.gov", "time.google.com" } };
     };
 
     MdnsDriver& mdns;

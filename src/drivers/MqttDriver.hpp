@@ -20,9 +20,8 @@ public:
 
 protected:
     void setup() {
-        Serial.println("MQTT: Waiting for mDNS to be ready");
+        // TODO Allow configuring MQTT servers manually
         mdns.waitFor();
-        Serial.println("MQTT: mDNS is ready");
         // TODO Handle lookup failure
         mdns.lookupService("mqtt", "tcp", &mqttServer);
         Serial.println("MQTT: server: " + mqttServer.hostname + ":" + String(mqttServer.port) + " (" + mqttServer.ip.toString() + ")");
@@ -39,6 +38,8 @@ protected:
         }
 
         mqttClient.begin(mqttServer.ip, mqttServer.port, wifi.getClient());
+        // TODO Figure out the right keep alive value
+        mqttClient.setKeepAlive(60);
         // TODO Use hostname as client ID
         mqttClient.connect("esp32");
         mqttClient.publish("test/esp32", "Hello from ESP32");

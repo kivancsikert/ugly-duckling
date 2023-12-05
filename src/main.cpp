@@ -6,6 +6,8 @@
 #include <Application.hpp>
 #include <Task.hpp>
 
+#include <version.h>
+
 using namespace farmhub::device;
 using namespace farmhub::device::drivers;
 
@@ -50,6 +52,7 @@ protected:
         Serial.printf(", now: \033[33m%d\033[0m", now);
         Serial.print(&timeinfo, ", local time: \033[33m%A, %B %d %Y %H:%M:%S\033[0m");
 
+        Serial.print(" ");
         return 100;
     }
 
@@ -82,7 +85,7 @@ class BlinkerApplication : public Application {
 
 public:
     BlinkerApplication(const String& hostname)
-        : Application(hostname) {
+        : Application(hostname, VERSION) {
     }
 
 private:

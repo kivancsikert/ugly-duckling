@@ -27,7 +27,9 @@ public:
             [this, hostname, instanceName, version](WiFiEvent_t event, WiFiEventInfo_t info) {
                 MDNS.begin(hostname.c_str());
                 MDNS.setInstanceName(instanceName);
-                MDNS.addServiceTxt("arduino", "tcp", "version", version);
+                Serial.println("Advertising mDNS service " + instanceName + " on " + hostname + ".local, version: " + version);
+                MDNS.addService("farmhub", "tcp", 80);
+                MDNS.addServiceTxt("farmhub", "tcp", "version", version);
                 Serial.println("mDNS: configured");
                 emitEvent();
             },

@@ -13,16 +13,18 @@ using namespace farmhub::device::drivers;
 
 class Application {
 public:
-    Application(const String& hostname)
-        : hostname(hostname) {
+    Application(const String& hostname, const String& version)
+        : hostname(hostname),
+        version(version) {
     }
 
 private:
     const String hostname;
+    const String version;
 
     EventGroupHandle_t eventGroup { xEventGroupCreate() };
     WiFiDriver wifi;
-    MdnsDriver mdns { hostname, "FarmHub", "0.1", eventGroup, MDNS_CONFIGURED_BIT };
+    MdnsDriver mdns { hostname, "ugly-duckling", version, eventGroup, MDNS_CONFIGURED_BIT };
     NtpDriver ntp { mdns, eventGroup, NTP_SYNCED_BIT };
     MqttDriver mqtt { mdns, wifi };
 
