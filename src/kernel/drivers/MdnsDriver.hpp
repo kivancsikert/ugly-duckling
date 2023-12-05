@@ -1,11 +1,11 @@
 #pragma once
 
-#include <Event.hpp>
+#include <kernel/Event.hpp>
 
 #include <ESPmDNS.h>
 #include <WiFi.h>
 
-namespace farmhub { namespace device { namespace drivers {
+namespace farmhub { namespace kernel { namespace drivers {
 
 struct MdnsRecord {
     String hostname;
@@ -67,4 +67,4 @@ private:
     QueueHandle_t xMutex { xSemaphoreCreateMutex() };
 };
 
-}}}    // namespace farmhub::device::drivers
+}}}

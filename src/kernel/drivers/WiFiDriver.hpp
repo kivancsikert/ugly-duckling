@@ -1,14 +1,11 @@
 #pragma once
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-
 #include <WiFi.h>
 #include <WiFiManager.h>
 
-#include <Task.hpp>
+#include <kernel/Task.hpp>
 
-namespace farmhub { namespace device { namespace drivers {
+namespace farmhub { namespace kernel { namespace drivers {
 
 class WiFiDriver : Task {
 public:
@@ -34,4 +31,4 @@ private:
     WiFiClient wifiClient;
 };
 
-}}}    // namespace farmhub::device::drivers
+}}}

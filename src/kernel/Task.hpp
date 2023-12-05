@@ -6,7 +6,7 @@
 // TODO Use a logger instead of Serial
 #include <Arduino.h>
 
-namespace farmhub { namespace device {
+namespace farmhub { namespace kernel {
 
 static const uint32_t DEFAULT_STACK_SIZE = 10000;
 static const unsigned int DEFAULT_PRIORITY = 1;
@@ -92,4 +92,4 @@ protected:
     virtual int loopAndDelay() = 0;
 };
 
-}}    // namespace farmhub::device
+}}

@@ -3,12 +3,12 @@
 #include <list>
 #include <time.h>
 
-#include <Event.hpp>
-#include <Task.hpp>
+#include <kernel/Event.hpp>
+#include <kernel/Task.hpp>
 
-#include <drivers/MdnsDriver.hpp>
+#include <kernel/drivers/MdnsDriver.hpp>
 
-namespace farmhub { namespace device { namespace drivers {
+namespace farmhub { namespace kernel { namespace drivers {
 
 /**
  * @brief Ensures the system time is synchronized with an NTP server.
@@ -93,4 +93,4 @@ private:
     NtpSyncTask ntpSyncTask { mdns };
 };
 
-}}}    // namespace farmhub::device::drivers
+}}}

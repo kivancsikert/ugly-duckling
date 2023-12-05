@@ -3,13 +3,13 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include <Application.hpp>
-#include <Task.hpp>
+#include <kernel/Application.hpp>
+#include <kernel/Task.hpp>
 
 #include <version.h>
 
-using namespace farmhub::device;
-using namespace farmhub::device::drivers;
+using namespace farmhub::kernel;
+using namespace farmhub::kernel::drivers;
 
 class BlinkLedTask : public LoopTask {
 public:

@@ -2,14 +2,14 @@
 
 #include <freertos/FreeRTOS.h>
 
-#include <drivers/MdnsDriver.hpp>
-#include <drivers/MqttDriver.hpp>
-#include <drivers/NtpDriver.hpp>
-#include <drivers/WiFiDriver.hpp>
+#include <kernel/drivers/MdnsDriver.hpp>
+#include <kernel/drivers/MqttDriver.hpp>
+#include <kernel/drivers/NtpDriver.hpp>
+#include <kernel/drivers/WiFiDriver.hpp>
 
-namespace farmhub { namespace device {
+namespace farmhub { namespace kernel {
 
-using namespace farmhub::device::drivers;
+using namespace farmhub::kernel::drivers;
 
 class Application {
 public:
@@ -32,4 +32,4 @@ private:
     static const int MDNS_CONFIGURED_BIT = 2;
 };
 
-}}    // namespace farmhub::device
+}}

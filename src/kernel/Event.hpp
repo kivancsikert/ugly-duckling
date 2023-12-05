@@ -3,7 +3,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
 
-namespace farmhub { namespace device {
+namespace farmhub { namespace kernel {
 
 class Events {
 public:
@@ -47,4 +47,4 @@ private:
     const int eventBit;
 };
 
-}}    // namespace farmhub::device
+}}

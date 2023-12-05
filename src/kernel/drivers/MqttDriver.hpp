@@ -3,12 +3,12 @@
 #include <MQTT.h>
 #include <WiFi.h>
 
-#include <Event.hpp>
-#include <Task.hpp>
-#include <drivers/MdnsDriver.hpp>
-#include <drivers/WiFiDriver.hpp>
+#include <kernel/Event.hpp>
+#include <kernel/Task.hpp>
+#include <kernel/drivers/MdnsDriver.hpp>
+#include <kernel/drivers/WiFiDriver.hpp>
 
-namespace farmhub { namespace device { namespace drivers {
+namespace farmhub { namespace kernel { namespace drivers {
 
 class MqttDriver : IntermittentLoopTask {
 public:
@@ -61,4 +61,4 @@ private:
     static const int MQTT_NO_WIFI_CHECK_INTERVAL_IN_MS = 1000;
 };
 
-}}}    // namespace farmhub::device::drivers
+}}}
