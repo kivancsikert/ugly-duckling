@@ -43,7 +43,7 @@ public:
         String hostname = instance.get();
         hostname.replace(":", "-");
         hostname.replace("?", "");
-        return "ud-" + hostname;
+        return hostname;
     }
 
 private:
@@ -82,6 +82,12 @@ public:
         : fs(fs)
         , version(VERSION)
         , deviceConfig(loadConfig(deviceConfig)) {
+
+        Serial.printf("Initializing version %s on %s instance '%s' with hostname '%s'\n",
+            version.c_str(),
+            deviceConfig.model.get().c_str(),
+            deviceConfig.instance.get().c_str(),
+            deviceConfig.getHostname());
 
         mqtt.registerCommand(echoCommand);
         // TODO Add ping command
@@ -125,7 +131,10 @@ private:
     ApplicationConfiguration appConfig { fs };
     EventGroupHandle_t eventGroup { xEventGroupCreate() };
     WiFiDriver wifi { eventGroup, WIFI_CONFIGURED_BIT };
-    OtaDriver ota { deviceConfig.getHostname() };
+#ifdef OTA_UPDATE
+    // Only include OTA when needed for debugging
+    OtaDriver ota { wifi, deviceConfig.getHostname() };
+#endif
     MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, eventGroup, MDNS_CONFIGURED_BIT };
     RtcDriver rtc { wifi, mdns, eventGroup, NTP_SYNCED_BIT, deviceConfig.ntp };
     MqttDriver mqtt { wifi, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig };

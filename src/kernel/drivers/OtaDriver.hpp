@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 
+#include <kernel/drivers/WiFiDriver.hpp>
+
 #include <kernel/Task.hpp>
 
 namespace farmhub { namespace kernel { namespace drivers {
@@ -11,8 +13,16 @@ class OtaDriver
     : public IntermittentLoopTask {
 
 public:
-    OtaDriver(const String& hostname)
-        : IntermittentLoopTask("OTA") {
+    OtaDriver(WiFiDriver& wifi, const String& hostname)
+        : IntermittentLoopTask("OTA")
+        , wifi(wifi)
+        , hostname(hostname) {
+    }
+
+protected:
+    void setup() override {
+        wifi.await();
+
         ArduinoOTA.setHostname(hostname.c_str());
         ArduinoOTA.onStart([&]() {
             Serial.println("Start");
@@ -43,9 +53,10 @@ public:
             updating = false;
         });
         ArduinoOTA.begin();
+
+        Serial.println("OTA initialized on hostname " + hostname + ", IP " + WiFi.localIP().toString());
     }
 
-protected:
     int loopAndDelay() override {
         ArduinoOTA.handle();
         return updating
@@ -54,6 +65,8 @@ protected:
     }
 
 private:
+    WiFiDriver& wifi;
+    const String hostname;
     bool updating = false;
 };
 
