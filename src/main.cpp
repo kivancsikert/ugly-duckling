@@ -1,42 +1,38 @@
 #include <Arduino.h>
 
 #include <kernel/Application.hpp>
+#include <kernel/FTask.hpp>
 #include <kernel/FileSystem.hpp>
-#include <kernel/Task.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 
-class ConsolePrinter : IntermittentLoopTask {
+class ConsolePrinter {
 public:
-    ConsolePrinter(BatteryDriver& batteryDriver)
-        : IntermittentLoopTask("Console printer", 32768, 1)
-        , batteryDriver(batteryDriver) {
-    }
+    ConsolePrinter(BatteryDriver& batteryDriver){
+        FTask::loopTask("ConsolePrinter", 32 * 1024, 0, [&](FTask& task) {
+            Serial.print("\033[1G\033[0K");
 
-protected:
-    milliseconds loopAndDelay() override {
-        Serial.print("\033[1G\033[0K");
+            counter = (counter + 1) % spinner.length();
+            Serial.print("[" + spinner.substring(counter, counter + 1) + "] ");
 
-        counter = (counter + 1) % spinner.length();
-        Serial.print("[" + spinner.substring(counter, counter + 1) + "] ");
+            Serial.print("\033[33m" + wifiStatus() + "\033[0m");
+            Serial.print(", IP: \033[33m" + WiFi.localIP().toString() + "\033[0m");
 
-        Serial.print("\033[33m" + wifiStatus() + "\033[0m");
-        Serial.print(", IP: \033[33m" + WiFi.localIP().toString() + "\033[0m");
+            Serial.print(", uptime: \033[33m" + String(millis()) + "\033[0m ms");
+            time_t now;
+            struct tm timeinfo;
+            time(&now);
+            localtime_r(&now, &timeinfo);
+            Serial.print(&timeinfo, ", UTC: \033[33m%Y-%m-%d %H:%M:%S\033[0m");
 
-        Serial.print(", uptime: \033[33m" + String(millis()) + "\033[0m ms");
-        time_t now;
-        struct tm timeinfo;
-        time(&now);
-        localtime_r(&now, &timeinfo);
-        Serial.print(&timeinfo, ", UTC: \033[33m%Y-%m-%d %H:%M:%S\033[0m");
+            Serial.printf(", battery: \033[33m%.2f V\033[0m", batteryDriver.getVoltage());
 
-        Serial.printf(", battery: \033[33m%.2f V\033[0m", batteryDriver.getVoltage());
-
-        Serial.print(" ");
-        Serial.flush();
-        return milliseconds(100);
+            Serial.print(" ");
+            Serial.flush();
+            task.delayUntil(milliseconds(100));
+        });
     }
 
 private:
@@ -65,8 +61,6 @@ private:
 
     int counter;
     const String spinner { "-\\|/" };
-
-    BatteryDriver& batteryDriver;
 };
 
 class SampleDeviceConfiguration

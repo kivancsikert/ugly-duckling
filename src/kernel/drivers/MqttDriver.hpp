@@ -5,16 +5,16 @@
 #include <MQTT.h>
 #include <WiFi.h>
 
+#include <kernel/Command.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/Event.hpp>
-#include <kernel/Command.hpp>
-#include <kernel/Task.hpp>
+#include <kernel/FTask.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
 
 namespace farmhub { namespace kernel { namespace drivers {
 
-class MqttDriver : IntermittentLoopTask {
+class MqttDriver {
 public:
     class Config : public NamedConfigurationSection {
     public:
@@ -43,14 +43,20 @@ public:
     typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
 
     MqttDriver(Event& networkReady, MdnsDriver& mdns, Config& mqttConfig, const String& instanceName, Configuration& appConfig)
-        : IntermittentLoopTask("Keep MQTT connected", 32 * 1024)
-        , networkReady(networkReady)
+        : networkReady(networkReady)
         , mdns(mdns)
         , mqttConfig(mqttConfig)
         , instanceName(instanceName)
         , appConfig(appConfig)
         , clientId(getClientId(mqttConfig.clientId.get(), instanceName))
         , topic(getTopic(mqttConfig.topic.get(), instanceName)) {
+        FTask::runTask("MQTT", 24 * 1024, 1, [&](FTask& task) {
+            setup();
+            while (true) {
+                auto delay = loopAndDelay();
+                task.delay(delay);
+            }
+        });
     }
 
     bool publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
@@ -87,7 +93,7 @@ public:
         commandHandlers.emplace_back(command, handle);
     }
 
-protected:
+private:
     void setup() {
         if (mqttConfig.host.get().length() > 0) {
             mqttServer.hostname = mqttConfig.host.get();
@@ -121,7 +127,7 @@ protected:
             + ", client ID is '" + clientId + "', topic is '" + topic + "'");
     }
 
-    milliseconds loopAndDelay() override {
+    milliseconds loopAndDelay() {
         networkReady.await();
 
         if (!mqttClient.connected()) {
@@ -144,7 +150,6 @@ protected:
         return MQTT_LOOP_INTERVAL;
     }
 
-private:
     // This is kept private for now, as it is not thread-safe. Since subcscription is not currently
     // needed outside of this class, it is not a problem.
     bool subscribe(const String& suffix, QoS qos) {

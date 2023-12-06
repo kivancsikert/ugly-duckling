@@ -4,6 +4,7 @@
 #include <ESPmDNS.h>
 
 #include <kernel/Event.hpp>
+#include <kernel/FTask.hpp>
 #include <kernel/NvmStore.hpp>
 
 namespace farmhub { namespace kernel { namespace drivers {
@@ -18,8 +19,7 @@ struct MdnsRecord {
     }
 };
 
-class MdnsDriver
-    : Task {
+class MdnsDriver {
 public:
     MdnsDriver(
         Event& networkReady,
@@ -27,16 +27,20 @@ public:
         const String& instanceName,
         const String& version,
         Event& mdnsReady)
-        : Task("mDNS")
-        , networkReady(networkReady)
-        , hostname(hostname)
-        , instanceName(instanceName)
-        , version(version)
-        , mdnsReady(mdnsReady) {
+        : mdnsReady(mdnsReady) {
         // TODO Add error handling
         MDNS.begin(hostname);
         MDNS.setInstanceName(instanceName);
-        Serial.println("mDNS: initialized");
+        FTask::runTask("mDNS", [&](FTask& task) {
+            networkReady.await();
+
+            Serial.println("Advertising mDNS service " + instanceName + " on " + hostname + ".local, version: " + version);
+            MDNS.addService("farmhub", "tcp", 80);
+            MDNS.addServiceTxt("farmhub", "tcp", "version", version);
+            Serial.println("mDNS: configured");
+
+            mdnsReady.emit();
+        });
     }
 
     bool lookupService(const String& serviceName, const String& port, MdnsRecord& record) {
@@ -44,18 +48,6 @@ public:
         auto result = lookupServiceUnderMutex(serviceName, port, record);
         xSemaphoreGive(lookupMutex);
         return result;
-    }
-
-protected:
-    void run() override {
-        networkReady.await();
-
-        Serial.println("Advertising mDNS service " + instanceName + " on " + hostname + ".local, version: " + version);
-        MDNS.addService("farmhub", "tcp", 80);
-        MDNS.addServiceTxt("farmhub", "tcp", "version", version);
-        Serial.println("mDNS: configured");
-
-        mdnsReady.emit();
     }
 
 private:
@@ -95,14 +87,9 @@ private:
         return true;
     }
 
-    Event& networkReady;
     Event& mdnsReady;
 
     QueueHandle_t lookupMutex { xSemaphoreCreateMutex() };
-
-    const String hostname;
-    const String instanceName;
-    const String version;
 
     NvmStore nvm { "mdns" };
 };

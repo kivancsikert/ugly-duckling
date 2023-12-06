@@ -7,7 +7,7 @@
 #include <NTPClient.h>
 
 #include <kernel/Event.hpp>
-#include <kernel/Task.hpp>
+#include <kernel/FTask.hpp>
 
 #include <kernel/drivers/MdnsDriver.hpp>
 
@@ -37,21 +37,8 @@ public:
         Property<String> host { this, "host", "" };
     };
 
-    RtcDriver(Event& networkReady, MdnsDriver& mdns, Event& timeSet, Config& ntpConfig)
-        : timeCheckTask(timeSet)
-        , ntpSyncTask(networkReady, mdns, ntpConfig) {
-    }
-
-private:
-    class SystemTimeCheckTask : Task {
-    public:
-        SystemTimeCheckTask(Event& timeSet)
-            : Task("Check if system time is set to an actual value")
-            , timeSet(timeSet) {
-        }
-
-    protected:
-        void run() override {
+    RtcDriver(Event& networkReady, MdnsDriver& mdns, Event& timeSet, Config& ntpConfig) {
+        FTask::runTask("SystemTimeCheck", [&](FTask& task) {
             while (true) {
                 time_t now;
                 time(&now);
@@ -62,25 +49,12 @@ private:
                     timeSet.emit();
                     break;
                 }
-                delayUntil(seconds(1));
+                task.delayUntil(seconds(1));
             }
-        }
-
-    private:
-        Event& timeSet;
-    };
-
-    class NtpSyncTask : IntermittentLoopTask {
-    public:
-        NtpSyncTask(Event& networkReady, MdnsDriver& mdns, Config& ntpConfig)
-            : IntermittentLoopTask("Sync time with NTP server")
-            , networkReady(networkReady)
-            , mdns(mdns)
-            , ntpConfig(ntpConfig) {
-        }
-
-    protected:
-        void setup() override {
+        });
+        FTask::runTask("NtpSync", [&](FTask& task) {
+            WiFiUDP udp;
+            NTPClient* ntpClient;
             if (ntpConfig.host.get().length() > 0) {
                 Serial.println("NTP: using " + ntpConfig.host.get() + " from configuration");
                 ntpClient = new NTPClient(udp, ntpConfig.host.get().c_str());
@@ -101,57 +75,47 @@ private:
             //      We are using the external NTP client library, because the built in configTime() does not
             //      reliably update the time for some reason.
             ntpClient->begin();
-        }
 
-        milliseconds loopAndDelay() override {
-            if (ntpClient->forceUpdate()) {
-                setOrAdjustTime(ntpClient->getEpochTime());
+            while (true) {
+                if (ntpClient->forceUpdate()) {
+                    setOrAdjustTime(ntpClient->getEpochTime());
 
-                // We are good for a while now
-                return hours(1);
-            } else {
-                // Attempt a retry
-                return seconds(10);
+                    // We are good for a while now
+                    task.delay(hours(1));
+                } else {
+                    // Attempt a retry
+                    task.delay(seconds(10));
+                }
             }
+        });
+    }
+
+private:
+    static void setOrAdjustTime(long newEpochTime) {
+        // Threshold in seconds for deciding between settimeofday and adjtime
+        const long threshold = 30;
+
+        // Get current time
+        time_t now;
+        time(&now);
+
+        // Calculate the difference
+        long difference = newEpochTime - now;
+
+        if (abs(difference) > threshold) {
+            // If the difference is larger than the threshold, set the time directly
+            struct timeval tv = { .tv_sec = newEpochTime, .tv_usec = 0 };
+            settimeofday(&tv, NULL);
+            Serial.println("Set time to " + String(newEpochTime) + " (from: " + String(now) + ")");
+        } else if (difference != 0) {
+            // If the difference is smaller, adjust the time gradually
+            struct timeval adj = { .tv_sec = difference, .tv_usec = 0 };
+            adjtime(&adj, NULL);
+            Serial.println("Adjusted time by " + String(difference));
+        } else {
+            Serial.println("Time is already correct");
         }
-
-    private:
-        void setOrAdjustTime(long newEpochTime) {
-            // Threshold in seconds for deciding between settimeofday and adjtime
-            const long threshold = 30;
-
-            // Get current time
-            time_t now;
-            time(&now);
-
-            // Calculate the difference
-            long difference = newEpochTime - now;
-
-            if (abs(difference) > threshold) {
-                // If the difference is larger than the threshold, set the time directly
-                struct timeval tv = { .tv_sec = newEpochTime, .tv_usec = 0 };
-                settimeofday(&tv, NULL);
-                Serial.println("Set time to " + String(newEpochTime) + " (from: " + String(now) + ")");
-            } else if (difference != 0) {
-                // If the difference is smaller, adjust the time gradually
-                struct timeval adj = { .tv_sec = difference, .tv_usec = 0 };
-                adjtime(&adj, NULL);
-                Serial.println("Adjusted time by " + String(difference));
-            } else {
-                Serial.println("Time is already correct");
-            }
-        }
-
-        Event& networkReady;
-        MdnsDriver& mdns;
-        Config& ntpConfig;
-
-        WiFiUDP udp;
-        NTPClient* ntpClient;
-    };
-
-    SystemTimeCheckTask timeCheckTask;
-    NtpSyncTask ntpSyncTask;
+    }
 };
 
 }}}    // namespace farmhub::kernel::drivers
