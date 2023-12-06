@@ -134,7 +134,7 @@ private:
                 // If the difference is larger than the threshold, set the time directly
                 struct timeval tv = { .tv_sec = newEpochTime, .tv_usec = 0 };
                 settimeofday(&tv, NULL);
-                Serial.println("Set time to " + String(newEpochTime) + " (difference: " + String(difference));
+                Serial.println("Set time to " + String(newEpochTime) + " (from: " + String(now) + ")");
             } else if (difference != 0) {
                 // If the difference is smaller, adjust the time gradually
                 struct timeval adj = { .tv_sec = difference, .tv_usec = 0 };
