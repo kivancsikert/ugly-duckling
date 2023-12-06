@@ -66,12 +66,10 @@ private:
     Task(TaskFunction taskFunction)
         : taskFunction(taskFunction)
         , lastWakeTime(xTaskGetTickCount()) {
-        Serial.println("Creating Task with this pointing to " + String((uint32_t) this) + ".");
     }
 
     static void executeTask(void* parameters) {
         Task* task = static_cast<Task*>(parameters);
-        Serial.println("Got Task pointing to " + String((uint32_t) task) + ".");
         task->taskFunction(*task);
         vTaskDelete(task->taskHandle);
         delete task;
