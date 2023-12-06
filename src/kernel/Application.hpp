@@ -85,7 +85,7 @@ public:
         : fs(fs)
         , version(VERSION)
         , deviceConfig(loadConfig(deviceConfig))
-        , statusLed("status", statusLedPin, LedDriver::State::BLINKING, milliseconds(250)) {
+        , statusLed("status", statusLedPin, { milliseconds(125), milliseconds(-125) }) {
 
         Serial.printf("Initializing version %s on %s instance '%s' with hostname '%s'\n",
             version.c_str(),
@@ -94,10 +94,10 @@ public:
             deviceConfig.getHostname());
 
         networkReadyEvent.await();
-        statusLed.setBlinkRate(milliseconds(500));
+        statusLed.blink(milliseconds(500));
 
         timeSetEvent.await();
-        statusLed.setBlinkRate(milliseconds(1000));
+        statusLed.blink(milliseconds(1000));
 
         mqtt.registerCommand(echoCommand);
         // TODO Add ping command
@@ -129,7 +129,7 @@ public:
                 // json["wakeup"] = event.source;
             });
 
-        statusLed.setState(LedDriver::State::ON);
+        statusLed.turnOn();
         Serial.println("Application initialized in " + String(millis()) + " ms");
     }
 

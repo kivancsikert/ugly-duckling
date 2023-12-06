@@ -2,56 +2,58 @@
 
 #include <atomic>
 #include <chrono>
+#include <list>
 
-#include <kernel/Task.hpp>
+#include <kernel/FTask.hpp>
 
 using namespace std::chrono;
 
 namespace farmhub { namespace kernel { namespace drivers {
 
-class LedDriver : LoopTask {
+class LedDriver {
 public:
-    enum class State {
-        OFF,
-        ON,
-        BLINKING
-    };
-
-    LedDriver(const char* name, gpio_num_t pin, State initialState = State::OFF, milliseconds blinkRate = seconds(1))
-        : LoopTask(name)
-        , pin(pin)
-        , state(initialState)
-        , blinkRate(blinkRate) {
+    LedDriver(const char* name, gpio_num_t pin, std::list<milliseconds> initialPattern = { -milliseconds::max() })
+        : pin(pin)
+        , pattern(initialPattern) {
         pinMode(pin, OUTPUT);
-    }
+        FTask::loopTask(name, [&](FTask& task) {
+            if (currentPattern.empty()) {
+                currentPattern = pattern;
+            }
+            milliseconds delay = currentPattern.front();
+            currentPattern.pop_front();
 
-    void loop() override {
-        State state = this->state;
-        switch (state) {
-            case State::OFF:
-                setLedState(HIGH);
-                suspend();
-                break;
-            case State::ON:
+            if (delay > milliseconds::zero()) {
                 setLedState(LOW);
-                suspend();
-                break;
-            case State::BLINKING:
-                setLedState(!ledState);
-                delayUntil(blinkRate.load() / 2);
-                break;
-        }
+            } else {
+                setLedState(HIGH);
+            }
+            std::list<milliseconds>* newPattern;
+            if (xQueueReceive(patternQueue, &newPattern, pdMS_TO_TICKS(abs(delay.count()))) == pdTRUE) {
+                pattern = *newPattern;
+                currentPattern = {};
+                free(newPattern);
+            }
+        });
     }
 
-    void setState(State state) {
-        if (this->state != state) {
-            this->state = state;
-            abortDelay();
-        }
+    void setPattern(std::list<milliseconds> pattern) {
+        auto* payload = new std::list<milliseconds>(pattern);
+        xQueueSend(patternQueue, &payload, portMAX_DELAY);
     }
 
-    void setBlinkRate(milliseconds blinkRate) {
-        this->blinkRate = blinkRate;
+    void turnOn() {
+        setPattern({ milliseconds::max() });
+    }
+
+    void turnOff() {
+        setPattern({ -milliseconds::max() });
+    }
+
+    void blink(milliseconds blinkRate) {
+        setPattern(ledState
+                ? std::list<milliseconds>({ blinkRate, -blinkRate })
+                : std::list<milliseconds>({ -blinkRate, blinkRate }));
     }
 
 private:
@@ -60,10 +62,12 @@ private:
         digitalWrite(pin, state);
     }
 
+    QueueHandle_t patternQueue { xQueueCreate(1, sizeof(std::list<milliseconds>*)) };
     const gpio_num_t pin;
-    std::atomic<State> state;
-    std::atomic<milliseconds> blinkRate;
-    bool ledState;
+    std::atomic<bool> ledState;
+
+    std::list<milliseconds> pattern;
+    std::list<milliseconds> currentPattern;
 };
 
 }}}    // namespace farmhub::kernel::drivers
