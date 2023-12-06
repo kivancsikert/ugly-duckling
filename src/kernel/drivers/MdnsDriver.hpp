@@ -5,7 +5,6 @@
 
 #include <kernel/Event.hpp>
 #include <kernel/NvmStore.hpp>
-#include <kernel/drivers/WiFiDriver.hpp>
 
 namespace farmhub { namespace kernel { namespace drivers {
 
@@ -20,22 +19,20 @@ struct MdnsRecord {
 };
 
 class MdnsDriver
-    : Task,
-      public EventSource {
+    : Task {
 public:
     MdnsDriver(
-        WiFiDriver& wifi,
+        Event& networkReady,
         const String& hostname,
         const String& instanceName,
         const String& version,
-        EventGroupHandle_t eventGroup,
-        int eventBit)
+        Event& mdnsReady)
         : Task("mDNS")
-        , EventSource(eventGroup, eventBit)
-        , wifi(wifi)
+        , networkReady(networkReady)
         , hostname(hostname)
         , instanceName(instanceName)
-        , version(version) {
+        , version(version)
+        , mdnsReady(mdnsReady) {
         // TODO Add error handling
         MDNS.begin(hostname);
         MDNS.setInstanceName(instanceName);
@@ -51,14 +48,14 @@ public:
 
 protected:
     void run() override {
-        wifi.await();
+        networkReady.await();
 
         Serial.println("Advertising mDNS service " + instanceName + " on " + hostname + ".local, version: " + version);
         MDNS.addService("farmhub", "tcp", 80);
         MDNS.addServiceTxt("farmhub", "tcp", "version", version);
         Serial.println("mDNS: configured");
 
-        emitEvent();
+        mdnsReady.emit();
     }
 
 private:
@@ -75,7 +72,7 @@ private:
             }
         }
 
-        wifi.await();
+        mdnsReady.await();
         auto count = MDNS.queryService(serviceName.c_str(), port.c_str());
         if (count == 0) {
             return false;
@@ -98,13 +95,15 @@ private:
         return true;
     }
 
+    Event& networkReady;
+    Event& mdnsReady;
+
     QueueHandle_t lookupMutex { xSemaphoreCreateMutex() };
 
     const String hostname;
     const String instanceName;
     const String version;
 
-    WiFiDriver& wifi;
     NvmStore nvm { "mdns" };
 };
 

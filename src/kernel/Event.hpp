@@ -9,9 +9,9 @@ using namespace std::chrono;
 
 namespace farmhub { namespace kernel {
 
-class EventSource {
+class Event {
 public:
-    EventSource(EventGroupHandle_t eventGroup, int eventBit)
+    Event(EventGroupHandle_t eventGroup, int eventBit)
         : eventGroup(eventGroup)
         , eventBit(eventBit) {
     }
@@ -28,12 +28,11 @@ public:
         return 1 << eventBit;
     }
 
-protected:
-    void emitEvent() {
+    void emit() {
         xEventGroupSetBits(eventGroup, asEventBits());
     }
 
-    void emitEventFromISR() {
+    void emitFromISR() {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         xEventGroupSetBitsFromISR(eventGroup, asEventBits(), &xHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);

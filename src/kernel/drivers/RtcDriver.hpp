@@ -10,7 +10,6 @@
 #include <kernel/Task.hpp>
 
 #include <kernel/drivers/MdnsDriver.hpp>
-#include <kernel/drivers/WiFiDriver.hpp>
 
 using namespace std::chrono;
 
@@ -27,8 +26,7 @@ namespace farmhub { namespace kernel { namespace drivers {
  * - The second task configures the system time using the NTP server advertised by mDNS.
  *   This waits for mDNS to be ready, and then configures the system time.
  */
-class RtcDriver
-    : public EventSource {
+class RtcDriver {
 public:
     class Config : public NamedConfigurationSection {
     public:
@@ -39,17 +37,17 @@ public:
         Property<String> host { this, "host", "" };
     };
 
-    RtcDriver(WiFiDriver& wifi, MdnsDriver& mdns, EventGroupHandle_t eventGroup, int eventBit, Config& ntpConfig)
-        : EventSource(eventGroup, eventBit)
-        , ntpSyncTask(wifi, mdns, ntpConfig) {
+    RtcDriver(Event& networkReady, MdnsDriver& mdns, Event& timeSet, Config& ntpConfig)
+        : timeCheckTask(timeSet)
+        , ntpSyncTask(networkReady, mdns, ntpConfig) {
     }
 
 private:
     class SystemTimeCheckTask : Task {
     public:
-        SystemTimeCheckTask(RtcDriver& rtc)
+        SystemTimeCheckTask(Event& timeSet)
             : Task("Check if system time is set to an actual value")
-            , rtc(rtc) {
+            , timeSet(timeSet) {
         }
 
     protected:
@@ -61,7 +59,7 @@ private:
                 // much higher, then it means the RTC is set.
                 if (seconds(now) > hours((2022 - 1970) * 365 * 24)) {
                     Serial.println("Time configured, exiting task");
-                    rtc.emitEvent();
+                    timeSet.emit();
                     break;
                 }
                 delayUntil(seconds(1));
@@ -69,14 +67,14 @@ private:
         }
 
     private:
-        RtcDriver& rtc;
+        Event& timeSet;
     };
 
     class NtpSyncTask : IntermittentLoopTask {
     public:
-        NtpSyncTask(WiFiDriver& wifi, MdnsDriver& mdns, Config& ntpConfig)
+        NtpSyncTask(Event& networkReady, MdnsDriver& mdns, Config& ntpConfig)
             : IntermittentLoopTask("Sync time with NTP server")
-            , wifi(wifi)
+            , networkReady(networkReady)
             , mdns(mdns)
             , ntpConfig(ntpConfig) {
         }
@@ -87,7 +85,6 @@ private:
                 Serial.println("NTP: using " + ntpConfig.host.get() + " from configuration");
                 ntpClient = new NTPClient(udp, ntpConfig.host.get().c_str());
             } else {
-                mdns.await();
                 MdnsRecord ntpServer;
                 if (mdns.lookupService("ntp", "udp", ntpServer)) {
                     Serial.println("NTP: using " + ntpServer.hostname + ":" + String(ntpServer.port) + " (" + ntpServer.ip.toString() + ") from mDNS");
@@ -98,7 +95,7 @@ private:
                 }
             }
 
-            wifi.await();
+            networkReady.await();
 
             // TODO Use built in configTime() instead
             //      We are using the external NTP client library, because the built in configTime() does not
@@ -145,7 +142,7 @@ private:
             }
         }
 
-        WiFiDriver& wifi;
+        Event& networkReady;
         MdnsDriver& mdns;
         Config& ntpConfig;
 
@@ -153,7 +150,7 @@ private:
         NTPClient* ntpClient;
     };
 
-    SystemTimeCheckTask timeCheckTask { *this };
+    SystemTimeCheckTask timeCheckTask;
     NtpSyncTask ntpSyncTask;
 };
 

@@ -91,10 +91,10 @@ public:
             deviceConfig.instance.get().c_str(),
             deviceConfig.getHostname());
 
-        wifi.await();
+        networkReadyEvent.await();
         statusLed.setBlinkRate(milliseconds(500));
 
-        rtc.await();
+        timeSetEvent.await();
         statusLed.setBlinkRate(milliseconds(1000));
 
         mqtt.registerCommand(echoCommand);
@@ -145,14 +145,19 @@ private:
 
     ApplicationConfiguration appConfig { fs };
     EventGroupHandle_t eventGroup { xEventGroupCreate() };
-    WiFiDriver wifi { eventGroup, WIFI_CONFIGURED_BIT };
+
+    Event networkReadyEvent { eventGroup, 1 };
+    Event timeSetEvent { eventGroup, 2 };
+    Event mdnsReadyEvent { eventGroup, 3 };
+
+    WiFiDriver wifi { networkReadyEvent };
 #ifdef OTA_UPDATE
     // Only include OTA when needed for debugging
-    OtaDriver ota { wifi, deviceConfig.getHostname() };
+    OtaDriver ota { networkReadyEvent, deviceConfig.getHostname() };
 #endif
-    MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, eventGroup, MDNS_CONFIGURED_BIT };
-    RtcDriver rtc { wifi, mdns, eventGroup, NTP_SYNCED_BIT, deviceConfig.ntp };
-    MqttDriver mqtt { wifi, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig };
+    MdnsDriver mdns { networkReadyEvent, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyEvent };
+    RtcDriver rtc { networkReadyEvent, mdns, timeSetEvent, deviceConfig.ntp };
+    MqttDriver mqtt { networkReadyEvent, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig };
 
     EchoCommand echoCommand;
     RestartCommand restartCommand;
@@ -161,10 +166,6 @@ private:
     FileWriteCommand fileWriteCommand { fs };
     FileRemoveCommand fileRemoveCommand { fs };
     HttpUpdateCommand httpUpdateCommand { version };
-
-    static const int WIFI_CONFIGURED_BIT = 1;
-    static const int NTP_SYNCED_BIT = 2;
-    static const int MDNS_CONFIGURED_BIT = 3;
 };
 
 }}    // namespace farmhub::kernel

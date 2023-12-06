@@ -42,9 +42,9 @@ public:
 
     typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
 
-    MqttDriver(WiFiDriver& wifi, MdnsDriver& mdns, Config& mqttConfig, const String& instanceName, Configuration& appConfig)
+    MqttDriver(Event& networkReady, MdnsDriver& mdns, Config& mqttConfig, const String& instanceName, Configuration& appConfig)
         : IntermittentLoopTask("Keep MQTT connected", 32 * 1024)
-        , wifi(wifi)
+        , networkReady(networkReady)
         , mdns(mdns)
         , mqttConfig(mqttConfig)
         , instanceName(instanceName)
@@ -93,7 +93,6 @@ protected:
             mqttServer.hostname = mqttConfig.host.get();
             mqttServer.port = mqttConfig.port.get();
         } else {
-            mdns.await();
             // TODO Handle lookup failure
             mdns.lookupService("mqtt", "tcp", mqttServer);
         }
@@ -113,9 +112,9 @@ protected:
         });
 
         if (mqttServer.ip == IPAddress()) {
-            mqttClient.begin(mqttServer.hostname.c_str(), mqttServer.port, wifi.getClient());
+            mqttClient.begin(mqttServer.hostname.c_str(), mqttServer.port, wifiClient);
         } else {
-            mqttClient.begin(mqttServer.ip.toString().c_str(), mqttServer.port, wifi.getClient());
+            mqttClient.begin(mqttServer.ip.toString().c_str(), mqttServer.port, wifiClient);
         }
 
         Serial.println("MQTT: server: " + mqttServer.hostname + ":" + String(mqttServer.port)
@@ -123,7 +122,7 @@ protected:
     }
 
     milliseconds loopAndDelay() override {
-        wifi.await();
+        networkReady.await();
 
         if (!mqttClient.connected()) {
             Serial.println("MQTT: Disconnected, reconnecting");
@@ -283,7 +282,8 @@ private:
         }
     };
 
-    WiFiDriver& wifi;
+    Event& networkReady;
+    WiFiClient wifiClient;
     MdnsDriver& mdns;
     Config& mqttConfig;
     const String instanceName;

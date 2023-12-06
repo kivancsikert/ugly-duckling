@@ -13,15 +13,15 @@ class OtaDriver
     : public IntermittentLoopTask {
 
 public:
-    OtaDriver(WiFiDriver& wifi, const String& hostname)
+    OtaDriver(Event& networkReady, const String& hostname)
         : IntermittentLoopTask("OTA")
-        , wifi(wifi)
+        , networkReady(networkReady)
         , hostname(hostname) {
     }
 
 protected:
     void setup() override {
-        wifi.await();
+        networkReady.await();
 
         ArduinoOTA.setHostname(hostname.c_str());
         ArduinoOTA.onStart([&]() {
@@ -54,7 +54,7 @@ protected:
         });
         ArduinoOTA.begin();
 
-        Serial.println("OTA initialized on hostname " + hostname + ", IP " + WiFi.localIP().toString());
+        Serial.println("OTA initialized on hostname " + hostname);
     }
 
     milliseconds loopAndDelay() override {
@@ -65,7 +65,7 @@ protected:
     }
 
 private:
-    WiFiDriver& wifi;
+    Event& networkReady;
     const String hostname;
     bool updating = false;
 };

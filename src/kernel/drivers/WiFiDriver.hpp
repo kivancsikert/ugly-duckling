@@ -9,12 +9,11 @@
 namespace farmhub { namespace kernel { namespace drivers {
 
 class WiFiDriver
-    : Task,
-      public EventSource {
+    : Task {
 public:
-    WiFiDriver(EventGroupHandle_t eventGroup, int eventBit)
-        : EventSource(eventGroup, eventBit)
-        , Task("Connect to WiFi") {
+    WiFiDriver(Event& networkReady)
+        : Task("Connect to WiFi")
+        , networkReady(networkReady) {
     }
 
 protected:
@@ -32,32 +31,28 @@ protected:
                 Serial.println("WiFi: got IP " + IPAddress(info.got_ip.ip_info.ip.addr).toString()
                     + ", netmask: " + IPAddress(info.got_ip.ip_info.netmask.addr).toString()
                     + ", gateway: " + IPAddress(info.got_ip.ip_info.gw.addr).toString());
-                emitEventFromISR();
+                networkReady.emitFromISR();
             },
             ARDUINO_EVENT_WIFI_STA_GOT_IP);
         WiFi.onEvent(
             [](WiFiEvent_t event, WiFiEventInfo_t info) {
                 Serial.println("WiFi: lost IP address");
+                // TODO Should we clear the event bit when disconnected?
             },
             ARDUINO_EVENT_WIFI_STA_LOST_IP);
         WiFi.onEvent(
             [](WiFiEvent_t event, WiFiEventInfo_t info) {
                 Serial.println("WiFi: disconnected from " + String(info.wifi_sta_disconnected.ssid, info.wifi_sta_disconnected.ssid_len));
-                // TODO Should we clear the event bit when disconnected?
             },
             ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
         wifiManager.autoConnect("AutoConnectAP");
     }
 
-public:
-    WiFiClient& getClient() {
-        return wifiClient;
-    }
-
 private:
+    Event& networkReady;
+
     WiFiManager wifiManager;
-    WiFiClient wifiClient;
 };
 
 }}}    // namespace farmhub::kernel::drivers
