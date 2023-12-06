@@ -43,8 +43,9 @@ protected:
         Serial.print("[" + spinner.substring(counter, counter + 1) + "] ");
 
         Serial.print("WIFI: \033[33m" + wifiStatus() + "\033[0m");
-        Serial.print(", uptime: \033[33m" + String(millis()) + "\033[0m ms");
+        Serial.print(", IP: \033[33m" + WiFi.localIP().toString() + "\033[0m");
 
+        Serial.print(", uptime: \033[33m" + String(millis()) + "\033[0m ms");
         time_t now;
         struct tm timeinfo;
         time(&now);

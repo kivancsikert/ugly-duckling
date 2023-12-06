@@ -6,6 +6,7 @@
 #include <kernel/FileSystem.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
+#include <kernel/drivers/OtaDriver.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
 
@@ -124,6 +125,7 @@ private:
     ApplicationConfiguration appConfig { fs };
     EventGroupHandle_t eventGroup { xEventGroupCreate() };
     WiFiDriver wifi { eventGroup, WIFI_CONFIGURED_BIT };
+    OtaDriver ota { deviceConfig.getHostname() };
     MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, eventGroup, MDNS_CONFIGURED_BIT };
     RtcDriver rtc { wifi, mdns, eventGroup, NTP_SYNCED_BIT, deviceConfig.ntp };
     MqttDriver mqtt { wifi, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig };
