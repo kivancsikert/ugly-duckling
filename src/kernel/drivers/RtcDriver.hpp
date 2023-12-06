@@ -86,7 +86,7 @@ private:
             } else {
                 mdns.await();
                 MdnsRecord ntpServer;
-                if (mdns.lookupService("ntp", "udp", &ntpServer)) {
+                if (mdns.lookupService("ntp", "udp", ntpServer)) {
                     Serial.println("NTP: using " + ntpServer.hostname + ":" + String(ntpServer.port) + " (" + ntpServer.ip.toString() + ") from mDNS");
                     ntpClient = new NTPClient(udp, ntpServer.ip);
                 } else {

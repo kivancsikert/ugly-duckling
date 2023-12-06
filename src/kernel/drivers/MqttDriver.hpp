@@ -95,7 +95,7 @@ protected:
         } else {
             mdns.await();
             // TODO Handle lookup failure
-            mdns.lookupService("mqtt", "tcp", &mqttServer);
+            mdns.lookupService("mqtt", "tcp", mqttServer);
         }
         // TODO Figure out the right keep alive value
         mqttClient.setKeepAlive(180);
