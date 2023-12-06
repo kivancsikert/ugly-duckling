@@ -11,7 +11,7 @@ using namespace farmhub::kernel::drivers;
 class ConsolePrinter {
 public:
     ConsolePrinter(BatteryDriver& batteryDriver){
-        FTask::loopTask("ConsolePrinter", 32 * 1024, 0, [&](FTask& task) {
+        FTask::loopTask("ConsolePrinter", 32 * 1024, 1, [&](FTask& task) {
             Serial.print("\033[1G\033[0K");
 
             counter = (counter + 1) % spinner.length();
