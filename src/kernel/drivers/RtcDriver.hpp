@@ -7,7 +7,7 @@
 #include <NTPClient.h>
 
 #include <kernel/Event.hpp>
-#include <kernel/FTask.hpp>
+#include <kernel/Task.hpp>
 
 #include <kernel/drivers/MdnsDriver.hpp>
 
@@ -37,8 +37,8 @@ public:
         Property<String> host { this, "host", "" };
     };
 
-    RtcDriver(Event& networkReady, MdnsDriver& mdns, Event& timeSet, Config& ntpConfig) {
-        FTask::runTask("SystemTimeCheck", [&](FTask& task) {
+    RtcDriver(Event& networkReady, MdnsDriver& mdns, Config& ntpConfig, Event& timeSet) {
+        Task::run("SystemTimeCheck", [&timeSet](Task& task) {
             while (true) {
                 time_t now;
                 time(&now);
@@ -52,7 +52,7 @@ public:
                 task.delayUntil(seconds(1));
             }
         });
-        FTask::runTask("NtpSync", [&](FTask& task) {
+        Task::run("NtpSync", [&networkReady, &mdns, &ntpConfig](Task& task) {
             WiFiUDP udp;
             NTPClient* ntpClient;
             if (ntpConfig.host.get().length() > 0) {

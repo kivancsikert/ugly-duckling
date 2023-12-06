@@ -8,7 +8,7 @@
 #include <kernel/Command.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/Event.hpp>
-#include <kernel/FTask.hpp>
+#include <kernel/Task.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
 
@@ -50,7 +50,7 @@ public:
         , appConfig(appConfig)
         , clientId(getClientId(mqttConfig.clientId.get(), instanceName))
         , topic(getTopic(mqttConfig.topic.get(), instanceName)) {
-        FTask::runTask("MQTT", 24 * 1024, 1, [&](FTask& task) {
+        Task::run("MQTT", 24 * 1024, 1, [this](Task& task) {
             setup();
             while (true) {
                 auto delay = loopAndDelay();

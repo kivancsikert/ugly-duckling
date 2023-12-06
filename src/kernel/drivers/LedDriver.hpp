@@ -4,7 +4,7 @@
 #include <chrono>
 #include <list>
 
-#include <kernel/FTask.hpp>
+#include <kernel/Task.hpp>
 
 using namespace std::chrono;
 
@@ -16,7 +16,7 @@ public:
         : pin(pin)
         , pattern(initialPattern) {
         pinMode(pin, OUTPUT);
-        FTask::loopTask(name, [&](FTask& task) {
+        Task::loop(name, [this](Task& task) {
             if (currentPattern.empty()) {
                 currentPattern = pattern;
             }
@@ -65,7 +65,6 @@ private:
     QueueHandle_t patternQueue { xQueueCreate(1, sizeof(std::list<milliseconds>*)) };
     const gpio_num_t pin;
     std::atomic<bool> ledState;
-
     std::list<milliseconds> pattern;
     std::list<milliseconds> currentPattern;
 };

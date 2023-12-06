@@ -1,33 +1,46 @@
 #pragma once
 
 #include <chrono>
+#include <functional>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-// TODO Use a logger instead of Serial
 #include <Arduino.h>
 
 using namespace std::chrono;
 
 namespace farmhub { namespace kernel {
 
-static const uint32_t DEFAULT_STACK_SIZE = 10000;
-static const unsigned int DEFAULT_PRIORITY = 1;
+// TODO Remove _2 suffix
+static const uint32_t DEFAULT_STACK_SIZE_2 = 8192;
+static const unsigned int DEFAULT_PRIORITY_2 = 1;
+
+class Task;
+
+typedef std::function<void(Task&)> TaskFunction;
 
 class Task {
 public:
-    // TODO What's a good stack depth?
-    Task(const char* name, uint32_t stackSize = DEFAULT_STACK_SIZE, unsigned int priority = DEFAULT_PRIORITY) {
-        xTaskCreate(taskFunction, name, stackSize, this, priority, &taskHandle);
+    static void run(const char* name, TaskFunction runFunction) {
+        Task::run(name, DEFAULT_STACK_SIZE_2, DEFAULT_PRIORITY_2, runFunction);
+    }
+    static void run(const char* name, uint32_t stackSize, UBaseType_t priority, TaskFunction runFunction) {
+        Task* task = new Task(runFunction);
+        Serial.println("Creating task " + String(name) + " with priority " + String(priority) + " and stack size " + String(stackSize) + ".");
+        xTaskCreate(executeTask, name, stackSize, task, priority, &(task->taskHandle));
     }
 
-    TaskHandle_t getHandle() {
-        return taskHandle;
+    static void loop(const char* name, TaskFunction loopFunction) {
+        Task::loop(name, DEFAULT_STACK_SIZE_2, DEFAULT_PRIORITY_2, loopFunction);
     }
-
-protected:
-    virtual void run() = 0;
+    static void loop(const char* name, uint32_t stackSize, UBaseType_t priority, TaskFunction loopFunction) {
+        Task::run(name, stackSize, priority, [loopFunction](Task& task) {
+            while (true) {
+                loopFunction(task);
+            }
+        });
+    }
 
     void delay(milliseconds ms) {
         vTaskDelay(pdMS_TO_TICKS(ms.count()));
@@ -50,54 +63,23 @@ protected:
     }
 
 private:
-    void execute() {
-        lastWakeTime = xTaskGetTickCount();
-        run();
-        vTaskDelete(taskHandle);
+    Task(TaskFunction taskFunction)
+        : taskFunction(taskFunction)
+        , lastWakeTime(xTaskGetTickCount()) {
+        Serial.println("Creating Task with this pointing to " + String((uint32_t) this) + ".");
     }
 
-    static void taskFunction(void* parameters) {
-        static_cast<Task*>(parameters)->execute();
+    static void executeTask(void* parameters) {
+        Task* task = static_cast<Task*>(parameters);
+        Serial.println("Got Task pointing to " + String((uint32_t) task) + ".");
+        task->taskFunction(*task);
+        vTaskDelete(task->taskHandle);
+        delete task;
     }
 
+    TaskFunction taskFunction;
     TaskHandle_t taskHandle;
     TickType_t lastWakeTime;
 };
 
-class LoopTask : public Task {
-public:
-    LoopTask(const char* name, uint32_t stackSize = DEFAULT_STACK_SIZE, unsigned int priority = DEFAULT_PRIORITY)
-        : Task(name, stackSize, priority) {
-    }
-
-protected:
-    void run() override {
-        setup();
-
-        while (true) {
-            loop();
-        }
-    }
-
-    virtual void setup() {
-    }
-
-    virtual void loop() = 0;
-};
-
-class IntermittentLoopTask : public LoopTask {
-public:
-    IntermittentLoopTask(const char* name, uint32_t stackSize = DEFAULT_STACK_SIZE, unsigned int priority = DEFAULT_PRIORITY)
-        : LoopTask(name, stackSize, priority) {
-    }
-
-protected:
-    void loop() override {
-        auto interval = loopAndDelay();
-        delayUntil(interval);
-    }
-
-    virtual milliseconds loopAndDelay() = 0;
-};
-
-}}
+}}    // namespace farmhub::kernel

@@ -4,7 +4,7 @@
 #include <ESPmDNS.h>
 
 #include <kernel/Event.hpp>
-#include <kernel/FTask.hpp>
+#include <kernel/Task.hpp>
 #include <kernel/NvmStore.hpp>
 
 namespace farmhub { namespace kernel { namespace drivers {
@@ -31,7 +31,7 @@ public:
         // TODO Add error handling
         MDNS.begin(hostname);
         MDNS.setInstanceName(instanceName);
-        FTask::runTask("mDNS", [&](FTask& task) {
+        Task::run("mDNS", [&networkReady, &mdnsReady, instanceName, hostname, version](Task& task) {
             networkReady.await();
 
             Serial.println("Advertising mDNS service " + instanceName + " on " + hostname + ".local, version: " + version);

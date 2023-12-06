@@ -158,7 +158,7 @@ private:
     OtaDriver ota { networkReadyEvent, deviceConfig.getHostname() };
 #endif
     MdnsDriver mdns { networkReadyEvent, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyEvent };
-    RtcDriver rtc { networkReadyEvent, mdns, timeSetEvent, deviceConfig.ntp };
+    RtcDriver rtc { networkReadyEvent, mdns, deviceConfig.ntp, timeSetEvent };
     MqttDriver mqtt { networkReadyEvent, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig };
 
     EchoCommand echoCommand;

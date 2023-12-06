@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
 #include <kernel/Application.hpp>
-#include <kernel/FTask.hpp>
+#include <kernel/Task.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 
@@ -11,7 +11,8 @@ using namespace farmhub::kernel::drivers;
 class ConsolePrinter {
 public:
     ConsolePrinter(BatteryDriver& batteryDriver){
-        FTask::loopTask("ConsolePrinter", 32 * 1024, 1, [&](FTask& task) {
+        static const String spinner = "|/-\\";
+        Task::loop("ConsolePrinter", 32 * 1024, 1, [this, &batteryDriver](Task& task) {
             Serial.print("\033[1G\033[0K");
 
             counter = (counter + 1) % spinner.length();
@@ -60,7 +61,6 @@ private:
     }
 
     int counter;
-    const String spinner { "-\\|/" };
 };
 
 class SampleDeviceConfiguration

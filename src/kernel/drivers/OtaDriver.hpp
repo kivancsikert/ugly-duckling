@@ -5,7 +5,7 @@
 
 #include <kernel/drivers/WiFiDriver.hpp>
 
-#include <kernel/FTask.hpp>
+#include <kernel/Task.hpp>
 
 namespace farmhub { namespace kernel { namespace drivers {
 
@@ -13,7 +13,7 @@ class OtaDriver {
 
 public:
     OtaDriver(Event& networkReady, const String& hostname) {
-        FTask::runTask("OTA", [&](FTask& task) {
+        Task::run("OTA", [&networkReady, hostname](Task& task) {
             networkReady.await();
 
             ArduinoOTA.setHostname(hostname.c_str());

@@ -4,14 +4,14 @@
 
 #include <WiFiManager.h>
 
-#include <kernel/FTask.hpp>
+#include <kernel/Task.hpp>
 
 namespace farmhub { namespace kernel { namespace drivers {
 
 class WiFiDriver {
 public:
     WiFiDriver(Event& networkReady) {
-        FTask::runTask("WiFi", [&](FTask& task) {
+        Task::run("WiFi", [this, &networkReady](Task& task) {
             // Explicitly set mode, ESP defaults to STA+AP
             WiFi.mode(WIFI_STA);
 
