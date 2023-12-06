@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 #include <freertos/FreeRTOS.h>
 
 #include <kernel/Command.hpp>

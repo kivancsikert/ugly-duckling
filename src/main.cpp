@@ -3,14 +3,16 @@
 #include <kernel/Application.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/Task.hpp>
+#include <kernel/drivers/BatteryDriver.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 
 class ConsolePrinter : IntermittentLoopTask {
 public:
-    ConsolePrinter()
-        : IntermittentLoopTask("Console printer", 32768, 1) {
+    ConsolePrinter(BatteryDriver& batteryDriver)
+        : IntermittentLoopTask("Console printer", 32768, 1)
+        , batteryDriver(batteryDriver) {
     }
 
 protected:
@@ -31,7 +33,10 @@ protected:
         Serial.printf(", now: \033[33m%d\033[0m", now);
         Serial.print(&timeinfo, ", UTC: \033[33m%A, %B %d %Y %H:%M:%S\033[0m");
 
+        Serial.printf(", battery: \033[33m%.2f V\033[0m", batteryDriver.getVoltage());
+
         Serial.print(" ");
+        Serial.flush();
         return milliseconds(100);
     }
 
@@ -61,6 +66,8 @@ private:
 
     int counter;
     const String spinner { "-\\|/" };
+
+    BatteryDriver& batteryDriver;
 };
 
 class SampleDeviceConfiguration
@@ -79,7 +86,8 @@ public:
     }
 
 private:
-    ConsolePrinter consolePrinter;
+    BatteryDriver batteryDriver { GPIO_NUM_1, 1.0 };
+    ConsolePrinter consolePrinter { batteryDriver };
 };
 
 SampleDeviceConfiguration* deviceConfig;
