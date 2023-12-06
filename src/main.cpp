@@ -112,7 +112,7 @@ void setup() {
     Serial.begin(115200);
     Serial.println("Starting up...");
 
-    deviceConfig = new BlinkerDeviceConfiguration(FileSystem::instance());
+    deviceConfig = new BlinkerDeviceConfiguration(FileSystem::get());
     application = new BlinkerApplication(*deviceConfig);
 }
 

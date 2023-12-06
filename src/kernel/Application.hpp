@@ -10,7 +10,8 @@
 
 #include <version.h>
 
-namespace farmhub { namespace kernel {
+namespace farmhub {
+namespace kernel {
 
 using namespace farmhub::kernel::drivers;
 
@@ -21,9 +22,8 @@ public:
     DeviceConfiguration(
         FileSystem& fs,
         const String& defaultModel,
-        const String& path = "/device-config.json",
         size_t capacity = 2048)
-        : FileConfiguration(fs, "device", path, capacity)
+        : FileConfiguration(fs, "device", "/device-config.json", capacity)
         , model(this, "model", defaultModel)
         , instance(this, "instance", getMacAddress()) {
     }
@@ -68,6 +68,13 @@ private:
     friend Application;
 };
 
+class ApplicationConfiguration : public FileConfiguration {
+public:
+    ApplicationConfiguration(FileSystem& fs, size_t capacity = 2048)
+        : FileConfiguration(fs, "application", "/app-config.json", capacity) {
+    }
+};
+
 class Application {
 public:
     Application(DeviceConfiguration& deviceConfig)
@@ -99,15 +106,17 @@ private:
     const String version;
 
     DeviceConfiguration deviceConfig;
+    ApplicationConfiguration appConfig { FileSystem::get() };
     EventGroupHandle_t eventGroup { xEventGroupCreate() };
     WiFiDriver wifi { eventGroup, WIFI_CONFIGURED_BIT };
     MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, eventGroup, MDNS_CONFIGURED_BIT };
     RtcDriver rtc { wifi, mdns, eventGroup, NTP_SYNCED_BIT, deviceConfig.ntp };
-    MqttDriver mqtt { wifi, mdns, deviceConfig.mqtt, deviceConfig.instance.get() };
+    MqttDriver mqtt { wifi, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig };
 
     static const int WIFI_CONFIGURED_BIT = 1;
     static const int NTP_SYNCED_BIT = 2;
     static const int MDNS_CONFIGURED_BIT = 3;
 };
 
-}}    // namespace farmhub::kernel
+}
+}    // namespace farmhub::kernel

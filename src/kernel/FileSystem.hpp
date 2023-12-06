@@ -13,7 +13,7 @@ public:
 
     virtual File open(const String& path, const char* mode = FILE_READ) = 0;
 
-    static FileSystem& instance() {
+    static FileSystem& get() {
         static FileSystem* instance = initializeFileSystem();
         return *instance;
     }

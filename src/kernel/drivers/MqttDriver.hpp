@@ -1,5 +1,7 @@
 #pragma once
 
+#include <list>
+
 #include <MQTT.h>
 #include <WiFi.h>
 
@@ -37,12 +39,20 @@ public:
         ExactlyOnce = 2
     };
 
-    MqttDriver(WiFiDriver& wifi, MdnsDriver& mdns, Config& mqttConfig, const String& instanceName)
+    class Command {
+    public:
+        virtual void handle(const JsonObject& request, JsonObject& response) = 0;
+    };
+
+    typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
+
+    MqttDriver(WiFiDriver& wifi, MdnsDriver& mdns, Config& mqttConfig, const String& instanceName, Configuration& appConfig)
         : IntermittentLoopTask("Keep MQTT connected", 32 * 1024)
         , wifi(wifi)
         , mdns(mdns)
         , mqttConfig(mqttConfig)
         , instanceName(instanceName)
+        , appConfig(appConfig)
         , clientId(getClientId(mqttConfig.clientId.get(), instanceName))
         , topic(getTopic(mqttConfig.topic.get(), instanceName)) {
     }
@@ -71,6 +81,16 @@ public:
         return publish(suffix, doc, retain, qos);
     }
 
+    void registerCommand(const String command, Command& handler) {
+        registerCommand(command, [&](const JsonObject& request, JsonObject& response) {
+            handler.handle(request, response);
+        });
+    }
+
+    void registerCommand(const String command, CommandHandler handle) {
+        commandHandlers.emplace_back(command, handle);
+    }
+
 protected:
     void setup() {
         if (mqttConfig.host.get().length() > 0) {
@@ -83,6 +103,42 @@ protected:
         }
         // TODO Figure out the right keep alive value
         mqttClient.setKeepAlive(180);
+
+        mqttClient.onMessage([&](String& topic, String& payload) {
+#ifdef DUMP_MQTT
+            Serial.println("Received '" + topic + "' (size: " + payload.length() + "): " + payload);
+#endif
+            DynamicJsonDocument json(payload.length() * 2);
+            deserializeJson(json, payload);
+            if (topic == appConfigTopic) {
+                appConfig.update(json.as<JsonObject>());
+            } else if (topic.startsWith(commandTopicPrefix)) {
+                if (payload.isEmpty()) {
+#ifdef DUMP_MQTT
+                    Serial.println("Ignoring empty payload");
+#endif
+                    return;
+                }
+                auto command = topic.substring(commandTopicPrefix.length());
+                Serial.printf("Received command '%s'\n", command.c_str());
+                for (auto handler : commandHandlers) {
+                    if (handler.command == command) {    // Clear command topic
+                        mqttClient.publish(topic, "", true, 0);
+                        auto request = json.as<JsonObject>();
+                        DynamicJsonDocument responseDoc(2048);
+                        auto response = responseDoc.to<JsonObject>();
+                        handler.handle(request, response);
+                        if (response.size() > 0) {
+                            publish("responses/" + command, responseDoc, Retention::NoRetain, QoS::ExactlyOnce);
+                        }
+                        return;
+                    }
+                    Serial.printf("Unknown command: '%s'\n", command.c_str());
+                }
+            } else {
+                Serial.printf("Unknown topic: '%s'\n", topic.c_str());
+            }
+        });
 
         if (mqttServer.ip == IPAddress()) {
             mqttClient.begin(mqttServer.hostname.c_str(), mqttServer.port, wifi.getClient());
@@ -205,11 +261,24 @@ private:
     MdnsDriver& mdns;
     Config& mqttConfig;
     const String instanceName;
+    Configuration& appConfig;
+
     const String clientId;
     const String topic;
     const String appConfigTopic = topic + "/config";
     const String commandTopicPrefix = topic + "/commands/";
+    // TODO Use a map instead
+    struct CommandHandlerRecord {
+        CommandHandlerRecord(const String& command, CommandHandler handle)
+            : command(command)
+            , handle(handle) {
+        }
 
+        const String command;
+        const CommandHandler handle;
+    };
+
+    std::list<CommandHandlerRecord> commandHandlers;
     MdnsRecord mqttServer;
     MQTTClient mqttClient { MQTT_BUFFER_SIZE };
     QueueHandle_t publishQueue { xQueueCreate(mqttConfig.queueSize.get(), sizeof(MqttMessage*)) };
