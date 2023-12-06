@@ -104,39 +104,15 @@ protected:
         // TODO Figure out the right keep alive value
         mqttClient.setKeepAlive(180);
 
-        mqttClient.onMessage([&](String& topic, String& payload) {
+        mqttClient.onMessageAdvanced([&](MQTTClient* client, char* topic, char* payload, int length) {
+            MqttMessage* message = new MqttMessage(topic, payload, length, Retention::NoRetain, QoS::ExactlyOnce);
 #ifdef DUMP_MQTT
-            Serial.println("Received '" + topic + "' (size: " + payload.length() + "): " + payload);
+            Serial.println("Received '" + String(topic) + "' (size: " + length + "): " + String(payload, length));
 #endif
-            DynamicJsonDocument json(payload.length() * 2);
-            deserializeJson(json, payload);
-            if (topic == appConfigTopic) {
-                appConfig.update(json.as<JsonObject>());
-            } else if (topic.startsWith(commandTopicPrefix)) {
-                if (payload.isEmpty()) {
-#ifdef DUMP_MQTT
-                    Serial.println("Ignoring empty payload");
-#endif
-                    return;
-                }
-                auto command = topic.substring(commandTopicPrefix.length());
-                Serial.printf("Received command '%s'\n", command.c_str());
-                for (auto handler : commandHandlers) {
-                    if (handler.command == command) {    // Clear command topic
-                        mqttClient.publish(topic, "", true, 0);
-                        auto request = json.as<JsonObject>();
-                        DynamicJsonDocument responseDoc(2048);
-                        auto response = responseDoc.to<JsonObject>();
-                        handler.handle(request, response);
-                        if (response.size() > 0) {
-                            publish("responses/" + command, responseDoc, Retention::NoRetain, QoS::ExactlyOnce);
-                        }
-                        return;
-                    }
-                    Serial.printf("Unknown command: '%s'\n", command.c_str());
-                }
-            } else {
-                Serial.printf("Unknown topic: '%s'\n", topic.c_str());
+            // TODO allow some timeout here
+            bool storedWithoutDropping = xQueueSend(incomingQueue, &message, 0);
+            if (!storedWithoutDropping) {
+                Serial.println("Overflow in incoming queue, dropping message");
             }
         });
 
@@ -167,11 +143,8 @@ protected:
             Serial.println("MQTT: Connected");
         }
 
-        // Handle outgoing messages
         processPublishQueue();
-
-        // Handle incoming messages
-        mqttClient.loop();
+        procesIncomingQueue();
 
         return MQTT_LOOP_INTERVAL_IN_MS;
     }
@@ -191,6 +164,9 @@ private:
     }
 
     void processPublishQueue() {
+        // Process incoming network traffic
+        mqttClient.loop();
+
         while (true) {
             MqttMessage* message;
             if (!xQueueReceive(publishQueue, &message, 0)) {
@@ -205,6 +181,52 @@ private:
                 Serial.printf("Error publishing to MQTT topic at '%s', error = %d\n",
                     message->topic, mqttClient.lastError());
             }
+            delete message;
+        }
+    }
+
+    void procesIncomingQueue() {
+        while (true) {
+            MqttMessage* message;
+            if (!xQueueReceive(incomingQueue, &message, 0)) {
+                break;
+            }
+            String topic = message->topic;
+            String payload = message->payload;
+
+            DynamicJsonDocument json(message->length * 2);
+            deserializeJson(json, payload);
+            if (topic == appConfigTopic) {
+                appConfig.update(json.as<JsonObject>());
+            } else if (topic.startsWith(commandTopicPrefix)) {
+                if (payload.isEmpty()) {
+#ifdef DUMP_MQTT
+                    Serial.println("Ignoring empty payload");
+#endif
+                    return;
+                }
+                auto command = topic.substring(commandTopicPrefix.length());
+                Serial.printf("Received command: '%s'\n", command.c_str());
+                for (auto handler : commandHandlers) {
+                    if (handler.command == command) {
+                        // Clear command topic
+                        mqttClient.publish(topic, "", true, 0);
+                        auto request = json.as<JsonObject>();
+                        DynamicJsonDocument responseDoc(MQTT_BUFFER_SIZE);
+                        auto response = responseDoc.to<JsonObject>();
+                        handler.handle(request, response);
+                        if (response.size() > 0) {
+                            publish("responses/" + command, responseDoc, Retention::NoRetain, QoS::ExactlyOnce);
+                        }
+                        return;
+                    }
+                }
+                Serial.printf("Unknown command: '%s'\n", command.c_str());
+            } else {
+                Serial.printf("Unknown topic: '%s'\n", topic.c_str());
+            }
+
+            // TODO Handle incoming messages
             delete message;
         }
     }
@@ -236,6 +258,14 @@ private:
             , length(0)
             , retain(Retention::NoRetain)
             , qos(QoS::AtMostOnce) {
+        }
+
+        MqttMessage(const char* topic, const char* payload, size_t length, Retention retention, QoS qos)
+            : retain(retention)
+            , qos(qos)
+            , topic(strdup(topic))
+            , payload(strndup(payload, length))
+            , length(length) {
         }
 
         MqttMessage(const String& topic, const JsonDocument& payload, Retention retention, QoS qos)
@@ -282,6 +312,7 @@ private:
     MdnsRecord mqttServer;
     MQTTClient mqttClient { MQTT_BUFFER_SIZE };
     QueueHandle_t publishQueue { xQueueCreate(mqttConfig.queueSize.get(), sizeof(MqttMessage*)) };
+    QueueHandle_t incomingQueue { xQueueCreate(mqttConfig.queueSize.get(), sizeof(MqttMessage*)) };
 
     // TODO Review these values
     static const int MQTT_LOOP_INTERVAL_IN_MS = 1000;
