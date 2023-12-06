@@ -22,7 +22,7 @@ protected:
         counter = (counter + 1) % spinner.length();
         Serial.print("[" + spinner.substring(counter, counter + 1) + "] ");
 
-        Serial.print("WIFI: \033[33m" + wifiStatus() + "\033[0m");
+        Serial.print("\033[33m" + wifiStatus() + "\033[0m");
         Serial.print(", IP: \033[33m" + WiFi.localIP().toString() + "\033[0m");
 
         Serial.print(", uptime: \033[33m" + String(millis()) + "\033[0m ms");
@@ -30,8 +30,7 @@ protected:
         struct tm timeinfo;
         time(&now);
         localtime_r(&now, &timeinfo);
-        Serial.printf(", now: \033[33m%d\033[0m", now);
-        Serial.print(&timeinfo, ", UTC: \033[33m%A, %B %d %Y %H:%M:%S\033[0m");
+        Serial.print(&timeinfo, ", UTC: \033[33m%Y-%m-%d %H:%M:%S\033[0m");
 
         Serial.printf(", battery: \033[33m%.2f V\033[0m", batteryDriver.getVoltage());
 
