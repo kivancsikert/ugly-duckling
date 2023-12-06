@@ -41,6 +41,10 @@ protected:
         vTaskResume(taskHandle);
     }
 
+    bool abortDelay() {
+        return xTaskAbortDelay(taskHandle);
+    }
+
 private:
     void execute() {
         lastWakeTime = xTaskGetTickCount();

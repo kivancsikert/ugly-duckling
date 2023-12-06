@@ -7,28 +7,6 @@
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 
-class BlinkLedTask : public LoopTask {
-public:
-    BlinkLedTask(gpio_num_t ledPin, int interval)
-        : LoopTask("Blink LED", 1000, 1)
-        , ledPin(ledPin)
-        , interval(interval) {
-        pinMode(ledPin, OUTPUT);
-    }
-
-protected:
-    void loop() override {
-        digitalWrite(ledPin, HIGH);
-        delayUntil(interval);
-        digitalWrite(ledPin, LOW);
-        delayUntil(interval);
-    }
-
-private:
-    const gpio_num_t ledPin;
-    const int interval;
-};
-
 class ConsolePrinter : IntermittentLoopTask {
 public:
     ConsolePrinter()
@@ -85,37 +63,35 @@ private:
     const String spinner { "-\\|/" };
 };
 
-class BlinkerDeviceConfiguration
+class SampleDeviceConfiguration
     : public DeviceConfiguration {
 public:
-    BlinkerDeviceConfiguration(FileSystem& fs)
+    SampleDeviceConfiguration(FileSystem& fs)
         : DeviceConfiguration(fs, "mk1") {
     }
 };
 
-class BlinkerApplication : public Application {
+class SampleApplication : public Application {
 
 public:
-    BlinkerApplication(FileSystem& fs, BlinkerDeviceConfiguration& deviceConfig)
-        : Application(fs, deviceConfig) {
+    SampleApplication(FileSystem& fs, SampleDeviceConfiguration& deviceConfig)
+        : Application(fs, deviceConfig, GPIO_NUM_2) {
     }
 
 private:
-    BlinkLedTask blinkLedTask1 { GPIO_NUM_2, 2500 };
-    BlinkLedTask blinkLedTask2 { GPIO_NUM_4, 1500 };
     ConsolePrinter consolePrinter;
 };
 
-BlinkerDeviceConfiguration* deviceConfig;
-BlinkerApplication* application;
+SampleDeviceConfiguration* deviceConfig;
+SampleApplication* application;
 
 void setup() {
     Serial.begin(115200);
     Serial.println("Starting up...");
 
     auto& fs = FileSystem::get();
-    deviceConfig = new BlinkerDeviceConfiguration(fs);
-    application = new BlinkerApplication(fs, *deviceConfig);
+    deviceConfig = new SampleDeviceConfiguration(fs);
+    application = new SampleApplication(fs, *deviceConfig);
 }
 
 void loop() {

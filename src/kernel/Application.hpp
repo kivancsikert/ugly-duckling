@@ -4,6 +4,7 @@
 
 #include <kernel/Command.hpp>
 #include <kernel/FileSystem.hpp>
+#include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 #include <kernel/drivers/OtaDriver.hpp>
@@ -78,16 +79,23 @@ public:
 
 class Application {
 public:
-    Application(FileSystem& fs, DeviceConfiguration& deviceConfig)
+    Application(FileSystem& fs, DeviceConfiguration& deviceConfig, gpio_num_t statusLedPin)
         : fs(fs)
         , version(VERSION)
-        , deviceConfig(loadConfig(deviceConfig)) {
+        , deviceConfig(loadConfig(deviceConfig))
+        , statusLed("status", statusLedPin, LedDriver::State::BLINKING, 250) {
 
         Serial.printf("Initializing version %s on %s instance '%s' with hostname '%s'\n",
             version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
             deviceConfig.getHostname());
+
+        wifi.await();
+        statusLed.setBlinkRate(500);
+
+        rtc.await();
+        statusLed.setBlinkRate(1000);
 
         mqtt.registerCommand(echoCommand);
         // TODO Add ping command
@@ -100,6 +108,8 @@ public:
         mqtt.registerCommand(fileWriteCommand);
         mqtt.registerCommand(fileRemoveCommand);
         mqtt.registerCommand(httpUpdateCommand);
+
+        // TODO Init peripherals
 
         mqtt.publish(
             "init",
@@ -116,6 +126,8 @@ public:
                 // TODO Handle sleep / wakeup
                 // json["wakeup"] = event.source;
             });
+
+        statusLed.setState(LedDriver::State::ON);
     }
 
 private:
@@ -128,6 +140,8 @@ private:
     const String version;
 
     DeviceConfiguration deviceConfig;
+    LedDriver statusLed;
+
     ApplicationConfiguration appConfig { fs };
     EventGroupHandle_t eventGroup { xEventGroupCreate() };
     WiFiDriver wifi { eventGroup, WIFI_CONFIGURED_BIT };
