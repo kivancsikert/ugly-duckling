@@ -26,8 +26,8 @@ public:
         Task::run(name, DEFAULT_STACK_SIZE_2, DEFAULT_PRIORITY_2, runFunction);
     }
     static void run(const char* name, uint32_t stackSize, UBaseType_t priority, TaskFunction runFunction) {
-        Task* task = new Task(runFunction);
-        Serial.println("Creating task " + String(name) + " with priority " + String(priority) + " and stack size " + String(stackSize) + ".");
+        Task* task = new Task(String(name), runFunction);
+        Serial.println("Creating task " + String(name) + " with priority " + String(priority) + " and stack size " + String(stackSize));
         xTaskCreate(executeTask, name, stackSize, task, priority, &(task->taskHandle));
     }
 
@@ -63,18 +63,23 @@ public:
     }
 
 private:
-    Task(TaskFunction taskFunction)
-        : taskFunction(taskFunction)
+    Task(String name, TaskFunction taskFunction)
+        : name(name)
+        , taskFunction(taskFunction)
         , lastWakeTime(xTaskGetTickCount()) {
     }
 
     static void executeTask(void* parameters) {
         Task* task = static_cast<Task*>(parameters);
         task->taskFunction(*task);
-        vTaskDelete(task->taskHandle);
+        auto handle = task->taskHandle;
+        auto name = task->name;
         delete task;
+        Serial.println("Finished task " + name);
+        vTaskDelete(handle);
     }
 
+    String name;
     TaskFunction taskFunction;
     TaskHandle_t taskHandle;
     TickType_t lastWakeTime;
