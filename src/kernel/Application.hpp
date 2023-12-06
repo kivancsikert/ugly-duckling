@@ -128,6 +128,7 @@ public:
             });
 
         statusLed.setState(LedDriver::State::ON);
+        Serial.println("Application initialized in " + String(millis()) + " ms");
     }
 
 private:
