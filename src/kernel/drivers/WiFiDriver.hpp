@@ -10,10 +10,11 @@ namespace farmhub { namespace kernel { namespace drivers {
 
 class WiFiDriver {
 public:
-    WiFiDriver(Event& networkReady) {
-        Task::run("WiFi", [this, &networkReady](Task& task) {
+    WiFiDriver(Event& networkReady, const String& hostname) {
+        Task::run("WiFi", [this, &networkReady, hostname](Task& task) {
             // Explicitly set mode, ESP defaults to STA+AP
             WiFi.mode(WIFI_STA);
+            WiFi.setHostname(hostname.c_str());
 
             WiFi.onEvent(
                 [](WiFiEvent_t event, WiFiEventInfo_t info) {
