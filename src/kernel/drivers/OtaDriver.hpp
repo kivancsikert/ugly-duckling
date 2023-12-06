@@ -57,11 +57,11 @@ protected:
         Serial.println("OTA initialized on hostname " + hostname + ", IP " + WiFi.localIP().toString());
     }
 
-    int loopAndDelay() override {
+    milliseconds loopAndDelay() override {
         ArduinoOTA.handle();
         return updating
-            ? 0
-            : 1000;
+            ? seconds::zero()
+            : seconds(1);
     }
 
 private:

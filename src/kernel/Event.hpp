@@ -1,7 +1,11 @@
 #pragma once
 
+#include <chrono>
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
+
+using namespace std::chrono;
 
 namespace farmhub { namespace kernel {
 
@@ -10,6 +14,10 @@ public:
     EventSource(EventGroupHandle_t eventGroup, int eventBit)
         : eventGroup(eventGroup)
         , eventBit(eventBit) {
+    }
+
+    void await(milliseconds msToWait) {
+        await(pdMS_TO_TICKS(msToWait.count()));
     }
 
     void await(int ticksToWait = portMAX_DELAY) {
@@ -26,7 +34,7 @@ protected:
     }
 
     void emitEventFromISR() {
-        int xHigherPriorityTaskWoken = pdFALSE;
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         xEventGroupSetBitsFromISR(eventGroup, asEventBits(), &xHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }

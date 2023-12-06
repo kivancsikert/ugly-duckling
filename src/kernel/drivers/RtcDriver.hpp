@@ -1,6 +1,7 @@
 #pragma once
 
 #include <WiFiUdp.h>
+#include <chrono>
 #include <time.h>
 
 #include <NTPClient.h>
@@ -10,6 +11,8 @@
 
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
+
+using namespace std::chrono;
 
 namespace farmhub { namespace kernel { namespace drivers {
 
@@ -54,14 +57,14 @@ private:
             while (true) {
                 time_t now;
                 time(&now);
-                // The MCU boots with a timestamp of 0, so if the value is
+                // The MCU boots with a timestamp of 0 seconds, so if the value is
                 // much higher, then it means the RTC is set.
-                if (now > (2022 - 1970) * 365 * 24 * 60 * 60) {
+                if (seconds(now) > hours((2022 - 1970) * 365 * 24)) {
                     Serial.println("Time configured, exiting task");
                     rtc.emitEvent();
                     break;
                 }
-                delayUntil(1000);
+                delayUntil(seconds(1));
             }
         }
 
@@ -103,15 +106,15 @@ private:
             ntpClient->begin();
         }
 
-        int loopAndDelay() override {
+        milliseconds loopAndDelay() override {
             if (ntpClient->forceUpdate()) {
                 setOrAdjustTime(ntpClient->getEpochTime());
 
                 // We are good for a while now
-                return 60 * 60 * 1000;
+                return hours(1);
             } else {
                 // Attempt a retry
-                return 10 * 1000;
+                return seconds(10);
             }
         }
 

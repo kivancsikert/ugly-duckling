@@ -1,8 +1,11 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 
 #include <kernel/Task.hpp>
+
+using namespace std::chrono;
 
 namespace farmhub { namespace kernel { namespace drivers {
 
@@ -14,7 +17,7 @@ public:
         BLINKING
     };
 
-    LedDriver(const char* name, gpio_num_t pin, State initialState = State::OFF, int blinkRate = 1000)
+    LedDriver(const char* name, gpio_num_t pin, State initialState = State::OFF, milliseconds blinkRate = seconds(1))
         : LoopTask(name)
         , pin(pin)
         , state(initialState)
@@ -35,7 +38,7 @@ public:
                 break;
             case State::BLINKING:
                 setLedState(!ledState);
-                delayUntil(blinkRate / 2);
+                delayUntil(blinkRate.load() / 2);
                 break;
         }
     }
@@ -47,7 +50,7 @@ public:
         }
     }
 
-    void setBlinkRate(int blinkRate) {
+    void setBlinkRate(milliseconds blinkRate) {
         this->blinkRate = blinkRate;
     }
 
@@ -59,7 +62,7 @@ private:
 
     const gpio_num_t pin;
     std::atomic<State> state;
-    std::atomic<int> blinkRate;
+    std::atomic<milliseconds> blinkRate;
     bool ledState;
 };
 

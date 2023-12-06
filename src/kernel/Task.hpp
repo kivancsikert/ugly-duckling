@@ -1,10 +1,14 @@
 #pragma once
 
+#include <chrono>
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
 // TODO Use a logger instead of Serial
 #include <Arduino.h>
+
+using namespace std::chrono;
 
 namespace farmhub { namespace kernel {
 
@@ -25,12 +29,12 @@ public:
 protected:
     virtual void run() = 0;
 
-    void delay(int ms) {
-        vTaskDelay(pdMS_TO_TICKS(ms));
+    void delay(milliseconds ms) {
+        vTaskDelay(pdMS_TO_TICKS(ms.count()));
     }
 
-    void delayUntil(int ms) {
-        vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(ms));
+    void delayUntil(milliseconds ms) {
+        vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(ms.count()));
     }
 
     void suspend() {
@@ -93,7 +97,7 @@ protected:
         delayUntil(interval);
     }
 
-    virtual int loopAndDelay() = 0;
+    virtual milliseconds loopAndDelay() = 0;
 };
 
 }}

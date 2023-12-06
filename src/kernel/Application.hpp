@@ -83,7 +83,7 @@ public:
         : fs(fs)
         , version(VERSION)
         , deviceConfig(loadConfig(deviceConfig))
-        , statusLed("status", statusLedPin, LedDriver::State::BLINKING, 250) {
+        , statusLed("status", statusLedPin, LedDriver::State::BLINKING, milliseconds(250)) {
 
         Serial.printf("Initializing version %s on %s instance '%s' with hostname '%s'\n",
             version.c_str(),
@@ -92,10 +92,10 @@ public:
             deviceConfig.getHostname());
 
         wifi.await();
-        statusLed.setBlinkRate(500);
+        statusLed.setBlinkRate(milliseconds(500));
 
         rtc.await();
-        statusLed.setBlinkRate(1000);
+        statusLed.setBlinkRate(milliseconds(1000));
 
         mqtt.registerCommand(echoCommand);
         // TODO Add ping command

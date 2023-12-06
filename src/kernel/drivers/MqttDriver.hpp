@@ -122,7 +122,7 @@ protected:
             + ", client ID is '" + clientId + "', topic is '" + topic + "'");
     }
 
-    int loopAndDelay() override {
+    milliseconds loopAndDelay() override {
         wifi.await();
 
         if (!mqttClient.connected()) {
@@ -131,7 +131,7 @@ protected:
             if (!mqttClient.connect(clientId.c_str())) {
                 Serial.println("MQTT: Connection failed");
                 // TODO Implement exponential backoff
-                return MQTT_DISCONNECTED_CHECK_INTERVAL_IN_MS;
+                return MQTT_DISCONNECTED_CHECK_INTERVAL;
             }
 
             subscribe("config", QoS::ExactlyOnce);
@@ -142,7 +142,7 @@ protected:
         processPublishQueue();
         procesIncomingQueue();
 
-        return MQTT_LOOP_INTERVAL_IN_MS;
+        return MQTT_LOOP_INTERVAL;
     }
 
 private:
@@ -311,8 +311,8 @@ private:
     QueueHandle_t incomingQueue { xQueueCreate(mqttConfig.queueSize.get(), sizeof(MqttMessage*)) };
 
     // TODO Review these values
-    static const int MQTT_LOOP_INTERVAL_IN_MS = 1000;
-    static const int MQTT_DISCONNECTED_CHECK_INTERVAL_IN_MS = 1000;
+    static constexpr milliseconds MQTT_LOOP_INTERVAL = seconds(1);
+    static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = seconds(1);
     static const int MQTT_BUFFER_SIZE = 2048;
 };
 

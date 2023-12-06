@@ -14,7 +14,7 @@ public:
     }
 
 protected:
-    int loopAndDelay() override {
+    milliseconds loopAndDelay() override {
         Serial.print("\033[1G\033[0K");
 
         counter = (counter + 1) % spinner.length();
@@ -32,7 +32,7 @@ protected:
         Serial.print(&timeinfo, ", UTC: \033[33m%A, %B %d %Y %H:%M:%S\033[0m");
 
         Serial.print(" ");
-        return 100;
+        return milliseconds(100);
     }
 
 private:
