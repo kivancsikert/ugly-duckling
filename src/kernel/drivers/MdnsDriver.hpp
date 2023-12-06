@@ -30,10 +30,10 @@ public:
         : mdnsReady(mdnsReady) {
         // TODO Add error handling
         MDNS.begin(hostname);
-        MDNS.setInstanceName(instanceName);
         Task::run("mDNS", [&networkReady, &mdnsReady, instanceName, hostname, version](Task& task) {
             networkReady.await();
 
+            MDNS.setInstanceName(instanceName);
             Serial.println("Advertising mDNS service " + instanceName + " on " + hostname + ".local, version: " + version);
             MDNS.addService("farmhub", "tcp", 80);
             MDNS.addServiceTxt("farmhub", "tcp", "version", version);
