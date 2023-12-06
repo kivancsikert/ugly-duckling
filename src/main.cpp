@@ -95,8 +95,8 @@ public:
 class BlinkerApplication : public Application {
 
 public:
-    BlinkerApplication(BlinkerDeviceConfiguration& deviceConfig)
-        : Application(deviceConfig) {
+    BlinkerApplication(FileSystem& fs, BlinkerDeviceConfiguration& deviceConfig)
+        : Application(fs, deviceConfig) {
     }
 
 private:
@@ -112,8 +112,9 @@ void setup() {
     Serial.begin(115200);
     Serial.println("Starting up...");
 
-    deviceConfig = new BlinkerDeviceConfiguration(FileSystem::get());
-    application = new BlinkerApplication(*deviceConfig);
+    auto& fs = FileSystem::get();
+    deviceConfig = new BlinkerDeviceConfiguration(fs);
+    application = new BlinkerApplication(fs, *deviceConfig);
 }
 
 void loop() {

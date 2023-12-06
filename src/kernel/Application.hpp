@@ -2,6 +2,7 @@
 
 #include <freertos/FreeRTOS.h>
 
+#include <kernel/Command.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
@@ -10,8 +11,7 @@
 
 #include <version.h>
 
-namespace farmhub {
-namespace kernel {
+namespace farmhub { namespace kernel {
 
 using namespace farmhub::kernel::drivers;
 
@@ -77,9 +77,22 @@ public:
 
 class Application {
 public:
-    Application(DeviceConfiguration& deviceConfig)
-        : deviceConfig(loadConfig(deviceConfig))
-        , version(VERSION) {
+    Application(FileSystem& fs, DeviceConfiguration& deviceConfig)
+        : fs(fs)
+        , version(VERSION)
+        , deviceConfig(loadConfig(deviceConfig)) {
+
+        mqtt.registerCommand(echoCommand);
+        // TODO Add ping command
+        // mqtt.registerCommand(pingCommand);
+        // TODO Add reset-wifi command
+        // mqtt.registerCommand(resetWifiCommand);
+        mqtt.registerCommand(restartCommand);
+        mqtt.registerCommand(fileListCommand);
+        mqtt.registerCommand(fileReadCommand);
+        mqtt.registerCommand(fileWriteCommand);
+        mqtt.registerCommand(fileRemoveCommand);
+        mqtt.registerCommand(httpUpdateCommand);
 
         mqtt.publish(
             "init",
@@ -93,6 +106,7 @@ public:
                 deviceConfig.store(device, false);
                 json["app"] = "ugly-duckling";
                 json["version"] = version;
+                // TODO Handle sleep / wakeup
                 // json["wakeup"] = event.source;
             });
     }
@@ -103,20 +117,28 @@ private:
         return deviceConfig;
     }
 
+    FileSystem& fs;
     const String version;
 
     DeviceConfiguration deviceConfig;
-    ApplicationConfiguration appConfig { FileSystem::get() };
+    ApplicationConfiguration appConfig { fs };
     EventGroupHandle_t eventGroup { xEventGroupCreate() };
     WiFiDriver wifi { eventGroup, WIFI_CONFIGURED_BIT };
     MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, eventGroup, MDNS_CONFIGURED_BIT };
     RtcDriver rtc { wifi, mdns, eventGroup, NTP_SYNCED_BIT, deviceConfig.ntp };
     MqttDriver mqtt { wifi, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig };
 
+    EchoCommand echoCommand;
+    RestartCommand restartCommand;
+    FileListCommand fileListCommand { fs };
+    FileReadCommand fileReadCommand { fs };
+    FileWriteCommand fileWriteCommand { fs };
+    FileRemoveCommand fileRemoveCommand { fs };
+    HttpUpdateCommand httpUpdateCommand { version };
+
     static const int WIFI_CONFIGURED_BIT = 1;
     static const int NTP_SYNCED_BIT = 2;
     static const int MDNS_CONFIGURED_BIT = 3;
 };
 
-}
-}    // namespace farmhub::kernel
+}}    // namespace farmhub::kernel

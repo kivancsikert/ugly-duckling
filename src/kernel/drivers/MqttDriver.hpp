@@ -7,6 +7,7 @@
 
 #include <kernel/Configuration.hpp>
 #include <kernel/Event.hpp>
+#include <kernel/Command.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
@@ -37,11 +38,6 @@ public:
         AtMostOnce = 0,
         AtLeastOnce = 1,
         ExactlyOnce = 2
-    };
-
-    class Command {
-    public:
-        virtual void handle(const JsonObject& request, JsonObject& response) = 0;
     };
 
     typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
@@ -81,9 +77,9 @@ public:
         return publish(suffix, doc, retain, qos);
     }
 
-    void registerCommand(const String command, Command& handler) {
-        registerCommand(command, [&](const JsonObject& request, JsonObject& response) {
-            handler.handle(request, response);
+    void registerCommand(Command& command) {
+        registerCommand(command.name, [&](const JsonObject& request, JsonObject& response) {
+            command.handle(request, response);
         });
     }
 

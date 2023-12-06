@@ -13,6 +13,8 @@ public:
 
     virtual File open(const String& path, const char* mode = FILE_READ) = 0;
 
+    virtual bool remove(const String& path) = 0;
+
     static FileSystem& get() {
         static FileSystem* instance = initializeFileSystem();
         return *instance;
@@ -33,6 +35,10 @@ public:
     File open(const String& path, const char* mode = FILE_READ) override {
         return SPIFFS.open(path, mode);
     }
+
+    bool remove(const String& path) override {
+        return SPIFFS.remove(path);
+    }
 };
 
 class UninitializedFileSystem : public FileSystem {
@@ -46,6 +52,10 @@ public:
 
     File open(const String& path, const char* mode = FILE_READ) override {
         return File();
+    }
+
+    bool remove(const String& path) override {
+        return false;
     }
 };
 
