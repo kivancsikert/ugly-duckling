@@ -1,5 +1,7 @@
 #pragma once
 
+#include <list>
+
 #include <WiFi.h>
 
 #include <WiFiManager.h>
@@ -7,12 +9,14 @@
 #include <kernel/Event.hpp>
 #include <kernel/Task.hpp>
 
+#include <kernel/drivers/LedDriver.hpp>
+
 namespace farmhub { namespace kernel { namespace drivers {
 
 class WiFiDriver {
 public:
-    WiFiDriver(Event& networkReady, const String& hostname) {
-        Task::run("WiFi", [this, &networkReady, hostname](Task& task) {
+    WiFiDriver(Event& networkReady, LedDriver& statusLed, const String& hostname) {
+        Task::run("WiFi", [this, &networkReady, &statusLed, hostname](Task& task) {
             // Explicitly set mode, ESP defaults to STA+AP
             WiFi.mode(WIFI_STA);
             WiFi.setHostname(hostname.c_str());
@@ -42,7 +46,15 @@ public:
                 },
                 ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
+            wifiManager.setConfigPortalBlocking(false);
             wifiManager.autoConnect(hostname.c_str());
+
+            if (wifiManager.getConfigPortalActive()) {
+                Serial.println("WiFi: entered config portal");
+                statusLed.blinkPatternInMs({ 100, -100, 100, -100, 100, -500 });
+            } else {
+                Serial.println("WiFi: connected to " + WiFi.SSID());
+            }
         });
     }
 

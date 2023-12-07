@@ -37,11 +37,6 @@ public:
         });
     }
 
-    void setPattern(std::list<milliseconds> pattern) {
-        auto* payload = new std::list<milliseconds>(pattern);
-        xQueueSend(patternQueue, &payload, portMAX_DELAY);
-    }
-
     void turnOn() {
         setPattern({ milliseconds::max() });
     }
@@ -56,7 +51,20 @@ public:
                 : std::list<milliseconds>({ -blinkRate / 2, blinkRate / 2 }));
     }
 
+    void blinkPatternInMs(std::list<int> pattern) {
+        blinkPattern(std::list<milliseconds>(pattern.begin(), pattern.end()));
+    }
+
+    void blinkPattern(std::list<milliseconds> pattern) {
+        setPattern(pattern);
+    }
+
 private:
+    void setPattern(std::list<milliseconds> pattern) {
+        auto* payload = new std::list<milliseconds>(pattern);
+        xQueueSend(patternQueue, &payload, portMAX_DELAY);
+    }
+
     void setLedState(bool state) {
         this->ledState = state;
         digitalWrite(pin, state);

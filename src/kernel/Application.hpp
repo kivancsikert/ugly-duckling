@@ -152,7 +152,7 @@ private:
     Event timeSetEvent { eventGroup, 2 };
     Event mdnsReadyEvent { eventGroup, 3 };
 
-    WiFiDriver wifi { networkReadyEvent, deviceConfig.getHostname() };
+    WiFiDriver wifi { networkReadyEvent, statusLed, deviceConfig.getHostname() };
 #ifdef OTA_UPDATE
     // Only include OTA when needed for debugging
     OtaDriver ota { networkReadyEvent, deviceConfig.getHostname() };
