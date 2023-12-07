@@ -46,9 +46,7 @@ public:
     }
 
     void blink(milliseconds blinkRate) {
-        setPattern(ledState
-                ? std::list<milliseconds>({ blinkRate / 2, -blinkRate / 2 })
-                : std::list<milliseconds>({ -blinkRate / 2, blinkRate / 2 }));
+        setPattern({ blinkRate / 2, -blinkRate / 2 });
     }
 
     void blinkPatternInMs(std::list<int> pattern) {
