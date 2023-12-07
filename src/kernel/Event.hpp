@@ -9,6 +9,7 @@ using namespace std::chrono;
 
 namespace farmhub { namespace kernel {
 
+// TODO Separate Event (an observable) from EventSource (that emits the event).
 class Event {
 public:
     Event(EventGroupHandle_t eventGroup, int eventBit)
@@ -20,25 +21,38 @@ public:
         await(pdMS_TO_TICKS(msToWait.count()));
     }
 
-    void await(int ticksToWait = portMAX_DELAY) {
-        xEventGroupWaitBits(eventGroup, asEventBits(), false, true, ticksToWait);
+    bool await(int ticksToWait = portMAX_DELAY) {
+        return hasBits(xEventGroupWaitBits(eventGroup, asEventBits(), false, true, ticksToWait));
     }
 
+    bool emit() {
+        return hasBits(xEventGroupSetBits(eventGroup, asEventBits()));
+    }
+
+    bool emitFromISR() {
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        auto result = xEventGroupSetBitsFromISR(eventGroup, asEventBits(), &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        return hasBits(result);
+    }
+
+    bool clear() {
+        return hasBits(xEventGroupClearBits(eventGroup, asEventBits()));
+    }
+
+    bool clearFromISR() {
+        return hasBits(xEventGroupClearBitsFromISR(eventGroup, asEventBits()));
+    }
+
+private:
     EventBits_t inline asEventBits() {
         return 1 << eventBit;
     }
 
-    void emit() {
-        xEventGroupSetBits(eventGroup, asEventBits());
+    bool hasBits(EventBits_t bits) {
+        return (bits & asEventBits()) == asEventBits();
     }
 
-    void emitFromISR() {
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        xEventGroupSetBitsFromISR(eventGroup, asEventBits(), &xHigherPriorityTaskWoken);
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-    }
-
-private:
     const EventGroupHandle_t eventGroup;
     const int eventBit;
 };
