@@ -46,8 +46,14 @@ public:
         vTaskDelay(pdMS_TO_TICKS(ms.count()));
     }
 
-    void delayUntil(milliseconds ms) {
-        vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(ms.count()));
+    bool delayUntil(milliseconds ms) {
+        if (xTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(ms.count()))) {
+            return true;
+        }
+        auto newWakeTime = xTaskGetTickCount();
+        Serial.println("Task " + name + " missed deadline by " + String(pdTICKS_TO_MS(newWakeTime - lastWakeTime)) + " ms");
+        lastWakeTime = newWakeTime;
+        return false;
     }
 
     void suspend() {
