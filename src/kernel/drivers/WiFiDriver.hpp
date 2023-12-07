@@ -4,6 +4,7 @@
 
 #include <WiFiManager.h>
 
+#include <kernel/Event.hpp>
 #include <kernel/Task.hpp>
 
 namespace farmhub { namespace kernel { namespace drivers {
@@ -41,7 +42,7 @@ public:
                 },
                 ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
-            wifiManager.autoConnect("AutoConnectAP");
+            wifiManager.autoConnect(hostname.c_str());
         });
     }
 
