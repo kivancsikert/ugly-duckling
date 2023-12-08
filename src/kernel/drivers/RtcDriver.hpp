@@ -6,7 +6,7 @@
 
 #include <NTPClient.h>
 
-#include <kernel/Event.hpp>
+#include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 
 #include <kernel/drivers/MdnsDriver.hpp>
@@ -20,7 +20,7 @@ namespace farmhub { namespace kernel { namespace drivers {
  *
  * The driver runs two tasks:
  *
- * - The first task waits for the system time to be set. It emits an event when the time is set.
+ * - The first task waits for the system time to be set. It sets the RTC in sync state when the time is set.
  *   This task is non-blocking, and will pass if the RTC is already set during a previous boot.
  *
  * - The second task configures the system time using the NTP server advertised by mDNS.
@@ -37,7 +37,7 @@ public:
         Property<String> host { this, "host", "" };
     };
 
-    RtcDriver(Event& networkReady, MdnsDriver& mdns, Config& ntpConfig, EventSource& rtcInSync) {
+    RtcDriver(State& networkReady, MdnsDriver& mdns, Config& ntpConfig, StateSource& rtcInSync) {
         Task::run("SystemTimeCheck", [&rtcInSync](Task& task) {
             while (true) {
                 time_t now;
@@ -46,7 +46,7 @@ public:
                 // much higher, then it means the RTC is set.
                 if (seconds(now) > hours((2022 - 1970) * 365 * 24)) {
                     Serial.println("Time configured, exiting task");
-                    rtcInSync.emit();
+                    rtcInSync.set();
                     break;
                 }
                 task.delayUntil(seconds(1));
@@ -69,7 +69,7 @@ public:
                 }
             }
 
-            networkReady.await();
+            networkReady.awaitSet();
 
             // TODO Use built in configTime() instead
             //      We are using the external NTP client library, because the built in configTime() does not

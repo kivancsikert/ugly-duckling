@@ -12,9 +12,9 @@ namespace farmhub { namespace kernel { namespace drivers {
 class OtaDriver {
 
 public:
-    OtaDriver(Event& networkReady, const String& hostname) {
+    OtaDriver(State& networkReady, const String& hostname) {
         Task::run("OTA", [&networkReady, hostname](Task& task) {
-            networkReady.await();
+            networkReady.awaitSet();
 
             ArduinoOTA.setHostname(hostname.c_str());
 

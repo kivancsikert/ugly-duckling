@@ -6,20 +6,20 @@
 
 #include <WiFiManager.h>
 
-#include <kernel/Event.hpp>
+#include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 
 namespace farmhub { namespace kernel { namespace drivers {
 
 class WiFiDriver {
 public:
-    WiFiDriver(EventSource& networkReady, EventSource& configPortalRunning, const String& hostname) {
+    WiFiDriver(StateSource& networkReady, StateSource& configPortalRunning, const String& hostname) {
         WiFi.mode(WIFI_STA);
         WiFi.setHostname(hostname.c_str());
         wifiManager.setConfigPortalTimeout(180);
         wifiManager.setAPCallback([this, &configPortalRunning](WiFiManager* wifiManager) {
             Serial.println("WiFi: entered config portal");
-            configPortalRunning.emitFromISR();
+            configPortalRunning.setFromISR();
         });
         wifiManager.setConfigPortalTimeoutCallback([this, &configPortalRunning]() {
             Serial.println("WiFi: config portal timed out");
@@ -36,7 +36,7 @@ public:
                 Serial.println("WiFi: got IP " + IPAddress(info.got_ip.ip_info.ip.addr).toString()
                     + ", netmask: " + IPAddress(info.got_ip.ip_info.netmask.addr).toString()
                     + ", gateway: " + IPAddress(info.got_ip.ip_info.gw.addr).toString());
-                networkReady.emitFromISR();
+                networkReady.setFromISR();
             },
             ARDUINO_EVENT_WIFI_STA_GOT_IP);
         WiFi.onEvent(

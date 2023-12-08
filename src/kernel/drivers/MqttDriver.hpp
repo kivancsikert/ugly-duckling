@@ -7,7 +7,7 @@
 
 #include <kernel/Command.hpp>
 #include <kernel/Configuration.hpp>
-#include <kernel/Event.hpp>
+#include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
@@ -42,7 +42,7 @@ public:
 
     typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
 
-    MqttDriver(Event& networkReady, MdnsDriver& mdns, Config& mqttConfig, const String& instanceName, Configuration& appConfig)
+    MqttDriver(State& networkReady, MdnsDriver& mdns, Config& mqttConfig, const String& instanceName, Configuration& appConfig)
         : networkReady(networkReady)
         , mdns(mdns)
         , mqttConfig(mqttConfig)
@@ -128,7 +128,7 @@ private:
     }
 
     milliseconds loopAndDelay() {
-        networkReady.await();
+        networkReady.awaitSet();
 
         if (!mqttClient.connected()) {
             Serial.println("MQTT: Disconnected, reconnecting");
@@ -287,7 +287,7 @@ private:
         }
     };
 
-    Event& networkReady;
+    State& networkReady;
     WiFiClient wifiClient;
     MdnsDriver& mdns;
     Config& mqttConfig;

@@ -94,14 +94,14 @@ public:
             deviceConfig.getHostname());
 
         Task::loop("status-led", [this](Task& task) {
-            if (networkReadyEvent.isSet()) {
-                if (rtcInSyncEvent.isSet()) {
+            if (networkReadyState.isSet()) {
+                if (rtcInSyncState.isSet()) {
                     statusLed.turnOn();
                 } else {
                     statusLed.blink(milliseconds(1000));
                 }
             } else {
-                if (configPortalRunningEvent.isSet()) {
+                if (configPortalRunningState.isSet()) {
                     statusLed.blinkPattern({
                         milliseconds(100),
                         milliseconds(-100),
@@ -114,15 +114,9 @@ public:
                     statusLed.blink(milliseconds(200));
                 }
             }
-            eventGroup.waitForNextEvent();
-            Serial.println("Event received");
+            stateManager.waitStateChange();
+            Serial.println("Status changed");
         });
-
-        networkReadyEvent.await();
-        statusLed.blink(milliseconds(500));
-
-        rtcInSyncEvent.await();
-        statusLed.blink(milliseconds(1000));
 
         mqtt.registerCommand(echoCommand);
         // TODO Add ping command
@@ -154,7 +148,9 @@ public:
                 // json["wakeup"] = event.source;
             });
 
-        statusLed.turnOn();
+        // TODO Allow creating combined states
+        rtcInSyncState.awaitSet();
+        networkReadyState.awaitSet();
         Serial.println("Application initialized in " + String(millis()) + " ms");
     }
 
@@ -171,21 +167,21 @@ private:
     LedDriver statusLed;
 
     ApplicationConfiguration appConfig { fs };
-    EventGroup eventGroup;
+    StateManager stateManager;
 
-    EventSource networkReadyEvent = eventGroup.createEventSource("network-ready");
-    EventSource configPortalRunningEvent = eventGroup.createEventSource("config-portal-running");
-    EventSource rtcInSyncEvent = eventGroup.createEventSource("rtc-in-sync");
-    EventSource mdnsReadyEvent = eventGroup.createEventSource("mdns-ready");
+    StateSource networkReadyState = stateManager.createStateSource("network-ready");
+    StateSource configPortalRunningState = stateManager.createStateSource("config-portal-running");
+    StateSource rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
+    StateSource mdnsReadyState = stateManager.createStateSource("mdns-ready");
 
-    WiFiDriver wifi { networkReadyEvent, configPortalRunningEvent, deviceConfig.getHostname() };
+    WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname() };
 #ifdef OTA_UPDATE
     // Only include OTA when needed for debugging
-    OtaDriver ota { networkReadyEvent, deviceConfig.getHostname() };
+    OtaDriver ota { networkReadyState, deviceConfig.getHostname() };
 #endif
-    MdnsDriver mdns { networkReadyEvent, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyEvent };
-    RtcDriver rtc { networkReadyEvent, mdns, deviceConfig.ntp, rtcInSyncEvent };
-    MqttDriver mqtt { networkReadyEvent, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig };
+    MdnsDriver mdns { networkReadyState, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
+    RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp, rtcInSyncState };
+    MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig };
 
     EchoCommand echoCommand;
     RestartCommand restartCommand;

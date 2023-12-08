@@ -3,9 +3,9 @@
 #include <ArduinoJson.h>
 #include <ESPmDNS.h>
 
-#include <kernel/Event.hpp>
-#include <kernel/Task.hpp>
 #include <kernel/NvmStore.hpp>
+#include <kernel/State.hpp>
+#include <kernel/Task.hpp>
 
 namespace farmhub { namespace kernel { namespace drivers {
 
@@ -22,16 +22,16 @@ struct MdnsRecord {
 class MdnsDriver {
 public:
     MdnsDriver(
-        Event& networkReady,
+        State& networkReady,
         const String& hostname,
         const String& instanceName,
         const String& version,
-        EventSource& mdnsReady)
+        StateSource& mdnsReady)
         : mdnsReady(mdnsReady) {
         // TODO Add error handling
         MDNS.begin(hostname);
         Task::run("mDNS", [&networkReady, &mdnsReady, instanceName, hostname, version](Task& task) {
-            networkReady.await();
+            networkReady.awaitSet();
 
             MDNS.setInstanceName(instanceName);
             Serial.println("Advertising mDNS service " + instanceName + " on " + hostname + ".local, version: " + version);
@@ -39,7 +39,7 @@ public:
             MDNS.addServiceTxt("farmhub", "tcp", "version", version);
             Serial.println("mDNS: configured");
 
-            mdnsReady.emit();
+            mdnsReady.set();
         });
     }
 
@@ -64,7 +64,7 @@ private:
             }
         }
 
-        mdnsReady.await();
+        mdnsReady.awaitSet();
         auto count = MDNS.queryService(serviceName.c_str(), port.c_str());
         if (count == 0) {
             return false;
@@ -87,7 +87,7 @@ private:
         return true;
     }
 
-    Event& mdnsReady;
+    State& mdnsReady;
 
     QueueHandle_t lookupMutex { xSemaphoreCreateMutex() };
 
