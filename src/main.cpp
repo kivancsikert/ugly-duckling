@@ -71,16 +71,17 @@ public:
     }
 };
 
-class SampleApplication : public Application {
+class SampleApplication {
 
 public:
     SampleApplication(FileSystem& fs, SampleDeviceConfiguration& deviceConfig)
-        : Application(fs, deviceConfig, GPIO_NUM_2) {
+        : application(fs, deviceConfig, GPIO_NUM_2) {
     }
 
 private:
     BatteryDriver batteryDriver { GPIO_NUM_1, 1.0 };
     ConsolePrinter consolePrinter { batteryDriver };
+    Application application;
 };
 
 SampleDeviceConfiguration* deviceConfig;

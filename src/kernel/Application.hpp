@@ -170,6 +170,8 @@ public:
 
         // TODO Init peripherals
 
+        applicationReadyState.awaitSet();
+
         mqtt.publish(
             "init",
             [&](JsonObject& json) {
@@ -186,7 +188,6 @@ public:
                 // json["wakeup"] = event.source;
             });
 
-        applicationReadyState.awaitSet();
         Serial.println("Application initialized in " + String(millis()) + " ms");
     }
 
