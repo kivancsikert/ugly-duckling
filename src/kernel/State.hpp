@@ -144,9 +144,7 @@ public:
 
     bool waitStateChange(TickType_t ticksToWait = portMAX_DELAY) {
         // Since this is bit 0, we can just return the result directly
-        bool receivedEvent = xEventGroupWaitBits(eventGroup, STATE_CHANGE_BIT_MASK, false, true, ticksToWait);
-        xEventGroupClearBits(eventGroup, STATE_CHANGE_BIT_MASK);
-        return receivedEvent;
+        return xEventGroupWaitBits(eventGroup, STATE_CHANGE_BIT_MASK, true, true, ticksToWait);
     }
 
 private:
