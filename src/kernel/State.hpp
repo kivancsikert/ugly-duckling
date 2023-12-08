@@ -15,6 +15,8 @@ namespace farmhub { namespace kernel {
 // 0th bit reserved to indicate that a state has changed
 static const int STATE_CHANGE_BIT_MASK = (1 << 0);
 
+class StateManager;
+
 /**
  * @brief Represents an observable state. Tasks can check the current state, or wait for the state to be set.
  *
@@ -22,22 +24,22 @@ static const int STATE_CHANGE_BIT_MASK = (1 << 0);
  */
 class State {
 public:
-    State(const String& name, EventGroupHandle_t eventGroup, int eventBit)
+    State(const String& name, EventGroupHandle_t eventGroup, EventBits_t eventBits)
         : name(name)
         , eventGroup(eventGroup)
-        , eventBit(eventBit) {
+        , eventBits(eventBits) {
     }
 
     State(const State& event)
         : name(event.name)
         , eventGroup(event.eventGroup)
-        , eventBit(event.eventBit) {
+        , eventBits(event.eventBits) {
     }
 
     /**
      * @brief Checks if the state is set.
      */
-    bool inline isSet() {
+    bool inline isSet() const {
         return awaitSet(0);
     }
 
@@ -46,7 +48,7 @@ public:
      *
      * @return Whether the state was set before the timeout elapsed.
      */
-    bool awaitSet(milliseconds timeout) {
+    bool awaitSet(milliseconds timeout) const {
         return awaitSet(pdMS_TO_TICKS(timeout.count()));
     }
 
@@ -55,61 +57,59 @@ public:
      *
      * @return Whether the state was set before the given ticks have elapsed.
      */
-    bool awaitSet(int ticksToWait = portMAX_DELAY) {
-        return hasBits(xEventGroupWaitBits(eventGroup, asEventBits(), false, true, ticksToWait));
+    bool awaitSet(int ticksToWait = portMAX_DELAY) const {
+        return hasAllBits(xEventGroupWaitBits(eventGroup, eventBits, false, true, ticksToWait));
     }
 
 protected:
-    EventBits_t inline asEventBits() {
-        return 1 << eventBit;
-    }
-
-    bool hasBits(EventBits_t bits) {
-        return (bits & asEventBits()) == asEventBits();
+    bool constexpr hasAllBits(EventBits_t bits) {
+        return (bits & eventBits) == eventBits;
     }
 
     const String name;
     const EventGroupHandle_t eventGroup;
-    const int eventBit;
+    const EventBits_t eventBits;
+
+    friend StateManager;
 };
 
 class StateSource
     : public State {
 public:
-    StateSource(const String& name, EventGroupHandle_t eventGroup, int eventBit)
-        : State(name, eventGroup, eventBit) {
+    StateSource(const String& name, EventGroupHandle_t eventGroup, EventBits_t eventBits)
+        : State(name, eventGroup, eventBits) {
     }
 
     StateSource(const StateSource& eventSource)
         : State(eventSource) {
     }
 
-    bool set() {
-        return hasBits(setBits(asEventBits() | STATE_CHANGE_BIT_MASK));
+    bool set() const {
+        return hasAllBits(setBits(eventBits | STATE_CHANGE_BIT_MASK));
     }
 
-    bool setFromISR() {
-        return hasBits(setBitsFromISR(asEventBits() | STATE_CHANGE_BIT_MASK));
+    bool setFromISR() const {
+        return hasAllBits(setBitsFromISR(eventBits | STATE_CHANGE_BIT_MASK));
     }
 
-    bool clear() {
-        bool cleared = !hasBits(xEventGroupClearBits(eventGroup, asEventBits()));
+    bool clear() const {
+        bool cleared = !hasAllBits(xEventGroupClearBits(eventGroup, eventBits));
         setBits(STATE_CHANGE_BIT_MASK);
         return cleared;
     }
 
-    bool clearFromISR() {
-        bool cleared = hasBits(xEventGroupClearBitsFromISR(eventGroup, asEventBits()));
+    bool clearFromISR() const {
+        bool cleared = hasAllBits(xEventGroupClearBitsFromISR(eventGroup, eventBits));
         setBitsFromISR(STATE_CHANGE_BIT_MASK);
         return cleared;
     }
 
 private:
-    EventBits_t inline setBits(EventBits_t bits) {
+    EventBits_t inline setBits(EventBits_t bits) const {
         return xEventGroupSetBits(eventGroup, bits);
     }
 
-    EventBits_t inline setBitsFromISR(EventBits_t bits) {
+    EventBits_t inline setBitsFromISR(EventBits_t bits) const {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         auto result = xEventGroupSetBitsFromISR(eventGroup, bits, &xHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
@@ -135,14 +135,23 @@ public:
         if (nextEventBit > 31) {
             throw std::runtime_error("Too many states");
         }
-        return StateSource(name, eventGroup, nextEventBit++);
+        EventBits_t eventBits = 1 << nextEventBit++;
+        return StateSource(name, eventGroup, eventBits);
     }
 
-    bool waitStateChange(milliseconds timeout) {
+    State combineStates(const String& name, const std::list<State>& states) const {
+        int eventBits = 0;
+        for (auto& state : states) {
+            eventBits |= state.eventBits;
+        }
+        return State(name, eventGroup, eventBits);
+    }
+
+    bool waitStateChange(milliseconds timeout) const {
         return waitStateChange(pdMS_TO_TICKS(timeout.count()));
     }
 
-    bool waitStateChange(TickType_t ticksToWait = portMAX_DELAY) {
+    bool waitStateChange(TickType_t ticksToWait = portMAX_DELAY) const {
         // Since this is bit 0, we can just return the result directly
         return xEventGroupWaitBits(eventGroup, STATE_CHANGE_BIT_MASK, true, true, ticksToWait);
     }

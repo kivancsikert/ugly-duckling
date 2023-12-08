@@ -148,9 +148,7 @@ public:
                 // json["wakeup"] = event.source;
             });
 
-        // TODO Allow creating combined states
-        rtcInSyncState.awaitSet();
-        networkReadyState.awaitSet();
+        applicationReadyState.awaitSet();
         Serial.println("Application initialized in " + String(millis()) + " ms");
     }
 
@@ -173,6 +171,12 @@ private:
     StateSource configPortalRunningState = stateManager.createStateSource("config-portal-running");
     StateSource rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
     StateSource mdnsReadyState = stateManager.createStateSource("mdns-ready");
+
+    State applicationReadyState = stateManager.combineStates("application-ready", {
+        networkReadyState,
+        rtcInSyncState,
+        mdnsReadyState,
+    });
 
     WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname() };
 #ifdef OTA_UPDATE
