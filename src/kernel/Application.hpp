@@ -93,6 +93,31 @@ public:
             deviceConfig.instance.get().c_str(),
             deviceConfig.getHostname());
 
+        Task::loop("status-led", [this](Task& task) {
+            if (networkReadyEvent.isSet()) {
+                if (rtcInSyncEvent.isSet()) {
+                    statusLed.turnOn();
+                } else {
+                    statusLed.blink(milliseconds(1000));
+                }
+            } else {
+                if (configPortalRunningEvent.isSet()) {
+                    statusLed.blinkPattern({
+                        milliseconds(100),
+                        milliseconds(-100),
+                        milliseconds(100),
+                        milliseconds(-100),
+                        milliseconds(100),
+                        milliseconds(-500),
+                    });
+                } else {
+                    statusLed.blink(milliseconds(200));
+                }
+            }
+            eventGroup.waitForNextEvent();
+            Serial.println("Event received");
+        });
+
         networkReadyEvent.await();
         statusLed.blink(milliseconds(500));
 

@@ -10,6 +10,9 @@ using namespace std::chrono;
 
 namespace farmhub { namespace kernel {
 
+// 0th bit reserved to indicate that an event has happened
+static const int EVENT_BIT_MASK_EVENT_FIRED = (1 << 0);
+
 class Event {
 public:
     Event(const String& name, EventGroupHandle_t eventGroup, int eventBit)
@@ -22,6 +25,10 @@ public:
         : name(event.name)
         , eventGroup(event.eventGroup)
         , eventBit(event.eventBit) {
+    }
+
+    bool inline isSet() {
+        return await(0);
     }
 
     void await(milliseconds msToWait) {
@@ -58,22 +65,35 @@ public:
     }
 
     bool emit() {
-        return hasBits(xEventGroupSetBits(eventGroup, asEventBits()));
+        return hasBits(setBits(asEventBits() | EVENT_BIT_MASK_EVENT_FIRED));
     }
 
     bool emitFromISR() {
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        auto result = xEventGroupSetBitsFromISR(eventGroup, asEventBits(), &xHigherPriorityTaskWoken);
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-        return hasBits(result);
+        return hasBits(setBitsFromISR(asEventBits() | EVENT_BIT_MASK_EVENT_FIRED));
     }
 
     bool clear() {
-        return hasBits(xEventGroupClearBits(eventGroup, asEventBits()));
+        bool cleared = !hasBits(xEventGroupClearBits(eventGroup, asEventBits()));
+        setBits(EVENT_BIT_MASK_EVENT_FIRED);
+        return cleared;
     }
 
     bool clearFromISR() {
-        return hasBits(xEventGroupClearBitsFromISR(eventGroup, asEventBits()));
+        bool cleared = hasBits(xEventGroupClearBitsFromISR(eventGroup, asEventBits()));
+        setBitsFromISR(EVENT_BIT_MASK_EVENT_FIRED);
+        return cleared;
+    }
+
+private:
+    EventBits_t inline setBits(EventBits_t bits) {
+        return xEventGroupSetBits(eventGroup, bits);
+    }
+
+    EventBits_t inline setBitsFromISR(EventBits_t bits) {
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        auto result = xEventGroupSetBitsFromISR(eventGroup, bits, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        return result;
     }
 };
 
@@ -91,10 +111,20 @@ public:
         return EventSource(name, eventGroup, nextEventBit++);
     }
 
+    bool waitForNextEvent(milliseconds msToWait) {
+        return waitForNextEvent(pdMS_TO_TICKS(msToWait.count()));
+    }
+
+    bool waitForNextEvent(TickType_t ticksToWait = portMAX_DELAY) {
+        // Since this is bit 0, we can just return the result directly
+        bool receivedEvent = xEventGroupWaitBits(eventGroup, EVENT_BIT_MASK_EVENT_FIRED, false, true, ticksToWait);
+        xEventGroupClearBits(eventGroup, EVENT_BIT_MASK_EVENT_FIRED);
+        return receivedEvent;
+    }
+
 private:
     const EventGroupHandle_t eventGroup;
-    int nextEventBit = 0;
-    QueueHandle_t eventNotificationQueue = xQueueCreate(1, sizeof(EventBits_t));
+    int nextEventBit = 1;
 };
 
 }}    // namespace farmhub::kernel
