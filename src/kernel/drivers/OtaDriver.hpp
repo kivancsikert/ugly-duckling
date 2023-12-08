@@ -51,11 +51,13 @@ public:
 
             Serial.println("OTA initialized on hostname " + hostname);
 
+            // TODO Update wake time before loop to avoid task "missing" first deadline
+
             while (true) {
                 ArduinoOTA.handle();
-                return updating
-                    ? seconds::zero()
-                    : seconds(1);
+                task.delayUntil(updating
+                        ? seconds::zero()
+                        : seconds(1));
             }
         });
     }
