@@ -82,6 +82,8 @@ private:
     BatteryDriver batteryDriver { GPIO_NUM_1, 1.0 };
     ConsolePrinter consolePrinter { batteryDriver };
     Application application;
+
+    LedDriver secondaryStatus { "status-2", GPIO_NUM_4 , { milliseconds(250), milliseconds(-250) }};
 };
 
 SampleDeviceConfiguration* deviceConfig;
