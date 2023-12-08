@@ -221,10 +221,12 @@ private:
     StateSource mdnsReadyState = stateManager.createStateSource("mdns-ready");
     StateSource mqttReadyState = stateManager.createStateSource("mqtt-ready");
 
-    State applicationReadyState = stateManager.combineStates("application-ready", {
-                                                                                      networkReadyState, rtcInSyncState, mqttReadyState,
-                                                                                      // We don't need mDNS to be ready for the application to be ready
-                                                                                  });
+    State applicationReadyState = stateManager.combineStates("application-ready",
+        {
+            networkReadyState,
+            rtcInSyncState,
+            mqttReadyState,
+        });
 
     WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname() };
 #ifdef OTA_UPDATE
