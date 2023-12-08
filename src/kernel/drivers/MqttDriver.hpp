@@ -42,14 +42,21 @@ public:
 
     typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
 
-    MqttDriver(State& networkReady, MdnsDriver& mdns, Config& mqttConfig, const String& instanceName, Configuration& appConfig)
+    MqttDriver(
+        State& networkReady,
+        MdnsDriver& mdns,
+        Config& mqttConfig,
+        const String& instanceName,
+        Configuration& appConfig,
+        StateSource& mqttReady)
         : networkReady(networkReady)
         , mdns(mdns)
         , mqttConfig(mqttConfig)
         , instanceName(instanceName)
         , appConfig(appConfig)
         , clientId(getClientId(mqttConfig.clientId.get(), instanceName))
-        , topic(getTopic(mqttConfig.topic.get(), instanceName)) {
+        , topic(getTopic(mqttConfig.topic.get(), instanceName))
+        , mqttReady(mqttReady) {
         Task::run("MQTT", 24 * 1024, 1, [this](Task& task) {
             setup();
             while (true) {
@@ -132,6 +139,7 @@ private:
 
         if (!mqttClient.connected()) {
             Serial.println("MQTT: Disconnected, reconnecting");
+            mqttReady.clear();
 
             if (!mqttClient.connect(clientId.c_str())) {
                 Serial.println("MQTT: Connection failed");
@@ -142,6 +150,7 @@ private:
             subscribe("config", QoS::ExactlyOnce);
             subscribe("commands/#", QoS::ExactlyOnce);
             Serial.println("MQTT: Connected");
+            mqttReady.set();
         }
 
         processPublishQueue();
@@ -293,6 +302,7 @@ private:
     Config& mqttConfig;
     const String instanceName;
     Configuration& appConfig;
+    StateSource& mqttReady;
 
     const String clientId;
     const String topic;

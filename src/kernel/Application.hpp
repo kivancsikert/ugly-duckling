@@ -93,29 +93,67 @@ public:
             deviceConfig.instance.get().c_str(),
             deviceConfig.getHostname());
 
-        Task::loop("status-led", [this](Task& task) {
-            if (networkReadyState.isSet()) {
-                if (rtcInSyncState.isSet()) {
-                    statusLed.turnOn();
+        Task::run("status-led", [this](Task& task) {
+            ApplicationState state = ApplicationState::BOOTING;
+
+            while (true) {
+                ApplicationState newState;
+                if (networkReadyState.isSet()) {
+                    // We have network
+                    if (rtcInSyncState.isSet()) {
+                        // We have some valid time
+                        if (mqttReadyState.isSet()) {
+                            // We have MQTT conenction
+                            newState = ApplicationState::READY;
+                        } else {
+                            // We are waiting for MQTT connection
+                            newState = ApplicationState::MQTT_CONNECTING;
+                        }
+                    } else {
+                        // We are waiting for NTP sync
+                        newState = ApplicationState::RTC_SYNCING;
+                    }
                 } else {
-                    statusLed.blink(milliseconds(1000));
+                    // We don't have network
+                    if (configPortalRunningState.isSet()) {
+                        // We are waiting for the user to configure the network
+                        newState = ApplicationState::NETWORK_CONFIGURING;
+                    } else {
+                        // We are waiting for network connection
+                        newState = ApplicationState::NETWORK_CONNECTING;
+                    }
                 }
-            } else {
-                if (configPortalRunningState.isSet()) {
-                    statusLed.blinkPattern({
-                        milliseconds(100),
-                        milliseconds(-100),
-                        milliseconds(100),
-                        milliseconds(-100),
-                        milliseconds(100),
-                        milliseconds(-500),
-                    });
-                } else {
-                    statusLed.blink(milliseconds(200));
+
+                if (newState != state) {
+                    state = newState;
+                    Serial.printf("Application state changed from %d to %d\n", state, newState);
+                    switch (newState) {
+                        case ApplicationState::NETWORK_CONNECTING:
+                            statusLed.blink(milliseconds(200));
+                            break;
+                        case ApplicationState::NETWORK_CONFIGURING:
+                            statusLed.blinkPattern({
+                                milliseconds(100),
+                                milliseconds(-100),
+                                milliseconds(100),
+                                milliseconds(-100),
+                                milliseconds(100),
+                                milliseconds(-500),
+                            });
+                            break;
+                        case ApplicationState::RTC_SYNCING:
+                            statusLed.blink(milliseconds(1000));
+                            break;
+                        case ApplicationState::MQTT_CONNECTING:
+                            statusLed.blink(milliseconds(2000));
+                            break;
+                        case ApplicationState::READY:
+                            statusLed.turnOn();
+                            break;
+                    };
                 }
+                stateManager.waitStateChange();
             }
-            stateManager.waitStateChange();
-            Serial.println("Status changed");
         });
 
         mqtt.registerCommand(echoCommand);
@@ -153,6 +191,15 @@ public:
     }
 
 private:
+    enum class ApplicationState {
+        BOOTING,
+        NETWORK_CONNECTING,
+        NETWORK_CONFIGURING,
+        RTC_SYNCING,
+        MQTT_CONNECTING,
+        READY
+    };
+
     static DeviceConfiguration& loadConfig(DeviceConfiguration& deviceConfig) {
         deviceConfig.loadFromFileSystem();
         return deviceConfig;
@@ -171,12 +218,12 @@ private:
     StateSource configPortalRunningState = stateManager.createStateSource("config-portal-running");
     StateSource rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
     StateSource mdnsReadyState = stateManager.createStateSource("mdns-ready");
+    StateSource mqttReadyState = stateManager.createStateSource("mqtt-ready");
 
     State applicationReadyState = stateManager.combineStates("application-ready", {
-        networkReadyState,
-        rtcInSyncState,
-        mdnsReadyState,
-    });
+                                                                                      networkReadyState, rtcInSyncState, mqttReadyState,
+                                                                                      // We don't need mDNS to be ready for the application to be ready
+                                                                                  });
 
     WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname() };
 #ifdef OTA_UPDATE
@@ -185,7 +232,7 @@ private:
 #endif
     MdnsDriver mdns { networkReadyState, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
     RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp, rtcInSyncState };
-    MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig };
+    MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig, mqttReadyState };
 
     EchoCommand echoCommand;
     RestartCommand restartCommand;
