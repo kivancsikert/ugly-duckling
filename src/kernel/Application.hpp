@@ -85,7 +85,7 @@ public:
         : fs(fs)
         , version(VERSION)
         , deviceConfig(loadConfig(deviceConfig))
-        , statusLed("status", statusLedPin, { milliseconds(125), milliseconds(-125) }) {
+        , statusLed("status", statusLedPin) {
 
         Serial.printf("Initializing version %s on %s instance '%s' with hostname '%s'\n",
             version.c_str(),
@@ -96,7 +96,7 @@ public:
         networkReadyEvent.await();
         statusLed.blink(milliseconds(500));
 
-        timeSetEvent.await();
+        rtcInSyncEvent.await();
         statusLed.blink(milliseconds(1000));
 
         mqtt.registerCommand(echoCommand);
@@ -146,19 +146,20 @@ private:
     LedDriver statusLed;
 
     ApplicationConfiguration appConfig { fs };
-    EventGroupHandle_t eventGroup { xEventGroupCreate() };
+    EventGroup eventGroup;
 
-    Event networkReadyEvent { eventGroup, 1 };
-    Event timeSetEvent { eventGroup, 2 };
-    Event mdnsReadyEvent { eventGroup, 3 };
+    EventSource networkReadyEvent = eventGroup.createEventSource("network-ready");
+    EventSource configPortalRunningEvent = eventGroup.createEventSource("config-portal-running");
+    EventSource rtcInSyncEvent = eventGroup.createEventSource("rtc-in-sync");
+    EventSource mdnsReadyEvent = eventGroup.createEventSource("mdns-ready");
 
-    WiFiDriver wifi { networkReadyEvent, statusLed, deviceConfig.getHostname() };
+    WiFiDriver wifi { networkReadyEvent, configPortalRunningEvent, deviceConfig.getHostname() };
 #ifdef OTA_UPDATE
     // Only include OTA when needed for debugging
     OtaDriver ota { networkReadyEvent, deviceConfig.getHostname() };
 #endif
     MdnsDriver mdns { networkReadyEvent, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyEvent };
-    RtcDriver rtc { networkReadyEvent, mdns, deviceConfig.ntp, timeSetEvent };
+    RtcDriver rtc { networkReadyEvent, mdns, deviceConfig.ntp, rtcInSyncEvent };
     MqttDriver mqtt { networkReadyEvent, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig };
 
     EchoCommand echoCommand;

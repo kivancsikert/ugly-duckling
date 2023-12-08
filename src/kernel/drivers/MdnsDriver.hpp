@@ -26,7 +26,7 @@ public:
         const String& hostname,
         const String& instanceName,
         const String& version,
-        Event& mdnsReady)
+        EventSource& mdnsReady)
         : mdnsReady(mdnsReady) {
         // TODO Add error handling
         MDNS.begin(hostname);

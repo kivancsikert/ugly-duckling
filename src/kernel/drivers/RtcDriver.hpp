@@ -37,8 +37,8 @@ public:
         Property<String> host { this, "host", "" };
     };
 
-    RtcDriver(Event& networkReady, MdnsDriver& mdns, Config& ntpConfig, Event& timeSet) {
-        Task::run("SystemTimeCheck", [&timeSet](Task& task) {
+    RtcDriver(Event& networkReady, MdnsDriver& mdns, Config& ntpConfig, EventSource& rtcInSync) {
+        Task::run("SystemTimeCheck", [&rtcInSync](Task& task) {
             while (true) {
                 time_t now;
                 time(&now);
@@ -46,7 +46,7 @@ public:
                 // much higher, then it means the RTC is set.
                 if (seconds(now) > hours((2022 - 1970) * 365 * 24)) {
                     Serial.println("Time configured, exiting task");
-                    timeSet.emit();
+                    rtcInSync.emit();
                     break;
                 }
                 task.delayUntil(seconds(1));

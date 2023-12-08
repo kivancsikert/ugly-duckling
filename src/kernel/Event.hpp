@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <list>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
@@ -9,12 +10,18 @@ using namespace std::chrono;
 
 namespace farmhub { namespace kernel {
 
-// TODO Separate Event (an observable) from EventSource (that emits the event).
 class Event {
 public:
-    Event(EventGroupHandle_t eventGroup, int eventBit)
-        : eventGroup(eventGroup)
+    Event(const String& name, EventGroupHandle_t eventGroup, int eventBit)
+        : name(name)
+        , eventGroup(eventGroup)
         , eventBit(eventBit) {
+    }
+
+    Event(const Event& event)
+        : name(event.name)
+        , eventGroup(event.eventGroup)
+        , eventBit(event.eventBit) {
     }
 
     void await(milliseconds msToWait) {
@@ -23,6 +30,31 @@ public:
 
     bool await(int ticksToWait = portMAX_DELAY) {
         return hasBits(xEventGroupWaitBits(eventGroup, asEventBits(), false, true, ticksToWait));
+    }
+
+protected:
+    EventBits_t inline asEventBits() {
+        return 1 << eventBit;
+    }
+
+    bool hasBits(EventBits_t bits) {
+        return (bits & asEventBits()) == asEventBits();
+    }
+
+    const String name;
+    const EventGroupHandle_t eventGroup;
+    const int eventBit;
+};
+
+class EventSource
+    : public Event {
+public:
+    EventSource(const String& name, EventGroupHandle_t eventGroup, int eventBit)
+        : Event(name, eventGroup, eventBit) {
+    }
+
+    EventSource(const EventSource& eventSource)
+        : Event(eventSource) {
     }
 
     bool emit() {
@@ -43,18 +75,26 @@ public:
     bool clearFromISR() {
         return hasBits(xEventGroupClearBitsFromISR(eventGroup, asEventBits()));
     }
+};
+
+class EventGroup {
+public:
+    EventGroup()
+        : eventGroup(xEventGroupCreate()) {
+    }
+
+    EventSource createEventSource(const String& name) {
+        Serial.println("Creating event source " + name);
+        if (nextEventBit > 31) {
+            throw std::runtime_error("Too many events");
+        }
+        return EventSource(name, eventGroup, nextEventBit++);
+    }
 
 private:
-    EventBits_t inline asEventBits() {
-        return 1 << eventBit;
-    }
-
-    bool hasBits(EventBits_t bits) {
-        return (bits & asEventBits()) == asEventBits();
-    }
-
     const EventGroupHandle_t eventGroup;
-    const int eventBit;
+    int nextEventBit = 0;
+    QueueHandle_t eventNotificationQueue = xQueueCreate(1, sizeof(EventBits_t));
 };
 
 }}    // namespace farmhub::kernel

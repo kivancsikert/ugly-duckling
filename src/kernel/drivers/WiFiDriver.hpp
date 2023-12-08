@@ -9,23 +9,21 @@
 #include <kernel/Event.hpp>
 #include <kernel/Task.hpp>
 
-#include <kernel/drivers/LedDriver.hpp>
-
 namespace farmhub { namespace kernel { namespace drivers {
 
 class WiFiDriver {
 public:
-    WiFiDriver(Event& networkReady, LedDriver& statusLed, const String& hostname) {
+    WiFiDriver(EventSource& networkReady, EventSource& configPortalRunning, const String& hostname) {
         WiFi.mode(WIFI_STA);
         WiFi.setHostname(hostname.c_str());
         wifiManager.setConfigPortalTimeout(180);
-        wifiManager.setAPCallback([this, &statusLed](WiFiManager* wifiManager) {
+        wifiManager.setAPCallback([this, &configPortalRunning](WiFiManager* wifiManager) {
             Serial.println("WiFi: entered config portal");
-            statusLed.blinkPatternInMs({ 100, -100, 100, -100, 100, -500 });
+            configPortalRunning.emitFromISR();
         });
-        wifiManager.setConfigPortalTimeoutCallback([this, &statusLed]() {
+        wifiManager.setConfigPortalTimeoutCallback([this, &configPortalRunning]() {
             Serial.println("WiFi: config portal timed out");
-            statusLed.blinkPatternInMs({ 100, -100 });
+            configPortalRunning.clearFromISR();
         });
 
         WiFi.onEvent(
@@ -57,7 +55,7 @@ public:
             },
             ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
-        Task::run("WiFi", [this, &networkReady, &statusLed, hostname](Task& task) {
+        Task::run("WiFi", [this, &networkReady, hostname](Task& task) {
             while (true) {
                 bool connected = wifiManager.autoConnect(hostname.c_str());
                 xSemaphoreTake(reconnectSemaphor, connected ? portMAX_DELAY : 0);
