@@ -21,6 +21,8 @@ using namespace farmhub::kernel::drivers;
 
 class Application;
 
+static RTC_DATA_ATTR int bootCount = 0;
+
 class DeviceConfiguration : public FileConfiguration {
 public:
     DeviceConfiguration(
@@ -185,8 +187,9 @@ public:
                 deviceConfig.store(device, false);
                 json["app"] = "ugly-duckling";
                 json["version"] = version;
-                // TODO Handle sleep / wakeup
-                // json["wakeup"] = event.source;
+                json["wakeup"] = esp_sleep_get_wakeup_cause();
+                json["bootCount"] = bootCount++;
+                json["time"] = time(nullptr);
             });
 
         Serial.println("Application initialized in " + String(millis()) + " ms");
