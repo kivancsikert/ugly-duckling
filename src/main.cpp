@@ -71,10 +71,10 @@ public:
     }
 };
 
-class SampleApplication {
+class SampleDevice {
 
 public:
-    SampleApplication(FileSystem& fs, SampleDeviceConfiguration& deviceConfig)
+    SampleDevice(FileSystem& fs, SampleDeviceConfiguration& deviceConfig)
         : application(fs, deviceConfig, GPIO_NUM_2) {
 
         application.registerTelemetryProvider("battery", batteryDriver);
@@ -83,21 +83,20 @@ public:
 private:
     BatteryDriver batteryDriver { GPIO_NUM_1, 1.242424 };
     ConsolePrinter consolePrinter { batteryDriver };
-    Application application;
+    Application<SampleDeviceConfiguration> application;
 
     LedDriver secondaryStatus { "status-2", GPIO_NUM_4, { milliseconds(250), milliseconds(-250) } };
 };
 
-SampleDeviceConfiguration* deviceConfig;
-SampleApplication* application;
+SampleDevice* device;
 
 void setup() {
     Serial.begin(115200);
     Serial.println("Starting up...");
 
-    auto& fs = FileSystem::get();
-    deviceConfig = new SampleDeviceConfiguration(fs);
-    application = new SampleApplication(fs, *deviceConfig);
+    FileSystem& fs = FileSystem::get();
+    SampleDeviceConfiguration deviceConfig(fs);
+    device = new SampleDevice(fs, deviceConfig);
 }
 
 void loop() {

@@ -21,9 +21,31 @@ namespace farmhub { namespace kernel {
 
 using namespace farmhub::kernel::drivers;
 
+template <typename TDeviceConfiguration>
 class Application;
 
 static RTC_DATA_ATTR int bootCount = 0;
+
+// TODO Move this to a separate file
+static const String& getMacAddress() {
+    static String macAddress;
+    if (macAddress.length() == 0) {
+        uint8_t rawMac[6];
+        for (int i = 0; i < 6; i++) {
+            rawMac[i] = 0;
+        }
+        if (esp_efuse_mac_get_default(rawMac) != ESP_OK) {
+            macAddress = "??:??:??:??:??:??:??:??";
+        } else {
+            char mac[24];
+            sprintf(mac, "%02x:%02x:%02x:%02x:%02x:%02x",
+                rawMac[0], rawMac[1], rawMac[2], rawMac[3],
+                rawMac[4], rawMac[5]);
+            macAddress = mac;
+        }
+    }
+    return macAddress;
+}
 
 class DeviceConfiguration : public FileConfiguration {
 public:
@@ -52,28 +74,6 @@ public:
         hostname.replace("?", "");
         return hostname;
     }
-
-private:
-    static const String& getMacAddress() {
-        static String macAddress;
-        if (macAddress.length() == 0) {
-            uint8_t rawMac[6];
-            for (int i = 0; i < 6; i++) {
-                rawMac[i] = 0;
-            }
-            if (esp_efuse_mac_get_default(rawMac) != ESP_OK) {
-                macAddress = "??:??:??:??:??:??:??:??";
-            } else {
-                char mac[24];
-                sprintf(mac, "%02x:%02x:%02x:%02x:%02x:%02x",
-                    rawMac[0], rawMac[1], rawMac[2], rawMac[3],
-                    rawMac[4], rawMac[5]);
-                macAddress = mac;
-            }
-        }
-        return macAddress;
-    }
-    friend Application;
 };
 
 class ApplicationConfiguration : public FileConfiguration {
@@ -83,11 +83,12 @@ public:
     }
 };
 
+template <typename TDeviceConfiguration>
 class Application {
 public:
-    Application(FileSystem& fs, DeviceConfiguration& deviceConfig, gpio_num_t statusLedPin)
-        : fs(fs)
-        , version(VERSION)
+    Application(FileSystem& fs, TDeviceConfiguration& deviceConfig, gpio_num_t statusLedPin)
+        : version(VERSION)
+        , fs(fs)
         , deviceConfig(loadConfig(deviceConfig))
         , statusLed("status", statusLedPin) {
 
@@ -124,7 +125,7 @@ public:
                 json["type"] = "ugly-duckling";
                 json["model"] = deviceConfig.model.get();
                 json["instance"] = deviceConfig.instance.get();
-                json["mac"] = DeviceConfiguration::getMacAddress();
+                json["mac"] = getMacAddress();
                 auto device = json.createNestedObject("deviceConfig");
                 deviceConfig.store(device, false);
                 json["app"] = "ugly-duckling";
@@ -151,7 +152,7 @@ private:
         READY
     };
 
-    static DeviceConfiguration& loadConfig(DeviceConfiguration& deviceConfig) {
+    static TDeviceConfiguration& loadConfig(TDeviceConfiguration& deviceConfig) {
         deviceConfig.loadFromFileSystem();
         return deviceConfig;
     }
@@ -220,8 +221,11 @@ private:
         task.delayUntil(milliseconds(5000));
     }
 
-    FileSystem& fs;
     const String version;
+
+    FileSystem& fs;
+    TDeviceConfiguration deviceConfig;
+    ApplicationConfiguration appConfig { fs };
 
     LedDriver statusLed;
     ApplicationState state = ApplicationState::BOOTING;
@@ -237,9 +241,6 @@ private:
             rtcInSyncState,
             mqttReadyState,
         });
-
-    DeviceConfiguration deviceConfig;
-    ApplicationConfiguration appConfig { fs };
 
     WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname() };
 #ifdef OTA_UPDATE
