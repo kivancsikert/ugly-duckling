@@ -162,6 +162,7 @@ public:
         // TODO Add reset-wifi command
         // mqtt.registerCommand(resetWifiCommand);
         mqtt.registerCommand(restartCommand);
+        mqtt.registerCommand(sleepCommand);
         mqtt.registerCommand(fileListCommand);
         mqtt.registerCommand(fileReadCommand);
         mqtt.registerCommand(fileWriteCommand);
@@ -239,6 +240,7 @@ private:
 
     EchoCommand echoCommand;
     RestartCommand restartCommand;
+    SleepCommand sleepCommand;
     FileListCommand fileListCommand { fs };
     FileReadCommand fileReadCommand { fs };
     FileWriteCommand fileWriteCommand { fs };

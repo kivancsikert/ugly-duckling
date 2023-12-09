@@ -1,10 +1,16 @@
 #pragma once
 
+#include <chrono>
+
 #include <ArduinoJson.h>
 #include <HTTPUpdate.h>
 #include <SPIFFS.h>
 
+#include <esp_sleep.h>
+
 #include <kernel/FileSystem.hpp>
+
+using namespace std::chrono;
 
 namespace farmhub { namespace kernel {
 
@@ -38,6 +44,19 @@ public:
     void handle(const JsonObject& request, JsonObject& response) override {
         Serial.flush();
         ESP.restart();
+    }
+};
+
+class SleepCommand : public Command {
+public:
+    SleepCommand()
+        : Command("sleep") {
+    }
+    void handle(const JsonObject& request, JsonObject& response) override {
+        seconds duration = seconds(request["duration"].as<long>());
+        esp_sleep_enable_timer_wakeup(((microseconds) duration).count());
+        Serial.printf("Sleeping for %ld seconds in deep sleep mode\n", duration.count());
+        esp_deep_sleep_start();
     }
 };
 
