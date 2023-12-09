@@ -19,8 +19,6 @@ public:
         static FileSystem* instance = initializeFileSystem();
         return *instance;
     }
-
-private:
 };
 
 class SpiffsFileSystem : public FileSystem {
