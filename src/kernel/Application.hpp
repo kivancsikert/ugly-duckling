@@ -95,68 +95,7 @@ public:
             deviceConfig.instance.get().c_str(),
             deviceConfig.getHostname());
 
-        Task::run("status-led", [this](Task& task) {
-            ApplicationState state = ApplicationState::BOOTING;
-
-            while (true) {
-                ApplicationState newState;
-                if (networkReadyState.isSet()) {
-                    // We have network
-                    if (rtcInSyncState.isSet()) {
-                        // We have some valid time
-                        if (mqttReadyState.isSet()) {
-                            // We have MQTT conenction
-                            newState = ApplicationState::READY;
-                        } else {
-                            // We are waiting for MQTT connection
-                            newState = ApplicationState::MQTT_CONNECTING;
-                        }
-                    } else {
-                        // We are waiting for NTP sync
-                        newState = ApplicationState::RTC_SYNCING;
-                    }
-                } else {
-                    // We don't have network
-                    if (configPortalRunningState.isSet()) {
-                        // We are waiting for the user to configure the network
-                        newState = ApplicationState::NETWORK_CONFIGURING;
-                    } else {
-                        // We are waiting for network connection
-                        newState = ApplicationState::NETWORK_CONNECTING;
-                    }
-                }
-
-                if (newState != state) {
-                    state = newState;
-                    Serial.printf("Application state changed from %d to %d\n", state, newState);
-                    switch (newState) {
-                        case ApplicationState::NETWORK_CONNECTING:
-                            statusLed.blink(milliseconds(200));
-                            break;
-                        case ApplicationState::NETWORK_CONFIGURING:
-                            statusLed.blinkPattern({
-                                milliseconds(100),
-                                milliseconds(-100),
-                                milliseconds(100),
-                                milliseconds(-100),
-                                milliseconds(100),
-                                milliseconds(-500),
-                            });
-                            break;
-                        case ApplicationState::RTC_SYNCING:
-                            statusLed.blink(milliseconds(1000));
-                            break;
-                        case ApplicationState::MQTT_CONNECTING:
-                            statusLed.blink(milliseconds(2000));
-                            break;
-                        case ApplicationState::READY:
-                            statusLed.turnOn();
-                            break;
-                    };
-                }
-                stateManager.waitStateChange();
-            }
-        });
+        Task::loop("status-update", [this](Task&) { updateState(); });
 
         mqtt.registerCommand(echoCommand);
         // TODO Add ping command
@@ -210,27 +149,85 @@ private:
         return deviceConfig;
     }
 
+    void updateState() {
+        ApplicationState newState;
+        if (networkReadyState.isSet()) {
+            // We have network
+            if (rtcInSyncState.isSet()) {
+                // We have some valid time
+                if (mqttReadyState.isSet()) {
+                    // We have MQTT conenction
+                    newState = ApplicationState::READY;
+                } else {
+                    // We are waiting for MQTT connection
+                    newState = ApplicationState::MQTT_CONNECTING;
+                }
+            } else {
+                // We are waiting for NTP sync
+                newState = ApplicationState::RTC_SYNCING;
+            }
+        } else {
+            // We don't have network
+            if (configPortalRunningState.isSet()) {
+                // We are waiting for the user to configure the network
+                newState = ApplicationState::NETWORK_CONFIGURING;
+            } else {
+                // We are waiting for network connection
+                newState = ApplicationState::NETWORK_CONNECTING;
+            }
+        }
+
+        if (newState != state) {
+            state = newState;
+            Serial.printf("Application state changed from %d to %d\n", state, newState);
+            switch (newState) {
+                case ApplicationState::NETWORK_CONNECTING:
+                    statusLed.blink(milliseconds(200));
+                    break;
+                case ApplicationState::NETWORK_CONFIGURING:
+                    statusLed.blinkPattern({
+                        milliseconds(100),
+                        milliseconds(-100),
+                        milliseconds(100),
+                        milliseconds(-100),
+                        milliseconds(100),
+                        milliseconds(-500),
+                    });
+                    break;
+                case ApplicationState::RTC_SYNCING:
+                    statusLed.blink(milliseconds(1000));
+                    break;
+                case ApplicationState::MQTT_CONNECTING:
+                    statusLed.blink(milliseconds(2000));
+                    break;
+                case ApplicationState::READY:
+                    statusLed.turnOn();
+                    break;
+            };
+        }
+        stateManager.waitStateChange();
+    }
+
     FileSystem& fs;
     const String version;
 
-    DeviceConfiguration deviceConfig;
     LedDriver statusLed;
-
-    ApplicationConfiguration appConfig { fs };
+    ApplicationState state = ApplicationState::BOOTING;
     StateManager stateManager;
-
     StateSource networkReadyState = stateManager.createStateSource("network-ready");
     StateSource configPortalRunningState = stateManager.createStateSource("config-portal-running");
     StateSource rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
     StateSource mdnsReadyState = stateManager.createStateSource("mdns-ready");
     StateSource mqttReadyState = stateManager.createStateSource("mqtt-ready");
-
     State applicationReadyState = stateManager.combineStates("application-ready",
         {
             networkReadyState,
             rtcInSyncState,
             mqttReadyState,
         });
+
+    DeviceConfiguration deviceConfig;
+    ApplicationConfiguration appConfig { fs };
 
     WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname() };
 #ifdef OTA_UPDATE
