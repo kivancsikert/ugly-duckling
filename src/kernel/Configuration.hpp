@@ -247,10 +247,10 @@ public:
 
     void loadFromFileSystem() {
         DynamicJsonDocument json(capacity);
-        if (!SPIFFS.exists(path)) {
+        if (!fs.exists(path)) {
             Serial.println("The " + name + " configuration file " + path + " was not found, falling back to defaults");
         } else {
-            File file = SPIFFS.open(path, FILE_READ);
+            File file = fs.open(path, FILE_READ);
             if (!file) {
                 throw "Cannot open config file " + path;
             }
@@ -267,7 +267,7 @@ public:
 
     void update(const JsonObject& json) override {
         Configuration::update(json);
-        File file = SPIFFS.open(path, FILE_WRITE);
+        File file = fs.open(path, FILE_WRITE);
         if (!file) {
             throw "Cannot open config file " + path;
             return;
@@ -278,7 +278,7 @@ public:
     }
 
 private:
-    const FileSystem& fs;
+    FileSystem& fs;
 
     const String path;
 };
