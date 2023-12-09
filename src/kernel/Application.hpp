@@ -185,8 +185,8 @@ private:
         }
 
         if (newState != state) {
-            state = newState;
             Serial.printf("Application state changed from %d to %d\n", state, newState);
+            state = newState;
             switch (newState) {
                 case ApplicationState::NETWORK_CONNECTING:
                     statusLed.blink(milliseconds(200));
