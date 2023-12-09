@@ -2,9 +2,12 @@
 
 #include <Arduino.h>
 
+#include <kernel/Telemetry.hpp>
+
 namespace farmhub { namespace kernel { namespace drivers {
 
-class BatteryDriver {
+class BatteryDriver
+    : public TelemetryProvider {
 public:
     BatteryDriver(gpio_num_t pin, float voltageDividerRatio)
         : pin(pin)
@@ -15,6 +18,11 @@ public:
     float getVoltage() {
         auto batteryLevel = analogRead(pin);
         return batteryLevel * 3.3 / 4096 * voltageDividerRatio;
+    }
+
+protected:
+    void populateTelemetry(JsonObject& json) override {
+        json["voltage"] = getVoltage();
     }
 
 private:

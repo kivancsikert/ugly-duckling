@@ -1,8 +1,8 @@
 #include <Arduino.h>
 
 #include <kernel/Application.hpp>
-#include <kernel/Task.hpp>
 #include <kernel/FileSystem.hpp>
+#include <kernel/Task.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 
 using namespace farmhub::kernel;
@@ -10,7 +10,7 @@ using namespace farmhub::kernel::drivers;
 
 class ConsolePrinter {
 public:
-    ConsolePrinter(BatteryDriver& batteryDriver){
+    ConsolePrinter(BatteryDriver& batteryDriver) {
         static const String spinner = "|/-\\";
         Task::loop("ConsolePrinter", 32 * 1024, 1, [this, &batteryDriver](Task& task) {
             Serial.print("\033[1G\033[0K");
@@ -76,14 +76,16 @@ class SampleApplication {
 public:
     SampleApplication(FileSystem& fs, SampleDeviceConfiguration& deviceConfig)
         : application(fs, deviceConfig, GPIO_NUM_2) {
+
+        application.registerTelemetryProvider("battery", batteryDriver);
     }
 
 private:
-    BatteryDriver batteryDriver { GPIO_NUM_1, 1.0 };
+    BatteryDriver batteryDriver { GPIO_NUM_1, 1.242424 };
     ConsolePrinter consolePrinter { batteryDriver };
     Application application;
 
-    LedDriver secondaryStatus { "status-2", GPIO_NUM_4 , { milliseconds(250), milliseconds(-250) }};
+    LedDriver secondaryStatus { "status-2", GPIO_NUM_4, { milliseconds(250), milliseconds(-250) } };
 };
 
 SampleDeviceConfiguration* deviceConfig;

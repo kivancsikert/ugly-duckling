@@ -1,11 +1,13 @@
 #pragma once
 
+#include <functional>
 #include <optional>
 
 #include <freertos/FreeRTOS.h>
 
 #include <kernel/Command.hpp>
 #include <kernel/FileSystem.hpp>
+#include <kernel/Telemetry.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
@@ -96,6 +98,7 @@ public:
             deviceConfig.getHostname());
 
         Task::loop("status-update", [this](Task&) { updateState(); });
+        Task::loop("telemetry", [this](Task& task) { publishTelemetry(task); });
 
         mqtt.registerCommand(echoCommand);
         // TODO Add ping command
@@ -132,6 +135,10 @@ public:
             });
 
         Serial.println("Application initialized in " + String(millis()) + " ms");
+    }
+
+    void registerTelemetryProvider(const String& name, TelemetryProvider& provider) {
+        telemetryCollector.registerProvider(name, provider);
     }
 
 private:
@@ -208,6 +215,11 @@ private:
         stateManager.waitStateChange();
     }
 
+    void publishTelemetry(Task& task) {
+        mqtt.publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); });
+        task.delayUntil(milliseconds(5000));
+    }
+
     FileSystem& fs;
     const String version;
 
@@ -236,6 +248,7 @@ private:
 #endif
     MdnsDriver mdns { networkReadyState, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
     RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp, rtcInSyncState };
+    TelemetryCollector telemetryCollector;
     MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig, mqttReadyState };
 
     EchoCommand echoCommand;
