@@ -67,7 +67,7 @@ public:
         digitalWrite(enablePin, HIGH);
 
         int dutyValue = phaseChannel.maxValue() / 2 + (phase ? 1 : -1) * (int) (phaseChannel.maxValue() / 2 * duty);
-        Serial.printf("Driving valve %s at %.2f%%\n",
+        Serial.printf("Driving motor %s at %.2f%%\n",
             phase ? "forward" : "reverse",
             duty * 100);
 

@@ -51,7 +51,7 @@ public:
 
     virtual void drive(bool phase, double duty = 1) override {
         int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
-        Serial.printf("Driving valve %s at %.2f%%\n",
+        Serial.printf("Driving motor %s at %.2f%%\n",
             phase ? "forward" : "reverse",
             duty * 100);
 
