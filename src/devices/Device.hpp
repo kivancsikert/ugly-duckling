@@ -23,14 +23,14 @@ public:
             Serial.print("\033[33m" + wifiStatus() + "\033[0m");
             Serial.print(", IP: \033[33m" + WiFi.localIP().toString() + "\033[0m");
 
-            Serial.print(", uptime: \033[33m" + String(millis()) + "\033[0m ms");
+            Serial.printf(", uptime: \033[33m%.1f\033[0m s", float(millis()) / 1000.0f);
             time_t now;
             struct tm timeinfo;
             time(&now);
             localtime_r(&now, &timeinfo);
             Serial.print(&timeinfo, ", UTC: \033[33m%Y-%m-%d %H:%M:%S\033[0m");
 
-            Serial.printf(", HEAP: \033[33m%.2f\033[0m kB", float(ESP.getFreeHeap()) / 1024.0f);
+            Serial.printf(", heap: \033[33m%.2f\033[0m kB", float(ESP.getFreeHeap()) / 1024.0f);
 
             BatteryDriver* battery = this->battery.load();
             if (battery != nullptr) {
@@ -39,7 +39,7 @@ public:
 
             Serial.print(" ");
             Serial.flush();
-            task.delayUntil(milliseconds(250));
+            task.delayUntil(milliseconds(100));
         });
     }
 
