@@ -30,6 +30,8 @@ public:
             localtime_r(&now, &timeinfo);
             Serial.print(&timeinfo, ", UTC: \033[33m%Y-%m-%d %H:%M:%S\033[0m");
 
+            Serial.printf(", HEAP: \033[33m%.2fkB\033[0m", float(ESP.getFreeHeap()) / 1024.0f);
+
             BatteryDriver* battery = this->battery.load();
             if (battery != nullptr) {
                 Serial.printf(", battery: \033[33m%.2f V\033[0m", battery->getVoltage());
@@ -37,7 +39,7 @@ public:
 
             Serial.print(" ");
             Serial.flush();
-            task.delayUntil(milliseconds(100));
+            task.delayUntil(milliseconds(250));
         });
     }
 
