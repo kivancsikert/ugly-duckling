@@ -210,7 +210,8 @@ private:
 
     void publishTelemetry(Task& task) {
         mqtt.publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); });
-        task.delayUntil(milliseconds(5000));
+        // TODO Configure telemetry heartbeat interval
+        task.delayUntil(milliseconds(60000));
     }
 
     const String version;
