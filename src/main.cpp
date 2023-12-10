@@ -1,3 +1,5 @@
+#include <chrono>
+
 #include <Arduino.h>
 
 #include <kernel/Application.hpp>
@@ -11,7 +13,11 @@
 #include <devices/UglyDucklingMk5.hpp>
 #elif defined(MK6)
 #include <devices/UglyDucklingMk6.hpp>
+#else
+#error "No device defined"
 #endif
+
+using namespace std::chrono;
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
@@ -79,6 +85,37 @@ class Main {
     // TODO Add console printer for MK4, without battery driver
     // ConsolePrinter consolePrinter { device.batteryDriver };
 #elif defined(MK5)
+public:
+    Main() {
+        Task::run("demo", [this](Task& task) {
+            Serial.println("Driver A demo");
+            while (true) {
+                device.driverA.drive(true, 1.0);
+                task.delayUntil(milliseconds(200));
+                device.driverA.stop();
+                task.delayUntil(milliseconds(4800));
+                device.driverA.drive(false, 1.0);
+                task.delayUntil(milliseconds(200));
+                device.driverA.stop();
+                task.delayUntil(milliseconds(4800));
+            }
+        });
+
+        Task::run("demo", [this](Task& task) {
+            Serial.println("Driver B demo");
+            while (true) {
+                device.driverB.drive(true, 1.0);
+                task.delayUntil(milliseconds(200));
+                device.driverB.stop();
+                task.delayUntil(milliseconds(2300));
+                device.driverB.drive(false, 1.0);
+                task.delayUntil(milliseconds(200));
+                device.driverB.stop();
+                task.delayUntil(milliseconds(2300));
+            }
+        });
+    }
+
     UglyDucklingMk5 device;
     ConsolePrinter consolePrinter { device.batteryDriver };
 #elif defined(MK6)

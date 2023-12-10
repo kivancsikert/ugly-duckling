@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kernel/Application.hpp>
+#include <kernel/PwmManager.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
 using namespace farmhub::kernel;
@@ -26,6 +27,7 @@ public:
 public:
     LedDriver statusLed;
     Application<TDeviceConfiguration> application { statusLed };
+    PwmManager pwm;
 };
 
 template <typename TDeviceConfiguration>
