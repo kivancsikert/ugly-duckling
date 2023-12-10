@@ -74,8 +74,8 @@ public:
 class SampleDevice {
 
 public:
-    SampleDevice(FileSystem& fs, SampleDeviceConfiguration& deviceConfig)
-        : application(fs, deviceConfig, GPIO_NUM_2) {
+    SampleDevice()
+        : application(GPIO_NUM_2) {
 
         application.registerTelemetryProvider("battery", batteryDriver);
     }
@@ -94,9 +94,7 @@ void setup() {
     Serial.begin(115200);
     Serial.println("Starting up...");
 
-    FileSystem& fs = FileSystem::get();
-    SampleDeviceConfiguration deviceConfig;
-    device = new SampleDevice(fs, deviceConfig);
+    device = new SampleDevice();
 }
 
 void loop() {

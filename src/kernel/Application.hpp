@@ -80,13 +80,13 @@ public:
     }
 };
 
-template <typename TConfiguration>
+template <typename TDeviceConfiguration>
 class Application {
 public:
-    Application(FileSystem& fs, TConfiguration& deviceConfig, gpio_num_t statusLedPin)
+    Application(gpio_num_t statusLedPin)
         : version(VERSION)
-        , fs(fs)
-        , deviceConfig(Configuration::bindToFile(fs, "/device-config.json", deviceConfig))
+        , fs(FileSystem::get())
+        , deviceConfig(Configuration::bindToFile(fs, "/device-config.json", *new TDeviceConfiguration()))
         , statusLed("status", statusLedPin) {
 
         Serial.printf("Initializing version %s on %s instance '%s' with hostname '%s'\n",
@@ -216,7 +216,7 @@ private:
     const String version;
 
     FileSystem& fs;
-    TConfiguration deviceConfig;
+    TDeviceConfiguration deviceConfig;
     ApplicationConfiguration appConfig;
 
     LedDriver statusLed;

@@ -9,11 +9,11 @@ static FileSystem* initializeFileSystem();
 
 class FileSystem {
 public:
-    virtual bool exists(const String& path) = 0;
+    virtual bool exists(const String& path) const = 0;
 
-    virtual File open(const String& path, const char* mode = FILE_READ) = 0;
+    virtual File open(const String& path, const char* mode = FILE_READ) const = 0;
 
-    virtual bool remove(const String& path) = 0;
+    virtual bool remove(const String& path) const = 0;
 
     static FileSystem& get() {
         static FileSystem* instance = initializeFileSystem();
@@ -26,15 +26,15 @@ public:
     SpiffsFileSystem() {
     }
 
-    bool exists(const String& path) override {
+    bool exists(const String& path) const override {
         return SPIFFS.exists(path);
     }
 
-    File open(const String& path, const char* mode = FILE_READ) override {
+    File open(const String& path, const char* mode = FILE_READ) const override {
         return SPIFFS.open(path, mode);
     }
 
-    bool remove(const String& path) override {
+    bool remove(const String& path) const override {
         return SPIFFS.remove(path);
     }
 };
@@ -44,15 +44,15 @@ public:
     UninitializedFileSystem() {
     }
 
-    bool exists(const String& path) override {
+    bool exists(const String& path) const override {
         return false;
     }
 
-    File open(const String& path, const char* mode = FILE_READ) override {
+    File open(const String& path, const char* mode = FILE_READ) const override {
         return File();
     }
 
-    bool remove(const String& path) override {
+    bool remove(const String& path) const override {
         return false;
     }
 };

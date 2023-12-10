@@ -210,7 +210,7 @@ public:
     }
 
     template <typename TConfiguration>
-    static TConfiguration& bindToFile(FileSystem& fs, const String& path, TConfiguration& config) {
+    static TConfiguration& bindToFile(const FileSystem& fs, const String& path, TConfiguration& config) {
         DynamicJsonDocument json(config.capacity);
         if (!fs.exists(path)) {
             Serial.println("The configuration file " + path + " was not found, falling back to defaults");
