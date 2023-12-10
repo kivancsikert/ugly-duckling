@@ -98,7 +98,7 @@ class Device : ConsoleProvider {
 public:
     Device(gpio_num_t statusPin)
         : statusLed("status", statusPin) {
-#ifdef FARMHUB_DEBUG
+#if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
         application.registerTelemetryProvider("memory", memoryTelemetryProvider);
 #endif
     }
@@ -106,6 +106,9 @@ public:
 protected:
 #ifdef FARMHUB_DEBUG
     ConsolePrinter consolePrinter;
+#endif
+
+#if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
     MemoryTelemetryProvider memoryTelemetryProvider;
 #endif
 
