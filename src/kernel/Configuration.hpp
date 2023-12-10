@@ -209,8 +209,8 @@ public:
         ConfigurationSection::store(json, inlineDefaults);
     }
 
-    template <typename TConfiguration>
-    static TConfiguration& bindToFile(const FileSystem& fs, const String& path, TConfiguration& config) {
+    template <typename TDeviceConfiguration>
+    static TDeviceConfiguration& bindToFile(const FileSystem& fs, const String& path, TDeviceConfiguration& config) {
         DynamicJsonDocument json(config.capacity);
         if (!fs.exists(path)) {
             Serial.println("The configuration file " + path + " was not found, falling back to defaults");

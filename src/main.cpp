@@ -79,12 +79,12 @@ class Sample {
 
 public:
     Sample() {
-        device.getSecondaryStatusLed().blinkPattern({ milliseconds(250), milliseconds(-250) });
+        device.secondaryStatusLed.blinkPattern({ milliseconds(250), milliseconds(-250) });
     }
 
 private:
     UglyDucklingMk6 device;
-    ConsolePrinter consolePrinter { device.getBatteryDriver() };
+    ConsolePrinter consolePrinter { device.batteryDriver };
 };
 
 Sample* sample;
