@@ -4,6 +4,7 @@
 #include <kernel/PwmManager.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
+#include <version.h>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
@@ -20,8 +21,10 @@ public:
             counter = (counter + 1) % spinner.length();
             Serial.print("[" + spinner.substring(counter, counter + 1) + "] ");
 
-            Serial.print("\033[33m" + wifiStatus() + "\033[0m");
+            Serial.print("\033[33m" + String(VERSION) + "\033[0m");
+
             Serial.print(", IP: \033[33m" + WiFi.localIP().toString() + "\033[0m");
+            Serial.print("[\033[33m" + wifiStatus() + "\033[0m]");
 
             Serial.printf(", uptime: \033[33m%.1f\033[0m s", float(millis()) / 1000.0f);
             time_t now;
@@ -51,23 +54,23 @@ private:
     static String wifiStatus() {
         switch (WiFi.status()) {
             case WL_NO_SHIELD:
-                return "NO SHIELD";
+                return "//";
             case WL_IDLE_STATUS:
-                return "IDLE STATUS";
+                return "..";
             case WL_NO_SSID_AVAIL:
-                return "NO SSID AVAIL";
+                return "SS";
             case WL_SCAN_COMPLETED:
-                return "SCAN COMPLETED";
+                return "()";
             case WL_CONNECTED:
-                return "CONNECTED";
+                return "OK";
             case WL_CONNECT_FAILED:
-                return "CONNECT FAILED";
+                return "!!";
             case WL_CONNECTION_LOST:
-                return "CONNECTION LOST";
+                return "!-";
             case WL_DISCONNECTED:
-                return "DISCONNECTED";
+                return "--";
             default:
-                return "UNKNOWN";
+                return "??";
         }
     }
 
