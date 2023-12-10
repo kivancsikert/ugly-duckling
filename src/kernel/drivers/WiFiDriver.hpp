@@ -16,6 +16,7 @@ public:
     WiFiDriver(StateSource& networkReady, StateSource& configPortalRunning, const String& hostname) {
         WiFi.mode(WIFI_STA);
         WiFi.setHostname(hostname.c_str());
+        wifiManager.setHostname(hostname.c_str());
         wifiManager.setConfigPortalTimeout(180);
         wifiManager.setAPCallback([this, &configPortalRunning](WiFiManager* wifiManager) {
             Serial.println("WiFi: entered config portal");

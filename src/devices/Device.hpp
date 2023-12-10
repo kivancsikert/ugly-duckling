@@ -30,7 +30,7 @@ public:
             localtime_r(&now, &timeinfo);
             Serial.print(&timeinfo, ", UTC: \033[33m%Y-%m-%d %H:%M:%S\033[0m");
 
-            Serial.printf(", HEAP: \033[33m%.2fkB\033[0m", float(ESP.getFreeHeap()) / 1024.0f);
+            Serial.printf(", HEAP: \033[33m%.2f\033[0m kB", float(ESP.getFreeHeap()) / 1024.0f);
 
             BatteryDriver* battery = this->battery.load();
             if (battery != nullptr) {
