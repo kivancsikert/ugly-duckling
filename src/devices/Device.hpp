@@ -8,8 +8,16 @@ using namespace farmhub::kernel::drivers;
 
 namespace farmhub { namespace devices {
 
+class ConsoleProvider {
+public:
+    ConsoleProvider() {
+        Serial.begin(115200);
+        Serial.println("Starting up...");
+    }
+};
+
 template <typename TDeviceConfiguration>
-class Device {
+class Device : ConsoleProvider {
 public:
     Device(gpio_num_t statusPin)
         : statusLed("status", statusPin) {
