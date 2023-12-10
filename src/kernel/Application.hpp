@@ -96,7 +96,6 @@ public:
             deviceConfig.getHostname());
 
         Task::loop("status-update", 4096, [this](Task&) { updateState(); });
-        Task::loop("telemetry", 16384, [this](Task& task) { publishTelemetry(task); });
 
         mqtt.registerCommand(echoCommand);
         // TODO Add ping command
@@ -131,6 +130,7 @@ public:
                 json["bootCount"] = bootCount++;
                 json["time"] = time(nullptr);
             });
+        Task::loop("telemetry", 8192, [this](Task& task) { publishTelemetry(task); });
 
         Serial.println("Application initialized in " + String(millis()) + " ms");
     }

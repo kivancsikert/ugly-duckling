@@ -78,6 +78,13 @@ private:
     std::atomic<BatteryDriver*> battery { nullptr };
 };
 
+class MemoryTelemetryProvider : public TelemetryProvider {
+public:
+    void populateTelemetry(JsonObject& json) override {
+        json["free-heap"] = ESP.getFreeHeap();
+    }
+};
+
 class ConsoleProvider {
 public:
     ConsoleProvider() {
@@ -91,11 +98,15 @@ class Device : ConsoleProvider {
 public:
     Device(gpio_num_t statusPin)
         : statusLed("status", statusPin) {
+#ifdef FARMHUB_DEBUG
+        application.registerTelemetryProvider("memory", memoryTelemetryProvider);
+#endif
     }
 
 protected:
 #ifdef FARMHUB_DEBUG
     ConsolePrinter consolePrinter;
+    MemoryTelemetryProvider memoryTelemetryProvider;
 #endif
 
 public:
