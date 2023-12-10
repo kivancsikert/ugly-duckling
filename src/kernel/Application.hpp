@@ -21,7 +21,7 @@ namespace farmhub { namespace kernel {
 
 using namespace farmhub::kernel::drivers;
 
-template <typename TDeviceConfiguration>
+template <typename TConfiguration>
 class Application;
 
 static RTC_DATA_ATTR int bootCount = 0;
@@ -47,13 +47,10 @@ static const String& getMacAddress() {
     return macAddress;
 }
 
-class DeviceConfiguration : public FileConfiguration {
+class DeviceConfiguration : public Configuration {
 public:
-    DeviceConfiguration(
-        FileSystem& fs,
-        const String& defaultModel,
-        size_t capacity = 2048)
-        : FileConfiguration(fs, "device", "/device-config.json", capacity)
+    DeviceConfiguration(const String& defaultModel, size_t capacity = 2048)
+        : Configuration("device", capacity)
         , model(this, "model", defaultModel)
         , instance(this, "instance", getMacAddress()) {
     }
@@ -76,20 +73,20 @@ public:
     }
 };
 
-class ApplicationConfiguration : public FileConfiguration {
+class ApplicationConfiguration : public Configuration {
 public:
-    ApplicationConfiguration(FileSystem& fs, size_t capacity = 2048)
-        : FileConfiguration(fs, "application", "/app-config.json", capacity) {
+    ApplicationConfiguration(size_t capacity = 2048)
+        : Configuration("application", capacity) {
     }
 };
 
-template <typename TDeviceConfiguration>
+template <typename TConfiguration>
 class Application {
 public:
-    Application(FileSystem& fs, TDeviceConfiguration& deviceConfig, gpio_num_t statusLedPin)
+    Application(FileSystem& fs, TConfiguration& deviceConfig, gpio_num_t statusLedPin)
         : version(VERSION)
         , fs(fs)
-        , deviceConfig(loadConfig(deviceConfig))
+        , deviceConfig(Configuration::bindToFile(fs, "/device-config.json", deviceConfig))
         , statusLed("status", statusLedPin) {
 
         Serial.printf("Initializing version %s on %s instance '%s' with hostname '%s'\n",
@@ -151,11 +148,6 @@ private:
         MQTT_CONNECTING,
         READY
     };
-
-    static TDeviceConfiguration& loadConfig(TDeviceConfiguration& deviceConfig) {
-        deviceConfig.loadFromFileSystem();
-        return deviceConfig;
-    }
 
     void updateState() {
         ApplicationState newState;
@@ -224,8 +216,8 @@ private:
     const String version;
 
     FileSystem& fs;
-    TDeviceConfiguration deviceConfig;
-    ApplicationConfiguration appConfig { fs };
+    TConfiguration deviceConfig;
+    ApplicationConfiguration appConfig;
 
     LedDriver statusLed;
     ApplicationState state = ApplicationState::BOOTING;

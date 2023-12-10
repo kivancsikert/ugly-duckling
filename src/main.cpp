@@ -66,8 +66,8 @@ private:
 class SampleDeviceConfiguration
     : public DeviceConfiguration {
 public:
-    SampleDeviceConfiguration(FileSystem& fs)
-        : DeviceConfiguration(fs, "mk1") {
+    SampleDeviceConfiguration()
+        : DeviceConfiguration("mk1") {
     }
 };
 
@@ -95,7 +95,7 @@ void setup() {
     Serial.println("Starting up...");
 
     FileSystem& fs = FileSystem::get();
-    SampleDeviceConfiguration deviceConfig(fs);
+    SampleDeviceConfiguration deviceConfig;
     device = new SampleDevice(fs, deviceConfig);
 }
 

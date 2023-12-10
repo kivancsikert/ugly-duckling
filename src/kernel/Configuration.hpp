@@ -209,6 +209,37 @@ public:
         ConfigurationSection::store(json, inlineDefaults);
     }
 
+    template <typename TConfiguration>
+    static TConfiguration& bindToFile(FileSystem& fs, const String& path, TConfiguration& config) {
+        DynamicJsonDocument json(config.capacity);
+        if (!fs.exists(path)) {
+            Serial.println("The configuration file " + path + " was not found, falling back to defaults");
+        } else {
+            File file = fs.open(path, FILE_READ);
+            if (!file) {
+                throw "Cannot open config file " + path;
+            }
+
+            DeserializationError error = deserializeJson(json, file);
+            file.close();
+            if (error) {
+                Serial.println(file.readString());
+                throw "Cannot open config file " + path;
+            }
+        }
+        config.load(json.as<JsonObject>());
+        config.onUpdate([&]() {
+            File file = fs.open(path, FILE_WRITE);
+            if (!file) {
+                throw "Cannot open config file " + path;
+            }
+
+            serializeJson(json, file);
+            file.close();
+        });
+        return config;
+    }
+
 protected:
     void load(const JsonObject& json) override {
         ConfigurationSection::load(json);
@@ -237,51 +268,7 @@ private:
     std::list<std::function<void()>> callbacks;
 };
 
-class FileConfiguration : public Configuration {
-public:
-    FileConfiguration(FileSystem& fs, const String& name, const String& path, size_t capacity = 2048)
-        : Configuration(name, capacity)
-        , fs(fs)
-        , path(path) {
-    }
 
-    void loadFromFileSystem() {
-        DynamicJsonDocument json(capacity);
-        if (!fs.exists(path)) {
-            Serial.println("The " + name + " configuration file " + path + " was not found, falling back to defaults");
-        } else {
-            File file = fs.open(path, FILE_READ);
-            if (!file) {
-                throw "Cannot open config file " + path;
-            }
-
-            DeserializationError error = deserializeJson(json, file);
-            file.close();
-            if (error) {
-                Serial.println(file.readString());
-                throw "Cannot open config file " + path;
-            }
-        }
-        load(json.as<JsonObject>());
-    }
-
-    void update(const JsonObject& json) override {
-        Configuration::update(json);
-        File file = fs.open(path, FILE_WRITE);
-        if (!file) {
-            throw "Cannot open config file " + path;
-            return;
-        }
-
-        serializeJson(json, file);
-        file.close();
-    }
-
-private:
-    FileSystem& fs;
-
-    const String path;
-};
 
 }}    // namespace farmhub::kernel
 
