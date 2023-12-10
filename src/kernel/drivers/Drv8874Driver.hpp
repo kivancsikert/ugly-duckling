@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 
 #include <Arduino.h>
@@ -41,16 +42,14 @@ public:
         pinMode(faultPin, INPUT);
         pinMode(currentPin, INPUT);
 
-        stop();
+        sleep();
     }
 
     void stop() {
-        digitalWrite(sleepPin, LOW);
+        drive(true, 0);
     }
 
     void drive(bool phase, double duty = 1) {
-        digitalWrite(sleepPin, HIGH);
-
         int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
         Serial.printf("Driving valve %s at %.2f%%\n",
             phase ? "forward" : "reverse",
@@ -65,12 +64,28 @@ public:
         }
     }
 
+    void sleep() {
+        digitalWrite(sleepPin, LOW);
+        sleeping = true;
+    }
+
+    void wakeUp() {
+        digitalWrite(sleepPin, HIGH);
+        sleeping = false;
+    }
+
+    bool isSleeping() const {
+        return sleeping;
+    }
+
 private:
     const PwmChannel in1Channel;
     const PwmChannel in2Channel;
     const gpio_num_t faultPin;
     const gpio_num_t sleepPin;
     const gpio_num_t currentPin;
+
+    std::atomic<bool> sleeping { false };
 };
 
 }}}    // namespace farmhub::kernel::drivers

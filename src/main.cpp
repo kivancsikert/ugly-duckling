@@ -89,6 +89,7 @@ public:
     Main() {
         Task::run("demo", [this](Task& task) {
             Serial.println("Driver A demo");
+            device.driverA.wakeUp();
             while (true) {
                 device.driverA.drive(true, 1.0);
                 task.delayUntil(milliseconds(200));
@@ -103,6 +104,7 @@ public:
 
         Task::run("demo", [this](Task& task) {
             Serial.println("Driver B demo");
+            device.driverB.wakeUp();
             while (true) {
                 device.driverB.drive(true, 1.0);
                 task.delayUntil(milliseconds(200));
