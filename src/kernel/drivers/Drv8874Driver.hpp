@@ -6,6 +6,7 @@
 #include <Arduino.h>
 
 #include <kernel/PwmManager.hpp>
+#include <kernel/drivers/MotorDriver.hpp>
 
 using namespace std::chrono;
 
@@ -14,7 +15,8 @@ namespace farmhub { namespace kernel { namespace drivers {
 /**
  * @brief Texas Instruments DRV8874 motor driver.
  */
-class Drv8874Driver {
+class Drv8874Driver
+    : public PwmMotorDriver {
 
 private:
     const uint32_t PWM_FREQ = 25000;     // 25kHz
@@ -45,11 +47,7 @@ public:
         sleep();
     }
 
-    void stop() {
-        drive(true, 0);
-    }
-
-    void drive(bool phase, double duty = 1) {
+    virtual void drive(bool phase, double duty = 1) override {
         int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
         Serial.printf("Driving valve %s at %.2f%%\n",
             phase ? "forward" : "reverse",

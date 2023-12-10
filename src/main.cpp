@@ -85,44 +85,38 @@ class Main {
     // TODO Add console printer for MK4, without battery driver
     // ConsolePrinter consolePrinter { device.batteryDriver };
 #elif defined(MK5)
-public:
-    Main() {
-        Task::run("demo", [this](Task& task) {
-            Serial.println("Driver A demo");
-            device.driverA.wakeUp();
-            while (true) {
-                device.driverA.drive(true, 1.0);
-                task.delayUntil(milliseconds(200));
-                device.driverA.stop();
-                task.delayUntil(milliseconds(4800));
-                device.driverA.drive(false, 1.0);
-                task.delayUntil(milliseconds(200));
-                device.driverA.stop();
-                task.delayUntil(milliseconds(4800));
-            }
-        });
-
-        Task::run("demo", [this](Task& task) {
-            Serial.println("Driver B demo");
-            device.driverB.wakeUp();
-            while (true) {
-                device.driverB.drive(true, 1.0);
-                task.delayUntil(milliseconds(200));
-                device.driverB.stop();
-                task.delayUntil(milliseconds(2300));
-                device.driverB.drive(false, 1.0);
-                task.delayUntil(milliseconds(200));
-                device.driverB.stop();
-                task.delayUntil(milliseconds(2300));
-            }
-        });
-    }
-
     UglyDucklingMk5 device;
     ConsolePrinter consolePrinter { device.batteryDriver };
 #elif defined(MK6)
     UglyDucklingMk6 device;
     ConsolePrinter consolePrinter { device.batteryDriver };
+#endif
+
+#if defined(MK5) || defined(MK6)
+public:
+    void demo(const String& name, PwmMotorDriver& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
+        Task::loop(name.c_str(), [this, &motor, cycle, switchTime](Task& task) {
+            motor.drive(true, 1.0);
+            task.delayUntil(switchTime);
+            motor.stop();
+            task.delayUntil(cycle - switchTime);
+            motor.drive(false, 1.0);
+            task.delayUntil(switchTime);
+            motor.stop();
+            task.delayUntil(cycle - switchTime);
+        });
+    }
+
+    Main() {
+#if defined(MK5)
+        device.motorA.wakeUp();
+        device.motorB.wakeUp();
+#elif defined(MK6)
+        device.motorDriver.wakeUp();
+#endif
+        demo("motor-a", device.motorA, seconds(2));
+        demo("motor-b", device.motorB, seconds(1));
+    }
 #endif
 };
 

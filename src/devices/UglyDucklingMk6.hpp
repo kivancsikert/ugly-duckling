@@ -3,6 +3,7 @@
 #include <kernel/Application.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
+#include <kernel/drivers/Drv8833Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
 #include <devices/Device.hpp>
@@ -30,6 +31,18 @@ public:
     }
 
     LedDriver secondaryStatusLed { "status-2", GPIO_NUM_4 };
+
+    Drv8833Driver motorDriver {
+        pwm,
+        GPIO_NUM_16,    // AIN1
+        GPIO_NUM_17,    // AIN2
+        GPIO_NUM_18,    // BIN1
+        GPIO_NUM_8,     // BIN2
+        GPIO_NUM_11,    // NFault
+        GPIO_NUM_NC     // NSleep -- connected to LOADEN manually
+    };
+    PwmMotorDriver& motorA = motorDriver.getMotorA();
+    PwmMotorDriver& motorB = motorDriver.getMotorB();
 };
 
 }}    // namespace farmhub::devices

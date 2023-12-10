@@ -32,7 +32,7 @@ public:
             GPIO_NUM_1, 2.4848) {
     }
 
-    Drv8874Driver driverA {
+    Drv8874Driver motorA {
         pwm,
         GPIO_NUM_16,    // AIN1
         GPIO_NUM_17,    // AIN2
@@ -41,7 +41,7 @@ public:
         GPIO_NUM_10     // NSleep
     };
 
-    Drv8874Driver driverB {
+    Drv8874Driver motorB {
         pwm,
         GPIO_NUM_18,    // BIN1
         GPIO_NUM_8,     // BIN2
