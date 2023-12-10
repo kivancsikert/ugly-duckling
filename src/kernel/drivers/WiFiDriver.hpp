@@ -16,6 +16,16 @@ public:
     WiFiDriver(StateSource& networkReady, StateSource& configPortalRunning, const String& hostname) {
         WiFi.mode(WIFI_STA);
         WiFi.setHostname(hostname.c_str());
+        wifiManager.setHostname(hostname.c_str());
+        wifiManager.setConfigPortalTimeout(180);
+        wifiManager.setAPCallback([this, &configPortalRunning](WiFiManager* wifiManager) {
+            Serial.println("WiFi: entered config portal");
+            configPortalRunning.setFromISR();
+        });
+        wifiManager.setConfigPortalTimeoutCallback([this, &configPortalRunning]() {
+            Serial.println("WiFi: config portal timed out");
+            configPortalRunning.clearFromISR();
+        });
 
         WiFi.onEvent(
             [](WiFiEvent_t event, WiFiEventInfo_t info) {
@@ -46,19 +56,8 @@ public:
             },
             ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
-        Task::run("WiFi", 4096, [this, &networkReady, &configPortalRunning, hostname](Task& task) {
+        Task::run("WiFi", 4096, [this, &networkReady, hostname](Task& task) {
             while (true) {
-                WiFiManager wifiManager;
-                wifiManager.setHostname(hostname.c_str());
-                wifiManager.setConfigPortalTimeout(180);
-                wifiManager.setAPCallback([this, &configPortalRunning](WiFiManager* wifiManager) {
-                    Serial.println("WiFi: entered config portal");
-                    configPortalRunning.setFromISR();
-                });
-                wifiManager.setConfigPortalTimeoutCallback([this, &configPortalRunning]() {
-                    Serial.println("WiFi: config portal timed out");
-                    configPortalRunning.clearFromISR();
-                });
                 bool connected = wifiManager.autoConnect(hostname.c_str());
                 xSemaphoreTake(reconnectSemaphor, connected ? portMAX_DELAY : 0);
                 Serial.println("WiFi: Reconnecting...");
@@ -73,6 +72,7 @@ private:
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 
+    WiFiManager wifiManager;
     QueueHandle_t reconnectSemaphor = xSemaphoreCreateBinary();
 };
 
