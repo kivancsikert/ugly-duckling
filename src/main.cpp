@@ -5,8 +5,12 @@
 #include <kernel/Task.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 
+#include <devices/UglyDucklingMk6.hpp>
+
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
+
+using namespace farmhub::devices;
 
 class ConsolePrinter {
 public:
@@ -71,32 +75,25 @@ public:
     }
 };
 
-class SampleDevice {
+class Sample {
 
 public:
-    SampleDevice()
-        : application(GPIO_NUM_2) {
-
-        application.registerTelemetryProvider("battery", batteryDriver);
-
-        secondaryStatus.blinkPattern({ milliseconds(250), milliseconds(-250) });
+    Sample() {
+        device.getSecondaryStatusLed().blinkPattern({ milliseconds(250), milliseconds(-250) });
     }
 
 private:
-    BatteryDriver batteryDriver { GPIO_NUM_1, 1.242424 };
-    ConsolePrinter consolePrinter { batteryDriver };
-    Application<SampleDeviceConfiguration> application;
-
-    LedDriver secondaryStatus { "status-2", GPIO_NUM_4 };
+    UglyDucklingMk6 device;
+    ConsolePrinter consolePrinter { device.getBatteryDriver() };
 };
 
-SampleDevice* device;
+Sample* sample;
 
 void setup() {
     Serial.begin(115200);
     Serial.println("Starting up...");
 
-    device = new SampleDevice();
+    sample = new Sample();
 }
 
 void loop() {

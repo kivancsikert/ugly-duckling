@@ -83,11 +83,11 @@ public:
 template <typename TDeviceConfiguration>
 class Application {
 public:
-    Application(gpio_num_t statusLedPin)
+    Application(LedDriver& statusLed)
         : version(VERSION)
         , fs(FileSystem::get())
         , deviceConfig(Configuration::bindToFile(fs, "/device-config.json", *new TDeviceConfiguration()))
-        , statusLed("status", statusLedPin) {
+        , statusLed(statusLed) {
 
         Serial.printf("Initializing version %s on %s instance '%s' with hostname '%s'\n",
             version.c_str(),
@@ -219,7 +219,7 @@ private:
     TDeviceConfiguration deviceConfig;
     ApplicationConfiguration appConfig;
 
-    LedDriver statusLed;
+    LedDriver& statusLed;
     ApplicationState state = ApplicationState::BOOTING;
     StateManager stateManager;
     StateSource networkReadyState = stateManager.createStateSource("network-ready");
