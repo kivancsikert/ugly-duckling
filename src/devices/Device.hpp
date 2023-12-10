@@ -24,7 +24,7 @@ public:
             Serial.print("\033[33m" + String(VERSION) + "\033[0m");
 
             Serial.print(", IP: \033[33m" + WiFi.localIP().toString() + "\033[0m");
-            Serial.print("[\033[33m" + wifiStatus() + "\033[0m]");
+            Serial.print("/" + wifiStatus());
 
             Serial.printf(", uptime: \033[33m%.1f\033[0m s", float(millis()) / 1000.0f);
             time_t now;
@@ -54,23 +54,23 @@ private:
     static String wifiStatus() {
         switch (WiFi.status()) {
             case WL_NO_SHIELD:
-                return "//";
+                return "\033[0;31mno shield\033[0m";
             case WL_IDLE_STATUS:
-                return "..";
+                return "\033[0;33midle\033[0m";
             case WL_NO_SSID_AVAIL:
-                return "SS";
+                return "\033[0;31mno SSID\033[0m";
             case WL_SCAN_COMPLETED:
-                return "()";
+                return "\033[0;33mscan completed\033[0m";
             case WL_CONNECTED:
-                return "OK";
+                return "\033[0;32mOK\033[0m";
             case WL_CONNECT_FAILED:
-                return "!!";
+                return "\033[0;31mfailed\033[0m";
             case WL_CONNECTION_LOST:
-                return "!-";
+                return "\033[0;31mconnection lost\033[0m";
             case WL_DISCONNECTED:
-                return "--";
+                return "\033[0;33mdisconnected\033[0m";
             default:
-                return "??";
+                return "\033[0;31munknown\033[0m";
         }
     }
 
