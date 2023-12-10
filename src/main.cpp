@@ -5,7 +5,13 @@
 #include <kernel/Task.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 
+#if defined(MK4)
+#include <devices/UglyDucklingMk4.hpp>
+#elif defined(MK5)
 #include <devices/UglyDucklingMk5.hpp>
+#elif defined(MK6)
+#include <devices/UglyDucklingMk6.hpp>
+#endif
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
@@ -68,8 +74,17 @@ private:
 };
 
 class Main {
+#if defined(MK4)
+    UglyDucklingMk4 device;
+    // TODO Add console printer for MK4, without battery driver
+    // ConsolePrinter consolePrinter { device.batteryDriver };
+#elif defined(MK5)
     UglyDucklingMk5 device;
     ConsolePrinter consolePrinter { device.batteryDriver };
+#elif defined(MK6)
+    UglyDucklingMk6 device;
+    ConsolePrinter consolePrinter { device.batteryDriver };
+#endif
 };
 
 void setup() {
