@@ -5,7 +5,7 @@
 #include <kernel/Task.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 
-#include <devices/UglyDucklingMk6.hpp>
+#include <devices/UglyDucklingMk5.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
@@ -67,30 +67,13 @@ private:
     int counter;
 };
 
-class SampleDeviceConfiguration
-    : public DeviceConfiguration {
-public:
-    SampleDeviceConfiguration()
-        : DeviceConfiguration("mk1") {
-    }
-};
-
-class Sample {
-
-public:
-    Sample() {
-        device.secondaryStatusLed.blinkPattern({ milliseconds(250), milliseconds(-250) });
-    }
-
-private:
-    UglyDucklingMk6 device;
+class Main {
+    UglyDucklingMk5 device;
     ConsolePrinter consolePrinter { device.batteryDriver };
 };
 
-Sample* sample;
-
 void setup() {
-    sample = new Sample();
+    new Main();
 }
 
 void loop() {
