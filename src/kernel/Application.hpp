@@ -95,8 +95,8 @@ public:
             deviceConfig.instance.get().c_str(),
             deviceConfig.getHostname());
 
-        Task::loop("status-update", [this](Task&) { updateState(); });
-        Task::loop("telemetry", [this](Task& task) { publishTelemetry(task); });
+        Task::loop("status-update", 4096, [this](Task&) { updateState(); });
+        Task::loop("telemetry", 16384, [this](Task& task) { publishTelemetry(task); });
 
         mqtt.registerCommand(echoCommand);
         // TODO Add ping command

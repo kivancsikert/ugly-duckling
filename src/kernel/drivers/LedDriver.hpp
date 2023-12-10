@@ -16,7 +16,7 @@ public:
         : pin(pin)
         , pattern({ -milliseconds::max() }) {
         pinMode(pin, OUTPUT);
-        Task::loop(name, [this](Task& task) {
+        Task::loop(name, 2048, [this](Task& task) {
             if (currentPattern.empty()) {
                 currentPattern = pattern;
             }

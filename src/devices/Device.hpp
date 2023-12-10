@@ -14,7 +14,7 @@ class ConsolePrinter {
 public:
     ConsolePrinter() {
         static const String spinner = "|/-\\";
-        Task::loop("ConsolePrinter", 32 * 1024, 1, [this](Task& task) {
+        Task::loop("ConsolePrinter", 8192, 1, [this](Task& task) {
             Serial.print("\033[1G\033[0K");
 
             counter = (counter + 1) % spinner.length();

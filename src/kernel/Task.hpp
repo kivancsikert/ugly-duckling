@@ -13,8 +13,8 @@ using namespace std::chrono;
 namespace farmhub { namespace kernel {
 
 // TODO Remove _2 suffix
-static const uint32_t DEFAULT_STACK_SIZE_2 = 8192;
-static const unsigned int DEFAULT_PRIORITY_2 = 1;
+static const uint32_t DEFAULT_STACK_SIZE = 2048;
+static const unsigned int DEFAULT_PRIORITY = 1;
 
 class Task;
 
@@ -22,8 +22,11 @@ typedef std::function<void(Task&)> TaskFunction;
 
 class Task {
 public:
-    static void run(const char* name, TaskFunction runFunction) {
-        Task::run(name, DEFAULT_STACK_SIZE_2, DEFAULT_PRIORITY_2, runFunction);
+    static void inline run(const char* name, TaskFunction runFunction) {
+        Task::run(name, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, runFunction);
+    }
+    static void inline run(const char* name, uint32_t stackSize, TaskFunction runFunction) {
+        Task::run(name, stackSize, DEFAULT_PRIORITY, runFunction);
     }
     static void run(const char* name, uint32_t stackSize, UBaseType_t priority, TaskFunction runFunction) {
         Task* task = new Task(String(name), runFunction);
@@ -31,8 +34,11 @@ public:
         xTaskCreate(executeTask, name, stackSize, task, priority, &(task->taskHandle));
     }
 
-    static void loop(const char* name, TaskFunction loopFunction) {
-        Task::loop(name, DEFAULT_STACK_SIZE_2, DEFAULT_PRIORITY_2, loopFunction);
+    static void inline loop(const char* name, TaskFunction loopFunction) {
+        Task::loop(name, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, loopFunction);
+    }
+    static void inline loop(const char* name, uint32_t stackSize, TaskFunction loopFunction) {
+        Task::loop(name, stackSize, DEFAULT_PRIORITY, loopFunction);
     }
     static void loop(const char* name, uint32_t stackSize, UBaseType_t priority, TaskFunction loopFunction) {
         Task::run(name, stackSize, priority, [loopFunction](Task& task) {

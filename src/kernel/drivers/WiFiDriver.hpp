@@ -56,7 +56,7 @@ public:
             },
             ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
-        Task::run("WiFi", [this, &networkReady, hostname](Task& task) {
+        Task::run("WiFi", 4096, [this, &networkReady, hostname](Task& task) {
             while (true) {
                 bool connected = wifiManager.autoConnect(hostname.c_str());
                 xSemaphoreTake(reconnectSemaphor, connected ? portMAX_DELAY : 0);

@@ -52,7 +52,7 @@ public:
                 task.delayUntil(seconds(1));
             }
         });
-        Task::run("NtpSync", [&networkReady, &mdns, &ntpConfig](Task& task) {
+        Task::run("NtpSync", 4096, [&networkReady, &mdns, &ntpConfig](Task& task) {
             WiFiUDP udp;
             NTPClient* ntpClient;
             if (ntpConfig.host.get().length() > 0) {
