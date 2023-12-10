@@ -51,16 +51,13 @@ public:
     Main() {
 #if defined(MK4)
         device.motor.wakeUp();
-        demo("motor", device.motor, seconds(2));
+        demo("motor", device.motor, seconds(10));
 #elif defined(MK5)
         device.motorA.wakeUp();
-        device.motorB.wakeUp();
-        demo("motor-a", device.motorA, seconds(2));
-        demo("motor-b", device.motorB, seconds(1));
+        demo("motor-a", device.motorA, seconds(10));
 #elif defined(MK6)
         device.motorDriver.wakeUp();
-        demo("motor-a", device.motorA, seconds(2));
-        demo("motor-b", device.motorB, seconds(1));
+        demo("motor-a", device.motorA, seconds(10));
 #endif
     }
 };
