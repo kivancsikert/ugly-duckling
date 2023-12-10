@@ -12,9 +12,9 @@ namespace farmhub { namespace kernel { namespace drivers {
 
 class LedDriver {
 public:
-    LedDriver(const char* name, gpio_num_t pin, std::list<milliseconds> initialPattern = { -milliseconds::max() })
+    LedDriver(const char* name, gpio_num_t pin)
         : pin(pin)
-        , pattern(initialPattern) {
+        , pattern({ -milliseconds::max() }) {
         pinMode(pin, OUTPUT);
         Task::loop(name, [this](Task& task) {
             if (currentPattern.empty()) {
@@ -54,7 +54,11 @@ public:
     }
 
     void blinkPattern(std::list<milliseconds> pattern) {
-        setPattern(pattern);
+        if (pattern.empty()) {
+            turnOff();
+        } else {
+            setPattern(pattern);
+        }
     }
 
 private:

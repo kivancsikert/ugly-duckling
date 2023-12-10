@@ -78,6 +78,8 @@ public:
         : application(GPIO_NUM_2) {
 
         application.registerTelemetryProvider("battery", batteryDriver);
+
+        secondaryStatus.blinkPattern({ milliseconds(250), milliseconds(-250) });
     }
 
 private:
@@ -85,7 +87,7 @@ private:
     ConsolePrinter consolePrinter { batteryDriver };
     Application<SampleDeviceConfiguration> application;
 
-    LedDriver secondaryStatus { "status-2", GPIO_NUM_4, { milliseconds(250), milliseconds(-250) } };
+    LedDriver secondaryStatus { "status-2", GPIO_NUM_4 };
 };
 
 SampleDevice* device;
