@@ -13,11 +13,11 @@ using namespace std::chrono;
 namespace farmhub { namespace kernel { namespace drivers {
 
 /**
- * @brief Texas Instruments DRV8874 motor driver.
+ * @brief Texas Instruments DRV8801 motor driver.
  *
- * https://www.ti.com/lit/gpn/DRV8874
+ * https://www.ti.com/lit/gpn/DRV8801
  */
-class Drv8874Driver
+class Drv8801Driver
     : public PwmMotorDriver {
 
 private:
@@ -26,42 +26,52 @@ private:
 
 public:
     // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
-    Drv8874Driver(
+    Drv8801Driver(
         PwmManager& pwm,
-        gpio_num_t in1Pin,
-        gpio_num_t in2Pin,
+        gpio_num_t enablePin,
+        gpio_num_t phasePin,
+        gpio_num_t mode1Pin,
+        gpio_num_t mode2Pin,
         gpio_num_t currentPin,
         gpio_num_t faultPin,
         gpio_num_t sleepPin)
-        : in1Channel(pwm.registerChannel(in1Pin, PWM_FREQ, PWM_RESOLUTION))
-        , in2Channel(pwm.registerChannel(in2Pin, PWM_FREQ, PWM_RESOLUTION))
+        : enablePin(enablePin)
+        , phaseChannel(pwm.registerChannel(phasePin, PWM_FREQ, PWM_RESOLUTION))
         , currentPin(currentPin)
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
 
-        Serial.printf("Initializing DRV8874 on pins in1 = %d, in2 = %d, fault = %d, sleep = %d, current = %d\n",
-            in1Pin, in2Pin, faultPin, sleepPin, currentPin);
+        Serial.printf("Initializing DRV8801 on pins enable = %d, phase = %d, fault = %d, sleep = %d, mode1 = %d, mode2 = %d, current = %d\n",
+            enablePin, phasePin, faultPin, sleepPin, mode1Pin, mode2Pin, currentPin);
 
+        pinMode(enablePin, OUTPUT);
+        pinMode(mode1Pin, OUTPUT);
+        pinMode(mode2Pin, OUTPUT);
         pinMode(sleepPin, OUTPUT);
         pinMode(faultPin, INPUT);
         pinMode(currentPin, INPUT);
+
+        // TODO Allow using the DRV8801 in other modes
+        digitalWrite(mode1Pin, HIGH);
+        digitalWrite(mode2Pin, HIGH);
 
         sleep();
     }
 
     virtual void drive(bool phase, double duty = 1) override {
-        int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
+        if (duty == 0) {
+            Serial.println("Stopping");
+            digitalWrite(enablePin, LOW);
+            return;
+        }
+        digitalWrite(enablePin, HIGH);
+
+        int dutyValue = phaseChannel.maxValue() / 2 + (phase ? 1 : -1) * (int) (phaseChannel.maxValue() / 2 * duty);
         Serial.printf("Driving valve %s at %.2f%%\n",
             phase ? "forward" : "reverse",
             duty * 100);
 
-        if (phase) {
-            in1Channel.write(dutyValue);
-            in2Channel.write(0);
-        } else {
-            in1Channel.write(0);
-            in2Channel.write(dutyValue);
-        }
+        phaseChannel.write(dutyValue);
     }
 
     void sleep() {
@@ -79,8 +89,8 @@ public:
     }
 
 private:
-    const PwmChannel in1Channel;
-    const PwmChannel in2Channel;
+    const gpio_num_t enablePin;
+    const PwmChannel phaseChannel;
     const gpio_num_t faultPin;
     const gpio_num_t sleepPin;
     const gpio_num_t currentPin;

@@ -34,7 +34,6 @@ class Main {
     UglyDucklingMk6 device;
 #endif
 
-#if defined(MK5) || defined(MK6)
 public:
     void demo(const String& name, PwmMotorDriver& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
         Task::loop(name.c_str(), 4096, [this, &motor, cycle, switchTime](Task& task) {
@@ -50,16 +49,20 @@ public:
     }
 
     Main() {
-#if defined(MK5)
+#if defined(MK4)
+        device.motor.wakeUp();
+        demo("motor", device.motor, seconds(2));
+#elif defined(MK5)
         device.motorA.wakeUp();
         device.motorB.wakeUp();
-#elif defined(MK6)
-        device.motorDriver.wakeUp();
-#endif
         demo("motor-a", device.motorA, seconds(2));
         demo("motor-b", device.motorB, seconds(1));
-    }
+#elif defined(MK6)
+        device.motorDriver.wakeUp();
+        demo("motor-a", device.motorA, seconds(2));
+        demo("motor-b", device.motorB, seconds(1));
 #endif
+    }
 };
 
 void setup() {

@@ -13,7 +13,9 @@ using namespace std::chrono;
 namespace farmhub { namespace kernel { namespace drivers {
 
 /**
- * @brief Texas Instruments DRV8874 motor driver.
+ * @brief Texas Instruments DRV883 dual motor driver.
+ *
+ * https://www.ti.com/lit/gpn/DRV8833
  */
 class Drv8833Driver {
 
