@@ -58,7 +58,7 @@ public:
         sleep();
     }
 
-    virtual void drive(bool phase, double duty = 1) override {
+    void drive(MotorPhase phase, double duty = 1) override {
         if (duty == 0) {
             Serial.println("Stopping");
             digitalWrite(enablePin, LOW);
@@ -66,9 +66,10 @@ public:
         }
         digitalWrite(enablePin, HIGH);
 
-        int dutyValue = phaseChannel.maxValue() / 2 + (phase ? 1 : -1) * (int) (phaseChannel.maxValue() / 2 * duty);
-        Serial.printf("Driving motor %s at %.2f%%\n",
-            phase ? "forward" : "reverse",
+        int direction = (phase == MotorPhase::FORWARD ? 1 : -1);
+        int dutyValue = phaseChannel.maxValue() / 2 + direction * (int) (phaseChannel.maxValue() / 2 * duty);
+        Serial.printf("Driving motor %s at %.1f%%\n",
+            phase == MotorPhase::FORWARD ? "forward" : "reverse",
             duty * 100);
 
         phaseChannel.write(dutyValue);

@@ -37,11 +37,11 @@ class Main {
 public:
     void demo(const String& name, PwmMotorDriver& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
         Task::loop(name.c_str(), 4096, [this, &motor, cycle, switchTime](Task& task) {
-            motor.drive(true, 1.0);
+            motor.drive(MotorPhase::FORWARD, 1.0);
             task.delayUntil(switchTime);
             motor.stop();
             task.delayUntil(cycle - switchTime);
-            motor.drive(false, 1.0);
+            motor.drive(MotorPhase::REVERSE, 1.0);
             task.delayUntil(switchTime);
             motor.stop();
             task.delayUntil(cycle - switchTime);

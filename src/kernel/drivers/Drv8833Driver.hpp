@@ -80,18 +80,21 @@ private:
             , in2Channel(pwm.registerChannel(in2Pin, PWM_FREQ, PWM_RESOLUTION)) {
         }
 
-        virtual void drive(bool phase, double duty = 1) override {
+        void drive(MotorPhase phase, double duty = 1) override {
             int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
-            Serial.printf("Driving motor %s at %.2f%%\n",
-                phase ? "forward" : "reverse",
+            Serial.printf("Driving motor %s at %.1f%%\n",
+                phase == MotorPhase::FORWARD ? "forward" : "reverse",
                 duty * 100);
 
-            if (phase) {
-                in1Channel.write(dutyValue);
-                in2Channel.write(0);
-            } else {
-                in1Channel.write(0);
-                in2Channel.write(dutyValue);
+            switch (phase) {
+                case MotorPhase::FORWARD:
+                    in1Channel.write(dutyValue);
+                    in2Channel.write(0);
+                    break;
+                case MotorPhase::REVERSE:
+                    in1Channel.write(0);
+                    in2Channel.write(dutyValue);
+                    break;
             }
         }
 
