@@ -63,10 +63,10 @@ public:
     Main() {
 #if defined(MK4)
         device.motor.wakeUp();
-        demoMotor("motor", device.motor, seconds(10));
+        demoValve("motor", device.motor, seconds(10));
 #elif defined(MK5)
         device.motorA.wakeUp();
-        demoMotor("motor-a", device.motorA, seconds(10));
+        demoValve("motor-a", device.motorA, seconds(10));
 #elif defined(MK6)
         device.motorDriver.wakeUp();
         demoValve("valve-a", device.motorA, seconds(10));
