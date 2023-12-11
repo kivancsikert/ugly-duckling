@@ -8,6 +8,8 @@
 #include <kernel/Task.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 
+#include <peripherals/Valve.hpp>
+
 #if defined(MK4)
 #include <devices/UglyDucklingMk4.hpp>
 #elif defined(MK5)
@@ -20,10 +22,10 @@
 
 using namespace std::chrono;
 
+using namespace farmhub::devices;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
-
-using namespace farmhub::devices;
+using namespace farmhub::peripherals;
 
 class Main {
 #if defined(MK4)
@@ -35,8 +37,8 @@ class Main {
 #endif
 
 public:
-    void demo(const String& name, PwmMotorDriver& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
-        Task::loop(name.c_str(), 4096, [this, &motor, cycle, switchTime](Task& task) {
+    void demoMotor(const String& name, PwmMotorDriver& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
+        Task::loop(name.c_str(), 4096, [&motor, cycle, switchTime](Task& task) {
             motor.drive(MotorPhase::FORWARD, 1.0);
             task.delayUntil(switchTime);
             motor.stop();
@@ -48,16 +50,26 @@ public:
         });
     }
 
+    void demoValve(const String& name, PwmMotorDriver& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
+        Valve* valve = new Valve(motor, *new LatchingValveControlStrategy(switchTime));
+        Task::loop(name.c_str(), 4096, [valve, cycle](Task& task) {
+            valve->open();
+            task.delayUntil(cycle);
+            valve->close();
+            task.delayUntil(cycle);
+        });
+    }
+
     Main() {
 #if defined(MK4)
         device.motor.wakeUp();
-        demo("motor", device.motor, seconds(10));
+        demoMotor("motor", device.motor, seconds(10));
 #elif defined(MK5)
         device.motorA.wakeUp();
-        demo("motor-a", device.motorA, seconds(10));
+        demoMotor("motor-a", device.motorA, seconds(10));
 #elif defined(MK6)
         device.motorDriver.wakeUp();
-        demo("motor-a", device.motorA, seconds(10));
+        demoValve("valve-a", device.motorA, seconds(10));
 #endif
     }
 };
