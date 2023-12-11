@@ -73,10 +73,10 @@ public:
     }
 };
 
-class ApplicationConfiguration : public Configuration {
+class PeripheralsConfiguration : public Configuration {
 public:
-    ApplicationConfiguration(size_t capacity = 2048)
-        : Configuration("application", capacity) {
+    PeripheralsConfiguration(size_t capacity = 2048)
+        : Configuration("peripherals", capacity) {
     }
 };
 
@@ -87,6 +87,7 @@ public:
         : version(VERSION)
         , fs(FileSystem::get())
         , deviceConfig(Configuration::bindToFile(fs, "/device-config.json", *new TDeviceConfiguration()))
+        , peripheralsConfig(Configuration::bindToFile(fs, "/peripherals.json", *new PeripheralsConfiguration()))
         , statusLed(statusLed) {
 
         Serial.printf("Initializing version %s on %s instance '%s' with hostname '%s'\n",
@@ -218,7 +219,7 @@ private:
 
     FileSystem& fs;
     TDeviceConfiguration deviceConfig;
-    ApplicationConfiguration appConfig;
+    PeripheralsConfiguration peripheralsConfig;
 
     LedDriver& statusLed;
     ApplicationState state = ApplicationState::BOOTING;
@@ -243,7 +244,7 @@ private:
     MdnsDriver mdns { networkReadyState, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
     RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp, rtcInSyncState };
     TelemetryCollector telemetryCollector;
-    MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), appConfig, mqttReadyState };
+    MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), peripheralsConfig, mqttReadyState };
 
     EchoCommand echoCommand;
     RestartCommand restartCommand;

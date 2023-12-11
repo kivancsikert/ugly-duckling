@@ -201,7 +201,7 @@ public:
         load(json);
     }
 
-    void onUpdate(const std::function<void()>& callback) {
+    void onUpdate(const std::function<void(const JsonObject&)>& callback) {
         callbacks.push_back(callback);
     }
 
@@ -228,7 +228,7 @@ public:
             }
         }
         config.load(json.as<JsonObject>());
-        config.onUpdate([&]() {
+        config.onUpdate([&fs, path](const JsonObject& json) {
             File file = fs.open(path, FILE_WRITE);
             if (!file) {
                 throw "Cannot open config file " + path;
@@ -252,23 +252,21 @@ protected:
         serializeJsonPretty(prettyJson, Serial);
         Serial.println();
 
-        updated();
+        updated(json);
     }
 
     const String name;
     const size_t capacity;
 
 private:
-    void updated() {
+    void updated(const JsonObject& json) {
         for (auto& callback : callbacks) {
-            callback();
+            callback(json);
         }
     }
 
-    std::list<std::function<void()>> callbacks;
+    std::list<std::function<void(const JsonObject&)>> callbacks;
 };
-
-
 
 }}    // namespace farmhub::kernel
 
