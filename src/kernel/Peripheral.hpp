@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 
+#include <kernel/Concurrent.hpp>
 #include <kernel/Configuration.hpp>
 
 namespace farmhub { namespace kernel {
@@ -92,7 +93,12 @@ public:
 
 private:
     void updateConfig() {
-        // TODO Ensure mutual exclusion
+        configMutex.lock();
+        updateConfigUnderMutex();
+        configMutex.unlock();
+    }
+
+    void updateConfigUnderMutex() {
         // Stop all peripherals
         peripherals.clear();
 
@@ -124,6 +130,7 @@ private:
     PeripheralsConfiguration config;
     std::map<String, std::unique_ptr<PeripheralFactoryBase>> factories;
     std::list<std::unique_ptr<Peripheral>> peripherals;
+    Mutex configMutex;
 };
 
 }}    // namespace farmhub::kernel
