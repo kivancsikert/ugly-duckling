@@ -29,14 +29,14 @@ public:
     typedef std::function<void(const String&, const JsonObject&)> SubscriptionHandler;
 
 private:
-    struct MqttMessage {
+    struct Message {
         char* fullTopic;
         char* payload;
         size_t length;
         Retention retain;
         QoS qos;
 
-        MqttMessage()
+        Message()
             : fullTopic(nullptr)
             , payload(nullptr)
             , length(0)
@@ -44,7 +44,7 @@ private:
             , qos(QoS::AtMostOnce) {
         }
 
-        MqttMessage(const char* fullTopic, const char* payload, size_t length, Retention retention, QoS qos)
+        Message(const char* fullTopic, const char* payload, size_t length, Retention retention, QoS qos)
             : retain(retention)
             , qos(qos)
             , fullTopic(strdup(fullTopic))
@@ -52,7 +52,7 @@ private:
             , length(length) {
         }
 
-        MqttMessage(const String& fullTopic, const JsonDocument& payload, Retention retention, QoS qos)
+        Message(const String& fullTopic, const JsonDocument& payload, Retention retention, QoS qos)
             : retain(retention)
             , qos(qos)
             , fullTopic(strdup(fullTopic.c_str())) {
@@ -65,7 +65,7 @@ private:
             this->length = length;
         }
 
-        ~MqttMessage() {
+        ~Message() {
             free(fullTopic);
             free(payload);
         }
@@ -106,15 +106,15 @@ public:
     MqttDriver(
         State& networkReady,
         MdnsDriver& mdns,
-        Config& mqttConfig,
+        Config& config,
         const String& instanceName,
         StateSource& mqttReady)
         : networkReady(networkReady)
         , mdns(mdns)
-        , mqttConfig(mqttConfig)
+        , config(config)
         , instanceName(instanceName)
-        , clientId(getClientId(mqttConfig.clientId.get(), instanceName))
-        , rootTopic(getTopic(mqttConfig.topic.get(), instanceName))
+        , clientId(getClientId(config.clientId.get(), instanceName))
+        , rootTopic(getTopic(config.topic.get(), instanceName))
         , mqttReady(mqttReady) {
         Task::run("MQTT", 8192, 1, [this](Task& task) {
             setup();
@@ -127,7 +127,7 @@ public:
 
     bool publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
         String fullTopic = rootTopic + "/" + suffix;
-        MqttMessage* message = new MqttMessage(fullTopic, json, retain, qos);
+        Message* message = new Message(fullTopic, json, retain, qos);
 #ifdef DUMP_MQTT
         Serial.printf("Queuing MQTT topic '%s'%s (qos = %d): ",
             fullTopic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), qos);
@@ -147,7 +147,7 @@ public:
     bool clear(const String& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
         String fullTopic = rootTopic + "/" + suffix;
         Serial.println("Clearing MQTT topic '" + fullTopic + "'");
-        return publishToQueue(new MqttMessage(fullTopic.c_str(), "", 0, retain, qos));
+        return publishToQueue(new Message(fullTopic.c_str(), "", 0, retain, qos));
     }
 
     bool subscribe(const String& suffix, SubscriptionHandler handler) {
@@ -171,9 +171,9 @@ public:
 
 private:
     void setup() {
-        if (mqttConfig.host.get().length() > 0) {
-            mqttServer.hostname = mqttConfig.host.get();
-            mqttServer.port = mqttConfig.port.get();
+        if (config.host.get().length() > 0) {
+            mqttServer.hostname = config.host.get();
+            mqttServer.port = config.port.get();
         } else {
             // TODO Handle lookup failure
             mdns.lookupService("mqtt", "tcp", mqttServer);
@@ -182,7 +182,7 @@ private:
         mqttClient.setKeepAlive(180);
 
         mqttClient.onMessageAdvanced([&](MQTTClient* client, char* topic, char* payload, int length) {
-            MqttMessage* message = new MqttMessage(topic, payload, length, Retention::NoRetain, QoS::ExactlyOnce);
+            Message* message = new Message(topic, payload, length, Retention::NoRetain, QoS::ExactlyOnce);
 #ifdef DUMP_MQTT
             Serial.println("Received '" + String(topic) + "' (size: " + length + "): " + String(payload, length));
 #endif
@@ -237,7 +237,7 @@ private:
         mqttClient.loop();
 
         while (true) {
-            MqttMessage* message;
+            Message* message;
             if (!xQueueReceive(publishQueue, &message, 0)) {
                 break;
             }
@@ -270,7 +270,7 @@ private:
 
     void procesIncomingQueue() {
         while (true) {
-            MqttMessage* message;
+            Message* message;
             if (!xQueueReceive(incomingQueue, &message, 0)) {
                 break;
             }
@@ -302,7 +302,7 @@ private:
         }
     }
 
-    bool publishToQueue(const MqttMessage* message) {
+    bool publishToQueue(const Message* message) {
         // TODO allow some timeout here?
         bool storedWithoutDropping = xQueueSend(publishQueue, &message, 0);
         if (!storedWithoutDropping) {
@@ -341,7 +341,7 @@ private:
     State& networkReady;
     WiFiClient wifiClient;
     MdnsDriver& mdns;
-    Config& mqttConfig;
+    Config& config;
     const String instanceName;
     StateSource& mqttReady;
 
@@ -350,9 +350,9 @@ private:
 
     MdnsRecord mqttServer;
     MQTTClient mqttClient { MQTT_BUFFER_SIZE };
-    QueueHandle_t publishQueue { xQueueCreate(mqttConfig.queueSize.get(), sizeof(MqttMessage*)) };
-    QueueHandle_t incomingQueue { xQueueCreate(mqttConfig.queueSize.get(), sizeof(MqttMessage*)) };
-    QueueHandle_t subscribeQueue { xQueueCreate(mqttConfig.queueSize.get(), sizeof(Subscription*)) };
+    QueueHandle_t publishQueue { xQueueCreate(config.queueSize.get(), sizeof(Message*)) };
+    QueueHandle_t incomingQueue { xQueueCreate(config.queueSize.get(), sizeof(Message*)) };
+    QueueHandle_t subscribeQueue { xQueueCreate(config.queueSize.get(), sizeof(Subscription*)) };
     // TODO Use a map instead
     std::list<Subscription> subscriptions;
 
