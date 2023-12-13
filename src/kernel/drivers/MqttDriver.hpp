@@ -30,44 +30,37 @@ public:
 
 private:
     struct Message {
-        char* fullTopic;
-        char* payload;
-        size_t length;
-        Retention retain;
-        QoS qos;
+        const String fullTopic;
+        const String payload;
+        const Retention retain;
+        const QoS qos;
 
         Message()
-            : fullTopic(nullptr)
-            , payload(nullptr)
-            , length(0)
+            : fullTopic("")
+            , payload("")
             , retain(Retention::NoRetain)
             , qos(QoS::AtMostOnce) {
         }
 
-        Message(const char* fullTopic, const char* payload, size_t length, Retention retention, QoS qos)
-            : retain(retention)
-            , qos(qos)
-            , fullTopic(strdup(fullTopic))
-            , payload(strndup(payload, length))
-            , length(length) {
+        Message(const String& fullTopic, const String& payload, int length, Retention retention, QoS qos)
+            : fullTopic(fullTopic)
+            , payload(payload)
+            , retain(retention)
+            , qos(qos) {
         }
 
         Message(const String& fullTopic, const JsonDocument& payload, Retention retention, QoS qos)
-            : retain(retention)
-            , qos(qos)
-            , fullTopic(strdup(fullTopic.c_str())) {
-            size_t length = measureJson(payload);
-            // TODO Do we need to have this extra byte at the end?
-            size_t bufferLength = length + 1;
-            char* buffer = new char[bufferLength];
-            serializeJson(payload, buffer, bufferLength);
-            this->payload = buffer;
-            this->length = length;
+            : fullTopic(fullTopic)
+            , payload(serializeJsonToString(payload))
+            , retain(retention)
+            , qos(qos) {
         }
 
-        ~Message() {
-            free(fullTopic);
-            free(payload);
+    private:
+        static String serializeJsonToString(const JsonDocument& jsonPayload) {
+            String payload;
+            serializeJson(jsonPayload, payload);
+            return payload;
         }
     };
 
@@ -147,7 +140,7 @@ public:
     bool clear(const String& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
         String fullTopic = rootTopic + "/" + suffix;
         Serial.println("Clearing MQTT topic '" + fullTopic + "'");
-        return publishToQueue(new Message(fullTopic.c_str(), "", 0, retain, qos));
+        return publishToQueue(new Message(fullTopic, "", 0, retain, qos));
     }
 
     bool subscribe(const String& suffix, SubscriptionHandler handler) {
@@ -242,9 +235,9 @@ private:
                 break;
             }
 
-            bool success = mqttClient.publish(message->fullTopic, message->payload, message->length, message->retain == Retention::Retain, static_cast<int>(message->qos));
+            bool success = mqttClient.publish(message->fullTopic, message->payload, message->retain == Retention::Retain, static_cast<int>(message->qos));
 #ifdef DUMP_MQTT
-            Serial.printf("Published to '%s' (size: %d)\n", message->fullTopic, message->length);
+            Serial.printf("Published to '%s' (size: %d)\n", message->fullTopic.c_str(), message->payload.length());
 #endif
             if (!success) {
                 Serial.printf("Error publishing to MQTT topic at '%s', error = %d\n",
@@ -278,7 +271,7 @@ private:
             String fullTopic = message->fullTopic;
             String payload = message->payload;
 
-            DynamicJsonDocument json(message->length * 2);
+            DynamicJsonDocument json(message->payload.length() * 2);
             deserializeJson(json, payload);
             if (payload.isEmpty()) {
 #ifdef DUMP_MQTT
