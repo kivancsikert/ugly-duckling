@@ -4,6 +4,7 @@
 #include <chrono>
 #include <list>
 
+#include <kernel/Queue.hpp>
 #include <kernel/Task.hpp>
 
 using namespace std::chrono;
@@ -16,28 +17,28 @@ public:
 
     LedDriver(const String& name, gpio_num_t pin)
         : pin(pin)
+        , patternQueue(name, 1)
         , pattern({ -milliseconds::max() }) {
         pinMode(pin, OUTPUT);
         Task::loop(name, 2048, [this](Task& task) {
             if (currentPattern.empty()) {
                 currentPattern = pattern;
             }
-            milliseconds delay = currentPattern.front();
-            ticks delayTicks = delay < milliseconds::zero() ? -delay : delay;
+            milliseconds blinkTime = currentPattern.front();
             currentPattern.pop_front();
 
-            if (delay > milliseconds::zero()) {
+            if (blinkTime > milliseconds::zero()) {
                 setLedState(LOW);
             } else {
                 setLedState(HIGH);
             }
-            BlinkPattern* newPattern;
+
             // TOOD Substract processing time from delay
-            if (xQueueReceive(patternQueue, &newPattern, delayTicks.count()) == pdTRUE) {
-                pattern = *newPattern;
+            ticks timeout = blinkTime < milliseconds::zero() ? -blinkTime : blinkTime;
+            patternQueue.pollIn(timeout, [this](const BlinkPattern& newPattern) {
+                pattern = newPattern;
                 currentPattern = {};
-                free(newPattern);
-            }
+            });
         });
     }
 
@@ -67,8 +68,7 @@ public:
 
 private:
     void setPattern(BlinkPattern pattern) {
-        auto* payload = new BlinkPattern(pattern);
-        xQueueSend(patternQueue, &payload, portMAX_DELAY);
+        patternQueue.put(pattern);
     }
 
     void setLedState(bool state) {
@@ -76,10 +76,10 @@ private:
         digitalWrite(pin, state);
     }
 
-    QueueHandle_t patternQueue { xQueueCreate(1, sizeof(BlinkPattern*)) };
     const gpio_num_t pin;
-    std::atomic<bool> ledState;
+    Queue<BlinkPattern> patternQueue;
     BlinkPattern pattern;
+    std::atomic<bool> ledState;
     BlinkPattern currentPattern;
 };
 

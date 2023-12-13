@@ -15,7 +15,7 @@ namespace farmhub { namespace kernel {
 template <typename TMessage>
 class Queue {
 public:
-    Queue(const String& name, size_t capacity = 16, ticks sendTimeout = ticks::zero(), ticks receiveTimeout = ticks::zero())
+    Queue(const String& name, size_t capacity = 16)
         : name(name)
         , queue(xQueueCreate(capacity, sizeof(TMessage*)))
         , sendTimeout(sendTimeout)
@@ -29,9 +29,19 @@ public:
     typedef std::function<void(const TMessage&)> MessageHandler;
 
     template <typename... Args>
-    bool send(Args&&... args) {
+    void put(Args&&... args) {
+        while (!offerIn(ticks::max(), std::forward<Args>(args)...)) { }
+    }
+
+    template <typename... Args>
+    bool offer(Args&&... args) {
+        return offerIn(ticks::zero(), std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    bool offerIn(ticks timeout, Args&&... args) {
         TMessage* copy = new TMessage(std::forward<Args>(args)...);
-        bool sentWithoutDropping = xQueueSend(queue, &copy, sendTimeout.count()) == pdTRUE;
+        bool sentWithoutDropping = xQueueSend(queue, &copy, timeout.count()) == pdTRUE;
         if (!sentWithoutDropping) {
             Serial.println("Overflow in queue '" + name + "', dropping message");
             delete copy;
@@ -39,17 +49,25 @@ public:
         return sentWithoutDropping;
     }
 
-    int process(MessageHandler handler) {
+    int drain(MessageHandler handler) {
         int count = 0;
-        while (receiveNext(handler)) {
+        while (poll(handler)) {
             count++;
         }
         return count;
     }
 
-    bool receiveNext(MessageHandler handler) {
+    void take(MessageHandler handler) {
+        while (!pollIn(ticks::max(), handler)) { }
+    }
+
+    bool poll(MessageHandler handler) {
+        return pollIn(ticks::zero(), handler);
+    }
+
+    bool pollIn(ticks timeout, MessageHandler handler) {
         TMessage* message;
-        if (!xQueueReceive(queue, &message, receiveTimeout.count())) {
+        if (!xQueueReceive(queue, &message, timeout.count())) {
             return false;
         }
         handler(*message);
