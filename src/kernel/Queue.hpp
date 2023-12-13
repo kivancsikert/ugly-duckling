@@ -39,15 +39,20 @@ public:
 
     int process(MessageHandler handler) {
         int count = 0;
-        TMessage* message;
-        while (true) {
-            if (!xQueueReceive(queue, &message, receiveTimeout)) {
-                return count;
-            }
+        while (receiveNext(queue, handler)) {
             count++;
-            handler(*message);
-            delete message;
         }
+        return count;
+    }
+
+    bool receiveNext(MessageHandler handler) {
+        TMessage* message;
+        if (!xQueueReceive(queue, &message, receiveTimeout)) {
+            return false;
+        }
+        handler(*message);
+        delete message;
+        return true;
     }
 
 private:
