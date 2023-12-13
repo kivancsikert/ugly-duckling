@@ -90,18 +90,18 @@ public:
 
         Task::loop("status-update", 4096, [this](Task&) { updateState(); });
 
-        mqtt.registerCommand(echoCommand);
+        registerCommand(echoCommand);
         // TODO Add ping command
-        // mqtt.registerCommand(pingCommand);
+        // registerCommand(pingCommand);
         // TODO Add reset-wifi command
-        // mqtt.registerCommand(resetWifiCommand);
-        mqtt.registerCommand(restartCommand);
-        mqtt.registerCommand(sleepCommand);
-        mqtt.registerCommand(fileListCommand);
-        mqtt.registerCommand(fileReadCommand);
-        mqtt.registerCommand(fileWriteCommand);
-        mqtt.registerCommand(fileRemoveCommand);
-        mqtt.registerCommand(httpUpdateCommand);
+        // registerCommand(resetWifiCommand);
+        registerCommand(restartCommand);
+        registerCommand(sleepCommand);
+        registerCommand(fileListCommand);
+        registerCommand(fileReadCommand);
+        registerCommand(fileWriteCommand);
+        registerCommand(fileRemoveCommand);
+        registerCommand(httpUpdateCommand);
 
         applicationReadyState.awaitSet();
 
@@ -128,6 +128,28 @@ public:
 
     void registerTelemetryProvider(const String& name, TelemetryProvider& provider) {
         telemetryCollector.registerProvider(name, provider);
+    }
+
+    typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
+
+    void registerCommand(const String& name, CommandHandler handler) {
+        String suffix = "commands/" + name;
+        mqtt.subscribe(suffix, MqttDriver::QoS::ExactlyOnce, [this, name, suffix, handler](const String&, const JsonObject& request) {
+            // Clear topic
+            mqtt.clear(suffix, MqttDriver::Retention::Retain, MqttDriver::QoS::ExactlyOnce);
+            DynamicJsonDocument responseDoc(2048);
+            auto response = responseDoc.to<JsonObject>();
+            handler(request, response);
+            if (response.size() > 0) {
+                mqtt.publish("responses/" + name, responseDoc, MqttDriver::Retention::NoRetain, MqttDriver::QoS::ExactlyOnce);
+            }
+        });
+    }
+
+    void registerCommand(Command& command) {
+        registerCommand(command.name, [&](const JsonObject& request, JsonObject& response) {
+            command.handle(request, response);
+        });
     }
 
 private:

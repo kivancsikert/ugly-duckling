@@ -5,7 +5,6 @@
 #include <MQTT.h>
 #include <WiFi.h>
 
-#include <kernel/Command.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
@@ -15,6 +14,81 @@
 namespace farmhub { namespace kernel { namespace drivers {
 
 class MqttDriver {
+public:
+    enum class Retention {
+        NoRetain,
+        Retain
+    };
+
+    enum class QoS {
+        AtMostOnce = 0,
+        AtLeastOnce = 1,
+        ExactlyOnce = 2
+    };
+
+    typedef std::function<void(const String&, const JsonObject&)> SubscriptionHandler;
+
+private:
+    struct MqttMessage {
+        char* fullTopic;
+        char* payload;
+        size_t length;
+        Retention retain;
+        QoS qos;
+
+        MqttMessage()
+            : fullTopic(nullptr)
+            , payload(nullptr)
+            , length(0)
+            , retain(Retention::NoRetain)
+            , qos(QoS::AtMostOnce) {
+        }
+
+        MqttMessage(const char* fullTopic, const char* payload, size_t length, Retention retention, QoS qos)
+            : retain(retention)
+            , qos(qos)
+            , fullTopic(strdup(fullTopic))
+            , payload(strndup(payload, length))
+            , length(length) {
+        }
+
+        MqttMessage(const String& fullTopic, const JsonDocument& payload, Retention retention, QoS qos)
+            : retain(retention)
+            , qos(qos)
+            , fullTopic(strdup(fullTopic.c_str())) {
+            size_t length = measureJson(payload);
+            // TODO Do we need to have this extra byte at the end?
+            size_t bufferLength = length + 1;
+            char* buffer = new char[bufferLength];
+            serializeJson(payload, buffer, bufferLength);
+            this->payload = buffer;
+            this->length = length;
+        }
+
+        ~MqttMessage() {
+            free(fullTopic);
+            free(payload);
+        }
+    };
+
+    struct Subscription {
+        const String suffix;
+        const QoS qos;
+        const SubscriptionHandler handle;
+
+        Subscription(const String& suffix, QoS qos, SubscriptionHandler handle)
+            : suffix(suffix)
+            , qos(qos)
+            , handle(handle) {
+        }
+
+        Subscription(const Subscription& other)
+            : suffix(other.suffix)
+            , qos(other.qos)
+            , handle(other.handle) {
+        }
+    };
+
 public:
     class Config : public NamedConfigurationSection {
     public:
@@ -29,19 +103,6 @@ public:
         Property<unsigned int> queueSize { this, "queueSize", 16 };
     };
 
-    enum class Retention {
-        NoRetain,
-        Retain
-    };
-
-    enum class QoS {
-        AtMostOnce = 0,
-        AtLeastOnce = 1,
-        ExactlyOnce = 2
-    };
-
-    typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
-
     MqttDriver(
         State& networkReady,
         MdnsDriver& mdns,
@@ -53,7 +114,7 @@ public:
         , mqttConfig(mqttConfig)
         , instanceName(instanceName)
         , clientId(getClientId(mqttConfig.clientId.get(), instanceName))
-        , topic(getTopic(mqttConfig.topic.get(), instanceName))
+        , rootTopic(getTopic(mqttConfig.topic.get(), instanceName))
         , mqttReady(mqttReady) {
         Task::run("MQTT", 8192, 1, [this](Task& task) {
             setup();
@@ -65,7 +126,7 @@ public:
     }
 
     bool publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
-        String fullTopic = topic + "/" + suffix;
+        String fullTopic = rootTopic + "/" + suffix;
         MqttMessage* message = new MqttMessage(fullTopic, json, retain, qos);
 #ifdef DUMP_MQTT
         Serial.printf("Queuing MQTT topic '%s'%s (qos = %d): ",
@@ -73,12 +134,7 @@ public:
         serializeJsonPretty(json, Serial);
         Serial.println();
 #endif
-        // TODO allow some timeout here
-        bool storedWithoutDropping = xQueueSend(publishQueue, &message, 0);
-        if (!storedWithoutDropping) {
-            Serial.println("Overflow in publish queue, dropping message");
-        }
-        return storedWithoutDropping;
+        return publishToQueue(message);
     }
 
     bool publish(const String& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, int size = MQTT_BUFFER_SIZE) {
@@ -88,14 +144,29 @@ public:
         return publish(suffix, doc, retain, qos);
     }
 
-    void registerCommand(Command& command) {
-        registerCommand(command.name, [&](const JsonObject& request, JsonObject& response) {
-            command.handle(request, response);
-        });
+    bool clear(const String& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
+        String fullTopic = rootTopic + "/" + suffix;
+        Serial.println("Clearing MQTT topic '" + fullTopic + "'");
+        return publishToQueue(new MqttMessage(fullTopic.c_str(), "", 0, retain, qos));
     }
 
-    void registerCommand(const String command, CommandHandler handle) {
-        commandHandlers.emplace_back(command, handle);
+    bool subscribe(const String& suffix, SubscriptionHandler handler) {
+        return subscribe(suffix, QoS::ExactlyOnce, handler);
+    }
+
+    /**
+     * @brief Subscribes to the given topic under the topic prefix.
+     *
+     * Note that subscription does not support wildcards.
+     */
+    bool subscribe(const String& suffix, QoS qos, SubscriptionHandler handler) {
+        Subscription* subscription = new Subscription(suffix, qos, handler);
+        bool storedWithoutDropping = xQueueSend(subscribeQueue, &subscription, 0);
+        if (!storedWithoutDropping) {
+            Serial.println("Overflow in subscribe queue, dropping subscription");
+            delete subscription;
+        }
+        return storedWithoutDropping;
     }
 
 private:
@@ -129,7 +200,7 @@ private:
         }
 
         Serial.println("MQTT: server: " + mqttServer.hostname + ":" + String(mqttServer.port)
-            + ", client ID is '" + clientId + "', topic is '" + topic + "'");
+            + ", client ID is '" + clientId + "', topic is '" + rootTopic + "'");
     }
 
     milliseconds loopAndDelay() {
@@ -145,29 +216,20 @@ private:
                 return MQTT_DISCONNECTED_CHECK_INTERVAL;
             }
 
-            subscribe("config", QoS::ExactlyOnce);
-            subscribe("commands/#", QoS::ExactlyOnce);
+            // Re-subscribe to existing subscriptions
+            for (auto& subscription : subscriptions) {
+                registerSubscriptionWithMqtt(subscription.suffix, subscription.qos);
+            }
+
             Serial.println("MQTT: Connected");
             mqttReady.set();
         }
 
         processPublishQueue();
+        processSubscriptionQueue();
         procesIncomingQueue();
 
         return MQTT_LOOP_INTERVAL;
-    }
-
-    // This is kept private for now, as it is not thread-safe. Since subcscription is not currently
-    // needed outside of this class, it is not a problem.
-    bool subscribe(const String& suffix, QoS qos) {
-        String fullTopic = topic + "/" + suffix;
-        Serial.printf("Subscribing to MQTT topic '%s' with QOS = %d\n", fullTopic.c_str(), qos);
-        bool success = mqttClient.subscribe(fullTopic.c_str(), static_cast<int>(qos));
-        if (!success) {
-            Serial.printf("Error subscribing to MQTT topic '%s', error = %d\n",
-                fullTopic.c_str(), mqttClient.lastError());
-        }
-        return success;
     }
 
     void processPublishQueue() {
@@ -180,15 +242,29 @@ private:
                 break;
             }
 
-            bool success = mqttClient.publish(message->topic, message->payload, message->length, message->retain == Retention::Retain, static_cast<int>(message->qos));
+            bool success = mqttClient.publish(message->fullTopic, message->payload, message->length, message->retain == Retention::Retain, static_cast<int>(message->qos));
 #ifdef DUMP_MQTT
-            Serial.printf("Published to '%s' (size: %d)\n", message->topic, message->length);
+            Serial.printf("Published to '%s' (size: %d)\n", message->fullTopic, message->length);
 #endif
             if (!success) {
                 Serial.printf("Error publishing to MQTT topic at '%s', error = %d\n",
-                    message->topic, mqttClient.lastError());
+                    message->fullTopic, mqttClient.lastError());
             }
             delete message;
+        }
+    }
+
+    void processSubscriptionQueue() {
+        while (true) {
+            Subscription* subscription;
+            if (!xQueueReceive(subscribeQueue, &subscription, 0)) {
+                break;
+            }
+
+            if (registerSubscriptionWithMqtt(subscription->suffix, subscription->qos)) {
+                subscriptions.push_back(*subscription);
+            }
+            delete subscription;
         }
     }
 
@@ -198,42 +274,54 @@ private:
             if (!xQueueReceive(incomingQueue, &message, 0)) {
                 break;
             }
-            String topic = message->topic;
+
+            String fullTopic = message->fullTopic;
             String payload = message->payload;
 
             DynamicJsonDocument json(message->length * 2);
             deserializeJson(json, payload);
-            if (topic.startsWith(commandTopicPrefix)) {
-                if (payload.isEmpty()) {
+            if (payload.isEmpty()) {
 #ifdef DUMP_MQTT
-                    Serial.println("Ignoring empty payload");
+                Serial.println("Ignoring empty payload");
 #endif
+                return;
+            }
+            auto subTopic = fullTopic.substring(rootTopic.length() + 1);
+            Serial.printf("Received message: '%s'\n", subTopic.c_str());
+            for (auto subscription : subscriptions) {
+                if (subscription.suffix == subTopic) {
+                    auto request = json.as<JsonObject>();
+                    subscription.handle(subTopic, request);
                     return;
                 }
-                auto command = topic.substring(commandTopicPrefix.length());
-                Serial.printf("Received command: '%s'\n", command.c_str());
-                for (auto handler : commandHandlers) {
-                    if (handler.command == command) {
-                        // Clear command topic
-                        mqttClient.publish(topic, "", true, 0);
-                        auto request = json.as<JsonObject>();
-                        DynamicJsonDocument responseDoc(MQTT_BUFFER_SIZE);
-                        auto response = responseDoc.to<JsonObject>();
-                        handler.handle(request, response);
-                        if (response.size() > 0) {
-                            publish("responses/" + command, responseDoc, Retention::NoRetain, QoS::ExactlyOnce);
-                        }
-                        return;
-                    }
-                }
-                Serial.printf("Unknown command: '%s'\n", command.c_str());
-            } else {
-                Serial.printf("Unknown topic: '%s'\n", topic.c_str());
             }
+            Serial.printf("Unknown subscription topic: '%s'\n", subTopic.c_str());
 
             // TODO Handle incoming messages
             delete message;
         }
+    }
+
+    bool publishToQueue(const MqttMessage* message) {
+        // TODO allow some timeout here?
+        bool storedWithoutDropping = xQueueSend(publishQueue, &message, 0);
+        if (!storedWithoutDropping) {
+            Serial.println("Overflow in publish queue, dropping message");
+            delete message;
+        }
+        return storedWithoutDropping;
+    }
+
+    // Actually subscribe to the given topic
+    bool registerSubscriptionWithMqtt(const String& subTopic, QoS qos) {
+        String fullTopic = rootTopic + "/" + subTopic;
+        Serial.printf("Subscribing to MQTT topic '%s' with QOS = %d\n", fullTopic.c_str(), qos);
+        bool success = mqttClient.subscribe(fullTopic.c_str(), static_cast<int>(qos));
+        if (!success) {
+            Serial.printf("Error subscribing to MQTT topic '%s', error = %d\n",
+                fullTopic.c_str(), mqttClient.lastError());
+        }
+        return success;
     }
 
     static String getClientId(const String& clientId, const String& instanceName) {
@@ -250,48 +338,6 @@ private:
         return "devices/ugly-duckling/" + instanceName;
     }
 
-    struct MqttMessage {
-        char* topic;
-        char* payload;
-        size_t length;
-        Retention retain;
-        QoS qos;
-
-        MqttMessage()
-            : topic(nullptr)
-            , payload(nullptr)
-            , length(0)
-            , retain(Retention::NoRetain)
-            , qos(QoS::AtMostOnce) {
-        }
-
-        MqttMessage(const char* topic, const char* payload, size_t length, Retention retention, QoS qos)
-            : retain(retention)
-            , qos(qos)
-            , topic(strdup(topic))
-            , payload(strndup(payload, length))
-            , length(length) {
-        }
-
-        MqttMessage(const String& topic, const JsonDocument& payload, Retention retention, QoS qos)
-            : retain(retention)
-            , qos(qos)
-            , topic(strdup(topic.c_str())) {
-            size_t length = measureJson(payload);
-            // TODO Do we need to have this extra byte at the end?
-            size_t bufferLength = length + 1;
-            char* buffer = new char[bufferLength];
-            serializeJson(payload, buffer, bufferLength);
-            this->payload = buffer;
-            this->length = length;
-        }
-
-        ~MqttMessage() {
-            free(topic);
-            free(payload);
-        }
-    };
-
     State& networkReady;
     WiFiClient wifiClient;
     MdnsDriver& mdns;
@@ -300,25 +346,15 @@ private:
     StateSource& mqttReady;
 
     const String clientId;
-    const String topic;
-    const String appConfigTopic = topic + "/config";
-    const String commandTopicPrefix = topic + "/commands/";
-    // TODO Use a map instead
-    struct CommandHandlerRecord {
-        CommandHandlerRecord(const String& command, CommandHandler handle)
-            : command(command)
-            , handle(handle) {
-        }
+    const String rootTopic;
 
-        const String command;
-        const CommandHandler handle;
-    };
-
-    std::list<CommandHandlerRecord> commandHandlers;
     MdnsRecord mqttServer;
     MQTTClient mqttClient { MQTT_BUFFER_SIZE };
     QueueHandle_t publishQueue { xQueueCreate(mqttConfig.queueSize.get(), sizeof(MqttMessage*)) };
     QueueHandle_t incomingQueue { xQueueCreate(mqttConfig.queueSize.get(), sizeof(MqttMessage*)) };
+    QueueHandle_t subscribeQueue { xQueueCreate(mqttConfig.queueSize.get(), sizeof(Subscription*)) };
+    // TODO Use a map instead
+    std::list<Subscription> subscriptions;
 
     // TODO Review these values
     static constexpr milliseconds MQTT_LOOP_INTERVAL = seconds(1);
