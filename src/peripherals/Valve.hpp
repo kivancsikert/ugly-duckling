@@ -13,8 +13,11 @@
 
 #include <kernel/Peripheral.hpp>
 #include <kernel/Service.hpp>
+#include <kernel/Task.hpp>
 #include <kernel/Util.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
+
+#include <peripherals/ValveScheduler.hpp>
 
 using namespace std::chrono;
 
@@ -161,8 +164,16 @@ public:
 
         // TODO Restore stored state
         setState(strategy->getDefaultState());
+
+        Task::loop(name, 4096, [this](Task& task) {
+            open();
+            task.delayUntil(seconds(5));
+            close();
+            task.delayUntil(seconds(5));
+        });
     }
 
+private:
     void open() {
         Serial.println("Opening valve");
         strategy->open(controller);
@@ -191,9 +202,10 @@ public:
         // TODO Publish event
     }
 
-private:
     PwmMotorDriver& controller;
     std::unique_ptr<ValveControlStrategy> strategy;
+
+    ValveScheduler scheduler;
 
     ValveState state = ValveState::NONE;
 };
@@ -237,7 +249,12 @@ public:
             // TODO Add proper error handling
             return nullptr;
         }
-        return make_unique<Valve>(config.getName(), *targetMotor, std::move(createStrategy(config)));
+        std::unique_ptr<ValveControlStrategy> strategy = createStrategy(config);
+        if (strategy == nullptr) {
+            // TODO Add proper error handling
+            return nullptr;
+        }
+        return make_unique<Valve>(config.getName(), *targetMotor, std::move(strategy));
     }
 
 private:

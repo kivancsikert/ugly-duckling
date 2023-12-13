@@ -29,26 +29,13 @@ using namespace farmhub::peripherals;
 
 class Main {
 public:
-    void demoValve(const String& name, const ServiceRef<PwmMotorDriver>& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
-        Valve* valve = new Valve("valve", motor.get(), make_unique<LatchingValveControlStrategy>(switchTime));
-        Task::loop(name.c_str(), 4096, [valve, cycle](Task& task) {
-            valve->open();
-            task.delayUntil(cycle);
-            valve->close();
-            task.delayUntil(cycle);
-        });
-    }
-
     Main() {
 #if defined(MK4)
         device.motorDriver.wakeUp();
-        demoValve("motor", device.motor, seconds(10));
 #elif defined(MK5)
         device.motorADriver.wakeUp();
-        demoValve("motor-a", device.motorA, seconds(10));
 #elif defined(MK6)
         device.motorDriver.wakeUp();
-//        demoValve("valve-a", device.motorA, seconds(10));
 #endif
         device.begin();
     }
