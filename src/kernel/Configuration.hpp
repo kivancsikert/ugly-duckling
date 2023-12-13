@@ -240,6 +240,10 @@ public:
         return config;
     }
 
+    const String& getName() const {
+        return name;
+    }
+
 protected:
     void load(const JsonObject& json) override {
         ConfigurationSection::load(json);
@@ -255,9 +259,6 @@ protected:
         updated(json);
     }
 
-    const String name;
-    const size_t capacity;
-
 private:
     void updated(const JsonObject& json) {
         for (auto& callback : callbacks) {
@@ -265,6 +266,8 @@ private:
         }
     }
 
+    const String name;
+    const size_t capacity;
     std::list<std::function<void(const JsonObject&)>> callbacks;
 };
 
