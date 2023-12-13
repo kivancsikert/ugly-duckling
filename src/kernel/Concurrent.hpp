@@ -49,6 +49,33 @@ public:
         return sentWithoutDropping;
     }
 
+    template <typename... Args>
+    bool offerFromISR(Args&&... args) {
+        TMessage* copy = new TMessage(std::forward<Args>(args)...);
+        BaseType_t xHigherPriorityTaskWoken;
+        bool sentWithoutDropping = xQueueSendFromISR(queue, &copy, &xHigherPriorityTaskWoken) == pdTRUE;
+        if (!sentWithoutDropping) {
+            Serial.println("Overflow in queue '" + name + "', dropping message");
+            delete copy;
+        }
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        return sentWithoutDropping;
+    }
+
+    template <typename... Args>
+    void overwrite(Args&&... args) {
+        TMessage* copy = new TMessage(std::forward<Args>(args)...);
+        xQueueOverwrite(queue, &copy);
+    }
+
+    template <typename... Args>
+    void overwriteFromISR(Args&&... args) {
+        TMessage* copy = new TMessage(std::forward<Args>(args)...);
+        BaseType_t xHigherPriorityTaskWoken;
+        xQueueOverwriteFromISR(queue, &copy, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
+
     int drain(MessageHandler handler) {
         int count = 0;
         while (poll(handler)) {
@@ -80,6 +107,37 @@ private:
     const QueueHandle_t queue;
     const ticks sendTimeout;
     const ticks receiveTimeout;
+};
+
+class Mutex {
+public:
+    Mutex()
+        : mutex(xSemaphoreCreateMutex()) {
+    }
+
+    ~Mutex() {
+        vSemaphoreDelete(mutex);
+    }
+
+    void lock() {
+        while (!lockIn(ticks::max())) { }
+    }
+
+    bool tryLock() {
+        return lockIn(ticks::zero());
+    }
+
+    bool lockIn(ticks timeout) {
+        return xSemaphoreTake(mutex, timeout.count());
+    }
+
+    void unlock() {
+        xSemaphoreGive(mutex);
+    }
+
+private:
+    const String name;
+    const SemaphoreHandle_t mutex;
 };
 
 }}    // namespace farmhub::kernel

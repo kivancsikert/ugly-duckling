@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include <ESPmDNS.h>
 
+#include <kernel/Concurrent.hpp>
 #include <kernel/NvmStore.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
@@ -45,9 +46,9 @@ public:
 
     bool lookupService(const String& serviceName, const String& port, MdnsRecord& record) {
         // Wait indefinitely
-        while (!xSemaphoreTake(lookupMutex, ticks::max().count())) { }
+        lookupMutex.lock();
         auto result = lookupServiceUnderMutex(serviceName, port, record);
-        xSemaphoreGive(lookupMutex);
+        lookupMutex.unlock();
         return result;
     }
 
@@ -90,7 +91,7 @@ private:
 
     State& mdnsReady;
 
-    QueueHandle_t lookupMutex { xSemaphoreCreateMutex() };
+    Mutex lookupMutex;
 
     NvmStore nvm { "mdns" };
 };

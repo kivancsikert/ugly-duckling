@@ -5,8 +5,8 @@
 #include <MQTT.h>
 #include <WiFi.h>
 
+#include <kernel/Concurrent.hpp>
 #include <kernel/Configuration.hpp>
-#include <kernel/Queue.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>

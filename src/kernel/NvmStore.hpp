@@ -6,6 +6,8 @@
 
 #include <ArduinoJson.h>
 
+#include <kernel/Concurrent.hpp>
+
 namespace farmhub { namespace kernel {
 
 /**
@@ -70,16 +72,16 @@ public:
 
 private:
     bool withPreferences(bool readOnly, std::function<bool()> action) {
-        while (!xSemaphoreTake(preferencesMutex, ticks::max().count())) { }
+        preferencesMutex.lock();
         preferences.begin(name.c_str(), readOnly);
         bool result = action();
         preferences.end();
-        xSemaphoreGive(preferencesMutex);
+        preferencesMutex.unlock();
         return result;
     }
 
     Preferences preferences;
-    QueueHandle_t preferencesMutex { xSemaphoreCreateMutex() };
+    Mutex preferencesMutex;
     const String name;
 
     static const size_t DEFAULT_BUFFER_SIZE = 2048;

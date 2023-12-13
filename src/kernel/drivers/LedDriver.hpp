@@ -4,7 +4,7 @@
 #include <chrono>
 #include <list>
 
-#include <kernel/Queue.hpp>
+#include <kernel/Concurrent.hpp>
 #include <kernel/Task.hpp>
 
 using namespace std::chrono;
