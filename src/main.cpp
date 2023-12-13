@@ -28,14 +28,6 @@ using namespace farmhub::kernel::drivers;
 using namespace farmhub::peripherals;
 
 class Main {
-#if defined(MK4)
-    UglyDucklingMk4 device;
-#elif defined(MK5)
-    UglyDucklingMk5 device;
-#elif defined(MK6)
-    UglyDucklingMk6 device;
-#endif
-
 public:
     void demoMotor(const String& name, PwmMotorDriver& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
         Task::loop(name.c_str(), 4096, [&motor, cycle, switchTime](Task& task) {
@@ -71,7 +63,16 @@ public:
         device.motorDriver.wakeUp();
         demoValve("valve-a", device.motorA, seconds(10));
 #endif
+        device.begin();
     }
+
+#if defined(MK4)
+    UglyDucklingMk4 device;
+#elif defined(MK5)
+    UglyDucklingMk5 device;
+#elif defined(MK6)
+    UglyDucklingMk6 device;
+#endif
 };
 
 void setup() {

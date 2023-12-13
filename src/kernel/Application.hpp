@@ -102,7 +102,9 @@ public:
         registerCommand(fileWriteCommand);
         registerCommand(fileRemoveCommand);
         registerCommand(httpUpdateCommand);
+    }
 
+    void begin() {
         applicationReadyState.awaitSet();
 
         mqtt.publish(

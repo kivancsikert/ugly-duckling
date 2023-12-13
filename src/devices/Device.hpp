@@ -103,6 +103,10 @@ public:
 #endif
     }
 
+    void begin() {
+        application.begin();
+    }
+
 protected:
 #ifdef FARMHUB_DEBUG
     ConsolePrinter consolePrinter;
