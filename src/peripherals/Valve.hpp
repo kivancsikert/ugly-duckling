@@ -247,11 +247,13 @@ public:
         }
         if (targetMotor == nullptr) {
             // TODO Add proper error handling
+            Serial.println("Failed to find motor: " + config.motor.get());
             return nullptr;
         }
         std::unique_ptr<ValveControlStrategy> strategy = createStrategy(config);
         if (strategy == nullptr) {
             // TODO Add proper error handling
+            Serial.println("Failed to create strategy");
             return nullptr;
         }
         return make_unique<Valve>(config.getName(), *targetMotor, std::move(strategy));

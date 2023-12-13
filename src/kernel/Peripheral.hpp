@@ -115,6 +115,7 @@ private:
         auto it = factories.find(type);
         if (it == factories.end()) {
             // TODO Handle the case where no factory is found for the given type
+            Serial.println("No factory found for peripheral type: " + type + " among " + String(factories.size()) + " factories");
             return nullptr;
         }
         return it->second->createPeripheral(name, config);
