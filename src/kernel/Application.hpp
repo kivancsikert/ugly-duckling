@@ -7,6 +7,7 @@
 
 #include <kernel/Command.hpp>
 #include <kernel/FileSystem.hpp>
+#include <kernel/Peripheral.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
@@ -80,6 +81,7 @@ public:
         : version(VERSION)
         , fs(FileSystem::get())
         , deviceConfig(Configuration::bindToFile(fs, "/device-config.json", *new TDeviceConfiguration()))
+        , peripheralsConfig(Configuration::bindToFile(fs, "/peripherals.json", *new PeripheralsConfiguration()))
         , statusLed(statusLed) {
 
         Serial.printf("Initializing version %s on %s instance '%s' with hostname '%s'\n",
@@ -102,9 +104,15 @@ public:
         registerCommand(fileWriteCommand);
         registerCommand(fileRemoveCommand);
         registerCommand(httpUpdateCommand);
+
+        mqtt.subscribe("config", MqttDriver::QoS::ExactlyOnce, [this](const String&, const JsonObject& json) {
+            Serial.println("Peripherals updated");
+            peripheralsConfig.update(json);
+        });
     }
 
     void begin() {
+        mqtt.begin();
         applicationReadyState.awaitSet();
 
         mqtt.publish(
@@ -267,6 +275,9 @@ private:
     FileWriteCommand fileWriteCommand { fs };
     FileRemoveCommand fileRemoveCommand { fs };
     HttpUpdateCommand httpUpdateCommand { version };
+
+    PeripheralsConfiguration& peripheralsConfig;
+    PeripheralManager peripherals { peripheralsConfig };
 };
 
 }}    // namespace farmhub::kernel

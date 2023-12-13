@@ -1,11 +1,16 @@
 #pragma once
 
 #include <chrono>
+#include <map>
+#include <memory>
 
 #include <Arduino.h>
 
 #include <ArduinoJson.h>
 
+#include <kernel/Peripheral.hpp>
+#include <kernel/Service.hpp>
+#include <kernel/Util.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 
 using namespace std::chrono;
@@ -18,6 +23,12 @@ enum class ValveState {
     CLOSED = -1,
     NONE = 0,
     OPEN = 1
+};
+
+enum class ValveControlStrategyType {
+    NormallyOpen,
+    NormallyClosed,
+    Latching
 };
 
 class ValveControlStrategy {
@@ -137,26 +148,27 @@ private:
     const double switchDuty;
 };
 
-class Valve {
+class Valve : public Peripheral {
 public:
-    Valve(PwmMotorDriver& controller, ValveControlStrategy& strategy)
-        : controller(controller)
-        , strategy(strategy) {
+    Valve(const String& name, PwmMotorDriver& controller, std::unique_ptr<ValveControlStrategy> strategy)
+        : Peripheral(name)
+        , controller(controller)
+        , strategy(std::move(strategy)) {
         controller.stop();
 
         // TODO Restore stored state
-        setState(strategy.getDefaultState());
+        setState(strategy->getDefaultState());
     }
 
     void open() {
         Serial.println("Opening valve");
-        strategy.open(controller);
+        strategy->open(controller);
         this->state = ValveState::OPEN;
     }
 
     void close() {
         Serial.println("Closing valve");
-        strategy.close(controller);
+        strategy->close(controller);
         this->state = ValveState::CLOSED;
     }
 
@@ -178,16 +190,108 @@ public:
 
 private:
     PwmMotorDriver& controller;
-    ValveControlStrategy& strategy;
+    std::unique_ptr<ValveControlStrategy> strategy;
 
     ValveState state = ValveState::NONE;
 };
+
+class ValveConfiguration
+    : public Configuration {
+public:
+    ValveConfiguration(const String& name, ValveControlStrategyType defaultStrategy)
+        : Configuration(name)
+        , strategy(this, "strategy", defaultStrategy) {
+    }
+
+    Property<String> motor { this, "motor", "" };
+    Property<ValveControlStrategyType> strategy;
+    Property<double> duty { this, "duty", 1.0 };
+    Property<milliseconds> switchDuration { this, "switchDuration", milliseconds(500) };
+};
+
+class ValveFactory
+    : public PeripheralFactory<ValveConfiguration> {
+public:
+    ValveFactory(const std::list<ServiceRef<PwmMotorDriver>>& motors, ValveControlStrategyType defaultStrategy)
+        : PeripheralFactory<ValveConfiguration>("valve")
+        , motors(motors)
+        , defaultStrategy(defaultStrategy) {
+    }
+
+    std::unique_ptr<ValveConfiguration> createConfig(const String& name) override {
+        return make_unique<ValveConfiguration>(name, defaultStrategy);
+    }
+
+    std::unique_ptr<Peripheral> createPeripheral(ValveConfiguration& config) override {
+        PwmMotorDriver* targetMotor;
+        for (auto& motor : motors) {
+            if (motor.getName() == config.motor.get()) {
+                targetMotor = &(motor.get());
+                break;
+            }
+        }
+        if (targetMotor == nullptr) {
+            // TODO Add proper error handling
+            return nullptr;
+        }
+        return make_unique<Valve>(config.getName(), *targetMotor, std::move(createStrategy(config)));
+    }
+
+private:
+    std::unique_ptr<ValveControlStrategy> createStrategy(ValveConfiguration& config) {
+        switch (config.strategy.get()) {
+            case ValveControlStrategyType::NormallyOpen:
+                return make_unique<NormallyOpenValveControlStrategy>(config.switchDuration.get(), config.duty.get());
+            case ValveControlStrategyType::NormallyClosed:
+                return make_unique<NormallyClosedValveControlStrategy>(config.switchDuration.get(), config.duty.get());
+            case ValveControlStrategyType::Latching:
+                return make_unique<LatchingValveControlStrategy>(config.switchDuration.get(), config.duty.get());
+            default:
+                // TODO Add proper error handling
+                return nullptr;
+        }
+    }
+
+    const std::list<ServiceRef<PwmMotorDriver>> motors;
+    const ValveControlStrategyType defaultStrategy;
+};
+
+// JSON: ValveState
 
 bool convertToJson(const ValveState& src, JsonVariant dst) {
     return dst.set(static_cast<int>(src));
 }
 void convertFromJson(JsonVariantConst src, ValveState& dst) {
     dst = static_cast<ValveState>(src.as<int>());
+}
+
+// JSON: ValveControlStrategyType
+
+bool convertToJson(const ValveControlStrategyType& src, JsonVariant dst) {
+    switch (src) {
+        case ValveControlStrategyType::NormallyOpen:
+            return dst.set("NO");
+        case ValveControlStrategyType::NormallyClosed:
+            return dst.set("NC");
+        case ValveControlStrategyType::Latching:
+            return dst.set("latching");
+        default:
+            Serial.println("Unknown strategy: " + String(static_cast<int>(src)));
+            return dst.set("NC");
+    }
+}
+void convertFromJson(JsonVariantConst src, ValveControlStrategyType& dst) {
+    String strategy = src.as<String>();
+    if (strategy == "NO") {
+        dst = ValveControlStrategyType::NormallyOpen;
+    } else if (strategy == "NC") {
+        dst = ValveControlStrategyType::NormallyClosed;
+    } else if (strategy == "latching") {
+        dst = ValveControlStrategyType::Latching;
+    } else {
+        Serial.println("Unknown strategy: " + strategy);
+        dst = ValveControlStrategyType::NormallyClosed;
+    }
 }
 
 }}    // namespace farmhub::peripherals

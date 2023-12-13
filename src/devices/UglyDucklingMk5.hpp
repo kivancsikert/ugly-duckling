@@ -51,8 +51,8 @@ public:
         GPIO_NUM_10     // NSleep
     };
 
-    const Service<PwmMotorDriver> motorA { "a", motorADriver };
-    const Service<PwmMotorDriver> motorB { "b", motorBDriver };
+    const ServiceRef<PwmMotorDriver> motorA { "a", motorADriver };
+    const ServiceRef<PwmMotorDriver> motorB { "b", motorBDriver };
 };
 
 }}    // namespace farmhub::devices

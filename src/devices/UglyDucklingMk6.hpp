@@ -1,15 +1,21 @@
 #pragma once
 
+#include <list>
+
 #include <kernel/Application.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/Drv8833Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
+#include <kernel/drivers/MotorDriver.hpp>
 
 #include <devices/Device.hpp>
 
+#include <peripherals/Valve.hpp>
+
 using namespace farmhub::kernel;
+using namespace farmhub::peripherals;
 
 namespace farmhub { namespace devices {
 
@@ -43,8 +49,10 @@ public:
         GPIO_NUM_NC     // NSleep -- connected to LOADEN manually
     };
 
-    const Service<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
-    const Service<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };
+    const ServiceRef<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
+    const ServiceRef<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };
+
+    ValveFactory valveFactory { { motorA, motorB }, ValveControlStrategyType::Latching };
 };
 
 }}    // namespace farmhub::devices
