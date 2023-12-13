@@ -268,34 +268,35 @@ private:
                 break;
             }
 
-            String topic = message->topic;
-            String payload = message->payload;
-
-            DynamicJsonDocument json(message->payload.length() * 2);
-            deserializeJson(json, payload);
-            if (payload.isEmpty()) {
-#ifdef DUMP_MQTT
-                Serial.println("Ignoring empty payload");
-#endif
-                return;
-            }
-
-            auto suffix = topic.substring(rootTopic.length() + 1);
-            Serial.printf("Received message: '%s'\n", suffix.c_str());
-            for (auto subscription : subscriptions) {
-                if (subscription.suffix == suffix) {
-                    auto request = json.as<JsonObject>();
-                    subscription.handle(suffix, request);
-                    return;
-                }
-            }
-            Serial.printf("Unknown subscription suffix: '%s'\n", suffix.c_str());
-
+            handleIncomingMessage(message->topic, message->payload);
             delete message;
         }
     }
 
-    bool publishToQueue(const Message* message) {
+    void handleIncomingMessage(const String& topic, const String& payload) {
+        DynamicJsonDocument json(payload.length() * 2);
+        deserializeJson(json, payload);
+        if (payload.isEmpty()) {
+#ifdef DUMP_MQTT
+            Serial.println("Ignoring empty payload");
+#endif
+            return;
+        }
+
+        auto suffix = topic.substring(rootTopic.length() + 1);
+        Serial.printf("Received message: '%s'\n", suffix.c_str());
+        for (auto subscription : subscriptions) {
+            if (subscription.suffix == suffix) {
+                auto request = json.as<JsonObject>();
+                subscription.handle(suffix, request);
+                return;
+            }
+        }
+        Serial.printf("Unknown subscription suffix: '%s'\n", suffix.c_str());
+    }
+
+    bool
+    publishToQueue(const Message* message) {
         // TODO allow some timeout here?
         bool storedWithoutDropping = xQueueSend(publishQueue, &message, 0);
         if (!storedWithoutDropping) {
@@ -355,4 +356,6 @@ private:
     static const int MQTT_BUFFER_SIZE = 2048;
 };
 
-}}}    // namespace farmhub::kernel::drivers
+}
+}
+}    // namespace farmhub::kernel::drivers
