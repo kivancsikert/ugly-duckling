@@ -70,7 +70,7 @@ public:
 
 private:
     bool withPreferences(bool readOnly, std::function<bool()> action) {
-        xSemaphoreTake(preferencesMutex, portMAX_DELAY);
+        while (!xSemaphoreTake(preferencesMutex, ticks::max().count())) { }
         preferences.begin(name.c_str(), readOnly);
         bool result = action();
         preferences.end();

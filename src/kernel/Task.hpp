@@ -12,6 +12,8 @@ using namespace std::chrono;
 
 namespace farmhub { namespace kernel {
 
+using ticks = std::chrono::duration<uint32_t, std::ratio<1, configTICK_RATE_HZ>>;
+
 // TODO Remove _2 suffix
 static const uint32_t DEFAULT_STACK_SIZE = 2048;
 static const unsigned int DEFAULT_PRIORITY = 1;
@@ -48,16 +50,16 @@ public:
         });
     }
 
-    void delay(milliseconds ms) {
-        vTaskDelay(pdMS_TO_TICKS(ms.count()));
+    void delay(ticks time) {
+        vTaskDelay(time.count());
     }
 
-    bool delayUntil(milliseconds ms) {
-        if (xTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(ms.count()))) {
+    bool delayUntil(ticks time) {
+        if (xTaskDelayUntil(&lastWakeTime, time.count())) {
             return true;
         }
         auto newWakeTime = xTaskGetTickCount();
-        Serial.println("Task " + name + " missed deadline by " + String(pdTICKS_TO_MS(newWakeTime - lastWakeTime)) + " ms");
+        Serial.println("Task " + name + " missed deadline by " + String(duration_cast<milliseconds>(ticks(newWakeTime - lastWakeTime)).count()) + " ms");
         lastWakeTime = newWakeTime;
         return false;
     }

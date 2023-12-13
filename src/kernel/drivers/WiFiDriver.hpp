@@ -59,7 +59,11 @@ public:
         Task::run("WiFi", 3072, [this, &networkReady, hostname](Task& task) {
             while (true) {
                 bool connected = wifiManager.autoConnect(hostname.c_str());
-                xSemaphoreTake(reconnectSemaphor, connected ? portMAX_DELAY : 0);
+                // TODO Wait truly indefinitely when we are connected, not 49.7 days
+                ticks timeout = connected
+                    ? ticks::max()
+                    : ticks::zero();
+                xSemaphoreTake(reconnectSemaphor, timeout.count());
                 Serial.println("WiFi: Reconnecting...");
             }
         });

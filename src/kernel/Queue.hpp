@@ -6,6 +6,8 @@
 
 #include <freertos/FreeRTOS.h>
 
+#include <kernel/Task.hpp>
+
 using namespace std::chrono;
 
 namespace farmhub { namespace kernel {
@@ -13,11 +15,11 @@ namespace farmhub { namespace kernel {
 template <typename TMessage>
 class Queue {
 public:
-    Queue(const String& name, size_t capacity = 16, milliseconds sendTimeout = milliseconds::zero(), milliseconds receiveTimeout = milliseconds::zero())
+    Queue(const String& name, size_t capacity = 16, ticks sendTimeout = ticks::zero(), ticks receiveTimeout = ticks::zero())
         : name(name)
         , queue(xQueueCreate(capacity, sizeof(TMessage*)))
-        , sendTimeout(pdMS_TO_TICKS(sendTimeout.count()))
-        , receiveTimeout(pdMS_TO_TICKS(receiveTimeout.count())) {
+        , sendTimeout(sendTimeout)
+        , receiveTimeout(receiveTimeout) {
     }
 
     ~Queue() {
@@ -29,7 +31,7 @@ public:
     template <typename... Args>
     bool send(Args&&... args) {
         TMessage* copy = new TMessage(std::forward<Args>(args)...);
-        bool sentWithoutDropping = xQueueSend(queue, &copy, sendTimeout) == pdTRUE;
+        bool sentWithoutDropping = xQueueSend(queue, &copy, sendTimeout.count()) == pdTRUE;
         if (!sentWithoutDropping) {
             Serial.println("Overflow in queue '" + name + "', dropping message");
             delete copy;
@@ -39,7 +41,7 @@ public:
 
     int process(MessageHandler handler) {
         int count = 0;
-        while (receiveNext(queue, handler)) {
+        while (receiveNext(handler)) {
             count++;
         }
         return count;
@@ -47,7 +49,7 @@ public:
 
     bool receiveNext(MessageHandler handler) {
         TMessage* message;
-        if (!xQueueReceive(queue, &message, receiveTimeout)) {
+        if (!xQueueReceive(queue, &message, receiveTimeout.count())) {
             return false;
         }
         handler(*message);
@@ -58,8 +60,8 @@ public:
 private:
     const String name;
     const QueueHandle_t queue;
-    const TickType_t sendTimeout;
-    const TickType_t receiveTimeout;
+    const ticks sendTimeout;
+    const ticks receiveTimeout;
 };
 
 }}    // namespace farmhub::kernel

@@ -218,7 +218,7 @@ private:
                     break;
             };
         }
-        stateManager.waitStateChange();
+        stateManager.awaitStateChange();
     }
 
     void publishTelemetry(Task& task) {

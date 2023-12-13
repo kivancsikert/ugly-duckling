@@ -23,6 +23,7 @@ public:
                 currentPattern = pattern;
             }
             milliseconds delay = currentPattern.front();
+            ticks delayTicks = delay < milliseconds::zero() ? -delay : delay;
             currentPattern.pop_front();
 
             if (delay > milliseconds::zero()) {
@@ -32,7 +33,7 @@ public:
             }
             BlinkPattern* newPattern;
             // TOOD Substract processing time from delay
-            if (xQueueReceive(patternQueue, &newPattern, pdMS_TO_TICKS(abs(delay.count()))) == pdTRUE) {
+            if (xQueueReceive(patternQueue, &newPattern, delayTicks.count()) == pdTRUE) {
                 pattern = *newPattern;
                 currentPattern = {};
                 free(newPattern);

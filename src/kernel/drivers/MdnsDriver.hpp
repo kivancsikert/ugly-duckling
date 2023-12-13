@@ -44,7 +44,8 @@ public:
     }
 
     bool lookupService(const String& serviceName, const String& port, MdnsRecord& record) {
-        xSemaphoreTake(lookupMutex, portMAX_DELAY);
+        // Wait indefinitely
+        while (!xSemaphoreTake(lookupMutex, ticks::max().count())) { }
         auto result = lookupServiceUnderMutex(serviceName, port, record);
         xSemaphoreGive(lookupMutex);
         return result;

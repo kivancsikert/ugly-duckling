@@ -40,25 +40,23 @@ public:
      * @brief Checks if the state is set.
      */
     bool inline isSet() const {
-        return awaitSet(0);
+        return awaitSet(ticks::zero());
     }
 
     /**
-     * @brief Waits for the state to be set.
+     * @brief Waits for the state to be set, or until timeout is elapsed.
      *
      * @return Whether the state was set before the timeout elapsed.
      */
-    bool awaitSet(milliseconds timeout) const {
-        return awaitSet(pdMS_TO_TICKS(timeout.count()));
+    bool awaitSet(ticks timeout) const {
+        return hasAllBits(xEventGroupWaitBits(eventGroup, eventBits, false, true, timeout.count()));
     }
 
     /**
-     * @brief Waits for the state to be set.
-     *
-     * @return Whether the state was set before the given ticks have elapsed.
+     * @brief Waits indefinitely for the state to be set.
      */
-    bool awaitSet(int ticksToWait = portMAX_DELAY) const {
-        return hasAllBits(xEventGroupWaitBits(eventGroup, eventBits, false, true, ticksToWait));
+    void awaitSet() const {
+        while (!awaitSet(ticks::max())) { }
     }
 
 protected:
@@ -147,13 +145,21 @@ public:
         return State(name, eventGroup, eventBits);
     }
 
-    bool waitStateChange(milliseconds timeout) const {
-        return waitStateChange(pdMS_TO_TICKS(timeout.count()));
+    /**
+     * @brief Wait indefinitely for any state to change.
+     */
+    void awaitStateChange() const {
+        while (!awaitStateChange(ticks::max())) { }
     }
 
-    bool waitStateChange(TickType_t ticksToWait = portMAX_DELAY) const {
+    /**
+     * @brief Wait for any state to change, or for the timeout to elapse.
+     *
+     * @return Whether the state changed before the timeout elapsed.
+     */
+    bool awaitStateChange(ticks timeout) const {
         // Since this is bit 0, we can just return the result directly
-        return xEventGroupWaitBits(eventGroup, STATE_CHANGE_BIT_MASK, true, true, ticksToWait);
+        return xEventGroupWaitBits(eventGroup, STATE_CHANGE_BIT_MASK, true, true, timeout.count());
     }
 
 private:
