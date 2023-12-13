@@ -1,12 +1,15 @@
 #pragma once
 
 #include <chrono>
+#include <iostream>
 #include <map>
 #include <memory>
+#include <sstream>
 
 #include <Arduino.h>
 
 #include <ArduinoJson.h>
+#include <date.h>
 
 #include <kernel/Peripheral.hpp>
 #include <kernel/Service.hpp>
