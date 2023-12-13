@@ -31,6 +31,7 @@ public:
                 setLedState(HIGH);
             }
             BlinkPattern* newPattern;
+            // TOOD Substract processing time from delay
             if (xQueueReceive(patternQueue, &newPattern, pdMS_TO_TICKS(abs(delay.count()))) == pdTRUE) {
                 pattern = *newPattern;
                 currentPattern = {};
