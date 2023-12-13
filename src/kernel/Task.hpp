@@ -24,25 +24,25 @@ typedef std::function<void(Task&)> TaskFunction;
 
 class Task {
 public:
-    static void inline run(const char* name, TaskFunction runFunction) {
+    static void inline run(const String& name, TaskFunction runFunction) {
         Task::run(name, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, runFunction);
     }
-    static void inline run(const char* name, uint32_t stackSize, TaskFunction runFunction) {
+    static void inline run(const String& name, uint32_t stackSize, TaskFunction runFunction) {
         Task::run(name, stackSize, DEFAULT_PRIORITY, runFunction);
     }
-    static void run(const char* name, uint32_t stackSize, UBaseType_t priority, TaskFunction runFunction) {
+    static void run(const String& name, uint32_t stackSize, UBaseType_t priority, TaskFunction runFunction) {
         Task* task = new Task(String(name), runFunction);
         Serial.println("Creating task " + String(name) + " with priority " + String(priority) + " and stack size " + String(stackSize));
-        xTaskCreate(executeTask, name, stackSize, task, priority, &(task->taskHandle));
+        xTaskCreate(executeTask, name.c_str(), stackSize, task, priority, &(task->taskHandle));
     }
 
-    static void inline loop(const char* name, TaskFunction loopFunction) {
+    static void inline loop(const String& name, TaskFunction loopFunction) {
         Task::loop(name, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, loopFunction);
     }
-    static void inline loop(const char* name, uint32_t stackSize, TaskFunction loopFunction) {
+    static void inline loop(const String& name, uint32_t stackSize, TaskFunction loopFunction) {
         Task::loop(name, stackSize, DEFAULT_PRIORITY, loopFunction);
     }
-    static void loop(const char* name, uint32_t stackSize, UBaseType_t priority, TaskFunction loopFunction) {
+    static void loop(const String& name, uint32_t stackSize, UBaseType_t priority, TaskFunction loopFunction) {
         Task::run(name, stackSize, priority, [loopFunction](Task& task) {
             while (true) {
                 loopFunction(task);

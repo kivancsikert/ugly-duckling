@@ -14,7 +14,7 @@ class LedDriver {
 public:
     typedef std::list<milliseconds> BlinkPattern;
 
-    LedDriver(const char* name, gpio_num_t pin)
+    LedDriver(const String& name, gpio_num_t pin)
         : pin(pin)
         , pattern({ -milliseconds::max() }) {
         pinMode(pin, OUTPUT);
