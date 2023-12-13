@@ -6,10 +6,13 @@
 #include <WiFi.h>
 
 #include <kernel/Configuration.hpp>
+#include <kernel/Queue.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
+
+using namespace farmhub::kernel;
 
 namespace farmhub { namespace kernel { namespace drivers {
 
@@ -42,7 +45,7 @@ private:
             , qos(QoS::AtMostOnce) {
         }
 
-        Message(const String& topic, const String& payload, int length, Retention retention, QoS qos)
+        Message(const String& topic, const String& payload, Retention retention, QoS qos)
             : topic(topic)
             , payload(payload)
             , retain(retention)
@@ -93,7 +96,7 @@ public:
         Property<unsigned int> port { this, "port", 1883 };
         Property<String> clientId { this, "clientId", "" };
         Property<String> topic { this, "topic", "" };
-        Property<unsigned int> queueSize { this, "queueSize", 16 };
+        Property<size_t> queueSize { this, "queueSize", 16 };
     };
 
     MqttDriver(
@@ -119,15 +122,14 @@ public:
     }
 
     bool publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
-        String topic = rootTopic + "/" + suffix;
-        Message* message = new Message(topic, json, retain, qos);
+        const String topic = rootTopic + "/" + suffix;
 #ifdef DUMP_MQTT
         Serial.printf("Queuing MQTT topic '%s'%s (qos = %d): ",
             topic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), qos);
         serializeJsonPretty(json, Serial);
         Serial.println();
 #endif
-        return publishToQueue(message);
+        return publishQueue.send(topic, json, retain, qos);
     }
 
     bool publish(const String& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, int size = MQTT_BUFFER_SIZE) {
@@ -140,7 +142,7 @@ public:
     bool clear(const String& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
         String topic = rootTopic + "/" + suffix;
         Serial.println("Clearing MQTT topic '" + topic + "'");
-        return publishToQueue(new Message(topic, "", 0, retain, qos));
+        return publishQueue.send(topic, "", retain, qos);
     }
 
     bool subscribe(const String& suffix, SubscriptionHandler handler) {
@@ -153,13 +155,7 @@ public:
      * Note that subscription does not support wildcards.
      */
     bool subscribe(const String& suffix, QoS qos, SubscriptionHandler handler) {
-        Subscription* subscription = new Subscription(suffix, qos, handler);
-        bool storedWithoutDropping = xQueueSend(subscribeQueue, &subscription, 0);
-        if (!storedWithoutDropping) {
-            Serial.println("Overflow in subscribe queue, dropping subscription");
-            delete subscription;
-        }
-        return storedWithoutDropping;
+        return subscribeQueue.send(suffix, qos, handler);
     }
 
 private:
@@ -174,16 +170,12 @@ private:
         // TODO Figure out the right keep alive value
         mqttClient.setKeepAlive(180);
 
-        mqttClient.onMessageAdvanced([&](MQTTClient* client, char* topic, char* payload, int length) {
-            Message* message = new Message(topic, payload, length, Retention::NoRetain, QoS::ExactlyOnce);
+        mqttClient.onMessage([&](String& topic, String& payload) {
 #ifdef DUMP_MQTT
-            Serial.println("Received '" + String(topic) + "' (size: " + length + "): " + String(payload, length));
+            Serial.println("Received '" + topic + "' (size: " + payload.length() + "): " + payload);
 #endif
             // TODO allow some timeout here
-            bool storedWithoutDropping = xQueueSend(incomingQueue, &message, 0);
-            if (!storedWithoutDropping) {
-                Serial.println("Overflow in incoming queue, dropping message");
-            }
+            incomingQueue.send(topic, payload, Retention::NoRetain, QoS::ExactlyOnce);
         });
 
         if (mqttServer.ip == IPAddress()) {
@@ -229,81 +221,51 @@ private:
         // Process incoming network traffic
         mqttClient.loop();
 
-        while (true) {
-            Message* message;
-            if (!xQueueReceive(publishQueue, &message, 0)) {
-                break;
-            }
-
-            bool success = mqttClient.publish(message->topic, message->payload, message->retain == Retention::Retain, static_cast<int>(message->qos));
+        publishQueue.process([&](const Message& message) {
+            bool success = mqttClient.publish(message.topic, message.payload, message.retain == Retention::Retain, static_cast<int>(message.qos));
 #ifdef DUMP_MQTT
-            Serial.printf("Published to '%s' (size: %d)\n", message->topic.c_str(), message->payload.length());
+            Serial.printf("Published to '%s' (size: %d)\n", message.topic.c_str(), message.payload.length());
 #endif
             if (!success) {
                 Serial.printf("Error publishing to MQTT topic at '%s', error = %d\n",
-                    message->topic, mqttClient.lastError());
+                    message.topic, mqttClient.lastError());
             }
-            delete message;
-        }
+        });
     }
 
     void processSubscriptionQueue() {
-        while (true) {
-            Subscription* subscription;
-            if (!xQueueReceive(subscribeQueue, &subscription, 0)) {
-                break;
+        subscribeQueue.process([&](const Subscription& subscription) {
+            if (registerSubscriptionWithMqtt(subscription.suffix, subscription.qos)) {
+                subscriptions.push_back(subscription);
             }
-
-            if (registerSubscriptionWithMqtt(subscription->suffix, subscription->qos)) {
-                subscriptions.push_back(*subscription);
-            }
-            delete subscription;
-        }
+        });
     }
 
     void procesIncomingQueue() {
-        while (true) {
-            Message* message;
-            if (!xQueueReceive(incomingQueue, &message, 0)) {
-                break;
-            }
+        incomingQueue.process([&](const Message& message) {
+            const String& topic = message.topic;
+            const String& payload = message.payload;
 
-            handleIncomingMessage(message->topic, message->payload);
-            delete message;
-        }
-    }
-
-    void handleIncomingMessage(const String& topic, const String& payload) {
-        DynamicJsonDocument json(payload.length() * 2);
-        deserializeJson(json, payload);
-        if (payload.isEmpty()) {
+            DynamicJsonDocument json(payload.length() * 2);
+            deserializeJson(json, payload);
+            if (payload.isEmpty()) {
 #ifdef DUMP_MQTT
-            Serial.println("Ignoring empty payload");
+                Serial.println("Ignoring empty payload");
 #endif
-            return;
-        }
-
-        auto suffix = topic.substring(rootTopic.length() + 1);
-        Serial.printf("Received message: '%s'\n", suffix.c_str());
-        for (auto subscription : subscriptions) {
-            if (subscription.suffix == suffix) {
-                auto request = json.as<JsonObject>();
-                subscription.handle(suffix, request);
                 return;
             }
-        }
-        Serial.printf("Unknown subscription suffix: '%s'\n", suffix.c_str());
-    }
 
-    bool
-    publishToQueue(const Message* message) {
-        // TODO allow some timeout here?
-        bool storedWithoutDropping = xQueueSend(publishQueue, &message, 0);
-        if (!storedWithoutDropping) {
-            Serial.println("Overflow in publish queue, dropping message");
-            delete message;
-        }
-        return storedWithoutDropping;
+            auto suffix = topic.substring(rootTopic.length() + 1);
+            Serial.printf("Received message: '%s'\n", suffix.c_str());
+            for (auto subscription : subscriptions) {
+                if (subscription.suffix == suffix) {
+                    auto request = json.as<JsonObject>();
+                    subscription.handle(suffix, request);
+                    return;
+                }
+            }
+            Serial.printf("Unknown subscription suffix: '%s'\n", suffix.c_str());
+        });
     }
 
     // Actually subscribe to the given topic
@@ -344,9 +306,9 @@ private:
 
     MdnsRecord mqttServer;
     MQTTClient mqttClient { MQTT_BUFFER_SIZE };
-    QueueHandle_t publishQueue { xQueueCreate(config.queueSize.get(), sizeof(Message*)) };
-    QueueHandle_t incomingQueue { xQueueCreate(config.queueSize.get(), sizeof(Message*)) };
-    QueueHandle_t subscribeQueue { xQueueCreate(config.queueSize.get(), sizeof(Subscription*)) };
+    Queue<Message> publishQueue { "mqtt-publish", config.queueSize.get() };
+    Queue<Message> incomingQueue { "mqtt-incoming", config.queueSize.get() };
+    Queue<Subscription> subscribeQueue { "mqtt-subscribe", config.queueSize.get() };
     // TODO Use a map instead
     std::list<Subscription> subscriptions;
 
@@ -355,7 +317,4 @@ private:
     static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = seconds(1);
     static const int MQTT_BUFFER_SIZE = 2048;
 };
-
-}
-}
-}    // namespace farmhub::kernel::drivers
+}}}    // namespace farmhub::kernel::drivers
