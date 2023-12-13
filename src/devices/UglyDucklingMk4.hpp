@@ -2,6 +2,7 @@
 
 #include <kernel/Application.hpp>
 #include <kernel/FileSystem.hpp>
+#include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/Drv8801Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -28,7 +29,8 @@ public:
             GPIO_NUM_26) {
     }
 
-    Drv8801Driver motor {
+private:
+    Drv8801Driver motorDriver {
         pwm,
         GPIO_NUM_10,    // Enable
         GPIO_NUM_11,    // Phase
@@ -38,6 +40,9 @@ public:
         GPIO_NUM_12,    // Fault
         GPIO_NUM_13     // Sleep
     };
+
+public:
+    Service<PwmMotorDriver> motor { "motor", motorDriver };
 };
 
 }}    // namespace farmhub::devices

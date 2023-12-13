@@ -2,6 +2,7 @@
 
 #include <kernel/Application.hpp>
 #include <kernel/FileSystem.hpp>
+#include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/Drv8874Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -32,7 +33,7 @@ public:
             GPIO_NUM_1, 2.4848) {
     }
 
-    Drv8874Driver motorA {
+    Drv8874Driver motorADriver {
         pwm,
         GPIO_NUM_16,    // AIN1
         GPIO_NUM_17,    // AIN2
@@ -41,7 +42,7 @@ public:
         GPIO_NUM_10     // NSleep
     };
 
-    Drv8874Driver motorB {
+    Drv8874Driver motorBDriver {
         pwm,
         GPIO_NUM_18,    // BIN1
         GPIO_NUM_8,     // BIN2
@@ -49,6 +50,9 @@ public:
         GPIO_NUM_11,    // NFault
         GPIO_NUM_10     // NSleep
     };
+
+    Service<PwmMotorDriver> motorA { "a", motorADriver };
+    Service<PwmMotorDriver> motorB { "b", motorBDriver };
 };
 
 }}    // namespace farmhub::devices

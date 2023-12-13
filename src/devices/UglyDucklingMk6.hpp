@@ -2,6 +2,7 @@
 
 #include <kernel/Application.hpp>
 #include <kernel/FileSystem.hpp>
+#include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/Drv8833Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -41,8 +42,9 @@ public:
         GPIO_NUM_11,    // NFault
         GPIO_NUM_NC     // NSleep -- connected to LOADEN manually
     };
-    PwmMotorDriver& motorA = motorDriver.getMotorA();
-    PwmMotorDriver& motorB = motorDriver.getMotorB();
+
+    Service<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
+    Service<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };
 };
 
 }}    // namespace farmhub::devices

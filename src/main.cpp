@@ -29,21 +29,8 @@ using namespace farmhub::peripherals;
 
 class Main {
 public:
-    void demoMotor(const String& name, PwmMotorDriver& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
-        Task::loop(name.c_str(), 4096, [&motor, cycle, switchTime](Task& task) {
-            motor.drive(MotorPhase::FORWARD, 1.0);
-            task.delayUntil(switchTime);
-            motor.stop();
-            task.delayUntil(cycle - switchTime);
-            motor.drive(MotorPhase::REVERSE, 1.0);
-            task.delayUntil(switchTime);
-            motor.stop();
-            task.delayUntil(cycle - switchTime);
-        });
-    }
-
-    void demoValve(const String& name, PwmMotorDriver& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
-        Valve* valve = new Valve(motor, *new LatchingValveControlStrategy(switchTime));
+    void demoValve(const String& name, Service<PwmMotorDriver>& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
+        Valve* valve = new Valve(motor.get(), *new LatchingValveControlStrategy(switchTime));
         Task::loop(name.c_str(), 4096, [valve, cycle](Task& task) {
             valve->open();
             task.delayUntil(cycle);
@@ -54,10 +41,10 @@ public:
 
     Main() {
 #if defined(MK4)
-        device.motor.wakeUp();
+        device.motorDriver.wakeUp();
         demoValve("motor", device.motor, seconds(10));
 #elif defined(MK5)
-        device.motorA.wakeUp();
+        device.motorADriver.wakeUp();
         demoValve("motor-a", device.motorA, seconds(10));
 #elif defined(MK6)
         device.motorDriver.wakeUp();
