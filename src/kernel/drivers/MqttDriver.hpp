@@ -30,27 +30,27 @@ public:
 
 private:
     struct Message {
-        const String fullTopic;
+        const String topic;
         const String payload;
         const Retention retain;
         const QoS qos;
 
         Message()
-            : fullTopic("")
+            : topic("")
             , payload("")
             , retain(Retention::NoRetain)
             , qos(QoS::AtMostOnce) {
         }
 
-        Message(const String& fullTopic, const String& payload, int length, Retention retention, QoS qos)
-            : fullTopic(fullTopic)
+        Message(const String& topic, const String& payload, int length, Retention retention, QoS qos)
+            : topic(topic)
             , payload(payload)
             , retain(retention)
             , qos(qos) {
         }
 
-        Message(const String& fullTopic, const JsonDocument& payload, Retention retention, QoS qos)
-            : fullTopic(fullTopic)
+        Message(const String& topic, const JsonDocument& payload, Retention retention, QoS qos)
+            : topic(topic)
             , payload(serializeJsonToString(payload))
             , retain(retention)
             , qos(qos) {
@@ -119,11 +119,11 @@ public:
     }
 
     bool publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
-        String fullTopic = rootTopic + "/" + suffix;
-        Message* message = new Message(fullTopic, json, retain, qos);
+        String topic = rootTopic + "/" + suffix;
+        Message* message = new Message(topic, json, retain, qos);
 #ifdef DUMP_MQTT
         Serial.printf("Queuing MQTT topic '%s'%s (qos = %d): ",
-            fullTopic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), qos);
+            topic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), qos);
         serializeJsonPretty(json, Serial);
         Serial.println();
 #endif
@@ -138,9 +138,9 @@ public:
     }
 
     bool clear(const String& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
-        String fullTopic = rootTopic + "/" + suffix;
-        Serial.println("Clearing MQTT topic '" + fullTopic + "'");
-        return publishToQueue(new Message(fullTopic, "", 0, retain, qos));
+        String topic = rootTopic + "/" + suffix;
+        Serial.println("Clearing MQTT topic '" + topic + "'");
+        return publishToQueue(new Message(topic, "", 0, retain, qos));
     }
 
     bool subscribe(const String& suffix, SubscriptionHandler handler) {
@@ -235,13 +235,13 @@ private:
                 break;
             }
 
-            bool success = mqttClient.publish(message->fullTopic, message->payload, message->retain == Retention::Retain, static_cast<int>(message->qos));
+            bool success = mqttClient.publish(message->topic, message->payload, message->retain == Retention::Retain, static_cast<int>(message->qos));
 #ifdef DUMP_MQTT
-            Serial.printf("Published to '%s' (size: %d)\n", message->fullTopic.c_str(), message->payload.length());
+            Serial.printf("Published to '%s' (size: %d)\n", message->topic.c_str(), message->payload.length());
 #endif
             if (!success) {
                 Serial.printf("Error publishing to MQTT topic at '%s', error = %d\n",
-                    message->fullTopic, mqttClient.lastError());
+                    message->topic, mqttClient.lastError());
             }
             delete message;
         }
@@ -268,7 +268,7 @@ private:
                 break;
             }
 
-            String fullTopic = message->fullTopic;
+            String topic = message->topic;
             String payload = message->payload;
 
             DynamicJsonDocument json(message->payload.length() * 2);
@@ -279,18 +279,18 @@ private:
 #endif
                 return;
             }
-            auto subTopic = fullTopic.substring(rootTopic.length() + 1);
-            Serial.printf("Received message: '%s'\n", subTopic.c_str());
+
+            auto suffix = topic.substring(rootTopic.length() + 1);
+            Serial.printf("Received message: '%s'\n", suffix.c_str());
             for (auto subscription : subscriptions) {
-                if (subscription.suffix == subTopic) {
+                if (subscription.suffix == suffix) {
                     auto request = json.as<JsonObject>();
-                    subscription.handle(subTopic, request);
+                    subscription.handle(suffix, request);
                     return;
                 }
             }
-            Serial.printf("Unknown subscription topic: '%s'\n", subTopic.c_str());
+            Serial.printf("Unknown subscription suffix: '%s'\n", suffix.c_str());
 
-            // TODO Handle incoming messages
             delete message;
         }
     }
@@ -306,13 +306,13 @@ private:
     }
 
     // Actually subscribe to the given topic
-    bool registerSubscriptionWithMqtt(const String& subTopic, QoS qos) {
-        String fullTopic = rootTopic + "/" + subTopic;
-        Serial.printf("Subscribing to MQTT topic '%s' with QOS = %d\n", fullTopic.c_str(), qos);
-        bool success = mqttClient.subscribe(fullTopic.c_str(), static_cast<int>(qos));
+    bool registerSubscriptionWithMqtt(const String& suffix, QoS qos) {
+        String topic = rootTopic + "/" + suffix;
+        Serial.printf("Subscribing to MQTT topic '%s' with QOS = %d\n", topic.c_str(), qos);
+        bool success = mqttClient.subscribe(topic.c_str(), static_cast<int>(qos));
         if (!success) {
             Serial.printf("Error subscribing to MQTT topic '%s', error = %d\n",
-                fullTopic.c_str(), mqttClient.lastError());
+                topic.c_str(), mqttClient.lastError());
         }
         return success;
     }
