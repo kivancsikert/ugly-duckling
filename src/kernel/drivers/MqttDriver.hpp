@@ -47,13 +47,11 @@ public:
         MdnsDriver& mdns,
         Config& mqttConfig,
         const String& instanceName,
-        Configuration& remoteConfig,
         StateSource& mqttReady)
         : networkReady(networkReady)
         , mdns(mdns)
         , mqttConfig(mqttConfig)
         , instanceName(instanceName)
-        , remoteConfig(remoteConfig)
         , clientId(getClientId(mqttConfig.clientId.get(), instanceName))
         , topic(getTopic(mqttConfig.topic.get(), instanceName))
         , mqttReady(mqttReady) {
@@ -205,9 +203,7 @@ private:
 
             DynamicJsonDocument json(message->length * 2);
             deserializeJson(json, payload);
-            if (topic == appConfigTopic) {
-                remoteConfig.update(json.as<JsonObject>());
-            } else if (topic.startsWith(commandTopicPrefix)) {
+            if (topic.startsWith(commandTopicPrefix)) {
                 if (payload.isEmpty()) {
 #ifdef DUMP_MQTT
                     Serial.println("Ignoring empty payload");
@@ -301,7 +297,6 @@ private:
     MdnsDriver& mdns;
     Config& mqttConfig;
     const String instanceName;
-    Configuration& remoteConfig;
     StateSource& mqttReady;
 
     const String clientId;
