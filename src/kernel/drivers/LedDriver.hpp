@@ -12,6 +12,8 @@ namespace farmhub { namespace kernel { namespace drivers {
 
 class LedDriver {
 public:
+    typedef std::list<milliseconds> BlinkPattern;
+
     LedDriver(const char* name, gpio_num_t pin)
         : pin(pin)
         , pattern({ -milliseconds::max() }) {
@@ -28,7 +30,7 @@ public:
             } else {
                 setLedState(HIGH);
             }
-            std::list<milliseconds>* newPattern;
+            BlinkPattern* newPattern;
             if (xQueueReceive(patternQueue, &newPattern, pdMS_TO_TICKS(abs(delay.count()))) == pdTRUE) {
                 pattern = *newPattern;
                 currentPattern = {};
@@ -50,10 +52,10 @@ public:
     }
 
     void blinkPatternInMs(std::list<int> pattern) {
-        blinkPattern(std::list<milliseconds>(pattern.begin(), pattern.end()));
+        blinkPattern(BlinkPattern(pattern.begin(), pattern.end()));
     }
 
-    void blinkPattern(std::list<milliseconds> pattern) {
+    void blinkPattern(BlinkPattern pattern) {
         if (pattern.empty()) {
             turnOff();
         } else {
@@ -62,8 +64,8 @@ public:
     }
 
 private:
-    void setPattern(std::list<milliseconds> pattern) {
-        auto* payload = new std::list<milliseconds>(pattern);
+    void setPattern(BlinkPattern pattern) {
+        auto* payload = new BlinkPattern(pattern);
         xQueueSend(patternQueue, &payload, portMAX_DELAY);
     }
 
@@ -72,11 +74,11 @@ private:
         digitalWrite(pin, state);
     }
 
-    QueueHandle_t patternQueue { xQueueCreate(1, sizeof(std::list<milliseconds>*)) };
+    QueueHandle_t patternQueue { xQueueCreate(1, sizeof(BlinkPattern*)) };
     const gpio_num_t pin;
     std::atomic<bool> ledState;
-    std::list<milliseconds> pattern;
-    std::list<milliseconds> currentPattern;
+    BlinkPattern pattern;
+    BlinkPattern currentPattern;
 };
 
 }}}    // namespace farmhub::kernel::drivers
