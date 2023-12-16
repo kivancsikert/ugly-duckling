@@ -1,17 +1,19 @@
 #pragma once
 
+#include <functional>
+
 namespace farmhub { namespace kernel {
 
 template <typename T>
-class Service {
+class ServiceRef {
 public:
-    Service(const String& name, T& instance)
+    ServiceRef(const String& name, T& instance)
         : name(name)
-        , instance(instance) {
+        , reference(instance) {
     }
 
-    Service(Service& other)
-        : Service(other.name, other.instance) {
+    ServiceRef(const ServiceRef& other)
+        : ServiceRef(other.name, other.reference) {
     }
 
     const String& getName() const {
@@ -19,11 +21,12 @@ public:
     }
 
     T& get() const {
-        return instance;
+        return reference.get();
     }
 
 private:
     const String name;
-    T& instance;
+    const std::reference_wrapper<T> reference;
 };
+
 }}    // namespace farmhub::kernel

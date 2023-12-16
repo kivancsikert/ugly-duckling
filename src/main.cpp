@@ -29,7 +29,7 @@ using namespace farmhub::peripherals;
 
 class Main {
 public:
-    void demoValve(const String& name, const Service<PwmMotorDriver>& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
+    void demoValve(const String& name, const ServiceRef<PwmMotorDriver>& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
         Valve* valve = new Valve(motor.get(), *new LatchingValveControlStrategy(switchTime));
         Task::loop(name.c_str(), 4096, [valve, cycle](Task& task) {
             valve->open();

@@ -42,7 +42,7 @@ private:
     };
 
 public:
-    const Service<PwmMotorDriver> motor { "motor", motorDriver };
+    const ServiceRef<PwmMotorDriver> motor { "motor", motorDriver };
 };
 
 }}    // namespace farmhub::devices
