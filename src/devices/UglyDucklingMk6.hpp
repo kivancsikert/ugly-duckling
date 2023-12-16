@@ -43,8 +43,8 @@ public:
         GPIO_NUM_NC     // NSleep -- connected to LOADEN manually
     };
 
-    Service<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
-    Service<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };
+    const Service<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
+    const Service<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };
 };
 
 }}    // namespace farmhub::devices
