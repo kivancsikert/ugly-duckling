@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#include <kernel/Application.hpp>
+#include <kernel/Kernel.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>

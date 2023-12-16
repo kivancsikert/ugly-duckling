@@ -1,6 +1,6 @@
 #pragma once
 
-#include <kernel/Application.hpp>
+#include <kernel/Kernel.hpp>
 #include <kernel/PwmManager.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -19,12 +19,12 @@ public:
     }
 
     void begin() {
-        application.begin();
+        kernel.begin();
     }
 
 public:
     LedDriver statusLed;
-    Application<TDeviceConfiguration> application { statusLed };
+    Kernel<TDeviceConfiguration> kernel { statusLed };
     PwmManager pwm;
 };
 
@@ -35,9 +35,9 @@ public:
         : DeviceDefinition<TDeviceConfiguration>(statusPin)
         , batteryDriver(batteryPin, batteryVoltageDividerRatio) {
 #ifdef FARMHUB_DEBUG
-        DeviceDefinition<TDeviceConfiguration>::application.consolePrinter.registerBattery(batteryDriver);
+        DeviceDefinition<TDeviceConfiguration>::kernel.consolePrinter.registerBattery(batteryDriver);
 #endif
-        DeviceDefinition<TDeviceConfiguration>::application.registerTelemetryProvider("battery", batteryDriver);
+        DeviceDefinition<TDeviceConfiguration>::kernel.registerTelemetryProvider("battery", batteryDriver);
     }
 
 public:

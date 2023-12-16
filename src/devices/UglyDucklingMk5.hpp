@@ -1,6 +1,6 @@
 #pragma once
 
-#include <kernel/Application.hpp>
+#include <kernel/Kernel.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
