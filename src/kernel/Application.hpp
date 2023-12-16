@@ -9,6 +9,7 @@
 #include <kernel/FileSystem.hpp>
 #include <kernel/Peripheral.hpp>
 #include <kernel/Telemetry.hpp>
+#include <kernel/Util.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
@@ -80,15 +81,15 @@ public:
     Application(LedDriver& statusLed)
         : version(VERSION)
         , fs(FileSystem::get())
-        , deviceConfig(Configuration::bindToFile(fs, "/device-config.json", *new TDeviceConfiguration()))
-        , peripheralsConfig(Configuration::bindToFile(fs, "/peripherals.json", *new PeripheralsConfiguration()))
+        , deviceConfig(Configuration::bindToFile<TDeviceConfiguration>(fs, "/device-config.json"))
+        , peripheralsConfig(Configuration::bindToFile<PeripheralsConfiguration>(fs, "/peripherals.json"))
         , statusLed(statusLed) {
 
         Serial.printf("Initializing version %s on %s instance '%s' with hostname '%s'\n",
             version.c_str(),
-            deviceConfig.model.get().c_str(),
-            deviceConfig.instance.get().c_str(),
-            deviceConfig.getHostname());
+            deviceConfig->model.get().c_str(),
+            deviceConfig->instance.get().c_str(),
+            deviceConfig->getHostname());
 
         Task::loop("status-update", 4096, [this](Task&) { updateState(); });
 
@@ -107,7 +108,7 @@ public:
 
         mqtt.subscribe("config", MqttDriver::QoS::ExactlyOnce, [this](const String&, const JsonObject& json) {
             Serial.println("Peripherals updated");
-            peripheralsConfig.update(json);
+            peripheralsConfig->update(json);
         });
     }
 
@@ -115,16 +116,18 @@ public:
         mqtt.begin();
         applicationReadyState.awaitSet();
 
+        peripherals.begin();
+
         mqtt.publish(
             "init",
             [&](JsonObject& json) {
                 // TODO Remove redundanty mentions of "ugly-duckling"
                 json["type"] = "ugly-duckling";
-                json["model"] = deviceConfig.model.get();
-                json["instance"] = deviceConfig.instance.get();
+                json["model"] = deviceConfig->model.get();
+                json["instance"] = deviceConfig->instance.get();
                 json["mac"] = getMacAddress();
                 auto device = json.createNestedObject("deviceConfig");
-                deviceConfig.store(device, false);
+                deviceConfig->store(device, false);
                 json["app"] = "ugly-duckling";
                 json["version"] = version;
                 json["wakeup"] = esp_sleep_get_wakeup_cause();
@@ -138,6 +141,10 @@ public:
 
     void registerTelemetryProvider(const String& name, TelemetryProvider& provider) {
         telemetryCollector.registerProvider(name, provider);
+    }
+
+    void registerFactory(PeripheralFactoryBase& factory) {
+        peripherals.registerFactory(factory);
     }
 
     typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
@@ -240,7 +247,7 @@ private:
     const String version;
 
     FileSystem& fs;
-    TDeviceConfiguration deviceConfig;
+    std::unique_ptr<TDeviceConfiguration> deviceConfig;
 
     LedDriver& statusLed;
     ApplicationState state = ApplicationState::BOOTING;
@@ -257,15 +264,15 @@ private:
             mqttReadyState,
         });
 
-    WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname() };
+    WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig->getHostname() };
 #ifdef OTA_UPDATE
     // Only include OTA when needed for debugging
-    OtaDriver ota { networkReadyState, deviceConfig.getHostname() };
+    OtaDriver ota { networkReadyState, deviceConfig->getHostname() };
 #endif
-    MdnsDriver mdns { networkReadyState, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
-    RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp, rtcInSyncState };
+    MdnsDriver mdns { networkReadyState, deviceConfig->getHostname(), "ugly-duckling", version, mdnsReadyState };
+    RtcDriver rtc { networkReadyState, mdns, deviceConfig->ntp, rtcInSyncState };
     TelemetryCollector telemetryCollector;
-    MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), mqttReadyState };
+    MqttDriver mqtt { networkReadyState, mdns, deviceConfig->mqtt, deviceConfig->instance.get(), mqttReadyState };
 
     EchoCommand echoCommand;
     RestartCommand restartCommand;
@@ -276,8 +283,8 @@ private:
     FileRemoveCommand fileRemoveCommand { fs };
     HttpUpdateCommand httpUpdateCommand { version };
 
-    PeripheralsConfiguration& peripheralsConfig;
-    PeripheralManager peripherals { peripheralsConfig };
+    std::unique_ptr<PeripheralsConfiguration> peripheralsConfig;
+    PeripheralManager peripherals { *peripheralsConfig };
 };
 
 }}    // namespace farmhub::kernel

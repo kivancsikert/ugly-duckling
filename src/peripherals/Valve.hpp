@@ -218,7 +218,7 @@ public:
         , strategy(this, "strategy", defaultStrategy) {
     }
 
-    Property<String> motor { this, "motor", "" };
+    Property<String> motor { this, "motor" };
     Property<ValveControlStrategyType> strategy;
     Property<double> duty { this, "duty", 1.0 };
     Property<milliseconds> switchDuration { this, "switchDuration", milliseconds(500) };
@@ -237,37 +237,39 @@ public:
         return make_unique<ValveConfiguration>(name, defaultStrategy);
     }
 
-    std::unique_ptr<Peripheral> createPeripheral(ValveConfiguration& config) override {
+    std::unique_ptr<Peripheral> createPeripheral(std::unique_ptr<ValveConfiguration> config) override {
         PwmMotorDriver* targetMotor;
         for (auto& motor : motors) {
-            if (motor.getName() == config.motor.get()) {
+            if (motor.getName() == config->motor.get()) {
                 targetMotor = &(motor.get());
                 break;
             }
         }
         if (targetMotor == nullptr) {
             // TODO Add proper error handling
-            Serial.println("Failed to find motor: " + config.motor.get());
+            Serial.println("Failed to find motor: " + config->motor.get());
             return nullptr;
         }
-        std::unique_ptr<ValveControlStrategy> strategy = createStrategy(config);
+        std::unique_ptr<ValveControlStrategy> strategy = createStrategy(*config);
         if (strategy == nullptr) {
             // TODO Add proper error handling
             Serial.println("Failed to create strategy");
             return nullptr;
         }
-        return make_unique<Valve>(config.getName(), *targetMotor, std::move(strategy));
+        return make_unique<Valve>(config->getName(), *targetMotor, std::move(strategy));
     }
 
 private:
     std::unique_ptr<ValveControlStrategy> createStrategy(ValveConfiguration& config) {
+        auto switchDuration = config.switchDuration.get();
+        auto duty = config.duty.get();
         switch (config.strategy.get()) {
             case ValveControlStrategyType::NormallyOpen:
-                return make_unique<NormallyOpenValveControlStrategy>(config.switchDuration.get(), config.duty.get());
+                return make_unique<NormallyOpenValveControlStrategy>(switchDuration, duty);
             case ValveControlStrategyType::NormallyClosed:
-                return make_unique<NormallyClosedValveControlStrategy>(config.switchDuration.get(), config.duty.get());
+                return make_unique<NormallyClosedValveControlStrategy>(switchDuration, duty);
             case ValveControlStrategyType::Latching:
-                return make_unique<LatchingValveControlStrategy>(config.switchDuration.get(), config.duty.get());
+                return make_unique<LatchingValveControlStrategy>(switchDuration, duty);
             default:
                 // TODO Add proper error handling
                 return nullptr;

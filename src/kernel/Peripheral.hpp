@@ -6,6 +6,7 @@
 
 #include <kernel/Concurrent.hpp>
 #include <kernel/Configuration.hpp>
+#include <kernel/Util.hpp>
 
 namespace farmhub { namespace kernel {
 
@@ -15,9 +16,9 @@ public:
         : Configuration("peripheral", 1024) {
     }
 
-    Property<String> name { this, "name", "" };
-    Property<String> type { this, "type", "" };
-    RawJsonEntry params { this, "params" };
+    Property<String> name { this, "name" };
+    Property<String> type { this, "type" };
+    Property<JsonAsString> params { this, "params" };
 };
 
 class PeripheralsConfiguration : public Configuration {
@@ -26,7 +27,7 @@ public:
         : Configuration("peripherals", 8192) {
     }
 
-    ArrayProperty<JsonObject> peripherals { this, "peripherals" };
+    ObjectArrayProperty<JsonAsString> peripherals { this, "peripherals" };
 };
 
 class Peripheral {
@@ -63,13 +64,16 @@ public:
     virtual std::unique_ptr<TConfig> createConfig(const String& name) = 0;
 
     std::unique_ptr<Peripheral> createPeripheral(const String& name, const JsonObject& jsonConfig) override {
+        Serial.println("Creating peripheral: " + name + " of type " + type);
+        serializeJson(jsonConfig, Serial);
+
         std::unique_ptr<TConfig> config = createConfig(name);
         Serial.println("Configuring peripheral: " + name + " of type " + type);
         config->update(jsonConfig);
-        return createPeripheral(*config);
+        return createPeripheral(std::move(config));
     }
 
-    virtual std::unique_ptr<Peripheral> createPeripheral(TConfig& config) = 0;
+    virtual std::unique_ptr<Peripheral> createPeripheral(std::unique_ptr<TConfig> config) = 0;
 
 private:
     const size_t capacity;
@@ -79,16 +83,19 @@ class PeripheralManager {
 public:
     PeripheralManager(PeripheralsConfiguration& config)
         : config(config) {
+    }
+
+    void registerFactory(PeripheralFactoryBase& factory) {
+        Serial.println("Registering peripheral factory: " + factory.type);
+        factories.insert(std::make_pair(factory.type, std::reference_wrapper<PeripheralFactoryBase>(factory)));
+    }
+
+    void begin() {
         config.onUpdate([this](const JsonObject& json) {
             // Do this via a queue to avoid blocking the config update
             this->updateConfig();
         });
         updateConfig();
-    }
-
-    void registerFactory(std::unique_ptr<PeripheralFactoryBase> factory) {
-        Serial.println("Registering peripheral factory: " + factory->type);
-        factories[factory->type] = std::move(factory);
     }
 
 private:
@@ -104,10 +111,10 @@ private:
 
         Serial.println("Loading peripherals configuration with " + String(config.peripherals.get().size()) + " peripherals");
 
-        for (auto perpheralConfigJson : config.peripherals.get()) {
+        for (auto& perpheralConfigJsonAsString : config.peripherals.get()) {
             PeripheralConfiguration perpheralConfig;
-            perpheralConfig.update(perpheralConfigJson);
-            auto peripheral = createPeripheral(perpheralConfig.name.get(), perpheralConfig.type.get(), perpheralConfig.params.get());
+            perpheralConfig.load(perpheralConfigJsonAsString.get());
+            auto peripheral = createPeripheral(perpheralConfig.name.get(), perpheralConfig.type.get(), perpheralConfig.params.get().get());
             if (peripheral == nullptr) {
                 Serial.println("Failed to create peripheral: " + perpheralConfig.name.get() + " of type " + perpheralConfig.type.get());
                 return;
@@ -116,7 +123,7 @@ private:
         }
     }
 
-    std::unique_ptr<Peripheral> createPeripheral(const String& name, const String& type, const JsonObject& config) {
+    std::unique_ptr<Peripheral> createPeripheral(const String& name, const String& type, const String& configJson) {
         Serial.println("Creating peripheral: " + name + " of type " + type);
         auto it = factories.find(type);
         if (it == factories.end()) {
@@ -124,11 +131,18 @@ private:
             Serial.println("No factory found for peripheral type: " + type + " among " + String(factories.size()) + " factories");
             return nullptr;
         }
-        return it->second->createPeripheral(name, config);
+        // TODO Make this configurable
+        DynamicJsonDocument config(2048);
+        deserializeJson(config, configJson);
+        if (config.isNull()) {
+            Serial.println("Failed to parse peripheral configuration: " + configJson);
+            return nullptr;
+        }
+        return it->second.get().createPeripheral(name, config.as<JsonObject>());
     }
 
-    PeripheralsConfiguration config;
-    std::map<String, std::unique_ptr<PeripheralFactoryBase>> factories;
+    PeripheralsConfiguration& config;
+    std::map<String, std::reference_wrapper<PeripheralFactoryBase>> factories;
     std::list<std::unique_ptr<Peripheral>> peripherals;
     Mutex configMutex;
 };

@@ -20,7 +20,6 @@ namespace farmhub { namespace kernel { namespace drivers {
 class Drv8833Driver {
 
 public:
-    // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
     Drv8833Driver(
         PwmManager& pwm,
         gpio_num_t ain1Pin,
@@ -29,8 +28,8 @@ public:
         gpio_num_t bin2Pin,
         gpio_num_t faultPin,
         gpio_num_t sleepPin)
-        : motorA(pwm, ain1Pin, ain2Pin)
-        , motorB(pwm, bin1Pin, bin2Pin)
+        : motorA(pwm, "A", ain1Pin, ain2Pin)
+        , motorB(pwm, "B", bin1Pin, bin2Pin)
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
 
@@ -74,15 +73,18 @@ private:
     public:
         Drv8833MotorDriver(
             PwmManager& pwm,
+            const String& name,
             gpio_num_t in1Pin,
             gpio_num_t in2Pin)
-            : in1Channel(pwm.registerChannel(in1Pin, PWM_FREQ, PWM_RESOLUTION))
+            : name(name)
+            , in1Channel(pwm.registerChannel(in1Pin, PWM_FREQ, PWM_RESOLUTION))
             , in2Channel(pwm.registerChannel(in2Pin, PWM_FREQ, PWM_RESOLUTION)) {
         }
 
         void drive(MotorPhase phase, double duty = 1) override {
             int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
-            Serial.printf("Driving motor %s at %.1f%%\n",
+            Serial.printf("Driving motor %s %s at %.1f%%\n",
+                name.c_str(),
                 phase == MotorPhase::FORWARD ? "forward" : "reverse",
                 duty * 100);
 
@@ -99,6 +101,7 @@ private:
         }
 
     private:
+        const String name;
         const PwmChannel in1Channel;
         const PwmChannel in2Channel;
     };

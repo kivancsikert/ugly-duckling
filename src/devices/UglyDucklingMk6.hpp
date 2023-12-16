@@ -35,6 +35,7 @@ public:
             GPIO_NUM_2,
             // Battery
             GPIO_NUM_1, 1.2424) {
+        application.registerFactory(valveFactory);
     }
 
     LedDriver secondaryStatusLed { "status-2", GPIO_NUM_4 };

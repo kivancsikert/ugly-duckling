@@ -5,6 +5,7 @@
 #include <list>
 
 #include <kernel/FileSystem.hpp>
+#include <kernel/Util.hpp>
 
 using std::list;
 using std::ref;
@@ -279,8 +280,9 @@ public:
     }
 
     template <typename TDeviceConfiguration>
-    static TDeviceConfiguration& bindToFile(const FileSystem& fs, const String& path, TDeviceConfiguration& config) {
-        DynamicJsonDocument json(config.capacity);
+    static std::unique_ptr<TDeviceConfiguration> bindToFile(const FileSystem& fs, const String& path) {
+        auto config = make_unique<TDeviceConfiguration>();
+        DynamicJsonDocument json(config->capacity);
         if (!fs.exists(path)) {
             Serial.println("The configuration file " + path + " was not found, falling back to defaults");
         } else {
@@ -296,8 +298,8 @@ public:
                 throw "Cannot open config file " + path;
             }
         }
-        config.load(json.as<JsonObject>());
-        config.onUpdate([&fs, path](const JsonObject& json) {
+        config->load(json.as<JsonObject>());
+        config->onUpdate([&fs, path](const JsonObject& json) {
             File file = fs.open(path, FILE_WRITE);
             if (!file) {
                 throw "Cannot open config file " + path;
