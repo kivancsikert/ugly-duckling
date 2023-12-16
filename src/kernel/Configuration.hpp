@@ -12,6 +12,53 @@ using std::reference_wrapper;
 
 namespace farmhub { namespace kernel {
 
+class JsonAsString {
+public:
+    JsonAsString() {
+    }
+
+    JsonAsString(const String& value)
+        : value(value) {
+    }
+
+    JsonAsString(const JsonAsString& other)
+        : value(other.value) {
+    }
+
+    const String& get() const {
+        return value;
+    }
+
+    void set(const String& value) {
+        this->value = value;
+    }
+
+private:
+    String value;
+};
+
+bool convertToJson(const JsonAsString& src, JsonVariant dst) {
+    // TODO How large should this be?
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, src.get());
+
+    if (error) {
+        // Handle the error, if JSON parsing fails
+        return false;
+    }
+
+    dst.set(doc.as<JsonObject>());
+    Serial.println(">>> Serialized --to-> JSON: " + src.get());
+    return true;
+}
+bool convertFromJson(JsonVariantConst src, JsonAsString& dst) {
+    String value;
+    serializeJson(src, value);
+    dst.set(value);
+    Serial.println(">>> Serialized <-from-- JSON: " + dst.get());
+    return true;
+}
+
 class ConfigurationEntry {
 public:
     virtual void load(const JsonObject& json) = 0;
@@ -98,7 +145,7 @@ private:
 template <typename T>
 class Property : public ConfigurationEntry {
 public:
-    Property(ConfigurationSection* parent, const String& name, const T& defaultValue, const bool secret = false)
+    Property(ConfigurationSection* parent, const String& name, const T& defaultValue = T(), const bool secret = false)
         : name(name)
         , secret(secret)
         , defaultValue(defaultValue) {
@@ -150,40 +197,53 @@ private:
     const T defaultValue;
 };
 
-class RawJsonEntry : public ConfigurationEntry {
+template <typename T>
+class ObjectArrayProperty : public ConfigurationEntry {
 public:
-    RawJsonEntry(ConfigurationSection* parent, const String& name)
+    ObjectArrayProperty(ConfigurationSection* parent, const String& name)
         : name(name) {
         parent->add(*this);
     }
 
+    void set(const std::list<T>& entries) {
+        this->entries = entries;
+    }
+
+    const std::list<T>& get() const {
+        return entries;
+    }
+
     void load(const JsonObject& json) override {
+        reset();
         if (json.containsKey(name)) {
-            value = json[name];
-        } else {
-            value.clear();
+            auto jsonArray = json[name].as<JsonArray>();
+            for (auto jsonEntry : jsonArray) {
+                T entry;
+                convertFromJson(jsonEntry, entry);
+                entries.push_back(entry);
+            }
         }
     }
 
-    void store(JsonObject& json, bool inlineDefaults) const override {
-        json[name] = value;
+    bool hasValue() const override {
+        return !entries.empty();
     }
 
     void reset() override {
-        value.clear();
+        entries.clear();
     }
 
-    JsonVariant get() {
-        return value;
-    }
-
-    bool hasValue() const override {
-        return !value.isNull();
+    void store(JsonObject& json, bool inlineDefaults) const override {
+        auto jsonArray = json.createNestedArray(name);
+        for (auto& entry : entries) {
+            JsonObject jsonEntry = jsonArray.createNestedObject();
+            convertToJson(entry, jsonEntry);
+        }
     }
 
 private:
     const String name;
-    JsonVariant value;
+    std::list<T> entries;
 };
 
 class Configuration : protected ConfigurationSection {
@@ -195,6 +255,15 @@ public:
 
     void reset() override {
         ConfigurationSection::reset();
+    }
+
+    void load(const String& json) {
+        DynamicJsonDocument jsonDocument(capacity);
+        DeserializationError error = deserializeJson(jsonDocument, json);
+        if (error) {
+            throw "Cannot parse JSON configuration: " + String(error.c_str());
+        }
+        load(jsonDocument.as<JsonObject>());
     }
 
     virtual void update(const JsonObject& json) {
@@ -251,7 +320,7 @@ protected:
         // Print effective configuration
         DynamicJsonDocument prettyJson(capacity);
         auto prettyRoot = prettyJson.to<JsonObject>();
-        ConfigurationSection::store(prettyRoot, true);
+        store(prettyRoot, true);
         Serial.println("Effective " + name + " configuration:");
         serializeJsonPretty(prettyJson, Serial);
         Serial.println();
