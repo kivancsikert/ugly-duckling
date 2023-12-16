@@ -12,9 +12,9 @@ using namespace farmhub::kernel::drivers;
 namespace farmhub { namespace devices {
 
 template <typename TDeviceConfiguration>
-class Device {
+class DeviceDefinition {
 public:
-    Device(gpio_num_t statusPin)
+    DeviceDefinition(gpio_num_t statusPin)
         : statusLed("status", statusPin) {
     }
 
@@ -29,15 +29,15 @@ public:
 };
 
 template <typename TDeviceConfiguration>
-class BatteryPoweredDevice : public Device<TDeviceConfiguration> {
+class BatteryPoweredDeviceDefinition : public DeviceDefinition<TDeviceConfiguration> {
 public:
-    BatteryPoweredDevice(gpio_num_t statusPin, gpio_num_t batteryPin, float batteryVoltageDividerRatio)
-        : Device<TDeviceConfiguration>(statusPin)
+    BatteryPoweredDeviceDefinition(gpio_num_t statusPin, gpio_num_t batteryPin, float batteryVoltageDividerRatio)
+        : DeviceDefinition<TDeviceConfiguration>(statusPin)
         , batteryDriver(batteryPin, batteryVoltageDividerRatio) {
 #ifdef FARMHUB_DEBUG
-        Device<TDeviceConfiguration>::application.consolePrinter.registerBattery(batteryDriver);
+        DeviceDefinition<TDeviceConfiguration>::application.consolePrinter.registerBattery(batteryDriver);
 #endif
-        Device<TDeviceConfiguration>::application.registerTelemetryProvider("battery", batteryDriver);
+        DeviceDefinition<TDeviceConfiguration>::application.registerTelemetryProvider("battery", batteryDriver);
     }
 
 public:

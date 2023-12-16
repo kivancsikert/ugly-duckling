@@ -7,7 +7,7 @@
 #include <kernel/drivers/Drv8833Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
-#include <devices/Device.hpp>
+#include <devices/DeviceDefinition.hpp>
 
 using namespace farmhub::kernel;
 
@@ -21,10 +21,10 @@ public:
     }
 };
 
-class UglyDucklingMk6 : public BatteryPoweredDevice<Mk6Config> {
+class UglyDucklingMk6 : public BatteryPoweredDeviceDefinition<Mk6Config> {
 public:
     UglyDucklingMk6()
-        : BatteryPoweredDevice(
+        : BatteryPoweredDeviceDefinition(
             // Status LED
             GPIO_NUM_2,
             // Battery

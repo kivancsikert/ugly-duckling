@@ -7,7 +7,7 @@
 #include <kernel/drivers/Drv8801Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
-#include <devices/Device.hpp>
+#include <devices/DeviceDefinition.hpp>
 
 using namespace farmhub::kernel;
 
@@ -21,10 +21,10 @@ public:
     }
 };
 
-class UglyDucklingMk4 : public Device<Mk4Config> {
+class UglyDucklingMk4 : public DeviceDefinition<Mk4Config> {
 public:
     UglyDucklingMk4()
-        : Device(
+        : DeviceDefinition(
             // Status LED
             GPIO_NUM_26) {
     }
