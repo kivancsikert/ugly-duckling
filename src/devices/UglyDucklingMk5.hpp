@@ -22,7 +22,7 @@ public:
     }
 };
 
-class UglyDucklingMk5 : public BatteryPoweredDeviceDefinition<Mk5Config> {
+class UglyDucklingMk5 : public BatteryPoweredDeviceDefinition {
 public:
     UglyDucklingMk5()
         : BatteryPoweredDeviceDefinition(

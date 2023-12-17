@@ -148,16 +148,8 @@ public:
     }
 };
 
-class ConsoleProvider {
-public:
-    ConsoleProvider() {
-        Serial.begin(115200);
-        Serial.println("Starting up...");
-    }
-};
-
 template <typename TDeviceConfiguration>
-class Kernel : ConsoleProvider {
+class Kernel {
 public:
     Kernel(LedDriver& statusLed)
         : version(VERSION)

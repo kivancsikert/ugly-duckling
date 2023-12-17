@@ -1,7 +1,7 @@
 #pragma once
 
-#include <kernel/Kernel.hpp>
 #include <kernel/FileSystem.hpp>
+#include <kernel/Kernel.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/Drv8833Driver.hpp>
@@ -21,7 +21,7 @@ public:
     }
 };
 
-class UglyDucklingMk6 : public BatteryPoweredDeviceDefinition<Mk6Config> {
+class UglyDucklingMk6 : public BatteryPoweredDeviceDefinition {
 public:
     UglyDucklingMk6()
         : BatteryPoweredDeviceDefinition(

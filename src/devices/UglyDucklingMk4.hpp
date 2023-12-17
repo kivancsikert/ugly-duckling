@@ -21,7 +21,7 @@ public:
     }
 };
 
-class UglyDucklingMk4 : public DeviceDefinition<Mk4Config> {
+class UglyDucklingMk4 : public DeviceDefinition {
 public:
     UglyDucklingMk4()
         : DeviceDefinition(
