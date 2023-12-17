@@ -122,11 +122,10 @@ static const String& getMacAddress() {
     return macAddress;
 }
 
-class DeviceConfiguration : public Configuration {
+class DeviceConfiguration : public ConfigurationSection {
 public:
     DeviceConfiguration(const String& defaultModel)
-        : Configuration("device")
-        , model(this, "model", defaultModel)
+        : model(this, "model", defaultModel)
         , instance(this, "instance", getMacAddress()) {
     }
 
@@ -153,8 +152,6 @@ class Kernel {
 public:
     Kernel(LedDriver& statusLed)
         : version(VERSION)
-        , fs(FileSystem::get())
-        , deviceConfig(Configuration::bindToFile(fs, "/device-config.json", *new TDeviceConfiguration()))
         , statusLed(statusLed) {
 
         Serial.printf("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s'\n",
@@ -315,8 +312,9 @@ private:
 
     const String version;
 
-    FileSystem& fs;
-    TDeviceConfiguration deviceConfig;
+    FileSystem& fs { FileSystem::get() };
+    ConfigurationFile<TDeviceConfiguration> deviceConfigFile { fs, "/device-config.json" };
+    TDeviceConfiguration& deviceConfig = deviceConfigFile.config;
 
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
     MemoryTelemetryProvider memoryTelemetryProvider;

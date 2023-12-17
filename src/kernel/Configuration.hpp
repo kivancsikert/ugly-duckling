@@ -247,42 +247,13 @@ private:
     std::list<T> entries;
 };
 
-class Configuration : protected ConfigurationSection {
+template <typename TConfiguration>
+class ConfigurationFile {
 public:
-    Configuration(const String& name)
-        : name(name) {
-    }
-
-    void reset() override {
-        ConfigurationSection::reset();
-    }
-
-    void load(const String& json) {
-        DynamicJsonDocument jsonDocument(docSizeFor(json));
-        DeserializationError error = deserializeJson(jsonDocument, json);
-        if (error) {
-            throw "Cannot parse JSON configuration: " + String(error.c_str());
-        }
-        load(jsonDocument.as<JsonObject>());
-    }
-
-    virtual void update(const JsonObject& json) {
-        load(json);
-    }
-
-    void onUpdate(const std::function<void(const JsonObject&)>& callback) {
-        callbacks.push_back(callback);
-    }
-
-    virtual void store(JsonObject& json, bool inlineDefaults) const override {
-        ConfigurationSection::store(json, inlineDefaults);
-    }
-
-    template <typename TDeviceConfiguration>
-    static TDeviceConfiguration& bindToFile(const FileSystem& fs, const String& path, TDeviceConfiguration& config) {
+    ConfigurationFile(const FileSystem& fs, const String& path)
+        : path(path) {
         if (!fs.exists(path)) {
             Serial.println("The configuration file " + path + " was not found, falling back to defaults");
-            config.reset();
         } else {
             File file = fs.open(path, FILE_READ);
             if (!file) {
@@ -296,9 +267,9 @@ public:
                 Serial.println(file.readString());
                 throw "Cannot open config file " + path;
             }
-            config.load(json.as<JsonObject>());
+            load(json.as<JsonObject>());
         }
-        config.onUpdate([&fs, path](const JsonObject& json) {
+        onUpdate([&fs, path](const JsonObject& json) {
             File file = fs.open(path, FILE_WRITE);
             if (!file) {
                 throw "Cannot open config file " + path;
@@ -307,37 +278,54 @@ public:
             serializeJson(json, file);
             file.close();
         });
-        return config;
     }
 
-    const String& getName() const {
-        return name;
+    void reset() {
+        config.reset();
     }
 
-protected:
-    void load(const JsonObject& json) override {
-        ConfigurationSection::load(json);
+    void update(const String& json) {
+        DynamicJsonDocument jsonDocument(docSizeFor(json));
+        DeserializationError error = deserializeJson(jsonDocument, json);
+        if (error) {
+            throw "Cannot parse JSON configuration: " + String(error.c_str());
+        }
+        load(jsonDocument.as<JsonObject>());
+    }
+
+    void update(const JsonObject& json) {
+        load(json);
+    }
+
+    void onUpdate(const std::function<void(const JsonObject&)> callback) {
+        callbacks.push_back(callback);
+    }
+
+    virtual void store(JsonObject& json, bool inlineDefaults) const {
+        config.store(json, inlineDefaults);
+    }
+
+    TConfiguration config;
+
+private:
+    void load(const JsonObject& json) {
+        config.load(json);
 
         // Print effective configuration
         // TODO Estimate size of printed JSON based on the size of the configuration
         DynamicJsonDocument prettyJson(8192);
         auto prettyRoot = prettyJson.to<JsonObject>();
         store(prettyRoot, true);
-        Serial.println("Effective " + name + " configuration:");
+        Serial.println("Effective configuration for " + String(path) + ":");
         serializeJsonPretty(prettyJson, Serial);
         Serial.println();
 
-        updated(json);
-    }
-
-private:
-    void updated(const JsonObject& json) {
         for (auto& callback : callbacks) {
             callback(json);
         }
     }
 
-    const String name;
+    const String path;
     std::list<std::function<void(const JsonObject&)>> callbacks;
 };
 
