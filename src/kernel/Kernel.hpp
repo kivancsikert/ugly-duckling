@@ -124,8 +124,8 @@ static const String& getMacAddress() {
 
 class DeviceConfiguration : public Configuration {
 public:
-    DeviceConfiguration(const String& defaultModel, size_t capacity = 2048)
-        : Configuration("device", capacity)
+    DeviceConfiguration(const String& defaultModel)
+        : Configuration("device")
         , model(this, "model", defaultModel)
         , instance(this, "instance", getMacAddress()) {
     }

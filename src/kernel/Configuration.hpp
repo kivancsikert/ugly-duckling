@@ -5,6 +5,7 @@
 #include <list>
 
 #include <kernel/FileSystem.hpp>
+#include <kernel/Json.hpp>
 
 using std::list;
 using std::ref;
@@ -38,9 +39,9 @@ private:
 };
 
 bool convertToJson(const JsonAsString& src, JsonVariant dst) {
-    // TODO How large should this be?
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, src.get());
+    const String& stringValue = src.get();
+    DynamicJsonDocument doc(docSizeFor(stringValue));
+    DeserializationError error = deserializeJson(doc, stringValue);
 
     if (error) {
         // Handle the error, if JSON parsing fails
@@ -248,9 +249,8 @@ private:
 
 class Configuration : protected ConfigurationSection {
 public:
-    Configuration(const String& name, size_t capacity = 2048)
-        : name(name)
-        , capacity(capacity) {
+    Configuration(const String& name)
+        : name(name) {
     }
 
     void reset() override {
@@ -258,7 +258,7 @@ public:
     }
 
     void load(const String& json) {
-        DynamicJsonDocument jsonDocument(capacity);
+        DynamicJsonDocument jsonDocument(docSizeFor(json));
         DeserializationError error = deserializeJson(jsonDocument, json);
         if (error) {
             throw "Cannot parse JSON configuration: " + String(error.c_str());
@@ -280,23 +280,24 @@ public:
 
     template <typename TDeviceConfiguration>
     static TDeviceConfiguration& bindToFile(const FileSystem& fs, const String& path, TDeviceConfiguration& config) {
-        DynamicJsonDocument json(config.capacity);
         if (!fs.exists(path)) {
             Serial.println("The configuration file " + path + " was not found, falling back to defaults");
+            config.reset();
         } else {
             File file = fs.open(path, FILE_READ);
             if (!file) {
                 throw "Cannot open config file " + path;
             }
 
+            DynamicJsonDocument json(docSizeFor(file));
             DeserializationError error = deserializeJson(json, file);
             file.close();
             if (error) {
                 Serial.println(file.readString());
                 throw "Cannot open config file " + path;
             }
+            config.load(json.as<JsonObject>());
         }
-        config.load(json.as<JsonObject>());
         config.onUpdate([&fs, path](const JsonObject& json) {
             File file = fs.open(path, FILE_WRITE);
             if (!file) {
@@ -318,7 +319,8 @@ protected:
         ConfigurationSection::load(json);
 
         // Print effective configuration
-        DynamicJsonDocument prettyJson(capacity);
+        // TODO Estimate size of printed JSON based on the size of the configuration
+        DynamicJsonDocument prettyJson(8192);
         auto prettyRoot = prettyJson.to<JsonObject>();
         store(prettyRoot, true);
         Serial.println("Effective " + name + " configuration:");
@@ -336,7 +338,6 @@ private:
     }
 
     const String name;
-    const size_t capacity;
     std::list<std::function<void(const JsonObject&)>> callbacks;
 };
 
