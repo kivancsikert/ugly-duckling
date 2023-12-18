@@ -84,12 +84,24 @@ public:
         return count;
     }
 
+    void take() {
+        take([](const TMessage& message) {});
+    }
+
     void take(MessageHandler handler) {
         while (!pollIn(ticks::max(), handler)) { }
     }
 
+    bool poll() {
+        return poll([](const TMessage& message) {});
+    }
+
     bool poll(MessageHandler handler) {
         return pollIn(ticks::zero(), handler);
+    }
+
+    bool pollIn(ticks timeout) {
+        return pollIn(timeout, [](const TMessage& message) {});
     }
 
     bool pollIn(ticks timeout, MessageHandler handler) {
@@ -100,6 +112,10 @@ public:
         handler(*message);
         delete message;
         return true;
+    }
+
+    void clear() {
+        xQueueReset(queue);
     }
 
 private:
