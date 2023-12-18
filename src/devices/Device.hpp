@@ -10,6 +10,8 @@
 #endif
 #endif
 
+#include <Print.h>
+
 #include <ArduinoLog.h>
 
 #include <kernel/Kernel.hpp>
@@ -42,9 +44,11 @@ typedef farmhub::devices::Mk6Config TDeviceConfiguration;
 
 namespace farmhub { namespace devices {
 
-class ConsolePrinter {
+class ConsolePrinter : public Print {
 public:
     ConsolePrinter() {
+        Serial.begin(115200);
+
         static const String spinner = "|/-\\";
         Task::loop("ConsolePrinter", 8192, 1, [this](Task& task) {
             Serial.print("\033[1G\033[0K");
@@ -81,6 +85,18 @@ public:
         this->battery = &battery;
     }
 
+    size_t write(uint8_t character) override {
+        return Serial.write(character);
+    }
+
+    size_t write(const uint8_t *buffer, size_t size) override {
+        size_t written = 0;
+        for (size_t i = 0; i < size; i++) {
+            written += write(buffer[i]);
+        }
+        return written;
+    }
+
 private:
     static String wifiStatus() {
         switch (WiFi.status()) {
@@ -112,11 +128,17 @@ private:
 class ConsoleProvider {
 public:
     ConsoleProvider() {
-        Serial.begin(115200);
-
+#ifdef FARMHUB_DEBUG
+        Log.begin(FARMHUB_LOG_LEVEL, &consolePrinter);
+#else
         Log.begin(FARMHUB_LOG_LEVEL, &Serial);
+#endif
         Log.infoln("Starting up...");
     }
+
+#ifdef FARMHUB_DEBUG
+    ConsolePrinter consolePrinter;
+#endif
 };
 
 class Device : ConsoleProvider {
@@ -146,11 +168,6 @@ public:
     }
 
 private:
-
-#ifdef FARMHUB_DEBUG
-    ConsolePrinter consolePrinter;
-#endif
-
     TDeviceDefinition deviceDefinition;
     Kernel<TDeviceConfiguration> kernel { deviceDefinition.statusLed };
     PeripheralManager peripheralManager;
