@@ -41,7 +41,7 @@ public:
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
 
-        Serial.printf("Initializing DRV8801 on pins enable = %d, phase = %d, fault = %d, sleep = %d, mode1 = %d, mode2 = %d, current = %d\n",
+        Log.infoln("Initializing DRV8801 on pins enable = %d, phase = %d, fault = %d, sleep = %d, mode1 = %d, mode2 = %d, current = %d",
             enablePin, phasePin, faultPin, sleepPin, mode1Pin, mode2Pin, currentPin);
 
         pinMode(enablePin, OUTPUT);
@@ -60,7 +60,7 @@ public:
 
     void drive(MotorPhase phase, double duty = 1) override {
         if (duty == 0) {
-            Serial.println("Stopping");
+            Log.traceln("Stopping");
             digitalWrite(enablePin, LOW);
             return;
         }
@@ -68,7 +68,7 @@ public:
 
         int direction = (phase == MotorPhase::FORWARD ? 1 : -1);
         int dutyValue = phaseChannel.maxValue() / 2 + direction * (int) (phaseChannel.maxValue() / 2 * duty);
-        Serial.printf("Driving motor %s at %.1f%%\n",
+        Log.traceln("Driving motor %s at %d",
             phase == MotorPhase::FORWARD ? "forward" : "reverse",
             duty * 100);
 

@@ -5,6 +5,8 @@
 
 #include <freertos/FreeRTOS.h>
 
+#include <ArduinoLog.h>
+
 #include <kernel/Command.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/Telemetry.hpp>
@@ -154,7 +156,7 @@ public:
         : version(VERSION)
         , statusLed(statusLed) {
 
-        Serial.printf("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s'\n",
+        Log.infoln("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s'",
             version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
@@ -202,7 +204,8 @@ public:
             });
         Task::loop("telemetry", 8192, [this](Task& task) { publishTelemetry(task); });
 
-        Serial.println("Kernel initialized in " + String(millis()) + " ms");
+        Log.infoln("Kernel ready in %d ms",
+            millis());
     }
 
     void registerTelemetryProvider(const String& name, TelemetryProvider& provider) {
@@ -274,7 +277,8 @@ private:
         }
 
         if (newState != state) {
-            Serial.printf("Kernel state changed from %d to %d\n", state, newState);
+            Log.traceln("Kernel state changed from %d to %d",
+                state, newState);
             state = newState;
             switch (newState) {
                 case KernelState::NETWORK_CONNECTING:

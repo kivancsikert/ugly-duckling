@@ -3,6 +3,8 @@
 #include <map>
 #include <memory>
 
+#include <ArduinoLog.h>
+
 #include <kernel/Configuration.hpp>
 
 using std::move;
@@ -67,7 +69,7 @@ public:
 
     unique_ptr<Peripheral> createPeripheral(const String& name, const String& jsonConfig) override {
         unique_ptr<TConfig> config = createConfig();
-        Serial.println("Configuring peripheral: " + name + " of type " + type);
+        Log.traceln("Configuring peripheral: %s of type %s", name.c_str(), type.c_str());
         config->loadFromString(jsonConfig);
         return createPeripheral(name, move(config));
     }
@@ -84,7 +86,8 @@ public:
     }
 
     void registerFactory(PeripheralFactoryBase& factory) {
-        Serial.println("Registering peripheral factory: " + factory.type);
+        Log.traceln("Registering peripheral factory: %s",
+            factory.type.c_str());
         factories.insert(std::make_pair(factory.type, std::reference_wrapper<PeripheralFactoryBase>(factory)));
     }
 
@@ -98,14 +101,16 @@ private:
         // TODO Properly stop all peripherals
         peripherals.clear();
 
-        Serial.println("Loading peripherals configuration with " + String(config.peripherals.get().size()) + " peripherals");
+        Log.infoln("Loading configuration for %d peripherals",
+            config.peripherals.get().size());
 
         for (auto& perpheralConfigJsonAsString : config.peripherals.get()) {
             PeripheralConfiguration perpheralConfig;
             perpheralConfig.loadFromString(perpheralConfigJsonAsString.get());
             auto peripheral = createPeripheral(perpheralConfig.name.get(), perpheralConfig.type.get(), perpheralConfig.params.get().get());
             if (peripheral == nullptr) {
-                Serial.println("Failed to create peripheral: " + perpheralConfig.name.get() + " of type " + perpheralConfig.type.get());
+                Log.errorln("Failed to create peripheral: %s of type %s",
+                    perpheralConfig.name.get().c_str(), perpheralConfig.type.get().c_str());
                 return;
             }
             peripherals.push_back(move(peripheral));
@@ -113,11 +118,13 @@ private:
     }
 
     unique_ptr<Peripheral> createPeripheral(const String& name, const String& type, const String& configJson) {
-        Serial.println("Creating peripheral: " + name + " of type " + type);
+        Log.traceln("Creating peripheral: %s of type %s",
+            name.c_str(), type.c_str());
         auto it = factories.find(type);
         if (it == factories.end()) {
             // TODO Handle the case where no factory is found for the given type
-            Serial.println("No factory found for peripheral type: " + type + " among " + String(factories.size()) + " factories");
+            Log.errorln("No factory found for peripheral type: %s among %d factories",
+                type.c_str(), factories.size());
             return nullptr;
         }
         // TODO Make this configurable

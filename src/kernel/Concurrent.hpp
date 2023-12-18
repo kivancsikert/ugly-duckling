@@ -6,6 +6,8 @@
 
 #include <freertos/FreeRTOS.h>
 
+#include <ArduinoLog.h>
+
 #include <kernel/Task.hpp>
 
 using namespace std::chrono;
@@ -43,7 +45,8 @@ public:
         TMessage* copy = new TMessage(std::forward<Args>(args)...);
         bool sentWithoutDropping = xQueueSend(queue, &copy, timeout.count()) == pdTRUE;
         if (!sentWithoutDropping) {
-            Serial.println("Overflow in queue '" + name + "', dropping message");
+            Log.warningln("Overflow in queue '%s', dropping message",
+                name.c_str());
             delete copy;
         }
         return sentWithoutDropping;
@@ -55,7 +58,8 @@ public:
         BaseType_t xHigherPriorityTaskWoken;
         bool sentWithoutDropping = xQueueSendFromISR(queue, &copy, &xHigherPriorityTaskWoken) == pdTRUE;
         if (!sentWithoutDropping) {
-            Serial.println("Overflow in queue '" + name + "', dropping message");
+            Log.warningln("Overflow in queue '%s', dropping message",
+                name.c_str());
             delete copy;
         }
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);

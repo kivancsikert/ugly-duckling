@@ -4,6 +4,7 @@
 #include <chrono>
 #include <time.h>
 
+#include <ArduinoLog.h>
 #include <NTPClient.h>
 
 #include <kernel/State.hpp>
@@ -45,7 +46,7 @@ public:
                 // The MCU boots with a timestamp of 0 seconds, so if the value is
                 // much higher, then it means the RTC is set.
                 if (seconds(now) > hours((2022 - 1970) * 365 * 24)) {
-                    Serial.println("Time configured, exiting task");
+                    Log.infoln("RTC: time is set, exiting task");
                     rtcInSync.set();
                     break;
                 }
@@ -56,15 +57,19 @@ public:
             WiFiUDP udp;
             NTPClient* ntpClient;
             if (ntpConfig.host.get().length() > 0) {
-                Serial.println("NTP: using " + ntpConfig.host.get() + " from configuration");
+                Log.infoln("RTC: using NTP server %s from configuration",
+                    ntpConfig.host.get().c_str());
                 ntpClient = new NTPClient(udp, ntpConfig.host.get().c_str());
             } else {
                 MdnsRecord ntpServer;
                 if (mdns.lookupService("ntp", "udp", ntpServer)) {
-                    Serial.println("NTP: using " + ntpServer.hostname + ":" + String(ntpServer.port) + " (" + ntpServer.ip.toString() + ") from mDNS");
+                    Log.infoln("RTC: using NTP server %s:%d (%p) from mDNS",
+                        ntpServer.hostname.c_str(),
+                        ntpServer.port,
+                        ntpServer.ip);
                     ntpClient = new NTPClient(udp, ntpServer.ip);
                 } else {
-                    Serial.println("NTP: using default server");
+                    Log.infoln("RTC: no NTP server configured, using default");
                     ntpClient = new NTPClient(udp);
                 }
             }
@@ -106,14 +111,16 @@ private:
             // If the difference is larger than the threshold, set the time directly
             struct timeval tv = { .tv_sec = newEpochTime, .tv_usec = 0 };
             settimeofday(&tv, NULL);
-            Serial.println("Set time to " + String(newEpochTime) + " (from: " + String(now) + ")");
+            Log.traceln("RTC: Set time to %ld (from: %ld)",
+                newEpochTime, now);
         } else if (difference != 0) {
             // If the difference is smaller, adjust the time gradually
             struct timeval adj = { .tv_sec = difference, .tv_usec = 0 };
             adjtime(&adj, NULL);
-            Serial.println("Adjusted time by " + String(difference));
+            Log.traceln("RTC: Adjusted time by %ld",
+                difference);
         } else {
-            Serial.println("Time is already correct");
+            Log.traceln("RTC: Time is already correct");
         }
     }
 };

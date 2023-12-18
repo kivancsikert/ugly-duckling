@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include <ArduinoJson.h>
+#include <ArduinoLog.h>
 #include <HTTPUpdate.h>
 #include <SPIFFS.h>
 
@@ -55,7 +56,8 @@ public:
     void handle(const JsonObject& request, JsonObject& response) override {
         seconds duration = seconds(request["duration"].as<long>());
         esp_sleep_enable_timer_wakeup(((microseconds) duration).count());
-        Serial.printf("Sleeping for %ld seconds in deep sleep mode\n", duration.count());
+        Log.infoln("Sleeping for %ld seconds in light sleep mode",
+            duration.count());
         esp_deep_sleep_start();
     }
 };
@@ -107,7 +109,8 @@ public:
         if (!path.startsWith("/")) {
             path = "/" + path;
         }
-        Serial.printf("Reading %s\n", path.c_str());
+        Log.infoln("Reading %s",
+            path.c_str());
         response["path"] = path;
         File file = fs.open(path, FILE_READ);
         if (file) {
@@ -130,7 +133,8 @@ public:
         if (!path.startsWith("/")) {
             path = "/" + path;
         }
-        Serial.printf("Writing %s\n", path.c_str());
+        Log.infoln("Writing %s",
+            path.c_str());
         String contents = request["contents"];
         response["path"] = path;
         File file = fs.open(path, FILE_WRITE);
@@ -156,7 +160,8 @@ public:
         if (!path.startsWith("/")) {
             path = "/" + path;
         }
-        Serial.printf("Removing %s\n", path.c_str());
+        Log.infoln("Removing %s",
+            path.c_str());
         response["path"] = path;
         if (fs.remove(path)) {
             response["removed"] = true;
@@ -189,7 +194,8 @@ public:
 
 private:
     static String update(const String& url, const String& currentVersion) {
-        Serial.printf("Updating from version %s via URL %s\n", currentVersion.c_str(), url.c_str());
+        Log.infoln("Updating from version %s via URL %s",
+            currentVersion.c_str(), url.c_str());
         WiFiClientSecure client;
         // Allow insecure connections for testing
         client.setInsecure();

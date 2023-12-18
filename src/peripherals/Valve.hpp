@@ -6,6 +6,7 @@
 #include <Arduino.h>
 
 #include <ArduinoJson.h>
+#include <ArduinoLog.h>
 
 #include <devices/Peripheral.hpp>
 #include <kernel/Service.hpp>
@@ -62,7 +63,6 @@ protected:
                 controller.drive(MotorPhase::REVERSE, holdDuty);
                 break;
         }
-        Serial.println("Holding valve " + String(targetState == ValveState::OPEN ? "open" : "closed") + " for " + String(switchDuration.count()) + " ms");
         delay(switchDuration.count());
         controller.stop();
     }
@@ -158,7 +158,8 @@ public:
         : Peripheral(name)
         , controller(controller)
         , strategy(move(strategy)) {
-        Serial.println("Creating valve " + name + " with strategy " + this->strategy->describe());
+        Log.infoln("Creating valve '%s' with strategy %s",
+            name.c_str(), this->strategy->describe().c_str());
 
         controller.stop();
 
@@ -174,18 +175,19 @@ public:
     }
 
     void open() {
-        Serial.println("Opening valve");
+        Log.traceln("Opening valve");
         strategy->open(controller);
         this->state = ValveState::OPEN;
     }
 
     void close() {
-        Serial.println("Closing valve");
+        Log.traceln("Closing valve");
         strategy->close(controller);
         this->state = ValveState::CLOSED;
     }
 
     void reset() {
+        Log.traceln("Resetting valve");
         controller.stop();
     }
 
@@ -244,13 +246,14 @@ public:
         }
         if (targetMotor == nullptr) {
             // TODO Add proper error handling
-            Serial.println("Failed to find motor: " + config->motor.get());
+            Log.errorln("Failed to find motor: %s",
+                config->motor.get().c_str());
             return nullptr;
         }
         unique_ptr<ValveControlStrategy> strategy = createStrategy(*config);
         if (strategy == nullptr) {
             // TODO Add proper error handling
-            Serial.println("Failed to create strategy");
+            Log.errorln("Failed to create strategy");
             return nullptr;
         }
         return make_unique<Valve>(name, *targetMotor, move(strategy));
@@ -297,7 +300,8 @@ bool convertToJson(const ValveControlStrategyType& src, JsonVariant dst) {
         case ValveControlStrategyType::Latching:
             return dst.set("latching");
         default:
-            Serial.println("Unknown strategy: " + String(static_cast<int>(src)));
+            Log.errorln("Unknown strategy: %d",
+                static_cast<int>(src));
             return dst.set("NC");
     }
 }
@@ -310,7 +314,8 @@ void convertFromJson(JsonVariantConst src, ValveControlStrategyType& dst) {
     } else if (strategy == "latching") {
         dst = ValveControlStrategyType::Latching;
     } else {
-        Serial.println("Unknown strategy: " + strategy);
+        Log.errorln("Unknown strategy: %s",
+            strategy.c_str());
         dst = ValveControlStrategyType::NormallyClosed;
     }
 }

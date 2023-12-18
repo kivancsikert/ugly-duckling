@@ -260,7 +260,8 @@ public:
     ConfigurationFile(const FileSystem& fs, const String& path)
         : path(path) {
         if (!fs.exists(path)) {
-            Serial.println("The configuration file " + path + " was not found, falling back to defaults");
+            Log.traceln("The configuration file '%s' was not found, falling back to defaults",
+                path.c_str());
         } else {
             File file = fs.open(path, FILE_READ);
             if (!file) {
@@ -271,7 +272,6 @@ public:
             DeserializationError error = deserializeJson(json, file);
             file.close();
             if (error) {
-                Serial.println(file.readString());
                 throw "Cannot open config file " + path;
             }
             load(json.as<JsonObject>());
@@ -314,9 +314,10 @@ private:
         DynamicJsonDocument prettyJson(8192);
         auto prettyRoot = prettyJson.to<JsonObject>();
         store(prettyRoot, true);
-        Serial.println("Effective configuration for " + String(path) + ":");
-        serializeJsonPretty(prettyJson, Serial);
-        Serial.println();
+        String jsonString;
+        serializeJsonPretty(prettyJson, jsonString);
+        Log.infoln("Effective configuration for '%s': %s",
+            path.c_str(), jsonString.c_str());
 
         for (auto& callback : callbacks) {
             callback(json);

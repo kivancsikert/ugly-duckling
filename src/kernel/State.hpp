@@ -8,6 +8,8 @@
 
 #include <Arduino.h>
 
+#include <ArduinoLog.h>
+
 #include <kernel/Task.hpp>
 
 using namespace std::chrono;
@@ -131,7 +133,8 @@ public:
     }
 
     StateSource createStateSource(const String& name) {
-        Serial.println("Creating state: " + name);
+        Log.traceln("Creating state: %s",
+            name.c_str());
         if (nextEventBit > 31) {
             throw std::runtime_error("Too many states");
         }

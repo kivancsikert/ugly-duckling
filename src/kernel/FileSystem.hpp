@@ -2,6 +2,8 @@
 
 #include <SPIFFS.h>
 
+#include <ArduinoLog.h>
+
 namespace farmhub { namespace kernel {
 
 class FileSystem;
@@ -58,19 +60,19 @@ public:
 };
 
 static FileSystem* initializeFileSystem() {
-    Serial.print("Starting file system... ");
     if (!SPIFFS.begin()) {
-        Serial.println("file system not initialized");
+        Log.infoln("File system not initialized");
         return new UninitializedFileSystem();
     }
-    Serial.println("contents:");
+    Log.infoln("File system contents:");
     File root = SPIFFS.open("/", FILE_READ);
     while (true) {
         File file = root.openNextFile();
         if (!file) {
             break;
         }
-        Serial.printf(" - %s (%d bytes)\n", file.name(), file.size());
+        Log.infoln(" - %s (%d bytes)",
+            file.name(), file.size());
         file.close();
     }
     return new SpiffsFileSystem();

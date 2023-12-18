@@ -3,6 +3,8 @@
 #include <ArduinoJson.h>
 #include <ESPmDNS.h>
 
+#include <ArduinoLog.h>
+
 #include <kernel/Concurrent.hpp>
 #include <kernel/NvmStore.hpp>
 #include <kernel/State.hpp>
@@ -35,10 +37,11 @@ public:
             networkReady.awaitSet();
 
             MDNS.setInstanceName(instanceName);
-            Serial.println("Advertising mDNS service " + instanceName + " on " + hostname + ".local, version: " + version);
+            Log.traceln("mDNS: Advertising service %s on %s.local, version: %s",
+                instanceName.c_str(), hostname.c_str(), version.c_str());
             MDNS.addService("farmhub", "tcp", 80);
             MDNS.addServiceTxt("farmhub", "tcp", "version", version);
-            Serial.println("mDNS: configured");
+            Log.infoln("mDNS: configured");
 
             mdnsReady.set();
         });
@@ -58,10 +61,12 @@ private:
         String cacheKey = serviceName + "." + port;
         if (nvm.get(cacheKey, record)) {
             if (record.validate()) {
-                Serial.println("mDNS: found " + cacheKey + " in NVM cache: " + record.hostname);
+                Log.traceln("mDNS: found %s in NVM cache: %s",
+                    cacheKey.c_str(), record.hostname.c_str());
                 return true;
             } else {
-                Serial.println("mDNS: invalid record in NVM cache for " + cacheKey + ", removing");
+                Log.traceln("mDNS: invalid record in NVM cache for %s, removing",
+                    cacheKey.c_str());
                 nvm.remove(cacheKey);
             }
         }
@@ -71,9 +76,10 @@ private:
         if (count == 0) {
             return false;
         }
-        Serial.printf(" found %d services, choosing first:\n", count);
+        Log.infoln("mDNS: found %d services, choosing first:",
+            count);
         for (int i = 0; i < count; i++) {
-            Serial.printf(" %s%d) %s:%d (%s)\n",
+            Log.infoln(" %s%d) %s:%d (%s)",
                 i == 0 ? "*" : " ",
                 i + 1,
                 MDNS.hostname(i).c_str(),

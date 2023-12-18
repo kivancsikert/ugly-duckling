@@ -8,6 +8,8 @@
 
 #include <Arduino.h>
 
+#include <ArduinoLog.h>
+
 using namespace std::chrono;
 
 namespace farmhub { namespace kernel {
@@ -32,7 +34,8 @@ public:
     }
     static void run(const String& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
         Task* task = new Task(String(name), runFunction);
-        Serial.println("Creating task " + String(name) + " with priority " + String(priority) + " and stack size " + String(stackSize));
+        Log.traceln("Creating task %s with priority %d and stack size %d",
+            name.c_str(), priority, stackSize);
         xTaskCreate(executeTask, name.c_str(), stackSize, task, priority, &(task->taskHandle));
     }
 
@@ -59,7 +62,8 @@ public:
             return true;
         }
         auto newWakeTime = xTaskGetTickCount();
-        Serial.println("Task " + name + " missed deadline by " + String(duration_cast<milliseconds>(ticks(newWakeTime - lastWakeTime)).count()) + " ms");
+        Log.warningln("Task '%s' missed deadline by %ld ms",
+            name.c_str(), duration_cast<milliseconds>(ticks(newWakeTime - lastWakeTime)).count());
         lastWakeTime = newWakeTime;
         return false;
     }
@@ -89,7 +93,8 @@ private:
         auto handle = task->taskHandle;
         auto name = task->name;
         delete task;
-        Serial.println("Finished task " + name);
+        Log.traceln("Finished task %s",
+            name.c_str());
         vTaskDelete(handle);
     }
 
