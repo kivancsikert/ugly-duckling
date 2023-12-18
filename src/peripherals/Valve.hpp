@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <memory>
 
 #include <Arduino.h>
 
@@ -12,6 +13,9 @@
 #include <kernel/drivers/MotorDriver.hpp>
 
 using namespace std::chrono;
+using std::make_unique;
+using std::move;
+using std::unique_ptr;
 
 using namespace farmhub::devices;
 using namespace farmhub::kernel::drivers;
@@ -150,16 +154,16 @@ private:
 
 class Valve : public Peripheral {
 public:
-    Valve(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy)
+    Valve(const String& name, PwmMotorDriver& controller, unique_ptr<ValveControlStrategy> strategy)
         : Peripheral(name)
         , controller(controller)
-        , strategy(strategy) {
-        Serial.println("Creating valve " + name + " with strategy " + strategy.describe());
+        , strategy(move(strategy)) {
+        Serial.println("Creating valve " + name + " with strategy " + this->strategy->describe());
 
         controller.stop();
 
         // TODO Restore stored state
-        setState(strategy.getDefaultState());
+        setState(this->strategy->getDefaultState());
 
         Task::loop(name, 4096, [this](Task& task) {
             open();
@@ -171,13 +175,13 @@ public:
 
     void open() {
         Serial.println("Opening valve");
-        strategy.open(controller);
+        strategy->open(controller);
         this->state = ValveState::OPEN;
     }
 
     void close() {
         Serial.println("Closing valve");
-        strategy.close(controller);
+        strategy->close(controller);
         this->state = ValveState::CLOSED;
     }
 
@@ -199,7 +203,7 @@ public:
 
 private:
     PwmMotorDriver& controller;
-    ValveControlStrategy& strategy;
+    unique_ptr<ValveControlStrategy> strategy;
 
     ValveState state = ValveState::NONE;
 };
@@ -226,11 +230,11 @@ public:
         , defaultStrategy(defaultStrategy) {
     }
 
-    ValveConfiguration* createConfig() override {
-        return new ValveConfiguration(defaultStrategy);
+    unique_ptr<ValveConfiguration> createConfig() override {
+        return make_unique<ValveConfiguration>(defaultStrategy);
     }
 
-    Peripheral* createPeripheral(const String& name, ValveConfiguration* config) override {
+    unique_ptr<Peripheral> createPeripheral(const String& name, unique_ptr<const ValveConfiguration> config) override {
         PwmMotorDriver* targetMotor;
         for (auto& motor : motors) {
             if (motor.getName() == config->motor.get()) {
@@ -243,26 +247,26 @@ public:
             Serial.println("Failed to find motor: " + config->motor.get());
             return nullptr;
         }
-        ValveControlStrategy* strategy = createStrategy(*config);
+        unique_ptr<ValveControlStrategy> strategy = createStrategy(*config);
         if (strategy == nullptr) {
             // TODO Add proper error handling
             Serial.println("Failed to create strategy");
             return nullptr;
         }
-        return new Valve(name, *targetMotor, *strategy);
+        return make_unique<Valve>(name, *targetMotor, move(strategy));
     }
 
 private:
-    ValveControlStrategy* createStrategy(ValveConfiguration& config) {
+    unique_ptr<ValveControlStrategy> createStrategy(const ValveConfiguration& config) {
         auto switchDuration = config.switchDuration.get();
         auto duty = config.duty.get();
         switch (config.strategy.get()) {
             case ValveControlStrategyType::NormallyOpen:
-                return new NormallyOpenValveControlStrategy(switchDuration, duty);
+                return make_unique<NormallyOpenValveControlStrategy>(switchDuration, duty);
             case ValveControlStrategyType::NormallyClosed:
-                return new NormallyClosedValveControlStrategy(switchDuration, duty);
+                return make_unique<NormallyClosedValveControlStrategy>(switchDuration, duty);
             case ValveControlStrategyType::Latching:
-                return new LatchingValveControlStrategy(switchDuration, duty);
+                return make_unique<LatchingValveControlStrategy>(switchDuration, duty);
             default:
                 // TODO Add proper error handling
                 return nullptr;

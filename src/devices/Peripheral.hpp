@@ -1,8 +1,12 @@
 #pragma once
 
 #include <map>
+#include <memory>
 
 #include <kernel/Configuration.hpp>
+
+using std::move;
+using std::unique_ptr;
 
 using namespace farmhub::kernel;
 
@@ -47,7 +51,7 @@ public:
         : type(type) {
     }
 
-    virtual Peripheral* createPeripheral(const String& name, const String& jsonConfig) = 0;
+    virtual unique_ptr<Peripheral> createPeripheral(const String& name, const String& jsonConfig) = 0;
 
     const String type;
 };
@@ -59,16 +63,16 @@ public:
         : PeripheralFactoryBase(type) {
     }
 
-    virtual TConfig* createConfig() = 0;
+    virtual unique_ptr<TConfig> createConfig() = 0;
 
-    Peripheral* createPeripheral(const String& name, const String& jsonConfig) override {
-        TConfig* config = createConfig();
+    unique_ptr<Peripheral> createPeripheral(const String& name, const String& jsonConfig) override {
+        unique_ptr<TConfig> config = createConfig();
         Serial.println("Configuring peripheral: " + name + " of type " + type);
         config->loadFromString(jsonConfig);
-        return createPeripheral(name, config);
+        return createPeripheral(name, move(config));
     }
 
-    virtual Peripheral* createPeripheral(const String& name, TConfig* config) = 0;
+    virtual unique_ptr<Peripheral> createPeripheral(const String& name, unique_ptr<const TConfig> config) = 0;
 };
 
 // Peripheral manager
@@ -104,11 +108,11 @@ private:
                 Serial.println("Failed to create peripheral: " + perpheralConfig.name.get() + " of type " + perpheralConfig.type.get());
                 return;
             }
-            peripherals.push_back(*peripheral);
+            peripherals.push_back(move(peripheral));
         }
     }
 
-    Peripheral* createPeripheral(const String& name, const String& type, const String& configJson) {
+    unique_ptr<Peripheral> createPeripheral(const String& name, const String& type, const String& configJson) {
         Serial.println("Creating peripheral: " + name + " of type " + type);
         auto it = factories.find(type);
         if (it == factories.end()) {
@@ -126,7 +130,7 @@ private:
     // TODO Use an unordered_map?
     std::map<String, std::reference_wrapper<PeripheralFactoryBase>> factories;
     // TODO Use smart pointers
-    std::list<std::reference_wrapper<Peripheral>> peripherals;
+    std::list<unique_ptr<Peripheral>> peripherals;
 };
 
 }}    // namespace farmhub::devices
