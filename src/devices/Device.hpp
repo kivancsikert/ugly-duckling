@@ -42,6 +42,73 @@ typedef farmhub::devices::Mk6Config TDeviceConfiguration;
 
 namespace farmhub { namespace devices {
 
+class ConsolePrinter {
+public:
+    ConsolePrinter() {
+        static const String spinner = "|/-\\";
+        Task::loop("ConsolePrinter", 8192, 1, [this](Task& task) {
+            Serial.print("\033[1G\033[0K");
+
+            counter = (counter + 1) % spinner.length();
+            Serial.print("[" + spinner.substring(counter, counter + 1) + "] ");
+
+            Serial.print("\033[33m" + String(VERSION) + "\033[0m");
+
+            Serial.print(", IP: \033[33m" + WiFi.localIP().toString() + "\033[0m");
+            Serial.print("/" + wifiStatus());
+
+            Serial.printf(", uptime: \033[33m%.1f\033[0m s", float(millis()) / 1000.0f);
+            time_t now;
+            struct tm timeinfo;
+            time(&now);
+            localtime_r(&now, &timeinfo);
+            Serial.print(&timeinfo, ", UTC: \033[33m%Y-%m-%d %H:%M:%S\033[0m");
+
+            Serial.printf(", heap: \033[33m%.2f\033[0m kB", float(ESP.getFreeHeap()) / 1024.0f);
+
+            BatteryDriver* battery = this->battery.load();
+            if (battery != nullptr) {
+                Serial.printf(", battery: \033[33m%.2f V\033[0m", battery->getVoltage());
+            }
+
+            Serial.print(" ");
+            Serial.flush();
+            task.delayUntil(milliseconds(100));
+        });
+    }
+
+    void registerBattery(BatteryDriver& battery) {
+        this->battery = &battery;
+    }
+
+private:
+    static String wifiStatus() {
+        switch (WiFi.status()) {
+            case WL_NO_SHIELD:
+                return "\033[0;31mno shield\033[0m";
+            case WL_IDLE_STATUS:
+                return "\033[0;33midle\033[0m";
+            case WL_NO_SSID_AVAIL:
+                return "\033[0;31mno SSID\033[0m";
+            case WL_SCAN_COMPLETED:
+                return "\033[0;33mscan completed\033[0m";
+            case WL_CONNECTED:
+                return "\033[0;32mOK\033[0m";
+            case WL_CONNECT_FAILED:
+                return "\033[0;31mfailed\033[0m";
+            case WL_CONNECTION_LOST:
+                return "\033[0;31mconnection lost\033[0m";
+            case WL_DISCONNECTED:
+                return "\033[0;33mdisconnected\033[0m";
+            default:
+                return "\033[0;31munknown\033[0m";
+        }
+    }
+
+    int counter;
+    std::atomic<BatteryDriver*> battery { nullptr };
+};
+
 class ConsoleProvider {
 public:
     ConsoleProvider() {
@@ -58,7 +125,7 @@ public:
 
 #ifdef HAS_BATTERY
 #ifdef FARMHUB_DEBUG
-        kernel.consolePrinter.registerBattery(deviceDefinition.batteryDriver);
+        consolePrinter.registerBattery(deviceDefinition.batteryDriver);
 #endif
         kernel.registerTelemetryProvider("battery", deviceDefinition.batteryDriver);
 #endif
@@ -79,6 +146,11 @@ public:
     }
 
 private:
+
+#ifdef FARMHUB_DEBUG
+    ConsolePrinter consolePrinter;
+#endif
+
     TDeviceDefinition deviceDefinition;
     Kernel<TDeviceConfiguration> kernel { deviceDefinition.statusLed };
     PeripheralManager peripheralManager;
