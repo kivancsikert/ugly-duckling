@@ -16,7 +16,6 @@ namespace farmhub { namespace kernel {
 
 using ticks = std::chrono::duration<uint32_t, std::ratio<1, configTICK_RATE_HZ>>;
 
-// TODO Remove _2 suffix
 static const uint32_t DEFAULT_STACK_SIZE = 2048;
 static const unsigned int DEFAULT_PRIORITY = 1;
 
