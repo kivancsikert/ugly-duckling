@@ -1,13 +1,14 @@
 #pragma once
 
-#include <kernel/Application.hpp>
 #include <kernel/FileSystem.hpp>
+#include <kernel/Kernel.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/Drv8833Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
-#include <devices/Device.hpp>
+#include <devices/DeviceDefinition.hpp>
+#include <devices/Peripheral.hpp>
 
 using namespace farmhub::kernel;
 
@@ -21,14 +22,18 @@ public:
     }
 };
 
-class UglyDucklingMk6 : public BatteryPoweredDevice<Mk6Config> {
+class UglyDucklingMk6 : public BatteryPoweredDeviceDefinition {
 public:
     UglyDucklingMk6()
-        : BatteryPoweredDevice(
+        : BatteryPoweredDeviceDefinition(
             // Status LED
             GPIO_NUM_2,
             // Battery
             GPIO_NUM_1, 1.2424) {
+    }
+
+    void registerPeripheralFactories(PeripheralManager& peripheralManager) override {
+        peripheralManager.registerFactory(valveFactory);
     }
 
     LedDriver secondaryStatusLed { "status-2", GPIO_NUM_4 };
@@ -45,6 +50,8 @@ public:
 
     const ServiceRef<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
     const ServiceRef<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };
+
+    ValveFactory valveFactory { { motorA, motorB }, ValveControlStrategyType::Latching };
 };
 
 }}    // namespace farmhub::devices

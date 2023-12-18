@@ -5,6 +5,7 @@
 #include <list>
 
 #include <kernel/FileSystem.hpp>
+#include <kernel/Json.hpp>
 
 using std::list;
 using std::ref;
@@ -38,9 +39,9 @@ private:
 };
 
 bool convertToJson(const JsonAsString& src, JsonVariant dst) {
-    // TODO How large should this be?
-    DynamicJsonDocument doc(1024);
-    DeserializationError error = deserializeJson(doc, src.get());
+    const String& stringValue = src.get();
+    DynamicJsonDocument doc(docSizeFor(stringValue));
+    DeserializationError error = deserializeJson(doc, stringValue);
 
     if (error) {
         // Handle the error, if JSON parsing fails
@@ -48,19 +49,26 @@ bool convertToJson(const JsonAsString& src, JsonVariant dst) {
     }
 
     dst.set(doc.as<JsonObject>());
-    Serial.println(">>> Serialized --to-> JSON: " + src.get());
     return true;
 }
 bool convertFromJson(JsonVariantConst src, JsonAsString& dst) {
     String value;
     serializeJson(src, value);
     dst.set(value);
-    Serial.println(">>> Serialized <-from-- JSON: " + dst.get());
     return true;
 }
 
 class ConfigurationEntry {
 public:
+    void loadFromString(const String& json) {
+        DynamicJsonDocument jsonDocument(docSizeFor(json));
+        DeserializationError error = deserializeJson(jsonDocument, json);
+        if (error) {
+            throw "Cannot parse JSON configuration: " + String(error.c_str());
+        }
+        load(jsonDocument.as<JsonObject>());
+    }
+
     virtual void load(const JsonObject& json) = 0;
     virtual void reset() = 0;
     virtual void store(JsonObject& json, bool inlineDefaults) const = 0;
@@ -246,41 +254,11 @@ private:
     std::list<T> entries;
 };
 
-class Configuration : protected ConfigurationSection {
+template <typename TConfiguration>
+class ConfigurationFile {
 public:
-    Configuration(const String& name, size_t capacity = 2048)
-        : name(name)
-        , capacity(capacity) {
-    }
-
-    void reset() override {
-        ConfigurationSection::reset();
-    }
-
-    void load(const String& json) {
-        DynamicJsonDocument jsonDocument(capacity);
-        DeserializationError error = deserializeJson(jsonDocument, json);
-        if (error) {
-            throw "Cannot parse JSON configuration: " + String(error.c_str());
-        }
-        load(jsonDocument.as<JsonObject>());
-    }
-
-    virtual void update(const JsonObject& json) {
-        load(json);
-    }
-
-    void onUpdate(const std::function<void(const JsonObject&)>& callback) {
-        callbacks.push_back(callback);
-    }
-
-    virtual void store(JsonObject& json, bool inlineDefaults) const override {
-        ConfigurationSection::store(json, inlineDefaults);
-    }
-
-    template <typename TDeviceConfiguration>
-    static TDeviceConfiguration& bindToFile(const FileSystem& fs, const String& path, TDeviceConfiguration& config) {
-        DynamicJsonDocument json(config.capacity);
+    ConfigurationFile(const FileSystem& fs, const String& path)
+        : path(path) {
         if (!fs.exists(path)) {
             Serial.println("The configuration file " + path + " was not found, falling back to defaults");
         } else {
@@ -289,15 +267,16 @@ public:
                 throw "Cannot open config file " + path;
             }
 
+            DynamicJsonDocument json(docSizeFor(file));
             DeserializationError error = deserializeJson(json, file);
             file.close();
             if (error) {
                 Serial.println(file.readString());
                 throw "Cannot open config file " + path;
             }
+            load(json.as<JsonObject>());
         }
-        config.load(json.as<JsonObject>());
-        config.onUpdate([&fs, path](const JsonObject& json) {
+        onUpdate([&fs, path](const JsonObject& json) {
             File file = fs.open(path, FILE_WRITE);
             if (!file) {
                 throw "Cannot open config file " + path;
@@ -306,37 +285,45 @@ public:
             serializeJson(json, file);
             file.close();
         });
-        return config;
     }
 
-    const String& getName() const {
-        return name;
+    void reset() {
+        config.reset();
     }
 
-protected:
-    void load(const JsonObject& json) override {
-        ConfigurationSection::load(json);
+    void update(const JsonObject& json) {
+        load(json);
+    }
+
+    void onUpdate(const std::function<void(const JsonObject&)> callback) {
+        callbacks.push_back(callback);
+    }
+
+    virtual void store(JsonObject& json, bool inlineDefaults) const {
+        config.store(json, inlineDefaults);
+    }
+
+    TConfiguration config;
+
+private:
+    void load(const JsonObject& json) {
+        config.load(json);
 
         // Print effective configuration
-        DynamicJsonDocument prettyJson(capacity);
+        // TODO Estimate size of printed JSON based on the size of the configuration
+        DynamicJsonDocument prettyJson(8192);
         auto prettyRoot = prettyJson.to<JsonObject>();
         store(prettyRoot, true);
-        Serial.println("Effective " + name + " configuration:");
+        Serial.println("Effective configuration for " + String(path) + ":");
         serializeJsonPretty(prettyJson, Serial);
         Serial.println();
 
-        updated(json);
-    }
-
-private:
-    void updated(const JsonObject& json) {
         for (auto& callback : callbacks) {
             callback(json);
         }
     }
 
-    const String name;
-    const size_t capacity;
+    const String path;
     std::list<std::function<void(const JsonObject&)>> callbacks;
 };
 

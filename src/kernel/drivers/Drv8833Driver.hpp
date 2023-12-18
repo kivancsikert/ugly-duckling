@@ -82,8 +82,10 @@ private:
 
         void drive(MotorPhase phase, double duty = 1) override {
             int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
-            Serial.printf("Driving motor %s at %.1f%%\n",
+            Serial.printf("Driving motor %s on pins %d/%d at %.1f%%\n",
                 phase == MotorPhase::FORWARD ? "forward" : "reverse",
+                in1Channel.pin,
+                in2Channel.pin,
                 duty * 100);
 
             switch (phase) {
