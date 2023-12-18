@@ -50,10 +50,11 @@ public:
         Serial.begin(115200);
 
         static const String spinner = "|/-\\";
+        static const int spinnerLength = spinner.length();
         Task::loop("ConsolePrinter", 8192, 1, [this](Task& task) {
             Serial.print("\033[1G\033[0K");
 
-            counter = (counter + 1) % spinner.length();
+            counter = (counter + 1) % spinnerLength;
             Serial.print("[" + spinner.substring(counter, counter + 1) + "] ");
 
             Serial.print("\033[33m" + String(VERSION) + "\033[0m");
