@@ -8,6 +8,7 @@
 
 #include <devices/Peripheral.hpp>
 #include <kernel/Service.hpp>
+#include <kernel/Task.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 
 using namespace std::chrono;

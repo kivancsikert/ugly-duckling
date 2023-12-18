@@ -20,7 +20,7 @@ struct PwmChannel {
         : PwmChannel(other.channel, other.pin, other.freq, other.resolutionBits) {
     }
 
-    uint32_t constexpr maxValue() {
+    uint32_t constexpr maxValue() const {
         return (1 << resolutionBits) - 1;
     }
 

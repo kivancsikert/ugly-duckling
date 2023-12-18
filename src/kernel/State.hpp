@@ -3,10 +3,12 @@
 #include <chrono>
 #include <list>
 
-#include <Arduino.h>
-
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
+
+#include <Arduino.h>
+
+#include <kernel/Task.hpp>
 
 using namespace std::chrono;
 
@@ -48,7 +50,7 @@ public:
      *
      * @return Whether the state was set before the timeout elapsed.
      */
-    bool awaitSet(ticks timeout) const {
+    bool awaitSet(const ticks timeout) const {
         return hasAllBits(xEventGroupWaitBits(eventGroup, eventBits, false, true, timeout.count()));
     }
 
@@ -60,7 +62,7 @@ public:
     }
 
 protected:
-    bool constexpr hasAllBits(EventBits_t bits) {
+    bool constexpr hasAllBits(const EventBits_t bits) const {
         return (bits & eventBits) == eventBits;
     }
 
