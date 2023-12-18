@@ -8,6 +8,7 @@
 #include <kernel/drivers/LedDriver.hpp>
 
 #include <devices/DeviceDefinition.hpp>
+#include <devices/Peripheral.hpp>
 
 using namespace farmhub::kernel;
 
@@ -31,6 +32,10 @@ public:
             GPIO_NUM_1, 1.2424) {
     }
 
+    void registerPeripheralFactories(PeripheralManager& peripheralManager) override {
+        peripheralManager.registerFactory(valveFactory);
+    }
+
     LedDriver secondaryStatusLed { "status-2", GPIO_NUM_4 };
 
     Drv8833Driver motorDriver {
@@ -45,6 +50,8 @@ public:
 
     const ServiceRef<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
     const ServiceRef<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };
+
+    ValveFactory valveFactory { { motorA, motorB }, ValveControlStrategyType::Latching };
 };
 
 }}    // namespace farmhub::devices

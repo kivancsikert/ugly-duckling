@@ -47,7 +47,7 @@ public:
         : type(type) {
     }
 
-    virtual Peripheral* createPeripheral(const String& name, const JsonObject& jsonConfig) = 0;
+    virtual Peripheral* createPeripheral(const String& name, const String& jsonConfig) = 0;
 
     const String type;
 };
@@ -59,17 +59,16 @@ public:
         : PeripheralFactoryBase(type) {
     }
 
-    Peripheral* createPeripheral(const String& name, const JsonObject& jsonConfig) override {
-        Serial.println("Creating peripheral: " + name + " of type " + type);
-        serializeJson(jsonConfig, Serial);
+    virtual TConfig* createConfig() = 0;
 
-        TConfig config(name);
+    Peripheral* createPeripheral(const String& name, const String& jsonConfig) override {
+        TConfig* config = createConfig();
         Serial.println("Configuring peripheral: " + name + " of type " + type);
-        config.update(jsonConfig);
-        return createPeripheral(config);
+        config->loadFromString(jsonConfig);
+        return createPeripheral(name, config);
     }
 
-    virtual Peripheral* createPeripheral(TConfig config) = 0;
+    virtual Peripheral* createPeripheral(const String& name, TConfig* config) = 0;
 };
 
 // Peripheral manager
@@ -118,13 +117,7 @@ private:
             return nullptr;
         }
         // TODO Make this configurable
-        DynamicJsonDocument config(2048);
-        deserializeJson(config, configJson);
-        if (config.isNull()) {
-            Serial.println("Failed to parse peripheral configuration: " + configJson);
-            return nullptr;
-        }
-        return it->second.get().createPeripheral(name, config.as<JsonObject>());
+        return it->second.get().createPeripheral(name, configJson);
     }
 
     ConfigurationFile<PeripheralsConfiguration> configFile { FileSystem::get(), "/peripherals.json" };
