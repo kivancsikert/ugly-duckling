@@ -24,13 +24,13 @@ typedef std::function<void(Task&)> TaskFunction;
 
 class Task {
 public:
-    static void inline run(const String& name, TaskFunction runFunction) {
+    static void inline run(const String& name, const TaskFunction runFunction) {
         Task::run(name, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, runFunction);
     }
-    static void inline run(const String& name, uint32_t stackSize, TaskFunction runFunction) {
+    static void inline run(const String& name, uint32_t stackSize, const TaskFunction runFunction) {
         Task::run(name, stackSize, DEFAULT_PRIORITY, runFunction);
     }
-    static void run(const String& name, uint32_t stackSize, UBaseType_t priority, TaskFunction runFunction) {
+    static void run(const String& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
         Task* task = new Task(String(name), runFunction);
         Serial.println("Creating task " + String(name) + " with priority " + String(priority) + " and stack size " + String(stackSize));
         xTaskCreate(executeTask, name.c_str(), stackSize, task, priority, &(task->taskHandle));
@@ -93,8 +93,8 @@ private:
         vTaskDelete(handle);
     }
 
-    String name;
-    TaskFunction taskFunction;
+    const String name;
+    const TaskFunction taskFunction;
     TaskHandle_t taskHandle;
     TickType_t lastWakeTime;
 };
