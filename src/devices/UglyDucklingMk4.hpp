@@ -1,7 +1,7 @@
 #pragma once
 
-#include <kernel/Kernel.hpp>
 #include <kernel/FileSystem.hpp>
+#include <kernel/Kernel.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/Drv8801Driver.hpp>
@@ -9,7 +9,10 @@
 
 #include <devices/DeviceDefinition.hpp>
 
+#include <peripherals/Valve.hpp>
+
 using namespace farmhub::kernel;
+using namespace farmhub::peripherals;
 
 namespace farmhub { namespace devices {
 
@@ -29,7 +32,10 @@ public:
             GPIO_NUM_26) {
     }
 
-private:
+    void registerPeripheralFactories(PeripheralManager& peripheralManager) override {
+        peripheralManager.registerFactory(valveFactory);
+    }
+
     Drv8801Driver motorDriver {
         pwm,
         GPIO_NUM_10,    // Enable
@@ -41,8 +47,9 @@ private:
         GPIO_NUM_13     // Sleep
     };
 
-public:
     const ServiceRef<PwmMotorDriver> motor { "motor", motorDriver };
+
+    ValveFactory valveFactory { { motor }, ValveControlStrategyType::Latching };
 };
 
 }}    // namespace farmhub::devices
