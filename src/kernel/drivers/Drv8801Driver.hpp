@@ -68,9 +68,9 @@ public:
 
         int direction = (phase == MotorPhase::FORWARD ? 1 : -1);
         int dutyValue = phaseChannel.maxValue() / 2 + direction * (int) (phaseChannel.maxValue() / 2 * duty);
-        Log.traceln("Driving motor %s at %d",
+        Log.traceln("Driving motor %s at %d%%",
             phase == MotorPhase::FORWARD ? "forward" : "reverse",
-            duty * 100);
+            (int) (duty * 100));
 
         phaseChannel.write(dutyValue);
     }

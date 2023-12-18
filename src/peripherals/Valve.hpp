@@ -262,7 +262,7 @@ public:
 private:
     unique_ptr<ValveControlStrategy> createStrategy(const ValveConfiguration& config) {
         auto switchDuration = config.switchDuration.get();
-        auto duty = config.duty.get();
+        auto duty = config.duty.get() / 100.0;
         switch (config.strategy.get()) {
             case ValveControlStrategyType::NormallyOpen:
                 return make_unique<NormallyOpenValveControlStrategy>(switchDuration, duty);

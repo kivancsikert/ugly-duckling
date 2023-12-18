@@ -51,9 +51,9 @@ public:
 
     void drive(MotorPhase phase, double duty = 1) override {
         int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
-        Log.traceln("Driving motor %s at %.1f%%",
+        Log.traceln("Driving motor %s at %d%%",
             phase == MotorPhase::FORWARD ? "forward" : "reverse",
-            duty * 100);
+            (int) (duty * 100));
 
         switch (phase) {
             case MotorPhase::FORWARD:
