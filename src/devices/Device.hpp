@@ -2,6 +2,16 @@
 
 #include <chrono>
 
+#ifndef FARMHUB_LOG_LEVEL
+#ifdef FARMHUB_DEBUG
+#define FARMHUB_LOG_LEVEL LOG_LEVEL_VERBOSE
+#else
+#define FARMHUB_LOG_LEVEL LOG_LEVEL_INFO
+#endif
+#endif
+
+#include <ArduinoLog.h>
+
 #include <kernel/Kernel.hpp>
 #include <peripherals/Valve.hpp>
 
@@ -36,7 +46,9 @@ class ConsoleProvider {
 public:
     ConsoleProvider() {
         Serial.begin(115200);
-        Serial.println("Starting up...");
+
+        Log.begin(FARMHUB_LOG_LEVEL, &Serial);
+        Log.infoln("Starting up...");
     }
 };
 
