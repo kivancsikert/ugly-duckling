@@ -49,19 +49,26 @@ bool convertToJson(const JsonAsString& src, JsonVariant dst) {
     }
 
     dst.set(doc.as<JsonObject>());
-    Serial.println(">>> Serialized --to-> JSON: " + src.get());
     return true;
 }
 bool convertFromJson(JsonVariantConst src, JsonAsString& dst) {
     String value;
     serializeJson(src, value);
     dst.set(value);
-    Serial.println(">>> Serialized <-from-- JSON: " + dst.get());
     return true;
 }
 
 class ConfigurationEntry {
 public:
+    void loadFromString(const String& json) {
+        DynamicJsonDocument jsonDocument(docSizeFor(json));
+        DeserializationError error = deserializeJson(jsonDocument, json);
+        if (error) {
+            throw "Cannot parse JSON configuration: " + String(error.c_str());
+        }
+        load(jsonDocument.as<JsonObject>());
+    }
+
     virtual void load(const JsonObject& json) = 0;
     virtual void reset() = 0;
     virtual void store(JsonObject& json, bool inlineDefaults) const = 0;
@@ -282,15 +289,6 @@ public:
 
     void reset() {
         config.reset();
-    }
-
-    void update(const String& json) {
-        DynamicJsonDocument jsonDocument(docSizeFor(json));
-        DeserializationError error = deserializeJson(jsonDocument, json);
-        if (error) {
-            throw "Cannot parse JSON configuration: " + String(error.c_str());
-        }
-        load(jsonDocument.as<JsonObject>());
     }
 
     void update(const JsonObject& json) {

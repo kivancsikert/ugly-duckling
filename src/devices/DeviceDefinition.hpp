@@ -1,9 +1,11 @@
 #pragma once
 
+#include <devices/Peripheral.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/PwmManager.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
+
 #include <version.h>
 
 using namespace farmhub::kernel;
@@ -15,6 +17,9 @@ class DeviceDefinition {
 public:
     DeviceDefinition(gpio_num_t statusPin)
         : statusLed("status", statusPin) {
+    }
+
+    virtual void registerPeripheralFactories(PeripheralManager& peripheralManager) {
     }
 
 public:

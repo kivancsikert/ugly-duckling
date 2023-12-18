@@ -50,33 +50,26 @@ public:
 #endif
         kernel.registerTelemetryProvider("battery", deviceDefinition.batteryDriver);
 #endif
+
+        deviceDefinition.registerPeripheralFactories(peripheralManager);
+
         kernel.begin();
+
+        peripheralManager.begin();
 
 #if defined(MK4)
         deviceDefinition.motorDriver.wakeUp();
-        demoValve("motor", deviceDefinition.motor, seconds(10));
 #elif defined(MK5)
         deviceDefinition.motorADriver.wakeUp();
-        demoValve("motor-a", deviceDefinition.motorA, seconds(10));
 #elif defined(MK6)
         deviceDefinition.motorDriver.wakeUp();
-        demoValve("valve-a", deviceDefinition.motorA, seconds(10));
 #endif
     }
 
 private:
-    void demoValve(const String& name, const ServiceRef<PwmMotorDriver>& motor, milliseconds cycle, milliseconds switchTime = milliseconds(200)) {
-        Valve* valve = new Valve(motor.get(), *new LatchingValveControlStrategy(switchTime));
-        Task::loop(name.c_str(), 4096, [valve, cycle](Task& task) {
-            valve->open();
-            task.delayUntil(cycle);
-            valve->close();
-            task.delayUntil(cycle);
-        });
-    }
-
     TDeviceDefinition deviceDefinition;
     Kernel<TDeviceConfiguration> kernel { deviceDefinition.statusLed };
+    PeripheralManager peripheralManager;
 };
 
 }}    // namespace farmhub::devices
