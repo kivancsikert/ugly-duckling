@@ -52,31 +52,36 @@ public:
         static const String spinner = "|/-\\";
         static const int spinnerLength = spinner.length();
         Task::loop("ConsolePrinter", 8192, 1, [this](Task& task) {
-            Serial.print("\033[1G\033[0K");
+            String status;
+            status += "\033[1G\033[0K";
 
             counter = (counter + 1) % spinnerLength;
-            Serial.print("[" + spinner.substring(counter, counter + 1) + "] ");
+            status += "[" + spinner.substring(counter, counter + 1) + "] ";
 
-            Serial.print("\033[33m" + String(VERSION) + "\033[0m");
+            status += "\033[33m" + String(VERSION) + "\033[0m";
 
-            Serial.print(", IP: \033[33m" + WiFi.localIP().toString() + "\033[0m");
-            Serial.print("/" + wifiStatus());
+            status += ", IP: \033[33m" + WiFi.localIP().toString() + "\033[0m";
+            status += "/" + wifiStatus();
 
-            Serial.printf(", uptime: \033[33m%.1f\033[0m s", float(millis()) / 1000.0f);
+            status += ", uptime: \033[33m" + String(float(millis()) / 1000.0f, 1) + "\033[0m s";
             time_t now;
             struct tm timeinfo;
             time(&now);
             localtime_r(&now, &timeinfo);
-            Serial.print(&timeinfo, ", UTC: \033[33m%Y-%m-%d %H:%M:%S\033[0m");
 
-            Serial.printf(", heap: \033[33m%.2f\033[0m kB", float(ESP.getFreeHeap()) / 1024.0f);
+            char buffer[64];    // Ensure buffer is large enough for the formatted string
+            strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
+            status += ", UTC: \033[33m" + String(buffer) + "\033[0m";
+
+            status += ", heap: \033[33m" + String(float(ESP.getFreeHeap()) / 1024.0f, 2) + "\033[0m kB";
 
             BatteryDriver* battery = this->battery.load();
             if (battery != nullptr) {
-                Serial.printf(", battery: \033[33m%.2f V\033[0m", battery->getVoltage());
+                status += ", battery: \033[33m" + String(battery->getVoltage(), 2) + "\033[0m V";
             }
+            status += " ";
 
-            Serial.print(" ");
+            Serial.print(status);
             Serial.flush();
             task.delayUntil(milliseconds(100));
         });
@@ -90,7 +95,7 @@ public:
         return Serial.write(character);
     }
 
-    size_t write(const uint8_t *buffer, size_t size) override {
+    size_t write(const uint8_t* buffer, size_t size) override {
         size_t written = 0;
         for (size_t i = 0; i < size; i++) {
             written += write(buffer[i]);
