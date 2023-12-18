@@ -50,7 +50,8 @@ public:
             ARDUINO_EVENT_WIFI_STA_LOST_IP);
         WiFi.onEvent(
             [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Serial.println("WiFi: disconnected from " + String(info.wifi_sta_disconnected.ssid, info.wifi_sta_disconnected.ssid_len));
+                Serial.println("WiFi: disconnected from " + String(info.wifi_sta_disconnected.ssid, info.wifi_sta_disconnected.ssid_len)
+                    + ", reason: " + String(WiFi.disconnectReasonName(static_cast<wifi_err_reason_t>(info.wifi_sta_disconnected.reason))));
                 networkReady.clearFromISR();
                 requestReconnect();
             },
@@ -65,6 +66,8 @@ public:
                     : ticks::zero();
                 xSemaphoreTake(reconnectSemaphor, timeout.count());
                 Serial.println("WiFi: Reconnecting...");
+                // TODO Does this fix "wifi: addba response cb: ap bss deleted"?
+                // WiFi.disconnect(true);
             }
         });
     }
