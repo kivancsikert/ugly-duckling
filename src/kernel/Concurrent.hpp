@@ -17,9 +17,7 @@ class Queue {
 public:
     Queue(const String& name, size_t capacity = 16)
         : name(name)
-        , queue(xQueueCreate(capacity, sizeof(TMessage*)))
-        , sendTimeout(sendTimeout)
-        , receiveTimeout(receiveTimeout) {
+        , queue(xQueueCreate(capacity, sizeof(TMessage*))) {
     }
 
     ~Queue() {
@@ -130,8 +128,6 @@ public:
 private:
     const String name;
     const QueueHandle_t queue;
-    const ticks sendTimeout;
-    const ticks receiveTimeout;
 };
 
 class Mutex {

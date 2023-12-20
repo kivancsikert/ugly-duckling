@@ -210,6 +210,9 @@ private:
                 state, newState);
             state = newState;
             switch (newState) {
+                case KernelState::BOOTING:
+                    statusLed.turnOff();
+                    break;
                 case KernelState::NETWORK_CONNECTING:
                     statusLed.blink(milliseconds(200));
                     break;

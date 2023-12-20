@@ -62,6 +62,9 @@ protected:
             case ValveState::CLOSED:
                 controller.drive(MotorPhase::REVERSE, holdDuty);
                 break;
+            default:
+                // Ignore
+                break;
         }
         delay(switchDuration.count());
         controller.stop();
@@ -199,6 +202,9 @@ public:
             case ValveState::CLOSED:
                 close();
                 break;
+            default:
+                // Ignore
+                break;
         }
         // TODO Publish event
     }
@@ -237,7 +243,7 @@ public:
     }
 
     unique_ptr<Peripheral> createPeripheral(const String& name, unique_ptr<const ValveConfiguration> config) override {
-        PwmMotorDriver* targetMotor;
+        PwmMotorDriver* targetMotor = nullptr;
         for (auto& motor : motors) {
             if (motor.getName() == config->motor.get()) {
                 targetMotor = &(motor.get());

@@ -305,10 +305,11 @@ private:
     MdnsDriver& mdns;
     Config& config;
     const String instanceName;
-    StateSource& mqttReady;
 
     const String clientId;
     const String rootTopic;
+
+    StateSource& mqttReady;
 
     MdnsRecord mqttServer;
     MQTTClient mqttClient { MQTT_BUFFER_SIZE };

@@ -61,7 +61,7 @@ public:
             return true;
         }
         auto newWakeTime = xTaskGetTickCount();
-        Serial.printf("Task '%s' missed deadline by %ld ms\n",
+        Serial.printf("Task '%s' missed deadline by %lld ms\n",
             name.c_str(), duration_cast<milliseconds>(ticks(newWakeTime - lastWakeTime)).count());
         lastWakeTime = newWakeTime;
         return false;

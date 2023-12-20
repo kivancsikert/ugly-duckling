@@ -10,7 +10,10 @@
 #include <devices/DeviceDefinition.hpp>
 #include <devices/Peripheral.hpp>
 
+#include <peripherals/Valve.hpp>
+
 using namespace farmhub::kernel;
+using namespace farmhub::peripherals;
 
 namespace farmhub { namespace devices {
 

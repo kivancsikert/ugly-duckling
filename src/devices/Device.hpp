@@ -15,11 +15,10 @@
 #include <ArduinoLog.h>
 
 #include <kernel/Kernel.hpp>
-#include <peripherals/Valve.hpp>
+#include <kernel/Task.hpp>
 
 using namespace std::chrono;
 using namespace farmhub::kernel;
-using namespace farmhub::peripherals;
 
 #if defined(MK4)
 #include <devices/UglyDucklingMk4.hpp>
