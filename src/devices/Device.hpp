@@ -95,17 +95,17 @@ public:
     }
 
     size_t write(uint8_t character) override {
-        getBuffer()->concat((char) character);
+        Task::consoleBuffer()->concat((char) character);
         return 1;
     }
 
     size_t write(const uint8_t* buffer, size_t size) override {
-        getBuffer()->concat(buffer, size);
+        Task::consoleBuffer()->concat(buffer, size);
         return size;
     }
 
     void printLine(int level) {
-        String* buffer = getBuffer();
+        String* buffer = Task::consoleBuffer();
         if (buffer->isEmpty()) {
             return;
         }
@@ -119,15 +119,6 @@ public:
     }
 
 private:
-    String* getBuffer() {
-        String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, Task::CONSOLE_BUFFER_INDEX));
-        if (buffer == nullptr) {
-            buffer = new String();
-            vTaskSetThreadLocalStoragePointer(nullptr, Task::CONSOLE_BUFFER_INDEX, static_cast<void*>(buffer));
-        }
-        return buffer;
-    }
-
     static String wifiStatus() {
         switch (WiFi.status()) {
             case WL_NO_SHIELD:
