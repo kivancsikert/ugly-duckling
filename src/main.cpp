@@ -5,9 +5,12 @@
 
 #include <devices/Device.hpp>
 
-void setup() {
-    new farmhub::devices::Device();
-}
+extern "C" void app_main() {
+    initArduino();
 
-void loop() {
+    new farmhub::devices::Device();
+
+    while (true) {
+        vTaskDelay(portMAX_DELAY);
+    }
 }

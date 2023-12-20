@@ -1,0 +1,29 @@
+# Won't compile without this
+CONFIG_FREERTOS_HZ=1000
+
+# Won't compile without this
+CONFIG_ESP_TLS_PSK_VERIFICATION=y
+
+# We don't need secure Boot
+CONFIG_SECURE_BOOT=n
+CONFIG_SECURE_FLASH_ENC_ENABLED=n
+
+# We want to use exceptions
+CONFIG_CXX_EXCEPTIONS=y
+
+# Less chatty
+CONFIG_BOOTLOADER_LOG_LEVEL_ERROR=y
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y
+
+# This is to allow tasks to keep a String buffer to print logs to, see Task::consoleBuffer()
+# It seems that Arduino uses index 0, so we need to add ours
+CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS=2
+
+# Seems like a good idea to have some stack checs
+CONFIG_COMPILER_STACK_CHECK_MODE_NORM=y
+
+# This is ERROR by default
+CONFIG_ARDUHAL_LOG_DEFAULT_LEVEL_WARN=y
+
+# Why compile more than necessary?
+CONFIG_ARDUINO_SELECTIVE_COMPILATION=y
