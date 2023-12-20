@@ -143,6 +143,8 @@ public:
     }
 
     State combineStates(const String& name, const std::list<State>& states) const {
+        Log.traceln("Creating combined state: %s",
+            name.c_str());
         int eventBits = 0;
         for (auto& state : states) {
             eventBits |= state.eventBits;

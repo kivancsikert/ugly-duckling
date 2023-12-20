@@ -79,6 +79,10 @@ public:
         return xTaskAbortDelay(taskHandle);
     }
 
+#ifdef FARMHUB_DEBUG
+    static const uint32_t CONSOLE_BUFFER_INDEX = 0;
+#endif
+
 private:
     Task(String name, TaskFunction taskFunction)
         : name(name)
@@ -88,13 +92,21 @@ private:
 
     static void executeTask(void* parameters) {
         Task* task = static_cast<Task*>(parameters);
-        task->taskFunction(*task);
         auto handle = task->taskHandle;
-        auto name = task->name;
-        delete task;
-        Log.traceln("Finished task %s",
+        auto& name = task->name;
+        Serial.printf("Starting task %s\n",
             name.c_str());
+        task->taskFunction(*task);
+        Serial.printf("Finished task %s\n",
+            name.c_str());
+#ifdef FARMHUB_DEBUG
+        String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(handle, CONSOLE_BUFFER_INDEX));
+        if (buffer != nullptr) {
+            delete buffer;
+        }
+#endif
         vTaskDelete(handle);
+        delete task;
     }
 
     const String name;

@@ -82,7 +82,6 @@ public:
             status += " ";
 
             Serial.print(status);
-            Serial.flush();
             task.delayUntil(milliseconds(100));
         });
     }
@@ -92,18 +91,34 @@ public:
     }
 
     size_t write(uint8_t character) override {
-        return Serial.write(character);
+        getBuffer()->concat((char) character);
+        return 1;
     }
 
     size_t write(const uint8_t* buffer, size_t size) override {
-        size_t written = 0;
-        for (size_t i = 0; i < size; i++) {
-            written += write(buffer[i]);
+        getBuffer()->concat(buffer, size);
+        return size;
+    }
+
+    void printLine(int level) {
+        String* buffer = getBuffer();
+        if (buffer->length() > 0) {
+            Serial.print(buffer->c_str());
+            buffer->clear();
         }
-        return written;
     }
 
 private:
+    String* getBuffer() {
+        String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, Task::CONSOLE_BUFFER_INDEX));
+        if (buffer == nullptr) {
+            Serial.printf("\033[0;31mTask %s has no console buffer\033[0m\n", pcTaskGetName(nullptr));
+            buffer = new String();
+            vTaskSetThreadLocalStoragePointer(nullptr, Task::CONSOLE_BUFFER_INDEX, static_cast<void*>(buffer));
+        }
+        return buffer;
+    }
+
     static String wifiStatus() {
         switch (WiFi.status()) {
             case WL_NO_SHIELD:
@@ -131,20 +146,25 @@ private:
     std::atomic<BatteryDriver*> battery { nullptr };
 };
 
+#ifdef FARMHUB_DEBUG
+ConsolePrinter consolePrinter;
+
+void printLogLine(Print* printer, int level) {
+    consolePrinter.printLine(level);
+}
+#endif
+
 class ConsoleProvider {
 public:
     ConsoleProvider() {
 #ifdef FARMHUB_DEBUG
         Log.begin(FARMHUB_LOG_LEVEL, &consolePrinter);
+        Log.setSuffix(printLogLine);
 #else
         Log.begin(FARMHUB_LOG_LEVEL, &Serial);
 #endif
         Log.infoln("Starting up...");
     }
-
-#ifdef FARMHUB_DEBUG
-    ConsolePrinter consolePrinter;
-#endif
 };
 
 class Device : ConsoleProvider {
