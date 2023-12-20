@@ -53,7 +53,6 @@ public:
         static const int spinnerLength = spinner.length();
         Task::loop("ConsolePrinter", 8192, 1, [this](Task& task) {
             String status;
-            status += "\033[1G\033[0K";
 
             counter = (counter + 1) % spinnerLength;
             status += "[" + spinner.substring(counter, counter + 1) + "] ";
@@ -79,7 +78,12 @@ public:
             if (battery != nullptr) {
                 status += ", battery: \033[33m" + String(battery->getVoltage(), 2) + "\033[0m V";
             }
-            status += " ";
+
+            Serial.print("\033[1G\033[0K");
+
+            consoleQueue.drain([](String line) {
+                Serial.println(line);
+            });
 
             Serial.print(status);
             task.delayUntil(milliseconds(100));
@@ -102,9 +106,15 @@ public:
 
     void printLine(int level) {
         String* buffer = getBuffer();
-        if (buffer->length() > 0) {
-            Serial.print(buffer->c_str());
-            buffer->clear();
+        if (buffer->isEmpty()) {
+            return;
+        }
+        size_t pos = (buffer->startsWith("\r") || buffer->startsWith("\n")) ? 1 : 0;
+        size_t len = buffer->endsWith("\n") ? buffer->length() - 1 : buffer->length();
+        String copy = "[\033[0;31m" + String(pcTaskGetName(nullptr)) + "\033[0m/\033[0;32m" + String(xPortGetCoreID()) + "\033[0m] " + buffer->substring(pos, pos + len);
+        buffer->clear();
+        if (!consoleQueue.offerFromISR(copy)) {
+            Serial.println(copy);
         }
     }
 
@@ -112,7 +122,6 @@ private:
     String* getBuffer() {
         String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, Task::CONSOLE_BUFFER_INDEX));
         if (buffer == nullptr) {
-            Serial.printf("\033[0;31mTask %s has no console buffer\033[0m\n", pcTaskGetName(nullptr));
             buffer = new String();
             vTaskSetThreadLocalStoragePointer(nullptr, Task::CONSOLE_BUFFER_INDEX, static_cast<void*>(buffer));
         }
@@ -144,6 +153,8 @@ private:
 
     int counter;
     std::atomic<BatteryDriver*> battery { nullptr };
+
+    Queue<String> consoleQueue { "console", 128 };
 };
 
 #ifdef FARMHUB_DEBUG
