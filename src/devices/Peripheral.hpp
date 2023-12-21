@@ -59,6 +59,7 @@ public:
         : Peripheral(name) {
     }
 
+    // Poor man's RTTI
     TelemetryProvider* getAsTelemetryProvider() override {
         return this;
     }
