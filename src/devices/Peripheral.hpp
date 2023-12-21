@@ -88,7 +88,6 @@ public:
 
     PeripheralManager(ObjectArrayProperty<JsonAsString>& peripheralsConfig)
         : peripheralsConfig(peripheralsConfig) {
-        // TODO Update config from MQTT
     }
 
     void registerFactory(PeripheralFactoryBase& factory) {
@@ -98,25 +97,6 @@ public:
     }
 
     void begin() {
-        // TODO Rebuild peripherals when config changes
-        updateConfig();
-    }
-
-    void populateTelemetry(JsonObject& json) override {
-        for (auto& peripheral : peripherals) {
-            TelemetryProvider* telemetryProvider = peripheral.get()->getAsTelemetryProvider();
-            if (telemetryProvider != nullptr) {
-                JsonObject peripheralJson = json.createNestedObject(peripheral->name);
-                telemetryProvider->populateTelemetry(peripheralJson);
-            }
-        }
-    }
-
-private:
-    void updateConfig() {
-        // TODO Properly stop all peripherals
-        peripherals.clear();
-
         Log.infoln("Loading configuration for %d peripherals",
             peripheralsConfig.get().size());
 
@@ -133,6 +113,17 @@ private:
         }
     }
 
+    void populateTelemetry(JsonObject& json) override {
+        for (auto& peripheral : peripherals) {
+            TelemetryProvider* telemetryProvider = peripheral.get()->getAsTelemetryProvider();
+            if (telemetryProvider != nullptr) {
+                JsonObject peripheralJson = json.createNestedObject(peripheral->name);
+                telemetryProvider->populateTelemetry(peripheralJson);
+            }
+        }
+    }
+
+private:
     unique_ptr<Peripheral> createPeripheral(const String& name, const String& type, const String& configJson) {
         Log.traceln("Creating peripheral: %s of type %s",
             name.c_str(), type.c_str());
