@@ -9,8 +9,8 @@
 namespace farmhub { namespace kernel {
 
 class TelemetryProvider {
+public:
     virtual void populateTelemetry(JsonObject& json) = 0;
-    friend class TelemetryCollector;
 };
 
 class TelemetryCollector {
@@ -29,8 +29,14 @@ public:
         // TODO Check for duplicates
         providers.emplace(name, std::reference_wrapper<TelemetryProvider>(provider));
     }
+
 private:
     std::map<String, std::reference_wrapper<TelemetryProvider>> providers;
+};
+
+class TelemetryPublisher {
+public:
+    virtual void publishTelemetry() = 0;
 };
 
 }}    // namespace farmhub::kernel

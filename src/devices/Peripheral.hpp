@@ -6,6 +6,7 @@
 #include <ArduinoLog.h>
 
 #include <kernel/Configuration.hpp>
+#include <kernel/Telemetry.hpp>
 
 using std::move;
 using std::unique_ptr;
@@ -42,7 +43,26 @@ public:
         : name(name) {
     }
 
+    virtual ~Peripheral() {
+    }
+
+    virtual TelemetryProvider* getAsTelemetryProvider() {
+        return nullptr;
+    }
+
     const String name;
+};
+
+class TelemetryProvidingPeripheral : public Peripheral, public TelemetryProvider {
+public:
+    TelemetryProvidingPeripheral(const String& name)
+        : Peripheral(name) {
+    }
+
+    // Poor man's RTTI
+    TelemetryProvider* getAsTelemetryProvider() override {
+        return this;
+    }
 };
 
 // Peripheral factories
@@ -79,7 +99,8 @@ public:
 
 // Peripheral manager
 
-class PeripheralManager {
+class PeripheralManager
+    : public TelemetryProvider {
 public:
     PeripheralManager() {
         // TODO Update config from MQTT
@@ -96,6 +117,16 @@ public:
         updateConfig();
     }
 
+    void populateTelemetry(JsonObject& json) override {
+        for (auto& peripheral : peripherals) {
+            TelemetryProvider* telemetryProvider = peripheral.get()->getAsTelemetryProvider();
+            if (telemetryProvider != nullptr) {
+                JsonObject peripheralJson = json.createNestedObject(peripheral->name);
+                telemetryProvider->populateTelemetry(peripheralJson);
+            }
+        }
+    }
+
 private:
     void updateConfig() {
         // TODO Properly stop all peripherals
@@ -107,7 +138,7 @@ private:
         for (auto& perpheralConfigJsonAsString : config.peripherals.get()) {
             PeripheralConfiguration perpheralConfig;
             perpheralConfig.loadFromString(perpheralConfigJsonAsString.get());
-            auto peripheral = createPeripheral(perpheralConfig.name.get(), perpheralConfig.type.get(), perpheralConfig.params.get().get());
+            unique_ptr<Peripheral> peripheral = createPeripheral(perpheralConfig.name.get(), perpheralConfig.type.get(), perpheralConfig.params.get().get());
             if (peripheral == nullptr) {
                 Log.errorln("Failed to create peripheral: %s of type %s",
                     perpheralConfig.name.get().c_str(), perpheralConfig.type.get().c_str());

@@ -10,6 +10,7 @@
 #include <esp_sleep.h>
 
 #include <kernel/FileSystem.hpp>
+#include <kernel/Telemetry.hpp>
 
 using namespace std::chrono;
 
@@ -35,6 +36,22 @@ public:
     void handle(const JsonObject& request, JsonObject& response) override {
         response["original"] = request;
     }
+};
+
+class PingCommand : public Command {
+public:
+    PingCommand(TelemetryPublisher& telemetryPublisher)
+        : Command("ping")
+        , telemetryPublisher(telemetryPublisher) {
+    }
+
+    void handle(const JsonObject& request, JsonObject& response) override {
+        telemetryPublisher.publishTelemetry();
+        response["pong"] = millis();
+    }
+
+private:
+    TelemetryPublisher& telemetryPublisher;
 };
 
 class RestartCommand : public Command {

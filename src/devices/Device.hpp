@@ -181,9 +181,11 @@ public:
 
         deviceDefinition.registerPeripheralFactories(peripheralManager);
 
-        kernel.begin();
+        kernel.registerTelemetryProvider("peripherals", peripheralManager);
 
         peripheralManager.begin();
+
+        kernel.begin();
 
 #if defined(MK4)
         deviceDefinition.motorDriver.wakeUp();
