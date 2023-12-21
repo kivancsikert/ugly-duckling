@@ -82,6 +82,22 @@ public:
     }
 };
 
+class MqttTelemetryPublisher : public TelemetryPublisher {
+public:
+    MqttTelemetryPublisher(MqttDriver& mqtt, TelemetryCollector& telemetryCollector)
+        : mqtt(mqtt)
+        , telemetryCollector(telemetryCollector) {
+    }
+
+    void publishTelemetry() {
+        mqtt.publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); });
+    }
+
+private:
+    MqttDriver& mqtt;
+    TelemetryCollector& telemetryCollector;
+};
+
 template <typename TDeviceConfiguration>
 class Kernel {
 public:
@@ -102,8 +118,7 @@ public:
 #endif
 
         registerCommand(echoCommand);
-        // TODO Add ping command
-        // registerCommand(pingCommand);
+        registerCommand(pingCommand);
         // TODO Add reset-wifi command
         // registerCommand(resetWifiCommand);
         registerCommand(restartCommand);
@@ -241,7 +256,7 @@ private:
     }
 
     void publishTelemetry(Task& task) {
-        mqtt.publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); });
+        telemetryPublisher.publishTelemetry();
         // TODO Configure telemetry heartbeat interval
         task.delayUntil(milliseconds(60000));
     }
@@ -280,8 +295,10 @@ private:
     RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp, rtcInSyncState };
     TelemetryCollector telemetryCollector;
     MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), mqttReadyState };
+    MqttTelemetryPublisher telemetryPublisher { mqtt, telemetryCollector };
 
     EchoCommand echoCommand;
+    PingCommand pingCommand { telemetryPublisher };
     RestartCommand restartCommand;
     SleepCommand sleepCommand;
     FileListCommand fileListCommand { fs };
