@@ -27,14 +27,6 @@ public:
     Property<JsonAsString> params { this, "params" };
 };
 
-class PeripheralsConfiguration : public ConfigurationSection {
-public:
-    PeripheralsConfiguration() {
-    }
-
-    ObjectArrayProperty<JsonAsString> peripherals { this, "peripherals" };
-};
-
 // Peripherals
 
 class Peripheral {
@@ -102,7 +94,8 @@ public:
 class PeripheralManager
     : public TelemetryProvider {
 public:
-    PeripheralManager() {
+    PeripheralManager(ObjectArrayProperty<JsonAsString>& peripheralsConfig)
+        : peripheralsConfig(peripheralsConfig) {
         // TODO Update config from MQTT
     }
 
@@ -133,9 +126,9 @@ private:
         peripherals.clear();
 
         Log.infoln("Loading configuration for %d peripherals",
-            config.peripherals.get().size());
+            peripheralsConfig.get().size());
 
-        for (auto& perpheralConfigJsonAsString : config.peripherals.get()) {
+        for (auto& perpheralConfigJsonAsString : peripheralsConfig.get()) {
             PeripheralConfiguration perpheralConfig;
             perpheralConfig.loadFromString(perpheralConfigJsonAsString.get());
             unique_ptr<Peripheral> peripheral = createPeripheral(perpheralConfig.name.get(), perpheralConfig.type.get(), perpheralConfig.params.get().get());
@@ -162,8 +155,7 @@ private:
         return it->second.get().createPeripheral(name, configJson);
     }
 
-    ConfigurationFile<PeripheralsConfiguration> configFile { FileSystem::get(), "/peripherals.json" };
-    PeripheralsConfiguration config { configFile.config };
+    ObjectArrayProperty<JsonAsString>& peripheralsConfig;
 
     // TODO Use an unordered_map?
     std::map<String, std::reference_wrapper<PeripheralFactoryBase>> factories;
