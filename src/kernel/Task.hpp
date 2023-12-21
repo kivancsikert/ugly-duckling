@@ -99,22 +99,23 @@ private:
         , lastWakeTime(xTaskGetTickCount()) {
     }
 
-    static void executeTask(void* parameters) {
-        Task* task = static_cast<Task*>(parameters);
-        auto handle = task->taskHandle;
-        auto& name = task->name;
-        Serial.printf("Starting task %s\n",
-            name.c_str());
-        task->taskFunction(*task);
-        Serial.printf("Finished task %s\n",
-            name.c_str());
+    ~Task() {
 #ifdef FARMHUB_DEBUG
-        String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(handle, CONSOLE_BUFFER_INDEX));
+        String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(taskHandle, CONSOLE_BUFFER_INDEX));
         if (buffer != nullptr) {
             delete buffer;
         }
 #endif
-        vTaskDelete(handle);
+        vTaskDelete(taskHandle);
+    }
+
+    static void executeTask(void* parameters) {
+        Task* task = static_cast<Task*>(parameters);
+        Serial.printf("Starting task %s\n",
+            task->name.c_str());
+        task->taskFunction(*task);
+        Serial.printf("Finished task %s\n",
+            task->name.c_str());
         delete task;
     }
 
