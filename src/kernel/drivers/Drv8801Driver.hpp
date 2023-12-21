@@ -92,9 +92,9 @@ public:
 private:
     const gpio_num_t enablePin;
     const PwmChannel phaseChannel;
+    const gpio_num_t currentPin;
     const gpio_num_t faultPin;
     const gpio_num_t sleepPin;
-    const gpio_num_t currentPin;
 
     std::atomic<bool> sleeping { false };
 };

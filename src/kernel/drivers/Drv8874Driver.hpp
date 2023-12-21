@@ -84,9 +84,9 @@ public:
 private:
     const PwmChannel in1Channel;
     const PwmChannel in2Channel;
+    const gpio_num_t currentPin;
     const gpio_num_t faultPin;
     const gpio_num_t sleepPin;
-    const gpio_num_t currentPin;
 
     std::atomic<bool> sleeping { false };
 };
