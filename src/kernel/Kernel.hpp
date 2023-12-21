@@ -59,17 +59,17 @@ static const String& getMacAddress() {
 
 class MqttTelemetryPublisher : public TelemetryPublisher {
 public:
-    MqttTelemetryPublisher(MqttDriver& mqtt, TelemetryCollector& telemetryCollector)
-        : mqtt(mqtt)
+    MqttTelemetryPublisher(MqttDriver::MqttRoot& mqtt, TelemetryCollector& telemetryCollector)
+        : mqttRoot(mqtt)
         , telemetryCollector(telemetryCollector) {
     }
 
     void publishTelemetry() {
-        mqtt.publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); });
+        mqttRoot.publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); });
     }
 
 private:
-    MqttDriver& mqtt;
+    MqttDriver::MqttRoot& mqttRoot;
     TelemetryCollector& telemetryCollector;
 };
 
@@ -109,7 +109,7 @@ public:
     void begin() {
         kernelReadyState.awaitSet();
 
-        mqtt.publish(
+        mqttDeviceRoot.publish(
             "init",
             [&](JsonObject& json) {
                 // TODO Remove redundanty mentions of "ugly-duckling"
@@ -140,14 +140,14 @@ public:
 
     void registerCommand(const String& name, CommandHandler handler) {
         String suffix = "commands/" + name;
-        mqtt.subscribe(suffix, MqttDriver::QoS::ExactlyOnce, [this, name, suffix, handler](const String&, const JsonObject& request) {
+        mqttDeviceRoot.subscribe(suffix, MqttDriver::QoS::ExactlyOnce, [this, name, suffix, handler](const String&, const JsonObject& request) {
             // Clear topic
-            mqtt.clear(suffix, MqttDriver::Retention::Retain, MqttDriver::QoS::ExactlyOnce);
+            mqttDeviceRoot.clear(suffix, MqttDriver::Retention::Retain, MqttDriver::QoS::ExactlyOnce);
             DynamicJsonDocument responseDoc(2048);
             auto response = responseDoc.to<JsonObject>();
             handler(request, response);
             if (response.size() > 0) {
-                mqtt.publish("responses/" + name, responseDoc, MqttDriver::Retention::NoRetain, MqttDriver::QoS::ExactlyOnce);
+                mqttDeviceRoot.publish("responses/" + name, responseDoc, MqttDriver::Retention::NoRetain, MqttDriver::QoS::ExactlyOnce);
             }
         });
     }
@@ -270,8 +270,8 @@ private:
     RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp, rtcInSyncState };
     TelemetryCollector telemetryCollector;
     MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), mqttReadyState };
-    MqttTelemetryPublisher telemetryPublisher { mqtt, telemetryCollector };
-
+    MqttDriver::MqttRoot mqttDeviceRoot = mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
+    MqttTelemetryPublisher telemetryPublisher { mqttDeviceRoot, telemetryCollector };
     EchoCommand echoCommand;
     PingCommand pingCommand { telemetryPublisher };
     RestartCommand restartCommand;

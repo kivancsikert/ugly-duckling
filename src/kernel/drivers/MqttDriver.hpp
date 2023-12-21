@@ -31,6 +31,55 @@ public:
 
     typedef std::function<void(const String&, const JsonObject&)> SubscriptionHandler;
 
+    class MqttRoot {
+    public:
+        MqttRoot(MqttDriver& mqtt, const String& rootTopic)
+            : mqtt(mqtt)
+            , rootTopic(rootTopic) {
+        }
+
+        MqttRoot(MqttRoot&& other)
+            : mqtt(other.mqtt)
+            , rootTopic(other.rootTopic) {
+        }
+
+        bool publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
+            return mqtt.publish(fullTopic(suffix), json, retain, qos);
+        }
+
+        bool publish(const String& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, int size = MQTT_BUFFER_SIZE) {
+            DynamicJsonDocument doc(size);
+            JsonObject root = doc.to<JsonObject>();
+            populate(root);
+            return publish(suffix, doc, retain, qos);
+        }
+
+        bool clear(const String& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
+            return mqtt.clear(fullTopic(suffix), retain, qos);
+        }
+
+        bool subscribe(const String& suffix, SubscriptionHandler handler) {
+            return subscribe(suffix, QoS::ExactlyOnce, handler);
+        }
+
+        /**
+         * @brief Subscribes to the given topic under the topic prefix.
+         *
+         * Note that subscription does not support wildcards.
+         */
+        bool subscribe(const String& suffix, QoS qos, SubscriptionHandler handler) {
+            return mqtt.subscribe(fullTopic(suffix), qos, handler);
+        }
+
+    private:
+        String fullTopic(const String& suffix) const {
+            return rootTopic + "/" + suffix;
+        }
+
+        MqttDriver& mqtt;
+        String rootTopic;
+    };
+
 private:
     struct Message {
         const String topic;
@@ -68,18 +117,18 @@ private:
     };
 
     struct Subscription {
-        const String suffix;
+        const String topic;
         const QoS qos;
         const SubscriptionHandler handle;
 
-        Subscription(const String& suffix, QoS qos, SubscriptionHandler handle)
-            : suffix(suffix)
+        Subscription(const String& topic, QoS qos, SubscriptionHandler handle)
+            : topic(topic)
             , qos(qos)
             , handle(handle) {
         }
 
         Subscription(const Subscription& other)
-            : suffix(other.suffix)
+            : topic(other.topic)
             , qos(other.qos)
             , handle(other.handle) {
         }
@@ -110,7 +159,6 @@ public:
         , config(config)
         , instanceName(instanceName)
         , clientId(getClientId(config.clientId.get(), instanceName))
-        , rootTopic(getTopic(config.topic.get(), instanceName))
         , mqttReady(mqttReady) {
         Task::run("mqtt", 8192, 1, [this](Task& task) {
             setup();
@@ -121,8 +169,12 @@ public:
         });
     }
 
-    bool publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
-        const String topic = rootTopic + "/" + suffix;
+    MqttRoot forRoot(const String& topic) {
+        return MqttRoot(*this, topic);
+    }
+
+private:
+    bool publish(const String& topic, const JsonDocument& json, Retention retain, QoS qos) {
 #ifdef DUMP_MQTT
         String serializedJson;
         serializeJsonPretty(json, serializedJson);
@@ -132,35 +184,22 @@ public:
         return publishQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, json, retain, qos);
     }
 
-    bool publish(const String& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, int size = MQTT_BUFFER_SIZE) {
-        DynamicJsonDocument doc(size);
-        JsonObject root = doc.to<JsonObject>();
-        populate(root);
-        return publish(suffix, doc, retain, qos);
-    }
-
-    bool clear(const String& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
-        String topic = rootTopic + "/" + suffix;
+    bool clear(const String& topic, Retention retain, QoS qos) {
         Log.traceln("MQTT: Clearing topic '%s'",
             topic.c_str());
         return publishQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, "", retain, qos);
     }
 
-    bool subscribe(const String& suffix, SubscriptionHandler handler) {
-        return subscribe(suffix, QoS::ExactlyOnce, handler);
-    }
-
     /**
-     * @brief Subscribes to the given topic under the topic prefix.
+     * @brief Subscribes to the given topic.
      *
      * Note that subscription does not support wildcards.
      */
-    bool subscribe(const String& suffix, QoS qos, SubscriptionHandler handler) {
+    bool subscribe(const String& topic, QoS qos, SubscriptionHandler handler) {
         // Allow some time for the queue to empty
-        return subscribeQueue.offerIn(MQTT_QUEUE_TIMEOUT, suffix, qos, handler);
+        return subscribeQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, qos, handler);
     }
 
-private:
     void setup() {
         if (config.host.get().length() > 0) {
             mqttServer.hostname = config.host.get();
@@ -186,8 +225,8 @@ private:
             mqttClient.begin(mqttServer.ip.toString().c_str(), mqttServer.port, wifiClient);
         }
 
-        Log.infoln("MQTT: server: %s:%d, client ID is '%s', topic is '%s'",
-            mqttServer.hostname.c_str(), mqttServer.port, clientId.c_str(), rootTopic.c_str());
+        Log.infoln("MQTT: server: %s:%d, client ID is '%s'",
+            mqttServer.hostname.c_str(), mqttServer.port, clientId.c_str());
     }
 
     ticks loopAndDelay() {
@@ -206,7 +245,7 @@ private:
 
             // Re-subscribe to existing subscriptions
             for (auto& subscription : subscriptions) {
-                registerSubscriptionWithMqtt(subscription.suffix, subscription.qos);
+                registerSubscriptionWithMqtt(subscription.topic, subscription.qos);
             }
 
             Log.infoln("MQTT: Connected");
@@ -239,7 +278,7 @@ private:
 
     void processSubscriptionQueue() {
         subscribeQueue.drain([&](const Subscription& subscription) {
-            if (registerSubscriptionWithMqtt(subscription.suffix, subscription.qos)) {
+            if (registerSubscriptionWithMqtt(subscription.topic, subscription.qos)) {
                 subscriptions.push_back(subscription);
             }
         });
@@ -259,23 +298,21 @@ private:
                 return;
             }
 
-            auto suffix = topic.substring(rootTopic.length() + 1);
-            Log.traceln("MQTT: Received message: '%s'", suffix.c_str());
+            Log.traceln("MQTT: Received message: '%s'", topic.c_str());
             for (auto subscription : subscriptions) {
-                if (subscription.suffix == suffix) {
+                if (subscription.topic == topic) {
                     auto request = json.as<JsonObject>();
-                    subscription.handle(suffix, request);
+                    subscription.handle(topic, request);
                     return;
                 }
             }
-            Log.warningln("MQTT: No handler for suffix '%s'",
-                suffix.c_str());
+            Log.warningln("MQTT: No handler for topic '%s'",
+                topic.c_str());
         });
     }
 
     // Actually subscribe to the given topic
-    bool registerSubscriptionWithMqtt(const String& suffix, QoS qos) {
-        String topic = rootTopic + "/" + suffix;
+    bool registerSubscriptionWithMqtt(const String& topic, QoS qos) {
         Log.infoln("MQTT: Subscribing to topic '%s' (qos = %d)",
             topic.c_str(), qos);
         bool success = mqttClient.subscribe(topic.c_str(), static_cast<int>(qos));
@@ -293,13 +330,6 @@ private:
         return "ugly-duckling-" + instanceName;
     }
 
-    static String getTopic(const String& topic, const String& instanceName) {
-        if (topic.length() > 0) {
-            return topic;
-        }
-        return "devices/ugly-duckling/" + instanceName;
-    }
-
     State& networkReady;
     WiFiClient wifiClient;
     MdnsDriver& mdns;
@@ -307,7 +337,6 @@ private:
     const String instanceName;
 
     const String clientId;
-    const String rootTopic;
 
     StateSource& mqttReady;
 
