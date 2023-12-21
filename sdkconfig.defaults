@@ -1,3 +1,6 @@
+# Make sure to delete sdkconfig.* after making changes here
+# so that they get regenerated!
+
 # Won't compile without this
 CONFIG_FREERTOS_HZ=1000
 
