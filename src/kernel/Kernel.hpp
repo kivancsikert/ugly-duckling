@@ -57,31 +57,6 @@ static const String& getMacAddress() {
     return macAddress;
 }
 
-class DeviceConfiguration : public ConfigurationSection {
-public:
-    DeviceConfiguration(const String& defaultModel)
-        : model(this, "model", defaultModel)
-        , instance(this, "instance", getMacAddress()) {
-    }
-
-    Property<String> model;
-    Property<String> instance;
-
-    MqttDriver::Config mqtt { this, "mqtt" };
-    RtcDriver::Config ntp { this, "ntp" };
-
-    virtual bool isResetButtonPressed() {
-        return false;
-    }
-
-    virtual const String getHostname() {
-        String hostname = instance.get();
-        hostname.replace(":", "-");
-        hostname.replace("?", "");
-        return hostname;
-    }
-};
-
 class MqttTelemetryPublisher : public TelemetryPublisher {
 public:
     MqttTelemetryPublisher(MqttDriver& mqtt, TelemetryCollector& telemetryCollector)
@@ -101,8 +76,9 @@ private:
 template <typename TDeviceConfiguration>
 class Kernel {
 public:
-    Kernel(LedDriver& statusLed)
+    Kernel(TDeviceConfiguration& deviceConfig, LedDriver& statusLed)
         : version(VERSION)
+        , deviceConfig(deviceConfig)
         , statusLed(statusLed) {
 
         Log.infoln("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s'",
@@ -264,8 +240,7 @@ private:
     const String version;
 
     FileSystem& fs { FileSystem::get() };
-    ConfigurationFile<TDeviceConfiguration> deviceConfigFile { fs, "/device-config.json" };
-    TDeviceConfiguration& deviceConfig = deviceConfigFile.config;
+    TDeviceConfiguration& deviceConfig;
 
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
     MemoryTelemetryProvider memoryTelemetryProvider;

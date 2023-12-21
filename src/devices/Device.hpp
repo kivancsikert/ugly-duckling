@@ -198,7 +198,7 @@ public:
 
 private:
     TDeviceDefinition deviceDefinition;
-    Kernel<TDeviceConfiguration> kernel { deviceDefinition.statusLed };
+    Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.statusLed };
     PeripheralManager peripheralManager;
 };
 

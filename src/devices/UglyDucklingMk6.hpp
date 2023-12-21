@@ -25,10 +25,10 @@ public:
     }
 };
 
-class UglyDucklingMk6 : public BatteryPoweredDeviceDefinition {
+class UglyDucklingMk6 : public BatteryPoweredDeviceDefinition<Mk6Config> {
 public:
     UglyDucklingMk6()
-        : BatteryPoweredDeviceDefinition(
+        : BatteryPoweredDeviceDefinition<Mk6Config>(
             // Status LED
             GPIO_NUM_2,
             // Battery

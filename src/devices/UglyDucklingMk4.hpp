@@ -24,10 +24,10 @@ public:
     }
 };
 
-class UglyDucklingMk4 : public DeviceDefinition {
+class UglyDucklingMk4 : public DeviceDefinition<Mk4Config> {
 public:
     UglyDucklingMk4()
-        : DeviceDefinition(
+        : DeviceDefinition<Mk4Config>(
             // Status LED
             GPIO_NUM_26) {
     }
