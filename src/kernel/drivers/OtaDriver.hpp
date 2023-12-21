@@ -15,7 +15,7 @@ class OtaDriver {
 
 public:
     OtaDriver(State& networkReady, const String& hostname) {
-        Task::run("OTA", 3072, [&networkReady, hostname](Task& task) {
+        Task::run("ota", 3072, [&networkReady, hostname](Task& task) {
             networkReady.awaitSet();
 
             ArduinoOTA.setHostname(hostname.c_str());

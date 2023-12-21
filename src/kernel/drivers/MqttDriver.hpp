@@ -112,7 +112,7 @@ public:
         , clientId(getClientId(config.clientId.get(), instanceName))
         , rootTopic(getTopic(config.topic.get(), instanceName))
         , mqttReady(mqttReady) {
-        Task::run("MQTT", 8192, 1, [this](Task& task) {
+        Task::run("mqtt", 8192, 1, [this](Task& task) {
             setup();
             while (true) {
                 auto delay = loopAndDelay();

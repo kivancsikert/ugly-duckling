@@ -64,7 +64,7 @@ public:
             },
             ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
-        Task::run("WiFi", 3072, [this, &networkReady, hostname](Task& task) {
+        Task::run("wifi", 3072, [this, &networkReady, hostname](Task& task) {
             while (true) {
                 bool connected = WiFi.isConnected() || wifiManager.autoConnect(hostname.c_str());
                 if (connected) {

@@ -50,7 +50,7 @@ public:
 
         static const String spinner = "|/-\\";
         static const int spinnerLength = spinner.length();
-        Task::loop("ConsolePrinter", 8192, 1, [this](Task& task) {
+        Task::loop("console", 8192, 1, [this](Task& task) {
             String status;
 
             counter = (counter + 1) % spinnerLength;

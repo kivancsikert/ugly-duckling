@@ -33,7 +33,7 @@ public:
         : mdnsReady(mdnsReady) {
         // TODO Add error handling
         MDNS.begin(hostname);
-        Task::run("mDNS", [&networkReady, &mdnsReady, instanceName, hostname, version](Task& task) {
+        Task::run("mdns", [&networkReady, &mdnsReady, instanceName, hostname, version](Task& task) {
             networkReady.awaitSet();
 
             MDNS.setInstanceName(instanceName);

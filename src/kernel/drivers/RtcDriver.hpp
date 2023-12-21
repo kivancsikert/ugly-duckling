@@ -39,7 +39,7 @@ public:
     };
 
     RtcDriver(State& networkReady, MdnsDriver& mdns, Config& ntpConfig, StateSource& rtcInSync) {
-        Task::run("SystemTimeCheck", [&rtcInSync](Task& task) {
+        Task::run("rtc-check", [&rtcInSync](Task& task) {
             while (true) {
                 time_t now;
                 time(&now);
@@ -53,7 +53,7 @@ public:
                 task.delayUntil(seconds(1));
             }
         });
-        Task::run("NtpSync", 4096, [&networkReady, &mdns, &ntpConfig](Task& task) {
+        Task::run("ntp-sync", 4096, [&networkReady, &mdns, &ntpConfig](Task& task) {
             WiFiUDP udp;
             NTPClient* ntpClient;
             if (ntpConfig.host.get().length() > 0) {
