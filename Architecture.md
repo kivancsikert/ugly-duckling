@@ -7,8 +7,6 @@ graph BT
 
         OTA["OTA\n(debug)"]
             style OTA stroke-dasharray: 4
-        ConsolePrinter["Console Printer\n(debug)"]
-            style ConsolePrinter stroke-dasharray: 4
 
         WiFi
         NetworkConnected(["Network connected"])
@@ -30,8 +28,6 @@ graph BT
         RTCInSync -.->|provided by| PreBoot{{"Wake up from\nsleep"}}
         TelemetryManager -->|awaits| MQTTConnected
         TelemetryManager -->|awaits| RTCInSync
-
-        ConsolePrinter -.-> WiFi
     end
 
     subgraph ActualDeviceDefinition["Actual device definition"]
@@ -54,8 +50,6 @@ graph BT
             Battery -.->|registers provider| TelemetryManager
         end
 
-        Battery -.-> ConsolePrinter
-
         Drivers[["Drivers"]]
         Services[["Services"]]
         PeripheralFactories[["Peripheral\nFactories"]]
@@ -66,6 +60,9 @@ graph BT
     Drivers -.->|uses| PwmManager
 
     subgraph Device["Device"]
+        ConsolePrinter["Console Printer\n(debug)"]
+            style ConsolePrinter stroke-dasharray: 4
+
         Peripherals[["Peripherals"]]
         PeripheralManager["Peripheral\nManager"]
     end
@@ -80,6 +77,9 @@ graph BT
     PeripheralManager -.->|"collects\ntelemetry"| Peripherals
 
     Peripherals -.->|uses| Services
+
+    ConsolePrinter -.->|uses| WiFi
+    ConsolePrinter -.->|uses| Battery
 
     Device o==o Kernel
     Device o==o ActualDeviceDefinition

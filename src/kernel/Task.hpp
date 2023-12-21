@@ -8,13 +8,14 @@
 
 #include <Arduino.h>
 
+#include <ArduinoLog.h>
+
 using namespace std::chrono;
 
 namespace farmhub { namespace kernel {
 
 using ticks = std::chrono::duration<uint32_t, std::ratio<1, configTICK_RATE_HZ>>;
 
-// TODO Remove _2 suffix
 static const uint32_t DEFAULT_STACK_SIZE = 2048;
 static const unsigned int DEFAULT_PRIORITY = 1;
 
@@ -32,7 +33,8 @@ public:
     }
     static void run(const String& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
         Task* task = new Task(String(name), runFunction);
-        Serial.println("Creating task " + String(name) + " with priority " + String(priority) + " and stack size " + String(stackSize));
+        Log.traceln("Creating task %s with priority %d and stack size %d",
+            name.c_str(), priority, stackSize);
         xTaskCreate(executeTask, name.c_str(), stackSize, task, priority, &(task->taskHandle));
     }
 
@@ -59,7 +61,8 @@ public:
             return true;
         }
         auto newWakeTime = xTaskGetTickCount();
-        Serial.println("Task " + name + " missed deadline by " + String(duration_cast<milliseconds>(ticks(newWakeTime - lastWakeTime)).count()) + " ms");
+        Serial.printf("Task '%s' missed deadline by %lld ms\n",
+            name.c_str(), duration_cast<milliseconds>(ticks(newWakeTime - lastWakeTime)).count());
         lastWakeTime = newWakeTime;
         return false;
     }
@@ -76,6 +79,19 @@ public:
         return xTaskAbortDelay(taskHandle);
     }
 
+#ifdef FARMHUB_DEBUG
+    static const uint32_t CONSOLE_BUFFER_INDEX = 1;
+
+    static String* consoleBuffer() {
+        String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX));
+        if (buffer == nullptr) {
+            buffer = new String();
+            vTaskSetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX, static_cast<void*>(buffer));
+        }
+        return buffer;
+    }
+#endif
+
 private:
     Task(String name, TaskFunction taskFunction)
         : name(name)
@@ -85,12 +101,21 @@ private:
 
     static void executeTask(void* parameters) {
         Task* task = static_cast<Task*>(parameters);
-        task->taskFunction(*task);
         auto handle = task->taskHandle;
-        auto name = task->name;
-        delete task;
-        Serial.println("Finished task " + name);
+        auto& name = task->name;
+        Serial.printf("Starting task %s\n",
+            name.c_str());
+        task->taskFunction(*task);
+        Serial.printf("Finished task %s\n",
+            name.c_str());
+#ifdef FARMHUB_DEBUG
+        String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(handle, CONSOLE_BUFFER_INDEX));
+        if (buffer != nullptr) {
+            delete buffer;
+        }
+#endif
         vTaskDelete(handle);
+        delete task;
     }
 
     const String name;

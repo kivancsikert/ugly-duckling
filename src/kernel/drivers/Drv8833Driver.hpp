@@ -34,7 +34,7 @@ public:
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
 
-        Serial.printf("Initializing DRV8833 on pins ain1 = %d, ain2 = %d, bin1 = %d, bin2 = %d, fault = %d, sleep = %d\n",
+        Log.infoln("Initializing DRV8833 on pins ain1 = %d, ain2 = %d, bin1 = %d, bin2 = %d, fault = %d, sleep = %d",
             ain1Pin, ain2Pin, bin1Pin, bin2Pin, faultPin, sleepPin);
 
         pinMode(sleepPin, OUTPUT);
@@ -82,11 +82,11 @@ private:
 
         void drive(MotorPhase phase, double duty = 1) override {
             int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
-            Serial.printf("Driving motor %s on pins %d/%d at %.1f%%\n",
+            Log.traceln("Driving motor %s on pins %d/%d at %d%%",
                 phase == MotorPhase::FORWARD ? "forward" : "reverse",
                 in1Channel.pin,
                 in2Channel.pin,
-                duty * 100);
+                (int) (duty * 100));
 
             switch (phase) {
                 case MotorPhase::FORWARD:

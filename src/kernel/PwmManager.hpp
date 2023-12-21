@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include <ArduinoLog.h>
+
 namespace farmhub { namespace kernel {
 
 // TODO Figure out what to do with low/high speed modes
@@ -41,7 +43,7 @@ public:
         pinMode(pin, OUTPUT);
         ledcAttachPin(pin, channel);
         ledcSetup(channel, freq, resolutionBits);
-        Serial.printf("Registered PWM channel %d on pin %d with freq %d and resolution %d\n",
+        Log.traceln("Registered PWM channel %d on pin %d with freq %d and resolution %d",
             channel, pin, freq, resolutionBits);
         return PwmChannel(channel, pin, freq, resolutionBits);
     }

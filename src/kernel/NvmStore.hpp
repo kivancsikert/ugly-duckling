@@ -5,6 +5,7 @@
 #include <Preferences.h>
 
 #include <ArduinoJson.h>
+#include <ArduinoLog.h>
 
 #include <kernel/Concurrent.hpp>
 
@@ -31,7 +32,8 @@ public:
             if (jsonString.length() == 0) {
                 return false;
             }
-            // Serial.println("NVM: get(" + String(key) + ") = " + jsonString);
+            Log.verboseln("NVM: get(%s) = %s",
+                key, jsonString.c_str());
             DynamicJsonDocument jsonDocument(bufferSize);
             deserializeJson(jsonDocument, jsonString);
             if (jsonDocument.isNull()) {
@@ -54,7 +56,8 @@ public:
             jsonDocument.set(value);
             String jsonString;
             serializeJson(jsonDocument, jsonString);
-            // Serial.println("NVM: set(" + String(key) + ") = " + jsonString);
+            Log.verboseln("NVM: set(%s) = %s",
+                key, jsonString.c_str());
             return preferences.putString(key, jsonString.c_str());
         });
     }
@@ -65,7 +68,8 @@ public:
 
     bool remove(const char* key) {
         return withPreferences(false, [&]() {
-            // Serial.println("NVM: remove(" + String(key) + ")");
+            Log.verboseln("NVM: remove(%s)",
+                key);
             return preferences.remove(key);
         });
     }

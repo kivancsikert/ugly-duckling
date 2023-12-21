@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 
+#include <ArduinoLog.h>
+
 #include <kernel/drivers/WiFiDriver.hpp>
 
 #include <kernel/Task.hpp>
@@ -13,7 +15,7 @@ class OtaDriver {
 
 public:
     OtaDriver(State& networkReady, const String& hostname) {
-        Task::run("OTA", 3072, [&networkReady, hostname](Task& task) {
+        Task::run("ota", 3072, [&networkReady, hostname](Task& task) {
             networkReady.awaitSet();
 
             ArduinoOTA.setHostname(hostname.c_str());
@@ -49,7 +51,8 @@ public:
             });
             ArduinoOTA.begin();
 
-            Serial.println("OTA initialized on hostname " + hostname);
+            Log.infoln("OTA initialized on hostname %s",
+                hostname.c_str());
 
             // TODO Update wake time before loop to avoid task "missing" first deadline
 

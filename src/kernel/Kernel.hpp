@@ -5,6 +5,8 @@
 
 #include <freertos/FreeRTOS.h>
 
+#include <ArduinoLog.h>
+
 #include <kernel/Command.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/Telemetry.hpp>
@@ -26,73 +28,6 @@ template <typename TConfiguration>
 class Kernel;
 
 static RTC_DATA_ATTR int bootCount = 0;
-
-class ConsolePrinter {
-public:
-    ConsolePrinter() {
-        static const String spinner = "|/-\\";
-        Task::loop("ConsolePrinter", 8192, 1, [this](Task& task) {
-            Serial.print("\033[1G\033[0K");
-
-            counter = (counter + 1) % spinner.length();
-            Serial.print("[" + spinner.substring(counter, counter + 1) + "] ");
-
-            Serial.print("\033[33m" + String(VERSION) + "\033[0m");
-
-            Serial.print(", IP: \033[33m" + WiFi.localIP().toString() + "\033[0m");
-            Serial.print("/" + wifiStatus());
-
-            Serial.printf(", uptime: \033[33m%.1f\033[0m s", float(millis()) / 1000.0f);
-            time_t now;
-            struct tm timeinfo;
-            time(&now);
-            localtime_r(&now, &timeinfo);
-            Serial.print(&timeinfo, ", UTC: \033[33m%Y-%m-%d %H:%M:%S\033[0m");
-
-            Serial.printf(", heap: \033[33m%.2f\033[0m kB", float(ESP.getFreeHeap()) / 1024.0f);
-
-            BatteryDriver* battery = this->battery.load();
-            if (battery != nullptr) {
-                Serial.printf(", battery: \033[33m%.2f V\033[0m", battery->getVoltage());
-            }
-
-            Serial.print(" ");
-            Serial.flush();
-            task.delayUntil(milliseconds(100));
-        });
-    }
-
-    void registerBattery(BatteryDriver& battery) {
-        this->battery = &battery;
-    }
-
-private:
-    static String wifiStatus() {
-        switch (WiFi.status()) {
-            case WL_NO_SHIELD:
-                return "\033[0;31mno shield\033[0m";
-            case WL_IDLE_STATUS:
-                return "\033[0;33midle\033[0m";
-            case WL_NO_SSID_AVAIL:
-                return "\033[0;31mno SSID\033[0m";
-            case WL_SCAN_COMPLETED:
-                return "\033[0;33mscan completed\033[0m";
-            case WL_CONNECTED:
-                return "\033[0;32mOK\033[0m";
-            case WL_CONNECT_FAILED:
-                return "\033[0;31mfailed\033[0m";
-            case WL_CONNECTION_LOST:
-                return "\033[0;31mconnection lost\033[0m";
-            case WL_DISCONNECTED:
-                return "\033[0;33mdisconnected\033[0m";
-            default:
-                return "\033[0;31munknown\033[0m";
-        }
-    }
-
-    int counter;
-    std::atomic<BatteryDriver*> battery { nullptr };
-};
 
 class MemoryTelemetryProvider : public TelemetryProvider {
 public:
@@ -154,7 +89,7 @@ public:
         : version(VERSION)
         , statusLed(statusLed) {
 
-        Serial.printf("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s'\n",
+        Log.infoln("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s'",
             version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
@@ -202,7 +137,8 @@ public:
             });
         Task::loop("telemetry", 8192, [this](Task& task) { publishTelemetry(task); });
 
-        Serial.println("Kernel initialized in " + String(millis()) + " ms");
+        Log.infoln("Kernel ready in %d ms",
+            millis());
     }
 
     void registerTelemetryProvider(const String& name, TelemetryProvider& provider) {
@@ -230,10 +166,6 @@ public:
             command.handle(request, response);
         });
     }
-
-#ifdef FARMHUB_DEBUG
-    ConsolePrinter consolePrinter;
-#endif
 
 private:
     enum class KernelState {
@@ -274,9 +206,13 @@ private:
         }
 
         if (newState != state) {
-            Serial.printf("Kernel state changed from %d to %d\n", state, newState);
+            Log.traceln("Kernel state changed from %d to %d",
+                state, newState);
             state = newState;
             switch (newState) {
+                case KernelState::BOOTING:
+                    statusLed.turnOff();
+                    break;
                 case KernelState::NETWORK_CONNECTING:
                     statusLed.blink(milliseconds(200));
                     break;

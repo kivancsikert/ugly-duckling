@@ -112,7 +112,7 @@ public:
         , clientId(getClientId(config.clientId.get(), instanceName))
         , rootTopic(getTopic(config.topic.get(), instanceName))
         , mqttReady(mqttReady) {
-        Task::run("MQTT", 8192, 1, [this](Task& task) {
+        Task::run("mqtt", 8192, 1, [this](Task& task) {
             setup();
             while (true) {
                 auto delay = loopAndDelay();
@@ -124,10 +124,10 @@ public:
     bool publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
         const String topic = rootTopic + "/" + suffix;
 #ifdef DUMP_MQTT
-        Serial.printf("Queuing MQTT topic '%s'%s (qos = %d): ",
-            topic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), qos);
-        serializeJsonPretty(json, Serial);
-        Serial.println();
+        String serializedJson;
+        serializeJsonPretty(json, serializedJson);
+        Log.infoln("MQTT: Queuing topic '%s'%s (qos = %d): %s",
+            topic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), qos, serializedJson.c_str());
 #endif
         return publishQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, json, retain, qos);
     }
@@ -141,7 +141,8 @@ public:
 
     bool clear(const String& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
         String topic = rootTopic + "/" + suffix;
-        Serial.println("Clearing MQTT topic '" + topic + "'");
+        Log.traceln("MQTT: Clearing topic '%s'",
+            topic.c_str());
         return publishQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, "", retain, qos);
     }
 
@@ -173,7 +174,8 @@ private:
 
         mqttClient.onMessage([&](String& topic, String& payload) {
 #ifdef DUMP_MQTT
-            Serial.println("Received '" + topic + "' (size: " + payload.length() + "): " + payload);
+            Log.infoln("MQTT: Received '%s' (size: %d): %s",
+                topic.c_str(), payload.length(), payload.c_str());
 #endif
             incomingQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, payload, Retention::NoRetain, QoS::ExactlyOnce);
         });
@@ -184,19 +186,20 @@ private:
             mqttClient.begin(mqttServer.ip.toString().c_str(), mqttServer.port, wifiClient);
         }
 
-        Serial.println("MQTT: server: " + mqttServer.hostname + ":" + String(mqttServer.port)
-            + ", client ID is '" + clientId + "', topic is '" + rootTopic + "'");
+        Log.infoln("MQTT: server: %s:%d, client ID is '%s', topic is '%s'",
+            mqttServer.hostname.c_str(), mqttServer.port, clientId.c_str(), rootTopic.c_str());
     }
 
     ticks loopAndDelay() {
         networkReady.awaitSet();
 
         if (!mqttClient.connected()) {
-            Serial.println("MQTT: Disconnected, reconnecting");
+            Log.infoln("MQTT: Disconnected, connecting");
             mqttReady.clear();
 
             if (!mqttClient.connect(clientId.c_str())) {
-                Serial.println("MQTT: Connection failed");
+                Log.errorln("MQTT: Connection failed, error = %d",
+                    mqttClient.lastError());
                 // TODO Implement exponential backoff
                 return MQTT_DISCONNECTED_CHECK_INTERVAL;
             }
@@ -206,7 +209,7 @@ private:
                 registerSubscriptionWithMqtt(subscription.suffix, subscription.qos);
             }
 
-            Serial.println("MQTT: Connected");
+            Log.infoln("MQTT: Connected");
             mqttReady.set();
         }
 
@@ -224,11 +227,12 @@ private:
         publishQueue.drain([&](const Message& message) {
             bool success = mqttClient.publish(message.topic, message.payload, message.retain == Retention::Retain, static_cast<int>(message.qos));
 #ifdef DUMP_MQTT
-            Serial.printf("Published to '%s' (size: %d)\n", message.topic.c_str(), message.payload.length());
+            Log.infoln("MQTT: Published to '%s' (size: %d)",
+                message.topic.c_str(), message.payload.length());
 #endif
             if (!success) {
-                Serial.printf("Error publishing to MQTT topic at '%s', error = %d\n",
-                    message.topic, mqttClient.lastError());
+                Log.errorln("MQTT: Error publishing to '%s', error = %d",
+                    message.topic.c_str(), mqttClient.lastError());
             }
         });
     }
@@ -250,13 +254,13 @@ private:
             deserializeJson(json, payload);
             if (payload.isEmpty()) {
 #ifdef DUMP_MQTT
-                Serial.println("Ignoring empty payload");
+                Log.infoln("MQTT: Ignoring empty payload");
 #endif
                 return;
             }
 
             auto suffix = topic.substring(rootTopic.length() + 1);
-            Serial.printf("Received message: '%s'\n", suffix.c_str());
+            Log.traceln("MQTT: Received message: '%s'", suffix.c_str());
             for (auto subscription : subscriptions) {
                 if (subscription.suffix == suffix) {
                     auto request = json.as<JsonObject>();
@@ -264,17 +268,19 @@ private:
                     return;
                 }
             }
-            Serial.printf("Unknown subscription suffix: '%s'\n", suffix.c_str());
+            Log.warningln("MQTT: No handler for suffix '%s'",
+                suffix.c_str());
         });
     }
 
     // Actually subscribe to the given topic
     bool registerSubscriptionWithMqtt(const String& suffix, QoS qos) {
         String topic = rootTopic + "/" + suffix;
-        Serial.printf("Subscribing to MQTT topic '%s' with QOS = %d\n", topic.c_str(), qos);
+        Log.infoln("MQTT: Subscribing to topic '%s' (qos = %d)",
+            topic.c_str(), qos);
         bool success = mqttClient.subscribe(topic.c_str(), static_cast<int>(qos));
         if (!success) {
-            Serial.printf("Error subscribing to MQTT topic '%s', error = %d\n",
+            Log.error("MQTT: Error subscribing to topic '%s', error = %d\n",
                 topic.c_str(), mqttClient.lastError());
         }
         return success;
@@ -299,10 +305,11 @@ private:
     MdnsDriver& mdns;
     Config& config;
     const String instanceName;
-    StateSource& mqttReady;
 
     const String clientId;
     const String rootTopic;
+
+    StateSource& mqttReady;
 
     MdnsRecord mqttServer;
     MQTTClient mqttClient { MQTT_BUFFER_SIZE };

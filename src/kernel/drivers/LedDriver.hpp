@@ -4,6 +4,8 @@
 #include <chrono>
 #include <list>
 
+#include <ArduinoLog.h>
+
 #include <kernel/Concurrent.hpp>
 #include <kernel/Task.hpp>
 
@@ -19,6 +21,9 @@ public:
         : pin(pin)
         , patternQueue(name, 1)
         , pattern({ -milliseconds::max() }) {
+        Log.infoln("Initializing LED driver on pin %d",
+            pin);
+
         pinMode(pin, OUTPUT);
         Task::loop(name, 2048, [this](Task& task) {
             if (currentPattern.empty()) {

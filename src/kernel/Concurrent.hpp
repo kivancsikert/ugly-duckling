@@ -17,9 +17,7 @@ class Queue {
 public:
     Queue(const String& name, size_t capacity = 16)
         : name(name)
-        , queue(xQueueCreate(capacity, sizeof(TMessage*)))
-        , sendTimeout(sendTimeout)
-        , receiveTimeout(receiveTimeout) {
+        , queue(xQueueCreate(capacity, sizeof(TMessage*))) {
     }
 
     ~Queue() {
@@ -43,7 +41,8 @@ public:
         TMessage* copy = new TMessage(std::forward<Args>(args)...);
         bool sentWithoutDropping = xQueueSend(queue, &copy, timeout.count()) == pdTRUE;
         if (!sentWithoutDropping) {
-            Serial.println("Overflow in queue '" + name + "', dropping message");
+            Serial.printf("Overflow in queue '%s', dropping message\n",
+                name.c_str());
             delete copy;
         }
         return sentWithoutDropping;
@@ -55,7 +54,8 @@ public:
         BaseType_t xHigherPriorityTaskWoken;
         bool sentWithoutDropping = xQueueSendFromISR(queue, &copy, &xHigherPriorityTaskWoken) == pdTRUE;
         if (!sentWithoutDropping) {
-            Serial.println("Overflow in queue '" + name + "', dropping message");
+            Serial.printf("Overflow in queue '%s', dropping message\n",
+                name.c_str());
             delete copy;
         }
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
@@ -76,9 +76,16 @@ public:
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 
-    int drain(MessageHandler handler) {
-        int count = 0;
-        while (poll(handler)) {
+    size_t drain(MessageHandler handler) {
+        return drain(SIZE_MAX, handler);
+    }
+
+    size_t drain(size_t maxItems, MessageHandler handler) {
+        size_t count = 0;
+        while (count < maxItems) {
+            if (!poll(handler)) {
+                break;
+            }
             count++;
         }
         return count;
@@ -121,8 +128,6 @@ public:
 private:
     const String name;
     const QueueHandle_t queue;
-    const ticks sendTimeout;
-    const ticks receiveTimeout;
 };
 
 class Mutex {

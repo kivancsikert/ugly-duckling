@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include <ArduinoLog.h>
+
 #include <kernel/Telemetry.hpp>
 
 namespace farmhub { namespace kernel { namespace drivers {
@@ -12,6 +14,9 @@ public:
     BatteryDriver(gpio_num_t pin, float voltageDividerRatio)
         : pin(pin)
         , voltageDividerRatio(voltageDividerRatio) {
+        Log.infoln("Initializing battery driver on pin %d",
+            pin);
+
         pinMode(pin, INPUT);
     }
 
