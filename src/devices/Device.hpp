@@ -43,6 +43,7 @@ typedef farmhub::devices::Mk6Config TDeviceConfiguration;
 
 namespace farmhub { namespace devices {
 
+#ifdef FARMHUB_DEBUG
 class ConsolePrinter : public Print {
 public:
     ConsolePrinter() {
@@ -147,7 +148,6 @@ private:
     Queue<String> consoleQueue { "console", 128 };
 };
 
-#ifdef FARMHUB_DEBUG
 ConsolePrinter consolePrinter;
 
 void printLogLine(Print* printer, int level) {
