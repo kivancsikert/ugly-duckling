@@ -11,6 +11,7 @@
 #include <devices/Peripheral.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/Task.hpp>
+#include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 
 using namespace std::chrono;
@@ -155,10 +156,11 @@ private:
     const double switchDuty;
 };
 
-class Valve : public Peripheral {
+class Valve
+    : public TelemetryProvidingPeripheral {
 public:
     Valve(const String& name, PwmMotorDriver& controller, unique_ptr<ValveControlStrategy> strategy)
-        : Peripheral(name)
+        : TelemetryProvidingPeripheral(name)
         , controller(controller)
         , strategy(move(strategy)) {
         Log.infoln("Creating valve '%s' with strategy %s",
@@ -207,6 +209,10 @@ public:
                 break;
         }
         // TODO Publish event
+    }
+
+    void populateTelemetry(JsonObject& telemetry) override {
+        telemetry["state"] = this->state;
     }
 
 private:

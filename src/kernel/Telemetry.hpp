@@ -9,8 +9,8 @@
 namespace farmhub { namespace kernel {
 
 class TelemetryProvider {
+public:
     virtual void populateTelemetry(JsonObject& json) = 0;
-    friend class TelemetryCollector;
 };
 
 class TelemetryCollector {

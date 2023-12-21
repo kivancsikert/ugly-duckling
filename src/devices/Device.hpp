@@ -183,6 +183,8 @@ public:
 
         kernel.begin();
 
+        kernel.registerTelemetryProvider("peripherals", peripheralManager);
+
         peripheralManager.begin();
 
 #if defined(MK4)
