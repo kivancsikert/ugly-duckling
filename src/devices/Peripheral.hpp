@@ -79,13 +79,6 @@ public:
 class PeripheralManager
     : public TelemetryProvider {
 public:
-    class ConstructionConfiguration : public ConfigurationSection {
-    public:
-        Property<String> name { this, "name" };
-        Property<String> type { this, "type" };
-        Property<JsonAsString> params { this, "params" };
-    };
-
     PeripheralManager(ObjectArrayProperty<JsonAsString>& peripheralsConfig)
         : peripheralsConfig(peripheralsConfig) {
     }
@@ -124,6 +117,13 @@ public:
     }
 
 private:
+    class ConstructionConfiguration : public ConfigurationSection {
+    public:
+        Property<String> name { this, "name" };
+        Property<String> type { this, "type" };
+        Property<JsonAsString> params { this, "params" };
+    };
+
     unique_ptr<Peripheral> createPeripheral(const String& name, const String& type, const String& configJson) {
         Log.traceln("Creating peripheral: %s of type %s",
             name.c_str(), type.c_str());
