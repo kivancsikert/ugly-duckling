@@ -15,27 +15,12 @@ using namespace farmhub::kernel;
 
 namespace farmhub { namespace devices {
 
-// Configuration
-
-class PeripheralConfiguration : public ConfigurationSection {
-public:
-    PeripheralConfiguration() {
-    }
-
-    Property<String> name { this, "name" };
-    Property<String> type { this, "type" };
-    Property<JsonAsString> params { this, "params" };
-};
-
 // Peripherals
 
 class Peripheral {
 public:
     Peripheral(const String& name)
         : name(name) {
-    }
-
-    virtual ~Peripheral() {
     }
 
     virtual TelemetryProvider* getAsTelemetryProvider() {
@@ -94,6 +79,13 @@ public:
 class PeripheralManager
     : public TelemetryProvider {
 public:
+    class ConstructionConfiguration : public ConfigurationSection {
+    public:
+        Property<String> name { this, "name" };
+        Property<String> type { this, "type" };
+        Property<JsonAsString> params { this, "params" };
+    };
+
     PeripheralManager(ObjectArrayProperty<JsonAsString>& peripheralsConfig)
         : peripheralsConfig(peripheralsConfig) {
         // TODO Update config from MQTT
@@ -129,7 +121,7 @@ private:
             peripheralsConfig.get().size());
 
         for (auto& perpheralConfigJsonAsString : peripheralsConfig.get()) {
-            PeripheralConfiguration perpheralConfig;
+            ConstructionConfiguration perpheralConfig;
             perpheralConfig.loadFromString(perpheralConfigJsonAsString.get());
             unique_ptr<Peripheral> peripheral = createPeripheral(perpheralConfig.name.get(), perpheralConfig.type.get(), perpheralConfig.params.get().get());
             if (peripheral == nullptr) {
