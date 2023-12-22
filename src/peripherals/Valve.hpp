@@ -156,20 +156,25 @@ private:
     const double switchDuty;
 };
 
-class Valve
-    : public TelemetryProvidingPeripheral {
+class ValveConfig
+    : public ConfigurationSection {
 public:
-    Valve(const String& name, PwmMotorDriver& controller, unique_ptr<ValveControlStrategy> strategy)
-        : TelemetryProvidingPeripheral(name)
+};
+
+class Valve
+    : public Peripheral<ValveConfig> {
+public:
+    Valve(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy)
+        : Peripheral<ValveConfig>(name)
         , controller(controller)
-        , strategy(move(strategy)) {
+        , strategy(strategy) {
         Log.infoln("Creating valve '%s' with strategy %s",
-            name.c_str(), this->strategy->describe().c_str());
+            name.c_str(), strategy.describe().c_str());
 
         controller.stop();
 
         // TODO Restore stored state
-        setState(this->strategy->getDefaultState());
+        setState(strategy.getDefaultState());
 
         Task::loop(name, 4096, [this](Task& task) {
             open();
@@ -181,13 +186,13 @@ public:
 
     void open() {
         Log.traceln("Opening valve");
-        strategy->open(controller);
+        strategy.open(controller);
         this->state = ValveState::OPEN;
     }
 
     void close() {
         Log.traceln("Closing valve");
-        strategy->close(controller);
+        strategy.close(controller);
         this->state = ValveState::CLOSED;
     }
 
@@ -217,15 +222,15 @@ public:
 
 private:
     PwmMotorDriver& controller;
-    unique_ptr<ValveControlStrategy> strategy;
+    ValveControlStrategy& strategy;
 
     ValveState state = ValveState::NONE;
 };
 
-class ValveConfiguration
+class ValveCreationConfig
     : public ConfigurationSection {
 public:
-    ValveConfiguration(ValveControlStrategyType defaultStrategy)
+    ValveCreationConfig(ValveControlStrategyType defaultStrategy)
         : strategy(this, "strategy", defaultStrategy) {
     }
 
@@ -236,22 +241,22 @@ public:
 };
 
 class ValveFactory
-    : public PeripheralFactory<ValveConfiguration> {
+    : public PeripheralFactory<ValveCreationConfig> {
 public:
     ValveFactory(const std::list<ServiceRef<PwmMotorDriver>>& motors, ValveControlStrategyType defaultStrategy)
-        : PeripheralFactory<ValveConfiguration>("valve")
+        : PeripheralFactory<ValveCreationConfig>("valve")
         , motors(motors)
         , defaultStrategy(defaultStrategy) {
     }
 
-    unique_ptr<ValveConfiguration> createConfig() override {
-        return make_unique<ValveConfiguration>(defaultStrategy);
+    ValveCreationConfig* createConstructionConfig() override {
+        return new ValveCreationConfig(defaultStrategy);
     }
 
-    unique_ptr<Peripheral> createPeripheral(const String& name, unique_ptr<const ValveConfiguration> config) override {
+    PeripheralBase* createPeripheral(const String& name, const ValveCreationConfig& config) override {
         PwmMotorDriver* targetMotor = nullptr;
         for (auto& motor : motors) {
-            if (motor.getName() == config->motor.get()) {
+            if (motor.getName() == config.motor.get()) {
                 targetMotor = &(motor.get());
                 break;
             }
@@ -259,29 +264,29 @@ public:
         if (targetMotor == nullptr) {
             // TODO Add proper error handling
             Log.errorln("Failed to find motor: %s",
-                config->motor.get().c_str());
+                config.motor.get().c_str());
             return nullptr;
         }
-        unique_ptr<ValveControlStrategy> strategy = createStrategy(*config);
+        ValveControlStrategy* strategy = createStrategy(config);
         if (strategy == nullptr) {
             // TODO Add proper error handling
             Log.errorln("Failed to create strategy");
             return nullptr;
         }
-        return make_unique<Valve>(name, *targetMotor, move(strategy));
+        return new Valve(name, *targetMotor, *strategy);
     }
 
 private:
-    unique_ptr<ValveControlStrategy> createStrategy(const ValveConfiguration& config) {
+    ValveControlStrategy* createStrategy(const ValveCreationConfig& config) {
         auto switchDuration = config.switchDuration.get();
         auto duty = config.duty.get() / 100.0;
         switch (config.strategy.get()) {
             case ValveControlStrategyType::NormallyOpen:
-                return make_unique<NormallyOpenValveControlStrategy>(switchDuration, duty);
+                return new NormallyOpenValveControlStrategy(switchDuration, duty);
             case ValveControlStrategyType::NormallyClosed:
-                return make_unique<NormallyClosedValveControlStrategy>(switchDuration, duty);
+                return new NormallyClosedValveControlStrategy(switchDuration, duty);
             case ValveControlStrategyType::Latching:
-                return make_unique<LatchingValveControlStrategy>(switchDuration, duty);
+                return new LatchingValveControlStrategy(switchDuration, duty);
             default:
                 // TODO Add proper error handling
                 return nullptr;

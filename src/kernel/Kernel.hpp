@@ -269,9 +269,14 @@ private:
     MdnsDriver mdns { networkReadyState, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
     RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp, rtcInSyncState };
     TelemetryCollector telemetryCollector;
+
+public:
     MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), mqttReadyState };
+
+private:
     MqttDriver::MqttRoot mqttDeviceRoot = mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
     MqttTelemetryPublisher telemetryPublisher { mqttDeviceRoot, telemetryCollector };
+
     EchoCommand echoCommand;
     PingCommand pingCommand { telemetryPublisher };
     RestartCommand restartCommand;

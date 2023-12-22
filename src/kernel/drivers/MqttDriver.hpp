@@ -289,11 +289,9 @@ private:
             const String& topic = message.topic;
             const String& payload = message.payload;
 
-            DynamicJsonDocument json(payload.length() * 2);
-            deserializeJson(json, payload);
             if (payload.isEmpty()) {
 #ifdef DUMP_MQTT
-                Log.infoln("MQTT: Ignoring empty payload");
+                Log.verboseln("MQTT: Ignoring empty payload");
 #endif
                 return;
             }
@@ -301,8 +299,9 @@ private:
             Log.traceln("MQTT: Received message: '%s'", topic.c_str());
             for (auto subscription : subscriptions) {
                 if (subscription.topic == topic) {
-                    auto request = json.as<JsonObject>();
-                    subscription.handle(topic, request);
+                    DynamicJsonDocument json(docSizeFor(payload));
+                    deserializeJson(json, payload);
+                    subscription.handle(topic, json.as<JsonObject>());
                     return;
                 }
             }

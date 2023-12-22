@@ -272,9 +272,9 @@ public:
             DeserializationError error = deserializeJson(json, file);
             file.close();
             if (error) {
-                throw "Cannot open config file " + path;
+                throw "Cannot open config file " + path + " (" + String(error.c_str()) + ")";
             }
-            load(json.as<JsonObject>());
+            update(json.as<JsonObject>());
         }
         onUpdate([&fs, path](const JsonObject& json) {
             File file = fs.open(path, FILE_WRITE);
@@ -292,22 +292,9 @@ public:
     }
 
     void update(const JsonObject& json) {
-        load(json);
-    }
-
-    void onUpdate(const std::function<void(const JsonObject&)> callback) {
-        callbacks.push_back(callback);
-    }
-
-    virtual void store(JsonObject& json, bool inlineDefaults) const {
-        config.store(json, inlineDefaults);
-    }
-
-    TConfiguration config;
-
-private:
-    void load(const JsonObject& json) {
         config.load(json);
+
+        // TODO Check hash to see if there really was a change
 
         // Print effective configuration
         // TODO Estimate size of printed JSON based on the size of the configuration
@@ -324,6 +311,17 @@ private:
         }
     }
 
+    void onUpdate(const std::function<void(const JsonObject&)> callback) {
+        callbacks.push_back(callback);
+    }
+
+    void store(JsonObject& json, bool inlineDefaults) const {
+        config.store(json, inlineDefaults);
+    }
+
+    TConfiguration config;
+
+private:
     const String path;
     std::list<std::function<void(const JsonObject&)>> callbacks;
 };

@@ -199,7 +199,7 @@ public:
 private:
     TDeviceDefinition deviceDefinition;
     Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.statusLed };
-    PeripheralManager peripheralManager { deviceDefinition.config.peripherals };
+    PeripheralManager peripheralManager { kernel.mqtt, deviceDefinition.config.peripherals };
 };
 
 }}    // namespace farmhub::devices
