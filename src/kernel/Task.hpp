@@ -45,7 +45,13 @@ public:
         return xTaskAbortDelay(handle);
     }
 
-    const TaskHandle_t handle;
+    void abort() {
+        suspend();
+        vTaskDelete(handle);
+    }
+
+private:
+    TaskHandle_t handle;
 };
 
 class Task {
@@ -123,14 +129,16 @@ private:
     }
 
     static void executeTask(void* parameters) {
-        TaskFunction* taskFunction = static_cast<TaskFunction*>(parameters);
+        TaskFunction* taskFunctionParam = static_cast<TaskFunction*>(parameters);
+        TaskFunction taskFunction(*taskFunctionParam);
+        delete taskFunctionParam;
+
         Log.traceln("Starting task %s\n",
             pcTaskGetName(nullptr));
         Task task;
-        (*taskFunction)(task);
+        taskFunction(task);
         Log.traceln("Finished task %s\n",
             pcTaskGetName(nullptr));
-        delete taskFunction;
     }
 
     TickType_t lastWakeTime { xTaskGetTickCount() };

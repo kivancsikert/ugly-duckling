@@ -38,7 +38,7 @@ public:
             , rootTopic(rootTopic) {
         }
 
-        MqttRoot(MqttRoot&& other)
+        MqttRoot(const MqttRoot& other)
             : mqtt(other.mqtt)
             , rootTopic(other.rootTopic) {
         }

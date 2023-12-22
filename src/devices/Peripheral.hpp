@@ -28,10 +28,6 @@ public:
     virtual ~PeripheralBase() = default;
 
     const String name;
-
-protected:
-    virtual void updateConfiguration(const JsonObject& json) = 0;
-    friend class PeripheralManager;
 };
 
 template <typename TConfig>
@@ -40,27 +36,14 @@ class Peripheral
 public:
     Peripheral(const String& name)
         : PeripheralBase(name) {
-        configFile.onUpdate([this, name](const JsonObject& json) {
-            Log.traceln("Config file updated for peripheral: %s", name.c_str());
-            configure(configFile.config);
-        });
-        configure(configFile.config);
     }
 
     virtual void populateTelemetry(JsonObject& json) {
     }
 
-protected:
     virtual void configure(const TConfig& config) {
+        Log.verboseln("No configuration to apply for peripheral: %s", name.c_str());
     }
-
-    void updateConfiguration(const JsonObject& json) {
-        configFile.update(json);
-    };
-
-private:
-    ConfigurationFile<TConfig> configFile { FileSystem::get(), "/peripherals/" + name + ".json" };
-    friend class PeripheralManager;
 };
 
 // Peripheral factories
@@ -71,28 +54,36 @@ public:
         : type(type) {
     }
 
-    virtual PeripheralBase* createPeripheral(const String& name, const String& jsonConfig) = 0;
+    virtual PeripheralBase* createPeripheral(const String& name, const String& jsonConfig, MqttDriver::MqttRoot mqttRoot) = 0;
 
     const String type;
 };
 
-template <typename TConstructionConfig>
+template <typename TDeviceConfig, typename TConfig>
 class PeripheralFactory : public PeripheralFactoryBase {
 public:
     PeripheralFactory(const String& type)
         : PeripheralFactoryBase(type) {
     }
 
-    virtual TConstructionConfig* createConstructionConfig() = 0;
+    virtual TDeviceConfig* createDeviceConfig() = 0;
 
-    PeripheralBase* createPeripheral(const String& name, const String& jsonConfig) override {
-        TConstructionConfig* config = createConstructionConfig();
+    PeripheralBase* createPeripheral(const String& name, const String& jsonConfig, MqttDriver::MqttRoot mqttRoot) override {
         Log.traceln("Creating peripheral: %s of type %s", name.c_str(), type.c_str());
-        config->loadFromString(jsonConfig);
-        return createPeripheral(name, *config);
+
+        ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/peripherals/" + name + ".json");
+        mqttRoot.subscribe("config", [configFile](const String&, const JsonObject& configJson) {
+            configFile->update(configJson);
+        });
+
+        TDeviceConfig* deviceConfig = createDeviceConfig();
+        deviceConfig->loadFromString(jsonConfig);
+        Peripheral<TConfig>* peripheral = createPeripheral(name, *deviceConfig);
+        peripheral->configure(configFile->config);
+        return peripheral;
     }
 
-    virtual PeripheralBase* createPeripheral(const String& name, const TConstructionConfig& config) = 0;
+    virtual Peripheral<TConfig>* createPeripheral(const String& name, const TDeviceConfig& deviceConfig) = 0;
 };
 
 // Peripheral manager
@@ -116,11 +107,11 @@ public:
             peripheralsConfig.get().size());
 
         for (auto& perpheralConfigJsonAsString : peripheralsConfig.get()) {
-            ConstructionConfiguration constructionConfig;
-            constructionConfig.loadFromString(perpheralConfigJsonAsString.get());
-            const String& name = constructionConfig.name.get();
-            const String& type = constructionConfig.type.get();
-            PeripheralBase* peripheral = createPeripheral(name, type, constructionConfig.params.get().get());
+            PeripheralDeviceConfiguration deviceConfig;
+            deviceConfig.loadFromString(perpheralConfigJsonAsString.get());
+            const String& name = deviceConfig.name.get();
+            const String& type = deviceConfig.type.get();
+            PeripheralBase* peripheral = createPeripheral(name, type, deviceConfig.params.get().get());
             if (peripheral == nullptr) {
                 Log.errorln("Failed to create peripheral: %s of type %s",
                     name.c_str(), type.c_str());
@@ -138,7 +129,7 @@ public:
     }
 
 private:
-    class ConstructionConfiguration : public ConfigurationSection {
+    class PeripheralDeviceConfiguration : public ConfigurationSection {
     public:
         Property<String> name { this, "name" };
         Property<String> type { this, "type" };
@@ -155,13 +146,9 @@ private:
                 type.c_str(), factories.size());
             return nullptr;
         }
-        PeripheralBase* peripheral = it->second.get().createPeripheral(name, configJson);
         MqttDriver::MqttRoot mqttRoot(mqtt, "peripherals/" + type + "/" + name);
-        mqttRoot.subscribe("config", [name, peripheral](const String&, const JsonObject& configJson) {
-            Log.traceln("Updating configuration for peripheral: %s",
-                name.c_str());
-            peripheral->updateConfiguration(configJson);
-        });
+        PeripheralFactoryBase& factory = it->second.get();
+        PeripheralBase* peripheral = factory.createPeripheral(name, configJson, mqttRoot);
         return peripheral;
     }
 

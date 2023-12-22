@@ -159,6 +159,7 @@ private:
 class ValveConfig
     : public ConfigurationSection {
 public:
+    Property<milliseconds> frequency { this, "frequency", seconds(15000) };
 };
 
 class Valve
@@ -175,13 +176,20 @@ public:
 
         // TODO Restore stored state
         setState(strategy.getDefaultState());
+    }
 
-        Task::loop(name, 4096, [this](Task& task) {
+    void configure(const ValveConfig& config) override {
+        if (task != nullptr) {
+            task->abort();
+        }
+        Log.infoln("Configuring valve '%s' with frequency %d",
+            name.c_str(), config.frequency.get().count());
+        task = new TaskHandle(Task::loop(name, [this, &config](Task& task) {
             open();
-            task.delayUntil(seconds(5));
+            task.delayUntil(config.frequency.get() / 2);
             close();
-            task.delayUntil(seconds(5));
-        });
+            task.delayUntil(config.frequency.get() / 2);
+        }));
     }
 
     void open() {
@@ -225,12 +233,13 @@ private:
     ValveControlStrategy& strategy;
 
     ValveState state = ValveState::NONE;
+    TaskHandle* task = nullptr;
 };
 
-class ValveCreationConfig
+class ValveDeviceConfig
     : public ConfigurationSection {
 public:
-    ValveCreationConfig(ValveControlStrategyType defaultStrategy)
+    ValveDeviceConfig(ValveControlStrategyType defaultStrategy)
         : strategy(this, "strategy", defaultStrategy) {
     }
 
@@ -241,22 +250,22 @@ public:
 };
 
 class ValveFactory
-    : public PeripheralFactory<ValveCreationConfig> {
+    : public PeripheralFactory<ValveDeviceConfig, ValveConfig> {
 public:
     ValveFactory(const std::list<ServiceRef<PwmMotorDriver>>& motors, ValveControlStrategyType defaultStrategy)
-        : PeripheralFactory<ValveCreationConfig>("valve")
+        : PeripheralFactory<ValveDeviceConfig, ValveConfig>("valve")
         , motors(motors)
         , defaultStrategy(defaultStrategy) {
     }
 
-    ValveCreationConfig* createConstructionConfig() override {
-        return new ValveCreationConfig(defaultStrategy);
+    ValveDeviceConfig* createDeviceConfig() override {
+        return new ValveDeviceConfig(defaultStrategy);
     }
 
-    PeripheralBase* createPeripheral(const String& name, const ValveCreationConfig& config) override {
+    Valve* createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig) override {
         PwmMotorDriver* targetMotor = nullptr;
         for (auto& motor : motors) {
-            if (motor.getName() == config.motor.get()) {
+            if (motor.getName() == deviceConfig.motor.get()) {
                 targetMotor = &(motor.get());
                 break;
             }
@@ -264,10 +273,10 @@ public:
         if (targetMotor == nullptr) {
             // TODO Add proper error handling
             Log.errorln("Failed to find motor: %s",
-                config.motor.get().c_str());
+                deviceConfig.motor.get().c_str());
             return nullptr;
         }
-        ValveControlStrategy* strategy = createStrategy(config);
+        ValveControlStrategy* strategy = createStrategy(deviceConfig);
         if (strategy == nullptr) {
             // TODO Add proper error handling
             Log.errorln("Failed to create strategy");
@@ -277,7 +286,7 @@ public:
     }
 
 private:
-    ValveControlStrategy* createStrategy(const ValveCreationConfig& config) {
+    ValveControlStrategy* createStrategy(const ValveDeviceConfig& config) {
         auto switchDuration = config.switchDuration.get();
         auto duty = config.duty.get() / 100.0;
         switch (config.strategy.get()) {
