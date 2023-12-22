@@ -33,6 +33,18 @@ public:
         : handle(other.handle) {
     }
 
+    void suspend() {
+        vTaskSuspend(handle);
+    }
+
+    void resume() {
+        vTaskResume(handle);
+    }
+
+    bool abortDelay() {
+        return xTaskAbortDelay(handle);
+    }
+
     const TaskHandle_t handle;
 };
 
@@ -83,15 +95,7 @@ public:
     }
 
     void suspend() {
-        vTaskSuspend(handle);
-    }
-
-    void resume() {
-        vTaskResume(handle);
-    }
-
-    bool abortDelay() {
-        return xTaskAbortDelay(handle);
+        vTaskSuspend(nullptr);
     }
 
 #ifdef FARMHUB_DEBUG
@@ -108,34 +112,28 @@ public:
 #endif
 
 private:
-    Task(TaskHandle_t handle)
-        : handle(handle)
-        , lastWakeTime(xTaskGetTickCount()) {
-    }
-
     ~Task() {
 #ifdef FARMHUB_DEBUG
-        String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(handle, CONSOLE_BUFFER_INDEX));
+        String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX));
         if (buffer != nullptr) {
             delete buffer;
         }
 #endif
-        vTaskDelete(handle);
+        vTaskDelete(nullptr);
     }
 
     static void executeTask(void* parameters) {
         TaskFunction* taskFunction = static_cast<TaskFunction*>(parameters);
         Log.traceln("Starting task %s\n",
             pcTaskGetName(nullptr));
-        Task task(xTaskGetCurrentTaskHandle());
+        Task task;
         (*taskFunction)(task);
         Log.traceln("Finished task %s\n",
             pcTaskGetName(nullptr));
         delete taskFunction;
     }
 
-    const TaskHandle_t handle;
-    TickType_t lastWakeTime;
+    TickType_t lastWakeTime { xTaskGetTickCount() };
 };
 
 }}    // namespace farmhub::kernel
