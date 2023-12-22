@@ -14,6 +14,8 @@
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 
+#include <peripherals/ValveScheduler.hpp>
+
 using namespace std::chrono;
 using std::make_unique;
 using std::move;
@@ -160,6 +162,7 @@ class ValveConfig
     : public ConfigurationSection {
 public:
     Property<milliseconds> frequency { this, "frequency", seconds(15000) };
+    ObjectArrayProperty<ValveSchedule> schedule { this, "schedule" };
 };
 
 class Valve
@@ -347,3 +350,34 @@ void convertFromJson(JsonVariantConst src, ValveControlStrategyType& dst) {
 }
 
 }}    // namespace farmhub::peripherals
+
+namespace ArduinoJson {
+
+using farmhub::peripherals::ValveSchedule;
+template <>
+struct Converter<ValveSchedule> {
+    static void toJson(const ValveSchedule& src, JsonVariant dst) {
+        JsonObject obj = dst.to<JsonObject>();
+        char buf[64];
+        strftime(buf, sizeof(buf), "%FT%TZ", &src.start);
+        obj["start"] = buf;
+        obj["period"] = src.period.count();
+        obj["duration"] = src.duration.count();
+    }
+
+    static ValveSchedule fromJson(JsonVariantConst src) {
+        tm start;
+        strptime(src["start"].as<const char*>(), "%FT%TZ", &start);
+        seconds period = seconds(src["period"].as<int>());
+        seconds duration = seconds(src["duration"].as<int>());
+        return ValveSchedule(start, period, duration);
+    }
+
+    static bool checkJson(JsonVariantConst src) {
+        return src["start"].is<const char*>()
+            && src["period"].is<int>()
+            && src["duration"].is<int>();
+    }
+};
+
+}    // namespace ArduinoJson

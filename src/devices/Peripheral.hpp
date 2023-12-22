@@ -72,7 +72,8 @@ public:
         Log.traceln("Creating peripheral: %s of type %s", name.c_str(), type.c_str());
 
         ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/peripherals/" + name + ".json");
-        mqttRoot.subscribe("config", [configFile](const String&, const JsonObject& configJson) {
+        mqttRoot.subscribe("config", [name, configFile](const String&, const JsonObject& configJson) {
+            Log.traceln("Received configuration update for peripheral: %s", name.c_str());
             configFile->update(configJson);
         });
 

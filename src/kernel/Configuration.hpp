@@ -226,8 +226,7 @@ public:
         if (json.containsKey(name)) {
             auto jsonArray = json[name].as<JsonArray>();
             for (auto jsonEntry : jsonArray) {
-                T entry;
-                convertFromJson(jsonEntry, entry);
+                const T& entry = jsonEntry.as<T>();
                 entries.push_back(entry);
             }
         }
@@ -244,8 +243,7 @@ public:
     void store(JsonObject& json, bool inlineDefaults) const override {
         auto jsonArray = json.createNestedArray(name);
         for (auto& entry : entries) {
-            JsonObject jsonEntry = jsonArray.createNestedObject();
-            convertToJson(entry, jsonEntry);
+            jsonArray.add(entry);
         }
     }
 
