@@ -23,29 +23,44 @@ class Task;
 
 typedef std::function<void(Task&)> TaskFunction;
 
-class Task {
+class TaskHandle {
 public:
-    static void inline run(const String& name, const TaskFunction runFunction) {
-        Task::run(name, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, runFunction);
-    }
-    static void inline run(const String& name, uint32_t stackSize, const TaskFunction runFunction) {
-        Task::run(name, stackSize, DEFAULT_PRIORITY, runFunction);
-    }
-    static void run(const String& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
-        Task* task = new Task(String(name), runFunction);
-        Log.traceln("Creating task %s with priority %d and stack size %d",
-            name.c_str(), priority, stackSize);
-        xTaskCreate(executeTask, name.c_str(), stackSize, task, priority, &(task->taskHandle));
+    TaskHandle(const TaskHandle_t handle)
+        : handle(handle) {
     }
 
-    static void inline loop(const String& name, TaskFunction loopFunction) {
-        Task::loop(name, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, loopFunction);
+    TaskHandle(const TaskHandle& other)
+        : handle(other.handle) {
     }
-    static void inline loop(const String& name, uint32_t stackSize, TaskFunction loopFunction) {
-        Task::loop(name, stackSize, DEFAULT_PRIORITY, loopFunction);
+
+    const TaskHandle_t handle;
+};
+
+class Task {
+public:
+    static TaskHandle inline run(const String& name, const TaskFunction runFunction) {
+        return Task::run(name, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, runFunction);
     }
-    static void loop(const String& name, uint32_t stackSize, UBaseType_t priority, TaskFunction loopFunction) {
-        Task::run(name, stackSize, priority, [loopFunction](Task& task) {
+    static TaskHandle inline run(const String& name, uint32_t stackSize, const TaskFunction runFunction) {
+        return Task::run(name, stackSize, DEFAULT_PRIORITY, runFunction);
+    }
+    static TaskHandle run(const String& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
+        TaskFunction* taskFunction = new TaskFunction(runFunction);
+        Log.traceln("Creating task %s with priority %d and stack size %d",
+            name.c_str(), priority, stackSize);
+        TaskHandle_t handle = nullptr;
+        xTaskCreate(executeTask, name.c_str(), stackSize, taskFunction, priority, &handle);
+        return TaskHandle(handle);
+    }
+
+    static TaskHandle inline loop(const String& name, TaskFunction loopFunction) {
+        return Task::loop(name, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, loopFunction);
+    }
+    static TaskHandle inline loop(const String& name, uint32_t stackSize, TaskFunction loopFunction) {
+        return Task::loop(name, stackSize, DEFAULT_PRIORITY, loopFunction);
+    }
+    static TaskHandle loop(const String& name, uint32_t stackSize, UBaseType_t priority, TaskFunction loopFunction) {
+        return Task::run(name, stackSize, priority, [loopFunction](Task& task) {
             while (true) {
                 loopFunction(task);
             }
@@ -62,21 +77,21 @@ public:
         }
         auto newWakeTime = xTaskGetTickCount();
         Serial.printf("Task '%s' missed deadline by %lld ms\n",
-            name.c_str(), duration_cast<milliseconds>(ticks(newWakeTime - lastWakeTime)).count());
+            pcTaskGetName(nullptr), duration_cast<milliseconds>(ticks(newWakeTime - lastWakeTime)).count());
         lastWakeTime = newWakeTime;
         return false;
     }
 
     void suspend() {
-        vTaskSuspend(taskHandle);
+        vTaskSuspend(handle);
     }
 
     void resume() {
-        vTaskResume(taskHandle);
+        vTaskResume(handle);
     }
 
     bool abortDelay() {
-        return xTaskAbortDelay(taskHandle);
+        return xTaskAbortDelay(handle);
     }
 
 #ifdef FARMHUB_DEBUG
@@ -93,35 +108,33 @@ public:
 #endif
 
 private:
-    Task(String name, TaskFunction taskFunction)
-        : name(name)
-        , taskFunction(taskFunction)
+    Task(TaskHandle_t handle)
+        : handle(handle)
         , lastWakeTime(xTaskGetTickCount()) {
     }
 
     ~Task() {
 #ifdef FARMHUB_DEBUG
-        String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(taskHandle, CONSOLE_BUFFER_INDEX));
+        String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(handle, CONSOLE_BUFFER_INDEX));
         if (buffer != nullptr) {
             delete buffer;
         }
 #endif
-        vTaskDelete(taskHandle);
+        vTaskDelete(handle);
     }
 
     static void executeTask(void* parameters) {
-        Task* task = static_cast<Task*>(parameters);
-        Serial.printf("Starting task %s\n",
-            task->name.c_str());
-        task->taskFunction(*task);
-        Serial.printf("Finished task %s\n",
-            task->name.c_str());
-        delete task;
+        TaskFunction* taskFunction = static_cast<TaskFunction*>(parameters);
+        Log.traceln("Starting task %s\n",
+            pcTaskGetName(nullptr));
+        Task task(xTaskGetCurrentTaskHandle());
+        (*taskFunction)(task);
+        Log.traceln("Finished task %s\n",
+            pcTaskGetName(nullptr));
+        delete taskFunction;
     }
 
-    const String name;
-    const TaskFunction taskFunction;
-    TaskHandle_t taskHandle;
+    const TaskHandle_t handle;
     TickType_t lastWakeTime;
 };
 
