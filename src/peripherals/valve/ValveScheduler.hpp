@@ -4,7 +4,7 @@
 
 using namespace std::chrono;
 
-namespace farmhub { namespace peripherals {
+namespace farmhub { namespace peripherals { namespace valve {
 
 class ValveSchedule {
 public:
@@ -28,4 +28,4 @@ public:
     const seconds duration;
 };
 
-}}    // namespace farmhub::peripherals
+}}}    // namespace farmhub::peripherals::valve

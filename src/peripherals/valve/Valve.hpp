@@ -14,7 +14,7 @@
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 
-#include <peripherals/ValveScheduler.hpp>
+#include <peripherals/valve/ValveScheduler.hpp>
 
 using namespace std::chrono;
 using std::make_unique;
@@ -24,7 +24,7 @@ using std::unique_ptr;
 using namespace farmhub::devices;
 using namespace farmhub::kernel::drivers;
 
-namespace farmhub { namespace peripherals {
+namespace farmhub { namespace peripherals { namespace valve {
 
 enum class ValveState {
     CLOSED = -1,
@@ -349,11 +349,11 @@ void convertFromJson(JsonVariantConst src, ValveControlStrategyType& dst) {
     }
 }
 
-}}    // namespace farmhub::peripherals
+}}}    // namespace farmhub::peripherals::valve
 
 namespace ArduinoJson {
 
-using farmhub::peripherals::ValveSchedule;
+using farmhub::peripherals::valve::ValveSchedule;
 template <>
 struct Converter<ValveSchedule> {
     static void toJson(const ValveSchedule& src, JsonVariant dst) {
