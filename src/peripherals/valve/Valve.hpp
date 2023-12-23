@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <list>
 #include <memory>
 
 #include <Arduino.h>
@@ -25,12 +26,6 @@ using namespace farmhub::devices;
 using namespace farmhub::kernel::drivers;
 
 namespace farmhub { namespace peripherals { namespace valve {
-
-enum class ValveState {
-    CLOSED = -1,
-    NONE = 0,
-    OPEN = 1
-};
 
 enum class ValveControlStrategyType {
     NormallyOpen,
@@ -177,22 +172,24 @@ public:
 
         controller.stop();
 
-        // TODO Restore stored state
-        setState(strategy.getDefaultState());
+        // TODO Restore stored state?
+
+        Task::loop(name, [this](Task& task) {
+            auto now = system_clock::now();
+            auto update = ValveScheduler::getStateUpdate(schedules, now, this->strategy.getDefaultState());
+            Log.traceln("Valve '%s' state is %d, will change after %d ms",
+                this->name.c_str(), static_cast<int>(update.state), update.transitionAfter.count());
+            setState(update.state);
+            task.delayUntil(update.transitionAfter);
+        });
     }
 
     void configure(const ValveConfig& config) override {
-        if (task != nullptr) {
-            task->abort();
-        }
         Log.infoln("Configuring valve '%s' with frequency %d",
             name.c_str(), config.frequency.get().count());
-        task = new TaskHandle(Task::loop(name, [this, &config](Task& task) {
-            open();
-            task.delayUntil(config.frequency.get() / 2);
-            close();
-            task.delayUntil(config.frequency.get() / 2);
-        }));
+        // TODO Do this thread safe?
+        schedules = std::list(config.schedule.get());
+        // TODO Notify the task to reevaluate the schedule
     }
 
     void open() {
@@ -237,6 +234,7 @@ private:
 
     ValveState state = ValveState::NONE;
     TaskHandle* task = nullptr;
+    std::list<ValveSchedule> schedules;
 };
 
 class ValveDeviceConfig
@@ -359,10 +357,10 @@ struct Converter<ValveSchedule> {
     static void toJson(const ValveSchedule& src, JsonVariant dst) {
         JsonObject obj = dst.to<JsonObject>();
         char buf[64];
-        strftime(buf, sizeof(buf), "%FT%TZ", &src.start);
+        strftime(buf, sizeof(buf), "%FT%TZ", &src.getStart());
         obj["start"] = buf;
-        obj["period"] = src.period.count();
-        obj["duration"] = src.duration.count();
+        obj["period"] = src.getPeriod().count();
+        obj["duration"] = src.getDuration().count();
     }
 
     static ValveSchedule fromJson(JsonVariantConst src) {
