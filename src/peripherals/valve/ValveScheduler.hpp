@@ -23,9 +23,15 @@ public:
         , duration(duration) {
     }
 
-    const tm& getStart() const { return start; }
-    seconds getPeriod() const { return period; }
-    seconds getDuration() const { return duration; }
+    const tm& getStart() const {
+        return start;
+    }
+    seconds getPeriod() const {
+        return period;
+    }
+    seconds getDuration() const {
+        return duration;
+    }
 
 private:
     const tm start;
@@ -41,9 +47,6 @@ struct ValveStateUpdate {
 class ValveScheduler {
 public:
     static ValveStateUpdate getStateUpdate(std::list<ValveSchedule> schedules, time_point<system_clock> now, ValveState defaultState) {
-        auto nowTm = system_clock::to_time_t(now);
-        auto nowTmLocal = localtime(&nowTm);
-
         ValveStateUpdate next = { defaultState, ticks::max() };
         for (auto& schedule : schedules) {
             tm scheduleTm = schedule.getStart();
