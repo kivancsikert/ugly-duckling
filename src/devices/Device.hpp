@@ -168,6 +168,13 @@ public:
     }
 };
 
+class MemoryTelemetryProvider : public TelemetryProvider {
+public:
+    void populateTelemetry(JsonObject& json) override {
+        json["free-heap"] = ESP.getFreeHeap();
+    }
+};
+
 class Device : ConsoleProvider {
 public:
     Device() {
@@ -177,6 +184,10 @@ public:
         consolePrinter.registerBattery(deviceDefinition.batteryDriver);
 #endif
         kernel.registerTelemetryProvider("battery", deviceDefinition.batteryDriver);
+#endif
+
+#if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
+        kernel.registerTelemetryProvider("memory", memoryTelemetryProvider);
 #endif
 
         deviceDefinition.registerPeripheralFactories(peripheralManager);
@@ -200,6 +211,10 @@ private:
     TDeviceDefinition deviceDefinition;
     Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.statusLed };
     PeripheralManager peripheralManager { kernel.mqtt, deviceDefinition.config.peripherals };
+
+#if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
+    MemoryTelemetryProvider memoryTelemetryProvider;
+#endif
 };
 
 }}    // namespace farmhub::devices

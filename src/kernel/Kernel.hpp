@@ -29,13 +29,6 @@ class Kernel;
 
 static RTC_DATA_ATTR int bootCount = 0;
 
-class MemoryTelemetryProvider : public TelemetryProvider {
-public:
-    void populateTelemetry(JsonObject& json) override {
-        json["free-heap"] = ESP.getFreeHeap();
-    }
-};
-
 // TODO Move this to a separate file
 static const String& getMacAddress() {
     static String macAddress;
@@ -88,10 +81,6 @@ public:
             deviceConfig.getHostname());
 
         Task::loop("status-update", 4096, [this](Task&) { updateState(); });
-
-#if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
-        registerTelemetryProvider("memory", memoryTelemetryProvider);
-#endif
 
         registerCommand(echoCommand);
         registerCommand(pingCommand);
@@ -241,10 +230,6 @@ private:
 
     FileSystem& fs { FileSystem::get() };
     TDeviceConfiguration& deviceConfig;
-
-#if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
-    MemoryTelemetryProvider memoryTelemetryProvider;
-#endif
 
     LedDriver& statusLed;
     KernelState state = KernelState::BOOTING;
