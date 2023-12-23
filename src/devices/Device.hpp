@@ -14,6 +14,7 @@
 
 #include <ArduinoLog.h>
 
+#include <kernel/Command.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/Task.hpp>
 
@@ -175,6 +176,24 @@ public:
     }
 };
 
+class MqttTelemetryPublisher : public TelemetryPublisher {
+public:
+    MqttTelemetryPublisher(MqttDriver::MqttRoot& mqtt, TelemetryCollector& telemetryCollector)
+        : mqttRoot(mqtt)
+        , telemetryCollector(telemetryCollector) {
+    }
+
+    void publishTelemetry() {
+        mqttRoot.publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); });
+    }
+
+private:
+    MqttDriver::MqttRoot& mqttRoot;
+    TelemetryCollector& telemetryCollector;
+};
+
+typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
+
 class Device : ConsoleProvider {
 public:
     Device() {
@@ -183,20 +202,30 @@ public:
 #ifdef FARMHUB_DEBUG
         consolePrinter.registerBattery(deviceDefinition.batteryDriver);
 #endif
-        kernel.registerTelemetryProvider("battery", deviceDefinition.batteryDriver);
+        deviceTelemetryCollector.registerProvider("battery", deviceDefinition.batteryDriver);
 #endif
 
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
-        kernel.registerTelemetryProvider("memory", memoryTelemetryProvider);
+        deviceTelemetryCollector.registerProvider("memory", memoryTelemetryProvider);
 #endif
 
         deviceDefinition.registerPeripheralFactories(peripheralManager);
 
-        kernel.registerTelemetryProvider("peripherals", peripheralManager);
+        deviceTelemetryCollector.registerProvider("peripherals", peripheralManager);
+
+        registerCommand(echoCommand);
+        registerCommand(pingCommand);
+        // TODO Add reset-wifi command
+        // registerCommand(resetWifiCommand);
+        registerCommand(restartCommand);
+        registerCommand(sleepCommand);
+        registerCommand(fileListCommand);
+        registerCommand(fileReadCommand);
+        registerCommand(fileWriteCommand);
+        registerCommand(fileRemoveCommand);
+        registerCommand(httpUpdateCommand);
 
         peripheralManager.begin();
-
-        kernel.begin();
 
 #if defined(MK4)
         deviceDefinition.motorDriver.wakeUp();
@@ -205,16 +234,79 @@ public:
 #elif defined(MK6)
         deviceDefinition.motorDriver.wakeUp();
 #endif
+
+        kernel.begin();
+
+        mqttDeviceRoot.publish(
+            "init",
+            [&](JsonObject& json) {
+                // TODO Remove redundanty mentions of "ugly-duckling"
+                json["type"] = "ugly-duckling";
+                json["model"] = deviceConfig.model.get();
+                json["instance"] = deviceConfig.instance.get();
+                json["mac"] = getMacAddress();
+                auto device = json.createNestedObject("deviceConfig");
+                deviceConfig.store(device, false);
+                // TODO Remove redundanty mentions of "ugly-duckling"
+                json["app"] = "ugly-duckling";
+                json["version"] = kernel.version;
+                json["wakeup"] = esp_sleep_get_wakeup_cause();
+                json["bootCount"] = bootCount++;
+                json["time"] = time(nullptr);
+            });
+        Task::loop("telemetry", 8192, [this](Task& task) { publishTelemetry(task); });
     }
 
 private:
+    void publishTelemetry(Task& task) {
+        deviceTelemetryPublisher.publishTelemetry();
+        // TODO Configure telemetry heartbeat interval
+        task.delayUntil(milliseconds(60000));
+    }
+
+    void registerCommand(const String& name, CommandHandler handler) {
+        String suffix = "commands/" + name;
+        mqttDeviceRoot.subscribe(suffix, MqttDriver::QoS::ExactlyOnce, [this, name, suffix, handler](const String&, const JsonObject& request) {
+            // Clear topic
+            mqttDeviceRoot.clear(suffix, MqttDriver::Retention::Retain, MqttDriver::QoS::ExactlyOnce);
+            DynamicJsonDocument responseDoc(2048);
+            auto response = responseDoc.to<JsonObject>();
+            handler(request, response);
+            if (response.size() > 0) {
+                mqttDeviceRoot.publish("responses/" + name, responseDoc, MqttDriver::Retention::NoRetain, MqttDriver::QoS::ExactlyOnce);
+            }
+        });
+    }
+
+    void registerCommand(Command& command) {
+        registerCommand(command.name, [&](const JsonObject& request, JsonObject& response) {
+            command.handle(request, response);
+        });
+    }
+
     TDeviceDefinition deviceDefinition;
-    Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.statusLed };
-    PeripheralManager peripheralManager { kernel.mqtt, deviceDefinition.config.peripherals };
+    TDeviceConfiguration& deviceConfig = deviceDefinition.config;
+    Kernel<TDeviceConfiguration> kernel { deviceConfig, deviceDefinition.statusLed };
+    PeripheralManager peripheralManager { kernel.mqtt, deviceConfig.peripherals };
+
+    TelemetryCollector deviceTelemetryCollector;
+    MqttDriver::MqttRoot mqttDeviceRoot = kernel.mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
+    MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };
+    PingCommand pingCommand { deviceTelemetryPublisher };
 
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
     MemoryTelemetryProvider memoryTelemetryProvider;
 #endif
+
+    FileSystem& fs { FileSystem::get() };
+    EchoCommand echoCommand;
+    RestartCommand restartCommand;
+    SleepCommand sleepCommand;
+    FileListCommand fileListCommand { fs };
+    FileReadCommand fileReadCommand { fs };
+    FileWriteCommand fileWriteCommand { fs };
+    FileRemoveCommand fileRemoveCommand { fs };
+    HttpUpdateCommand httpUpdateCommand { kernel.version };
 };
 
 }}    // namespace farmhub::devices

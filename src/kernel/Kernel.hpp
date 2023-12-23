@@ -7,10 +7,6 @@
 
 #include <ArduinoLog.h>
 
-#include <kernel/Command.hpp>
-#include <kernel/FileSystem.hpp>
-#include <kernel/Telemetry.hpp>
-#include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
@@ -50,22 +46,6 @@ static const String& getMacAddress() {
     return macAddress;
 }
 
-class MqttTelemetryPublisher : public TelemetryPublisher {
-public:
-    MqttTelemetryPublisher(MqttDriver::MqttRoot& mqtt, TelemetryCollector& telemetryCollector)
-        : mqttRoot(mqtt)
-        , telemetryCollector(telemetryCollector) {
-    }
-
-    void publishTelemetry() {
-        mqttRoot.publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); });
-    }
-
-private:
-    MqttDriver::MqttRoot& mqttRoot;
-    TelemetryCollector& telemetryCollector;
-};
-
 template <typename TDeviceConfiguration>
 class Kernel {
 public:
@@ -81,71 +61,17 @@ public:
             deviceConfig.getHostname());
 
         Task::loop("status-update", 4096, [this](Task&) { updateState(); });
-
-        registerCommand(echoCommand);
-        registerCommand(pingCommand);
-        // TODO Add reset-wifi command
-        // registerCommand(resetWifiCommand);
-        registerCommand(restartCommand);
-        registerCommand(sleepCommand);
-        registerCommand(fileListCommand);
-        registerCommand(fileReadCommand);
-        registerCommand(fileWriteCommand);
-        registerCommand(fileRemoveCommand);
-        registerCommand(httpUpdateCommand);
     }
 
     void begin() {
         kernelReadyState.awaitSet();
 
-        mqttDeviceRoot.publish(
-            "init",
-            [&](JsonObject& json) {
-                // TODO Remove redundanty mentions of "ugly-duckling"
-                json["type"] = "ugly-duckling";
-                json["model"] = deviceConfig.model.get();
-                json["instance"] = deviceConfig.instance.get();
-                json["mac"] = getMacAddress();
-                auto device = json.createNestedObject("deviceConfig");
-                deviceConfig.store(device, false);
-                // TODO Remove redundanty mentions of "ugly-duckling"
-                json["app"] = "ugly-duckling";
-                json["version"] = version;
-                json["wakeup"] = esp_sleep_get_wakeup_cause();
-                json["bootCount"] = bootCount++;
-                json["time"] = time(nullptr);
-            });
-        Task::loop("telemetry", 8192, [this](Task& task) { publishTelemetry(task); });
 
         Log.infoln("Kernel ready in %d ms",
             millis());
     }
 
-    void registerTelemetryProvider(const String& name, TelemetryProvider& provider) {
-        telemetryCollector.registerProvider(name, provider);
-    }
-
-    typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
-
-    void registerCommand(const String& name, CommandHandler handler) {
-        String suffix = "commands/" + name;
-        mqttDeviceRoot.subscribe(suffix, MqttDriver::QoS::ExactlyOnce, [this, name, suffix, handler](const String&, const JsonObject& request) {
-            // Clear topic
-            mqttDeviceRoot.clear(suffix, MqttDriver::Retention::Retain, MqttDriver::QoS::ExactlyOnce);
-            DynamicJsonDocument responseDoc(2048);
-            auto response = responseDoc.to<JsonObject>();
-            handler(request, response);
-            if (response.size() > 0) {
-                mqttDeviceRoot.publish("responses/" + name, responseDoc, MqttDriver::Retention::NoRetain, MqttDriver::QoS::ExactlyOnce);
-            }
-        });
-    }
-
-    void registerCommand(Command& command) {
-        registerCommand(command.name, [&](const JsonObject& request, JsonObject& response) {
-            command.handle(request, response);
-        });
-    }
+    const String version;
 
 private:
     enum class KernelState {
@@ -220,15 +146,6 @@ private:
         stateManager.awaitStateChange();
     }
 
-    void publishTelemetry(Task& task) {
-        telemetryPublisher.publishTelemetry();
-        // TODO Configure telemetry heartbeat interval
-        task.delayUntil(milliseconds(60000));
-    }
-
-    const String version;
-
-    FileSystem& fs { FileSystem::get() };
     TDeviceConfiguration& deviceConfig;
 
     LedDriver& statusLed;
@@ -253,24 +170,9 @@ private:
 #endif
     MdnsDriver mdns { networkReadyState, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
     RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp, rtcInSyncState };
-    TelemetryCollector telemetryCollector;
 
 public:
     MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), mqttReadyState };
-
-private:
-    MqttDriver::MqttRoot mqttDeviceRoot = mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
-    MqttTelemetryPublisher telemetryPublisher { mqttDeviceRoot, telemetryCollector };
-
-    EchoCommand echoCommand;
-    PingCommand pingCommand { telemetryPublisher };
-    RestartCommand restartCommand;
-    SleepCommand sleepCommand;
-    FileListCommand fileListCommand { fs };
-    FileReadCommand fileReadCommand { fs };
-    FileWriteCommand fileWriteCommand { fs };
-    FileRemoveCommand fileRemoveCommand { fs };
-    HttpUpdateCommand httpUpdateCommand { version };
 };
 
 }}    // namespace farmhub::kernel
