@@ -9,15 +9,15 @@ size_t constexpr _docSizeFor(size_t size) {
     return size * 2 + 1024;
 }
 
-size_t docSizeFor(const String& json) {
+size_t inline docSizeFor(const String& json) {
     return _docSizeFor(json.length());
 }
 
-size_t docSizeFor(const char* json) {
+size_t inline docSizeFor(const char* json) {
     return _docSizeFor(strlen(json));
 }
 
-size_t docSizeFor(const File file) {
+size_t inline docSizeFor(const File file) {
     return _docSizeFor(file.size());
 }
 

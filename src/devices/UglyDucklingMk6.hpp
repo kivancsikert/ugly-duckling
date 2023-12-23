@@ -10,10 +10,10 @@
 #include <devices/DeviceDefinition.hpp>
 #include <devices/Peripheral.hpp>
 
-#include <peripherals/Valve.hpp>
+#include <peripherals/valve/Valve.hpp>
 
 using namespace farmhub::kernel;
-using namespace farmhub::peripherals;
+using namespace farmhub::peripherals::valve;
 
 namespace farmhub { namespace devices {
 
@@ -25,10 +25,10 @@ public:
     }
 };
 
-class UglyDucklingMk6 : public BatteryPoweredDeviceDefinition {
+class UglyDucklingMk6 : public BatteryPoweredDeviceDefinition<Mk6Config> {
 public:
     UglyDucklingMk6()
-        : BatteryPoweredDeviceDefinition(
+        : BatteryPoweredDeviceDefinition<Mk6Config>(
             // Status LED
             GPIO_NUM_2,
             // Battery

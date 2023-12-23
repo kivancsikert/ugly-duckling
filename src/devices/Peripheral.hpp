@@ -7,6 +7,7 @@
 
 #include <kernel/Configuration.hpp>
 #include <kernel/Telemetry.hpp>
+#include <kernel/drivers/MqttDriver.hpp>
 
 using std::move;
 using std::unique_ptr;
@@ -15,53 +16,53 @@ using namespace farmhub::kernel;
 
 namespace farmhub { namespace devices {
 
-// Configuration
-
-class PeripheralConfiguration : public ConfigurationSection {
-public:
-    PeripheralConfiguration() {
-    }
-
-    Property<String> name { this, "name" };
-    Property<String> type { this, "type" };
-    Property<JsonAsString> params { this, "params" };
-};
-
-class PeripheralsConfiguration : public ConfigurationSection {
-public:
-    PeripheralsConfiguration() {
-    }
-
-    ObjectArrayProperty<JsonAsString> peripherals { this, "peripherals" };
-};
-
 // Peripherals
 
-class Peripheral {
+class PeripheralBase
+    : public TelemetryProvider {
 public:
-    Peripheral(const String& name)
-        : name(name) {
+    PeripheralBase(const String& name, MqttDriver::MqttRoot& mqttRoot, size_t telemetrySize = 2048)
+        : name(name)
+        , mqttRoot(mqttRoot)
+        , telemetrySize(telemetrySize) {
     }
 
-    virtual ~Peripheral() {
+    virtual ~PeripheralBase() = default;
+
+    void publishTelemetry() {
+        DynamicJsonDocument telemetryDoc(telemetrySize);
+        JsonObject telemetryJson = telemetryDoc.to<JsonObject>();
+        populateTelemetry(telemetryJson);
+        if (telemetryJson.begin() == telemetryJson.end()) {
+            // No telemetry added
+            return;
+        }
+        // TODO Add device ID
+        mqttRoot.publish("telemetry", telemetryDoc);
     }
 
-    virtual TelemetryProvider* getAsTelemetryProvider() {
-        return nullptr;
+    virtual void populateTelemetry(JsonObject& telemetryJson) {
     }
 
     const String name;
+
+protected:
+    MqttDriver::MqttRoot mqttRoot;
+
+private:
+    const size_t telemetrySize;
 };
 
-class TelemetryProvidingPeripheral : public Peripheral, public TelemetryProvider {
+template <typename TConfig>
+class Peripheral
+    : public PeripheralBase {
 public:
-    TelemetryProvidingPeripheral(const String& name)
-        : Peripheral(name) {
+    Peripheral(const String& name, MqttDriver::MqttRoot& mqttRoot)
+        : PeripheralBase(name, mqttRoot) {
     }
 
-    // Poor man's RTTI
-    TelemetryProvider* getAsTelemetryProvider() override {
-        return this;
+    virtual void configure(const TConfig& config) {
+        Log.verboseln("No configuration to apply for peripheral: %s", name.c_str());
     }
 };
 
@@ -73,37 +74,47 @@ public:
         : type(type) {
     }
 
-    virtual unique_ptr<Peripheral> createPeripheral(const String& name, const String& jsonConfig) = 0;
+    virtual PeripheralBase* createPeripheral(const String& name, const String& jsonConfig, MqttDriver::MqttRoot mqttRoot) = 0;
 
     const String type;
 };
 
-template <typename TConfig>
+template <typename TDeviceConfig, typename TConfig>
 class PeripheralFactory : public PeripheralFactoryBase {
 public:
     PeripheralFactory(const String& type)
         : PeripheralFactoryBase(type) {
     }
 
-    virtual unique_ptr<TConfig> createConfig() = 0;
+    virtual TDeviceConfig* createDeviceConfig() = 0;
 
-    unique_ptr<Peripheral> createPeripheral(const String& name, const String& jsonConfig) override {
-        unique_ptr<TConfig> config = createConfig();
-        Log.traceln("Configuring peripheral: %s of type %s", name.c_str(), type.c_str());
-        config->loadFromString(jsonConfig);
-        return createPeripheral(name, move(config));
+    PeripheralBase* createPeripheral(const String& name, const String& jsonConfig, MqttDriver::MqttRoot mqttRoot) override {
+        Log.traceln("Creating peripheral: %s of type %s", name.c_str(), type.c_str());
+
+        ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/peripherals/" + name + ".json");
+        mqttRoot.subscribe("config", [name, configFile](const String&, const JsonObject& configJson) {
+            Log.traceln("Received configuration update for peripheral: %s", name.c_str());
+            configFile->update(configJson);
+        });
+
+        TDeviceConfig* deviceConfig = createDeviceConfig();
+        deviceConfig->loadFromString(jsonConfig);
+        Peripheral<TConfig>* peripheral = createPeripheral(name, *deviceConfig, mqttRoot);
+        peripheral->configure(configFile->config);
+        return peripheral;
     }
 
-    virtual unique_ptr<Peripheral> createPeripheral(const String& name, unique_ptr<const TConfig> config) = 0;
+    virtual Peripheral<TConfig>* createPeripheral(const String& name, const TDeviceConfig& deviceConfig, MqttDriver::MqttRoot mqttRoot) = 0;
 };
 
 // Peripheral manager
 
 class PeripheralManager
-    : public TelemetryProvider {
+    : public TelemetryPublisher {
 public:
-    PeripheralManager() {
-        // TODO Update config from MQTT
+    PeripheralManager(MqttDriver& mqtt, ObjectArrayProperty<JsonAsString>& peripheralsConfig)
+        : mqtt(mqtt)
+        , peripheralsConfig(peripheralsConfig) {
     }
 
     void registerFactory(PeripheralFactoryBase& factory) {
@@ -113,42 +124,39 @@ public:
     }
 
     void begin() {
-        // TODO Rebuild peripherals when config changes
-        updateConfig();
+        Log.infoln("Loading configuration for %d peripherals",
+            peripheralsConfig.get().size());
+
+        for (auto& perpheralConfigJsonAsString : peripheralsConfig.get()) {
+            PeripheralDeviceConfiguration deviceConfig;
+            deviceConfig.loadFromString(perpheralConfigJsonAsString.get());
+            const String& name = deviceConfig.name.get();
+            const String& type = deviceConfig.type.get();
+            PeripheralBase* peripheral = createPeripheral(name, type, deviceConfig.params.get().get());
+            if (peripheral == nullptr) {
+                Log.errorln("Failed to create peripheral: %s of type %s",
+                    name.c_str(), type.c_str());
+                return;
+            }
+            peripherals.push_back(unique_ptr<PeripheralBase>(peripheral));
+        }
     }
 
-    void populateTelemetry(JsonObject& json) override {
+    void publishTelemetry() override {
         for (auto& peripheral : peripherals) {
-            TelemetryProvider* telemetryProvider = peripheral.get()->getAsTelemetryProvider();
-            if (telemetryProvider != nullptr) {
-                JsonObject peripheralJson = json.createNestedObject(peripheral->name);
-                telemetryProvider->populateTelemetry(peripheralJson);
-            }
+            peripheral->publishTelemetry();
         }
     }
 
 private:
-    void updateConfig() {
-        // TODO Properly stop all peripherals
-        peripherals.clear();
+    class PeripheralDeviceConfiguration : public ConfigurationSection {
+    public:
+        Property<String> name { this, "name" };
+        Property<String> type { this, "type" };
+        Property<JsonAsString> params { this, "params" };
+    };
 
-        Log.infoln("Loading configuration for %d peripherals",
-            config.peripherals.get().size());
-
-        for (auto& perpheralConfigJsonAsString : config.peripherals.get()) {
-            PeripheralConfiguration perpheralConfig;
-            perpheralConfig.loadFromString(perpheralConfigJsonAsString.get());
-            unique_ptr<Peripheral> peripheral = createPeripheral(perpheralConfig.name.get(), perpheralConfig.type.get(), perpheralConfig.params.get().get());
-            if (peripheral == nullptr) {
-                Log.errorln("Failed to create peripheral: %s of type %s",
-                    perpheralConfig.name.get().c_str(), perpheralConfig.type.get().c_str());
-                return;
-            }
-            peripherals.push_back(move(peripheral));
-        }
-    }
-
-    unique_ptr<Peripheral> createPeripheral(const String& name, const String& type, const String& configJson) {
+    PeripheralBase* createPeripheral(const String& name, const String& type, const String& configJson) {
         Log.traceln("Creating peripheral: %s of type %s",
             name.c_str(), type.c_str());
         auto it = factories.find(type);
@@ -158,17 +166,18 @@ private:
                 type.c_str(), factories.size());
             return nullptr;
         }
-        // TODO Make this configurable
-        return it->second.get().createPeripheral(name, configJson);
+        MqttDriver::MqttRoot mqttRoot(mqtt, "peripherals/" + type + "/" + name);
+        PeripheralFactoryBase& factory = it->second.get();
+        PeripheralBase* peripheral = factory.createPeripheral(name, configJson, mqttRoot);
+        return peripheral;
     }
 
-    ConfigurationFile<PeripheralsConfiguration> configFile { FileSystem::get(), "/peripherals.json" };
-    PeripheralsConfiguration config { configFile.config };
+    MqttDriver& mqtt;
+    ObjectArrayProperty<JsonAsString>& peripheralsConfig;
 
     // TODO Use an unordered_map?
     std::map<String, std::reference_wrapper<PeripheralFactoryBase>> factories;
-    // TODO Use smart pointers
-    std::list<unique_ptr<Peripheral>> peripherals;
+    std::list<unique_ptr<PeripheralBase>> peripherals;
 };
 
 }}    // namespace farmhub::devices

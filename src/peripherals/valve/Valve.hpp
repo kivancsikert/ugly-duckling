@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <list>
 #include <memory>
 
 #include <Arduino.h>
@@ -14,6 +15,8 @@
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 
+#include <peripherals/valve/ValveScheduler.hpp>
+
 using namespace std::chrono;
 using std::make_unique;
 using std::move;
@@ -22,13 +25,7 @@ using std::unique_ptr;
 using namespace farmhub::devices;
 using namespace farmhub::kernel::drivers;
 
-namespace farmhub { namespace peripherals {
-
-enum class ValveState {
-    CLOSED = -1,
-    NONE = 0,
-    OPEN = 1
-};
+namespace farmhub { namespace peripherals { namespace valve {
 
 enum class ValveControlStrategyType {
     NormallyOpen,
@@ -156,38 +153,54 @@ private:
     const double switchDuty;
 };
 
-class Valve
-    : public TelemetryProvidingPeripheral {
+class ValveConfig
+    : public ConfigurationSection {
 public:
-    Valve(const String& name, PwmMotorDriver& controller, unique_ptr<ValveControlStrategy> strategy)
-        : TelemetryProvidingPeripheral(name)
+    Property<milliseconds> frequency { this, "frequency", seconds(15000) };
+    ObjectArrayProperty<ValveSchedule> schedule { this, "schedule" };
+};
+
+class Valve
+    : public Peripheral<ValveConfig> {
+public:
+    Valve(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy, MqttDriver::MqttRoot mqttRoot)
+        : Peripheral<ValveConfig>(name, mqttRoot)
         , controller(controller)
-        , strategy(move(strategy)) {
+        , strategy(strategy) {
         Log.infoln("Creating valve '%s' with strategy %s",
-            name.c_str(), this->strategy->describe().c_str());
+            name.c_str(), strategy.describe().c_str());
 
         controller.stop();
 
-        // TODO Restore stored state
-        setState(this->strategy->getDefaultState());
+        // TODO Restore stored state?
 
-        Task::loop(name, 4096, [this](Task& task) {
-            open();
-            task.delayUntil(seconds(5));
-            close();
-            task.delayUntil(seconds(5));
+        Task::loop(name, 3072, [this](Task& task) {
+            auto now = system_clock::now();
+            auto update = ValveScheduler::getStateUpdate(schedules, now, this->strategy.getDefaultState());
+            Log.traceln("Valve '%s' state is %d, will change after %d ms",
+                this->name.c_str(), static_cast<int>(update.state), update.transitionAfter.count());
+            setState(update.state);
+            task.delayUntil(update.transitionAfter);
         });
+    }
+
+    void configure(const ValveConfig& config) override {
+        Log.infoln("Configuring valve '%s' with frequency %d",
+            name.c_str(), config.frequency.get().count());
+        // TODO Do this thread safe?
+        schedules = std::list(config.schedule.get());
+        // TODO Notify the task to reevaluate the schedule
     }
 
     void open() {
         Log.traceln("Opening valve");
-        strategy->open(controller);
+        strategy.open(controller);
         this->state = ValveState::OPEN;
     }
 
     void close() {
         Log.traceln("Closing valve");
-        strategy->close(controller);
+        strategy.close(controller);
         this->state = ValveState::CLOSED;
     }
 
@@ -211,21 +224,23 @@ public:
         // TODO Publish event
     }
 
-    void populateTelemetry(JsonObject& telemetry) override {
+    void populateTelemetry(JsonObject& telemetry) {
         telemetry["state"] = this->state;
     }
 
 private:
     PwmMotorDriver& controller;
-    unique_ptr<ValveControlStrategy> strategy;
+    ValveControlStrategy& strategy;
 
     ValveState state = ValveState::NONE;
+    TaskHandle* task = nullptr;
+    std::list<ValveSchedule> schedules;
 };
 
-class ValveConfiguration
+class ValveDeviceConfig
     : public ConfigurationSection {
 public:
-    ValveConfiguration(ValveControlStrategyType defaultStrategy)
+    ValveDeviceConfig(ValveControlStrategyType defaultStrategy)
         : strategy(this, "strategy", defaultStrategy) {
     }
 
@@ -236,22 +251,22 @@ public:
 };
 
 class ValveFactory
-    : public PeripheralFactory<ValveConfiguration> {
+    : public PeripheralFactory<ValveDeviceConfig, ValveConfig> {
 public:
     ValveFactory(const std::list<ServiceRef<PwmMotorDriver>>& motors, ValveControlStrategyType defaultStrategy)
-        : PeripheralFactory<ValveConfiguration>("valve")
+        : PeripheralFactory<ValveDeviceConfig, ValveConfig>("valve")
         , motors(motors)
         , defaultStrategy(defaultStrategy) {
     }
 
-    unique_ptr<ValveConfiguration> createConfig() override {
-        return make_unique<ValveConfiguration>(defaultStrategy);
+    ValveDeviceConfig* createDeviceConfig() override {
+        return new ValveDeviceConfig(defaultStrategy);
     }
 
-    unique_ptr<Peripheral> createPeripheral(const String& name, unique_ptr<const ValveConfiguration> config) override {
+    Valve* createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, MqttDriver::MqttRoot mqttRoot) override {
         PwmMotorDriver* targetMotor = nullptr;
         for (auto& motor : motors) {
-            if (motor.getName() == config->motor.get()) {
+            if (motor.getName() == deviceConfig.motor.get()) {
                 targetMotor = &(motor.get());
                 break;
             }
@@ -259,29 +274,29 @@ public:
         if (targetMotor == nullptr) {
             // TODO Add proper error handling
             Log.errorln("Failed to find motor: %s",
-                config->motor.get().c_str());
+                deviceConfig.motor.get().c_str());
             return nullptr;
         }
-        unique_ptr<ValveControlStrategy> strategy = createStrategy(*config);
+        ValveControlStrategy* strategy = createStrategy(deviceConfig);
         if (strategy == nullptr) {
             // TODO Add proper error handling
             Log.errorln("Failed to create strategy");
             return nullptr;
         }
-        return make_unique<Valve>(name, *targetMotor, move(strategy));
+        return new Valve(name, *targetMotor, *strategy, mqttRoot);
     }
 
 private:
-    unique_ptr<ValveControlStrategy> createStrategy(const ValveConfiguration& config) {
+    ValveControlStrategy* createStrategy(const ValveDeviceConfig& config) {
         auto switchDuration = config.switchDuration.get();
         auto duty = config.duty.get() / 100.0;
         switch (config.strategy.get()) {
             case ValveControlStrategyType::NormallyOpen:
-                return make_unique<NormallyOpenValveControlStrategy>(switchDuration, duty);
+                return new NormallyOpenValveControlStrategy(switchDuration, duty);
             case ValveControlStrategyType::NormallyClosed:
-                return make_unique<NormallyClosedValveControlStrategy>(switchDuration, duty);
+                return new NormallyClosedValveControlStrategy(switchDuration, duty);
             case ValveControlStrategyType::Latching:
-                return make_unique<LatchingValveControlStrategy>(switchDuration, duty);
+                return new LatchingValveControlStrategy(switchDuration, duty);
             default:
                 // TODO Add proper error handling
                 return nullptr;
@@ -332,4 +347,35 @@ void convertFromJson(JsonVariantConst src, ValveControlStrategyType& dst) {
     }
 }
 
-}}    // namespace farmhub::peripherals
+}}}    // namespace farmhub::peripherals::valve
+
+namespace ArduinoJson {
+
+using farmhub::peripherals::valve::ValveSchedule;
+template <>
+struct Converter<ValveSchedule> {
+    static void toJson(const ValveSchedule& src, JsonVariant dst) {
+        JsonObject obj = dst.to<JsonObject>();
+        char buf[64];
+        strftime(buf, sizeof(buf), "%FT%TZ", &src.getStart());
+        obj["start"] = buf;
+        obj["period"] = src.getPeriod().count();
+        obj["duration"] = src.getDuration().count();
+    }
+
+    static ValveSchedule fromJson(JsonVariantConst src) {
+        tm start;
+        strptime(src["start"].as<const char*>(), "%FT%TZ", &start);
+        seconds period = seconds(src["period"].as<int>());
+        seconds duration = seconds(src["duration"].as<int>());
+        return ValveSchedule(start, period, duration);
+    }
+
+    static bool checkJson(JsonVariantConst src) {
+        return src["start"].is<const char*>()
+            && src["period"].is<int>()
+            && src["duration"].is<int>();
+    }
+};
+
+}    // namespace ArduinoJson

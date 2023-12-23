@@ -9,10 +9,10 @@
 
 #include <devices/DeviceDefinition.hpp>
 
-#include <peripherals/Valve.hpp>
+#include <peripherals/valve/Valve.hpp>
 
 using namespace farmhub::kernel;
-using namespace farmhub::peripherals;
+using namespace farmhub::peripherals::valve;
 
 namespace farmhub { namespace devices {
 
@@ -24,10 +24,10 @@ public:
     }
 };
 
-class UglyDucklingMk4 : public DeviceDefinition {
+class UglyDucklingMk4 : public DeviceDefinition<Mk4Config> {
 public:
     UglyDucklingMk4()
-        : DeviceDefinition(
+        : DeviceDefinition<Mk4Config>(
             // Status LED
             GPIO_NUM_26) {
     }

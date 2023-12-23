@@ -13,6 +13,34 @@ using namespace farmhub::kernel::drivers;
 
 namespace farmhub { namespace devices {
 
+class DeviceConfiguration : public ConfigurationSection {
+public:
+    DeviceConfiguration(const String& defaultModel)
+        : model(this, "model", defaultModel)
+        , instance(this, "instance", getMacAddress()) {
+    }
+
+    Property<String> model;
+    Property<String> instance;
+
+    MqttDriver::Config mqtt { this, "mqtt" };
+    RtcDriver::Config ntp { this, "ntp" };
+
+    ObjectArrayProperty<JsonAsString> peripherals { this, "peripherals" };
+
+    virtual bool isResetButtonPressed() {
+        return false;
+    }
+
+    virtual const String getHostname() {
+        String hostname = instance.get();
+        hostname.replace(":", "-");
+        hostname.replace("?", "");
+        return hostname;
+    }
+};
+
+template <typename TDeviceConfiguration>
 class DeviceDefinition {
 public:
     DeviceDefinition(gpio_num_t statusPin)
@@ -25,12 +53,19 @@ public:
 public:
     LedDriver statusLed;
     PwmManager pwm;
+
+private:
+    ConfigurationFile<TDeviceConfiguration> configFile { FileSystem::get(), "/device-config.json" };
+
+public:
+    TDeviceConfiguration& config = configFile.config;
 };
 
-class BatteryPoweredDeviceDefinition : public DeviceDefinition {
+template <typename TDeviceConfiguration>
+class BatteryPoweredDeviceDefinition : public DeviceDefinition<TDeviceConfiguration> {
 public:
     BatteryPoweredDeviceDefinition(gpio_num_t statusPin, gpio_num_t batteryPin, float batteryVoltageDividerRatio)
-        : DeviceDefinition(statusPin)
+        : DeviceDefinition<TDeviceConfiguration>(statusPin)
         , batteryDriver(batteryPin, batteryVoltageDividerRatio) {
     }
 
