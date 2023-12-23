@@ -89,9 +89,7 @@ public:
     virtual TDeviceConfig* createDeviceConfig() = 0;
 
     PeripheralBase* createPeripheral(const String& name, const String& jsonConfig, MqttDriver::MqttRoot mqttRoot) override {
-        Log.traceln("Creating peripheral: %s of type %s", name.c_str(), type.c_str());
-
-        ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/peripherals/" + name + ".json");
+        ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "peripherals/" + name + ".json");
         mqttRoot.subscribe("config", [name, configFile](const String&, const JsonObject& configJson) {
             Log.traceln("Received configuration update for peripheral: %s", name.c_str());
             configFile->update(configJson);
