@@ -163,8 +163,8 @@ public:
 class Valve
     : public Peripheral<ValveConfig> {
 public:
-    Valve(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy)
-        : Peripheral<ValveConfig>(name)
+    Valve(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy, MqttDriver::MqttRoot mqttRoot)
+        : Peripheral<ValveConfig>(name, mqttRoot)
         , controller(controller)
         , strategy(strategy) {
         Log.infoln("Creating valve '%s' with strategy %s",
@@ -224,7 +224,7 @@ public:
         // TODO Publish event
     }
 
-    void populateTelemetry(JsonObject& telemetry) override {
+    void populateTelemetry(JsonObject& telemetry) {
         telemetry["state"] = this->state;
     }
 
@@ -263,7 +263,7 @@ public:
         return new ValveDeviceConfig(defaultStrategy);
     }
 
-    Valve* createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig) override {
+    Valve* createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, MqttDriver::MqttRoot mqttRoot) override {
         PwmMotorDriver* targetMotor = nullptr;
         for (auto& motor : motors) {
             if (motor.getName() == deviceConfig.motor.get()) {
@@ -283,7 +283,7 @@ public:
             Log.errorln("Failed to create strategy");
             return nullptr;
         }
-        return new Valve(name, *targetMotor, *strategy);
+        return new Valve(name, *targetMotor, *strategy, mqttRoot);
     }
 
 private:

@@ -211,7 +211,7 @@ public:
 
         deviceDefinition.registerPeripheralFactories(peripheralManager);
 
-        deviceTelemetryCollector.registerProvider("peripherals", peripheralManager);
+        // deviceTelemetryCollector.registerProvider("peripherals", peripheralManager);
 
         registerCommand(echoCommand);
         registerCommand(pingCommand);

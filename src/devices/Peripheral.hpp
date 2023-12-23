@@ -18,27 +18,25 @@ namespace farmhub { namespace devices {
 
 // Peripherals
 
-class PeripheralBase
-    : public TelemetryProvider {
+class PeripheralBase {
 public:
-    PeripheralBase(const String& name)
-        : name(name) {
+    PeripheralBase(const String& name, MqttDriver::MqttRoot& mqttRoot)
+        : name(name)
+        , mqttRoot(mqttRoot) {
     }
 
     virtual ~PeripheralBase() = default;
 
     const String name;
+    MqttDriver::MqttRoot mqttRoot;
 };
 
 template <typename TConfig>
 class Peripheral
     : public PeripheralBase {
 public:
-    Peripheral(const String& name)
-        : PeripheralBase(name) {
-    }
-
-    virtual void populateTelemetry(JsonObject& json) {
+    Peripheral(const String& name, MqttDriver::MqttRoot& mqttRoot)
+        : PeripheralBase(name, mqttRoot) {
     }
 
     virtual void configure(const TConfig& config) {
@@ -79,18 +77,18 @@ public:
 
         TDeviceConfig* deviceConfig = createDeviceConfig();
         deviceConfig->loadFromString(jsonConfig);
-        Peripheral<TConfig>* peripheral = createPeripheral(name, *deviceConfig);
+        Peripheral<TConfig>* peripheral = createPeripheral(name, *deviceConfig, mqttRoot);
         peripheral->configure(configFile->config);
         return peripheral;
     }
 
-    virtual Peripheral<TConfig>* createPeripheral(const String& name, const TDeviceConfig& deviceConfig) = 0;
+    virtual Peripheral<TConfig>* createPeripheral(const String& name, const TDeviceConfig& deviceConfig, MqttDriver::MqttRoot mqttRoot) = 0;
 };
 
 // Peripheral manager
 
 class PeripheralManager
-    : public TelemetryProvider {
+    : public TelemetryPublisher {
 public:
     PeripheralManager(MqttDriver& mqtt, ObjectArrayProperty<JsonAsString>& peripheralsConfig)
         : mqtt(mqtt)
@@ -122,10 +120,9 @@ public:
         }
     }
 
-    void populateTelemetry(JsonObject& json) override {
+    void publishTelemetry() override {
         for (auto& peripheral : peripherals) {
-            JsonObject peripheralJson = json.createNestedObject(peripheral->name);
-            peripheral->populateTelemetry(peripheralJson);
+            // peripheral->publishTelemetry();
         }
     }
 
