@@ -18,17 +18,39 @@ namespace farmhub { namespace devices {
 
 // Peripherals
 
-class PeripheralBase {
+class PeripheralBase
+    : public TelemetryProvider {
 public:
-    PeripheralBase(const String& name, MqttDriver::MqttRoot& mqttRoot)
+    PeripheralBase(const String& name, MqttDriver::MqttRoot& mqttRoot, size_t telemetrySize = 2048)
         : name(name)
-        , mqttRoot(mqttRoot) {
+        , mqttRoot(mqttRoot)
+        , telemetrySize(telemetrySize) {
     }
 
     virtual ~PeripheralBase() = default;
 
+    void publishTelemetry() {
+        DynamicJsonDocument telemetryDoc(telemetrySize);
+        JsonObject telemetryJson = telemetryDoc.to<JsonObject>();
+        populateTelemetry(telemetryJson);
+        if (telemetryJson.begin() == telemetryJson.end()) {
+            // No telemetry added
+            return;
+        }
+        // TODO Add device ID
+        mqttRoot.publish("telemetry", telemetryDoc);
+    }
+
+    virtual void populateTelemetry(JsonObject& telemetryJson) {
+    }
+
     const String name;
+
+protected:
     MqttDriver::MqttRoot mqttRoot;
+
+private:
+    const size_t telemetrySize;
 };
 
 template <typename TConfig>
@@ -122,7 +144,7 @@ public:
 
     void publishTelemetry() override {
         for (auto& peripheral : peripherals) {
-            // peripheral->publishTelemetry();
+            peripheral->publishTelemetry();
         }
     }
 

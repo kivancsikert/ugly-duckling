@@ -260,6 +260,7 @@ public:
 private:
     void publishTelemetry(Task& task) {
         deviceTelemetryPublisher.publishTelemetry();
+        peripheralManager.publishTelemetry();
         // TODO Configure telemetry heartbeat interval
         task.delayUntil(milliseconds(60000));
     }

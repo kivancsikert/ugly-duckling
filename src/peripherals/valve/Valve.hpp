@@ -174,7 +174,7 @@ public:
 
         // TODO Restore stored state?
 
-        Task::loop(name, [this](Task& task) {
+        Task::loop(name, 3072, [this](Task& task) {
             auto now = system_clock::now();
             auto update = ValveScheduler::getStateUpdate(schedules, now, this->strategy.getDefaultState());
             Log.traceln("Valve '%s' state is %d, will change after %d ms",
