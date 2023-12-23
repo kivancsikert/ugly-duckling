@@ -26,7 +26,7 @@ public:
     MqttDriver::Config mqtt { this, "mqtt" };
     RtcDriver::Config ntp { this, "ntp" };
 
-    ObjectArrayProperty<JsonAsString> peripherals { this, "peripherals" };
+    ArrayProperty<JsonAsString> peripherals { this, "peripherals" };
 
     virtual bool isResetButtonPressed() {
         return false;

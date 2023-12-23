@@ -112,7 +112,7 @@ public:
 class PeripheralManager
     : public TelemetryPublisher {
 public:
-    PeripheralManager(MqttDriver& mqtt, ObjectArrayProperty<JsonAsString>& peripheralsConfig)
+    PeripheralManager(MqttDriver& mqtt, ArrayProperty<JsonAsString>& peripheralsConfig)
         : mqtt(mqtt)
         , peripheralsConfig(peripheralsConfig) {
     }
@@ -173,7 +173,7 @@ private:
     }
 
     MqttDriver& mqtt;
-    ObjectArrayProperty<JsonAsString>& peripheralsConfig;
+    ArrayProperty<JsonAsString>& peripheralsConfig;
 
     // TODO Use an unordered_map?
     std::map<String, std::reference_wrapper<PeripheralFactoryBase>> factories;

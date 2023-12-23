@@ -206,9 +206,9 @@ private:
 };
 
 template <typename T>
-class ObjectArrayProperty : public ConfigurationEntry {
+class ArrayProperty : public ConfigurationEntry {
 public:
-    ObjectArrayProperty(ConfigurationSection* parent, const String& name)
+    ArrayProperty(ConfigurationSection* parent, const String& name)
         : name(name) {
         parent->add(*this);
     }

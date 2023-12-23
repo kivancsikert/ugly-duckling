@@ -157,7 +157,7 @@ class ValveConfig
     : public ConfigurationSection {
 public:
     Property<milliseconds> frequency { this, "frequency", seconds(15000) };
-    ObjectArrayProperty<ValveSchedule> schedule { this, "schedule" };
+    ArrayProperty<ValveSchedule> schedule { this, "schedule" };
 };
 
 class Valve
