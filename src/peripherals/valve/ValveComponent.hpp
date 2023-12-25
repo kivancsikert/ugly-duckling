@@ -10,6 +10,7 @@
 #include <ArduinoLog.h>
 
 #include <devices/Peripheral.hpp>
+#include <kernel/Concurrent.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
@@ -167,16 +168,16 @@ public:
             Log.traceln("Valve '%s' state is %d, will change after %d ms",
                 name.c_str(), static_cast<int>(update.state), update.transitionAfter.count());
             setState(update.state);
-            task.delayUntil(update.transitionAfter);
+            scheduleQueue.pollIn(update.transitionAfter, [this](const std::list<ValveSchedule>& schedules) {
+                this->schedules = std::list(schedules);
+            });
         });
     }
 
     void setSchedules(std::list<ValveSchedule> schedules) {
         Log.traceln("Setting %d schedules for valve %s",
             schedules.size(), name.c_str());
-        // TODO Do this thread safe?
-        this->schedules = std::list(schedules);
-        // TODO Notify the task to reevaluate the schedule
+        scheduleQueue.overwrite(schedules);
     }
 
     void open() {
@@ -228,6 +229,7 @@ private:
     ValveState state = ValveState::NONE;
     TaskHandle* task = nullptr;
     std::list<ValveSchedule> schedules;
+    Queue<std::list<ValveSchedule>> scheduleQueue { "scheduleQueue", 1 };
 };
 
 }}}    // namespace farmhub::peripherals::valve
