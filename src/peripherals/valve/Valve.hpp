@@ -42,7 +42,7 @@ public:
     }
 
     void populateTelemetry(JsonObject& telemetry) override {
-        telemetry["state"] = valve.getState();
+        valve.populateTelemetry(telemetry);
     }
 
 private:

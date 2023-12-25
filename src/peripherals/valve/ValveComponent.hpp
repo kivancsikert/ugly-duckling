@@ -180,10 +180,6 @@ public:
         scheduleQueue.overwrite(schedules);
     }
 
-    ValveState getState() {
-        return state;
-    }
-
     void populateTelemetry(JsonObject& telemetry) {
         telemetry["state"] = this->state;
     }
