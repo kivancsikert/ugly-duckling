@@ -196,7 +196,6 @@ public:
         controller.stop();
     }
 
-
     ValveState getState() {
         return state;
     }

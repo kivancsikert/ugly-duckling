@@ -16,6 +16,20 @@ enum class ValveControlStrategyType {
     Latching
 };
 
+static ValveControlStrategy* createValveControlStrategy(ValveControlStrategyType strategy, milliseconds switchDuration, double duty) {
+    switch (strategy) {
+        case ValveControlStrategyType::NormallyOpen:
+            return new NormallyOpenValveControlStrategy(switchDuration, duty);
+        case ValveControlStrategyType::NormallyClosed:
+            return new NormallyClosedValveControlStrategy(switchDuration, duty);
+        case ValveControlStrategyType::Latching:
+            return new LatchingValveControlStrategy(switchDuration, duty);
+        default:
+            // TODO Add proper error handling
+            return nullptr;
+    }
+}
+
 class ValveConfig
     : public ConfigurationSection {
 public:

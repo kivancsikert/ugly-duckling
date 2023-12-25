@@ -87,19 +87,10 @@ public:
 
 private:
     ValveControlStrategy* createStrategy(const ValveDeviceConfig& config) {
-        auto switchDuration = config.switchDuration.get();
-        auto duty = config.duty.get() / 100.0;
-        switch (config.strategy.get()) {
-            case ValveControlStrategyType::NormallyOpen:
-                return new NormallyOpenValveControlStrategy(switchDuration, duty);
-            case ValveControlStrategyType::NormallyClosed:
-                return new NormallyClosedValveControlStrategy(switchDuration, duty);
-            case ValveControlStrategyType::Latching:
-                return new LatchingValveControlStrategy(switchDuration, duty);
-            default:
-                // TODO Add proper error handling
-                return nullptr;
-        }
+        return createValveControlStrategy(
+            config.strategy.get(),
+            config.switchDuration.get(),
+            config.duty.get() / 100.0);
     }
 
     const std::list<ServiceRef<PwmMotorDriver>> motors;
