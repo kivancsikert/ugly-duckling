@@ -68,6 +68,22 @@ public:
 
 // Peripheral factories
 
+class PeripheralCreationException
+    : public std::exception {
+public:
+    PeripheralCreationException(const String& name, const String& reason)
+        : name(name)
+        , reason(reason) {
+    }
+
+    const char* what() const noexcept override {
+        return String("Failed to create peripheral '" + name + "' because " + reason).c_str();
+    }
+
+    const String name;
+    const String reason;
+};
+
 class PeripheralFactoryBase {
 public:
     PeripheralFactoryBase(const String& type)
@@ -95,6 +111,7 @@ public:
             configFile->update(configJson);
         });
 
+        // TODO Use smart pointers
         TDeviceConfig* deviceConfig = createDeviceConfig();
         deviceConfig->loadFromString(jsonConfig);
         Peripheral<TConfig>* peripheral = createPeripheral(name, *deviceConfig, mqttRoot);
@@ -130,13 +147,13 @@ public:
             deviceConfig.loadFromString(perpheralConfigJsonAsString.get());
             const String& name = deviceConfig.name.get();
             const String& type = deviceConfig.type.get();
-            PeripheralBase* peripheral = createPeripheral(name, type, deviceConfig.params.get().get());
-            if (peripheral == nullptr) {
-                Log.errorln("Failed to create peripheral: %s of type %s",
-                    name.c_str(), type.c_str());
-                return;
+            try {
+                PeripheralBase* peripheral = createPeripheral(name, type, deviceConfig.params.get().get());
+                peripherals.push_back(unique_ptr<PeripheralBase>(peripheral));
+            } catch (const PeripheralCreationException& e) {
+                Log.errorln("Failed to create peripheral: %s of type %s because %s",
+                    name.c_str(), type.c_str(), e.reason.c_str());
             }
-            peripherals.push_back(unique_ptr<PeripheralBase>(peripheral));
         }
     }
 
@@ -159,10 +176,7 @@ private:
             name.c_str(), type.c_str());
         auto it = factories.find(type);
         if (it == factories.end()) {
-            // TODO Handle the case where no factory is found for the given type
-            Log.errorln("No factory found for peripheral type: %s among %d factories",
-                type.c_str(), factories.size());
-            return nullptr;
+            throw PeripheralCreationException(name, "No factory found for peripheral type '" + type + "'");
         }
         MqttDriver::MqttRoot mqttRoot(mqtt, "peripherals/" + type + "/" + name);
         PeripheralFactoryBase& factory = it->second.get();

@@ -71,19 +71,16 @@ public:
             }
         }
         if (targetMotor == nullptr) {
-            // TODO Add proper error handling
-            Log.errorln("Failed to find motor: %s",
-                deviceConfig.motor.get().c_str());
-            return nullptr;
+            throw PeripheralCreationException(name, "Failed to find motor: " + deviceConfig.motor.get());
         }
-        ValveControlStrategy* strategy = createValveControlStrategy(
-            deviceConfig.strategy.get(),
-            deviceConfig.switchDuration.get(),
-            deviceConfig.duty.get() / 100.0);
-        if (strategy == nullptr) {
-            // TODO Add proper error handling
-            Log.errorln("Failed to create strategy");
-            return nullptr;
+        ValveControlStrategy* strategy;
+        try {
+            strategy = createValveControlStrategy(
+                deviceConfig.strategy.get(),
+                deviceConfig.switchDuration.get(),
+                deviceConfig.duty.get() / 100.0);
+        } catch (const std::exception& e) {
+            throw PeripheralCreationException(name, "Failed to create strategy: " + String(e.what()));
         }
         return new Valve(name, *targetMotor, *strategy, mqttRoot);
     }

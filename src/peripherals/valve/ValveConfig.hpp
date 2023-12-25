@@ -25,8 +25,7 @@ static ValveControlStrategy* createValveControlStrategy(ValveControlStrategyType
         case ValveControlStrategyType::Latching:
             return new LatchingValveControlStrategy(switchDuration, duty);
         default:
-            // TODO Add proper error handling
-            return nullptr;
+            throw std::runtime_error("Unknown strategy");
     }
 }
 
