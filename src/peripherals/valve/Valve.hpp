@@ -63,16 +63,7 @@ public:
     }
 
     Valve* createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, MqttDriver::MqttRoot mqttRoot) override {
-        PwmMotorDriver* targetMotor = nullptr;
-        for (auto& motor : motors) {
-            if (motor.getName() == deviceConfig.motor.get()) {
-                targetMotor = &(motor.get());
-                break;
-            }
-        }
-        if (targetMotor == nullptr) {
-            throw PeripheralCreationException(name, "Failed to find motor: " + deviceConfig.motor.get());
-        }
+        PwmMotorDriver& targetMotor = findMotor(name, deviceConfig.motor.get());
         ValveControlStrategy* strategy;
         try {
             strategy = createValveControlStrategy(
@@ -82,7 +73,16 @@ public:
         } catch (const std::exception& e) {
             throw PeripheralCreationException(name, "Failed to create strategy: " + String(e.what()));
         }
-        return new Valve(name, *targetMotor, *strategy, mqttRoot);
+        return new Valve(name, targetMotor, *strategy, mqttRoot);
+    }
+
+    PwmMotorDriver& findMotor(const String& name, const String& motorName) {
+        for (auto& motor : motors) {
+            if (motor.getName() == motorName) {
+                return motor.get();
+            }
+        }
+        throw PeripheralCreationException(name, "Failed to find motor: " + motorName);
     }
 
 private:
