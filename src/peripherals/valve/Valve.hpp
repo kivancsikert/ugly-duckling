@@ -76,7 +76,10 @@ public:
                 deviceConfig.motor.get().c_str());
             return nullptr;
         }
-        ValveControlStrategy* strategy = createStrategy(deviceConfig);
+        ValveControlStrategy* strategy = createValveControlStrategy(
+            deviceConfig.strategy.get(),
+            deviceConfig.switchDuration.get(),
+            deviceConfig.duty.get() / 100.0);
         if (strategy == nullptr) {
             // TODO Add proper error handling
             Log.errorln("Failed to create strategy");
@@ -86,13 +89,6 @@ public:
     }
 
 private:
-    ValveControlStrategy* createStrategy(const ValveDeviceConfig& config) {
-        return createValveControlStrategy(
-            config.strategy.get(),
-            config.switchDuration.get(),
-            config.duty.get() / 100.0);
-    }
-
     const std::list<ServiceRef<PwmMotorDriver>> motors;
     const ValveControlStrategyType defaultStrategy;
 };
