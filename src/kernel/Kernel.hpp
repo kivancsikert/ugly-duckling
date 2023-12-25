@@ -66,7 +66,6 @@ public:
     void begin() {
         kernelReadyState.awaitSet();
 
-
         Log.infoln("Kernel ready in %d ms",
             millis());
     }

@@ -48,8 +48,6 @@ namespace farmhub { namespace devices {
 class ConsolePrinter : public Print {
 public:
     ConsolePrinter() {
-        Serial.begin(115200);
-
         static const String spinner = "|/-\\";
         static const int spinnerLength = spinner.length();
         Task::loop("console", 8192, 1, [this](Task& task) {
@@ -159,12 +157,20 @@ void printLogLine(Print* printer, int level) {
 class ConsoleProvider {
 public:
     ConsoleProvider() {
+        Serial.begin(115200);
 #ifdef FARMHUB_DEBUG
         Log.begin(FARMHUB_LOG_LEVEL, &consolePrinter);
         Log.setSuffix(printLogLine);
 #else
         Log.begin(FARMHUB_LOG_LEVEL, &Serial);
 #endif
+        Log.infoln(F("  ______                   _    _       _"));
+        Log.infoln(F(" |  ____|                 | |  | |     | |"));
+        Log.infoln(F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
+        Log.infoln(F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
+        Log.infoln(F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
+        Log.infoln(F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/"));
+        Log.infoln("");
         Log.infoln("Starting up...");
     }
 };
