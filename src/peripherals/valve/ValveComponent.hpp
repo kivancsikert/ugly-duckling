@@ -180,6 +180,16 @@ public:
         scheduleQueue.overwrite(schedules);
     }
 
+    ValveState getState() {
+        return state;
+    }
+
+    void populateTelemetry(JsonObject& telemetry) {
+        telemetry["state"] = this->state;
+    }
+
+private:
+
     void open() {
         Log.traceln("Opening valve %s", name.c_str());
         strategy.open(controller);
@@ -197,10 +207,6 @@ public:
         controller.stop();
     }
 
-    ValveState getState() {
-        return state;
-    }
-
     void setState(ValveState state) {
         switch (state) {
             case ValveState::OPEN:
@@ -216,11 +222,6 @@ public:
         // TODO Publish event
     }
 
-    void populateTelemetry(JsonObject& telemetry) {
-        telemetry["state"] = this->state;
-    }
-
-private:
     const String name;
     PwmMotorDriver& controller;
     ValveControlStrategy& strategy;
