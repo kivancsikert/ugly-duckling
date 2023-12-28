@@ -10,8 +10,10 @@
 #include <devices/DeviceDefinition.hpp>
 
 #include <peripherals/valve/Valve.hpp>
+#include <peripherals/flow_meter/FlowMeter.hpp>
 
 using namespace farmhub::kernel;
+using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
 
 namespace farmhub {
@@ -38,6 +40,7 @@ public:
 
     void registerPeripheralFactories(PeripheralManager& peripheralManager) override {
         peripheralManager.registerFactory(valveFactory);
+        peripheralManager.registerFactory(flowMeterFactory);
     }
 
     Drv8874Driver motorADriver {
@@ -62,6 +65,7 @@ public:
     const ServiceRef<PwmMotorDriver> motorB { "b", motorBDriver };
 
     ValveFactory valveFactory { { motorA, motorB }, ValveControlStrategyType::Latching };
+    FlowMeterFactory flowMeterFactory;
 };
 
 }}    // namespace farmhub::devices

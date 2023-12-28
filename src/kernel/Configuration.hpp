@@ -113,6 +113,8 @@ private:
     list<reference_wrapper<ConfigurationEntry>> entries;
 };
 
+class EmptyConfiguration : public ConfigurationSection { };
+
 class NamedConfigurationSection : public ConfigurationSection {
 public:
     NamedConfigurationSection(ConfigurationSection* parent, const String& name)

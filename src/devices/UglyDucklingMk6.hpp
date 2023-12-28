@@ -11,9 +11,11 @@
 #include <devices/Peripheral.hpp>
 
 #include <peripherals/valve/Valve.hpp>
+#include <peripherals/flow_meter/FlowMeter.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals::valve;
+using namespace farmhub::peripherals::flow_meter;
 
 namespace farmhub { namespace devices {
 
@@ -37,6 +39,7 @@ public:
 
     void registerPeripheralFactories(PeripheralManager& peripheralManager) override {
         peripheralManager.registerFactory(valveFactory);
+        peripheralManager.registerFactory(flowMeterFactory);
     }
 
     LedDriver secondaryStatusLed { "status-2", GPIO_NUM_4 };
@@ -55,6 +58,7 @@ public:
     const ServiceRef<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };
 
     ValveFactory valveFactory { { motorA, motorB }, ValveControlStrategyType::Latching };
+    FlowMeterFactory flowMeterFactory;
 };
 
 }}    // namespace farmhub::devices
