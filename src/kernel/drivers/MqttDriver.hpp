@@ -147,7 +147,7 @@ public:
     MqttDriver(
         State& networkReady,
         MdnsDriver& mdns,
-        Config& config,
+        const Config& config,
         const String& instanceName,
         StateSource& mqttReady)
         : networkReady(networkReady)
@@ -328,7 +328,7 @@ private:
     State& networkReady;
     WiFiClient wifiClient;
     MdnsDriver& mdns;
-    Config& config;
+    const Config& config;
     const String instanceName;
 
     const String clientId;

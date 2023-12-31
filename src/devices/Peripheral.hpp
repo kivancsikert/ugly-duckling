@@ -37,13 +37,14 @@ public:
         populateTelemetry(telemetryJson);
         if (telemetryJson.begin() == telemetryJson.end()) {
             // No telemetry added
+            Log.verboseln("No telemetry to publish for peripheral: %s", name.c_str());
             return;
         }
         // TODO Add device ID
         mqttRoot.publish("telemetry", telemetryDoc);
     }
 
-    virtual void populateTelemetry(JsonObject& telemetryJson) {
+    virtual void populateTelemetry(JsonObject& telemetryJson) override {
     }
 
 protected:

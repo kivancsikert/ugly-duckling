@@ -34,7 +34,7 @@ public:
         Property<String> host { this, "host", "" };
     };
 
-    RtcDriver(State& networkReady, MdnsDriver& mdns, Config& ntpConfig, StateSource& rtcInSync) {
+    RtcDriver(State& networkReady, MdnsDriver& mdns, const Config& ntpConfig, StateSource& rtcInSync) {
         Task::run("rtc-check", [&rtcInSync](Task& task) {
             while (true) {
                 time_t now;

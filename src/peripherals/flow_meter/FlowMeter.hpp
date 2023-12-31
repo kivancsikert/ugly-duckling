@@ -4,20 +4,13 @@
 #include <kernel/Configuration.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>
+#include <peripherals/flow_meter/FlowMeterConfig.hpp>
 
 using namespace farmhub::devices;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 
 namespace farmhub { namespace peripherals { namespace flow_meter {
-
-class FlowMeterDeviceConfig
-    : public ConfigurationSection {
-public:
-    Property<gpio_num_t> pin { this, "pin", GPIO_NUM_NC };
-    Property<double> qFactor { this, "qFactor", 5.0 };
-    Property<milliseconds> measurementFrequency { this, "measurementFrequency", milliseconds(1000) };
-};
 
 class FlowMeter
     : public Peripheral<EmptyConfiguration> {

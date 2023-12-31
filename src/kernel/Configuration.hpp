@@ -151,7 +151,7 @@ public:
         delegate.reset();
     }
 
-    TDelegate& get() {
+    const TDelegate& get() const {
         return delegate;
     }
 
