@@ -15,7 +15,7 @@ namespace farmhub { namespace peripherals { namespace flow_meter {
 class FlowMeter
     : public Peripheral<EmptyConfiguration> {
 public:
-    FlowMeter(const String& name, MqttDriver::MqttRoot mqttRoot, gpio_num_t pin, double qFactor, milliseconds measurementFrequency)
+    FlowMeter(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot, gpio_num_t pin, double qFactor, milliseconds measurementFrequency)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , flowMeter(name, mqttRoot, pin, qFactor, measurementFrequency) {
     }
@@ -39,7 +39,7 @@ public:
         return new FlowMeterDeviceConfig();
     }
 
-    FlowMeter* createPeripheral(const String& name, const FlowMeterDeviceConfig& deviceConfig, MqttDriver::MqttRoot mqttRoot) override {
+    FlowMeter* createPeripheral(const String& name, const FlowMeterDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
         return new FlowMeter(name, mqttRoot, deviceConfig.pin.get(), deviceConfig.qFactor.get(), deviceConfig.measurementFrequency.get());
     }
 };

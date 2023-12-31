@@ -21,7 +21,7 @@ class FlowControlConfig
 
 class FlowControl : public Peripheral<FlowControlConfig> {
 public:
-    FlowControl(const String& name, MqttDriver::MqttRoot mqttRoot,
+    FlowControl(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         PwmMotorDriver& controller, ValveControlStrategy& strategy,
         gpio_num_t pin, double qFactor, milliseconds measurementFrequency)
         : Peripheral<FlowControlConfig>(name, mqttRoot)
@@ -68,7 +68,7 @@ public:
         return new FlowControlDeviceConfig(defaultStrategy);
     }
 
-    FlowControl* createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, MqttDriver::MqttRoot mqttRoot) override {
+    FlowControl* createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
         const ValveDeviceConfig& valveConfig = deviceConfig.valve.get();
         const FlowMeterDeviceConfig& flowMeterConfig = deviceConfig.flowMeter.get();
 

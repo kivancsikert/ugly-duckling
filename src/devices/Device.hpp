@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <memory>
 
 #ifndef FARMHUB_LOG_LEVEL
 #ifdef FARMHUB_DEBUG
@@ -19,6 +20,7 @@
 #include <kernel/Task.hpp>
 
 using namespace std::chrono;
+using std::shared_ptr;
 using namespace farmhub::kernel;
 
 #if defined(MK4)
@@ -183,17 +185,17 @@ public:
 
 class MqttTelemetryPublisher : public TelemetryPublisher {
 public:
-    MqttTelemetryPublisher(MqttDriver::MqttRoot& mqtt, TelemetryCollector& telemetryCollector)
-        : mqttRoot(mqtt)
+    MqttTelemetryPublisher(shared_ptr<MqttDriver::MqttRoot> mqttRoot, TelemetryCollector& telemetryCollector)
+        : mqttRoot(mqttRoot)
         , telemetryCollector(telemetryCollector) {
     }
 
     void publishTelemetry() {
-        mqttRoot.publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); });
+        mqttRoot->publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); });
     }
 
 private:
-    MqttDriver::MqttRoot& mqttRoot;
+    shared_ptr<MqttDriver::MqttRoot> mqttRoot;
     TelemetryCollector& telemetryCollector;
 };
 
@@ -216,17 +218,17 @@ public:
 
         // deviceTelemetryCollector.registerProvider("peripherals", peripheralManager);
 
-        mqttDeviceRoot.registerCommand(echoCommand);
-        mqttDeviceRoot.registerCommand(pingCommand);
+        mqttDeviceRoot->registerCommand(echoCommand);
+        mqttDeviceRoot->registerCommand(pingCommand);
         // TODO Add reset-wifi command
-        // mqttDeviceRoot.registerCommand(resetWifiCommand);
-        mqttDeviceRoot.registerCommand(restartCommand);
-        mqttDeviceRoot.registerCommand(sleepCommand);
-        mqttDeviceRoot.registerCommand(fileListCommand);
-        mqttDeviceRoot.registerCommand(fileReadCommand);
-        mqttDeviceRoot.registerCommand(fileWriteCommand);
-        mqttDeviceRoot.registerCommand(fileRemoveCommand);
-        mqttDeviceRoot.registerCommand(httpUpdateCommand);
+        // mqttDeviceRoot->registerCommand(resetWifiCommand);
+        mqttDeviceRoot->registerCommand(restartCommand);
+        mqttDeviceRoot->registerCommand(sleepCommand);
+        mqttDeviceRoot->registerCommand(fileListCommand);
+        mqttDeviceRoot->registerCommand(fileReadCommand);
+        mqttDeviceRoot->registerCommand(fileWriteCommand);
+        mqttDeviceRoot->registerCommand(fileRemoveCommand);
+        mqttDeviceRoot->registerCommand(httpUpdateCommand);
 
         peripheralManager.begin();
 
@@ -240,7 +242,7 @@ public:
 
         kernel.begin();
 
-        mqttDeviceRoot.publish(
+        mqttDeviceRoot->publish(
             "init",
             [&](JsonObject& json) {
                 // TODO Remove redundanty mentions of "ugly-duckling"
@@ -274,7 +276,7 @@ private:
     PeripheralManager peripheralManager { kernel.mqtt, deviceConfig.peripherals };
 
     TelemetryCollector deviceTelemetryCollector;
-    MqttDriver::MqttRoot mqttDeviceRoot = kernel.mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
+    shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };
     PingCommand pingCommand { deviceTelemetryPublisher };
 

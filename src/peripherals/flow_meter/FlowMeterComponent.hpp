@@ -25,12 +25,11 @@ class FlowMeterComponent
 public:
     FlowMeterComponent(
         const String& name,
-        MqttDriver::MqttRoot& mqttRoot,
+        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         gpio_num_t pin,
         double qFactor,
         milliseconds measurementFrequency)
-        : Component(name)
-        , mqttRoot(mqttRoot)
+        : Component(name, mqttRoot)
         , pin(pin)
         , qFactor(qFactor) {
 
@@ -106,7 +105,6 @@ private:
         lastPublished = lastMeasurement;
     }
 
-    MqttDriver::MqttRoot mqttRoot;
     const gpio_num_t pin;
     const double qFactor;
 

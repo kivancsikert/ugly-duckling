@@ -1,6 +1,7 @@
 #pragma once
 
 #include <list>
+#include <memory>
 
 #include <MQTT.h>
 #include <WiFi.h>
@@ -14,6 +15,8 @@
 #include <kernel/drivers/WiFiDriver.hpp>
 
 using namespace farmhub::kernel;
+using std::make_shared;
+using std::shared_ptr;
 
 namespace farmhub { namespace kernel { namespace drivers {
 
@@ -39,11 +42,6 @@ public:
         MqttRoot(MqttDriver& mqtt, const String& rootTopic)
             : mqtt(mqtt)
             , rootTopic(rootTopic) {
-        }
-
-        MqttRoot(const MqttRoot& other)
-            : mqtt(other.mqtt)
-            , rootTopic(other.rootTopic) {
         }
 
         bool publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
@@ -104,7 +102,7 @@ public:
         }
 
         MqttDriver& mqtt;
-        String rootTopic;
+        const String rootTopic;
     };
 
 private:
@@ -192,8 +190,8 @@ public:
         });
     }
 
-    MqttRoot forRoot(const String& topic) {
-        return MqttRoot(*this, topic);
+    shared_ptr<MqttRoot> forRoot(const String& topic) {
+        return make_shared<MqttRoot>(*this, topic);
     }
 
 private:

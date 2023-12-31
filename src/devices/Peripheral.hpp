@@ -11,6 +11,7 @@
 #include <kernel/drivers/MqttDriver.hpp>
 
 using std::move;
+using std::shared_ptr;
 using std::unique_ptr;
 
 using namespace farmhub::kernel;
@@ -20,13 +21,18 @@ namespace farmhub { namespace devices {
 // Peripherals
 
 class PeripheralBase
-    : public TelemetryProvider
-    , public Named {
+    : public TelemetryProvider,
+      public Named {
 public:
-    PeripheralBase(const String& name, MqttDriver::MqttRoot& mqttRoot, size_t telemetrySize = 2048)
+    PeripheralBase(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot, size_t telemetrySize = 2048)
         : Named(name)
         , mqttRoot(mqttRoot)
         , telemetrySize(telemetrySize) {
+        mqttRoot->registerCommand("ping", [this](const JsonObject& request, JsonObject& response) {
+            Serial.println("Received ping request");
+            publishTelemetry();
+            response["pong"] = millis();
+        });
     }
 
     virtual ~PeripheralBase() = default;
@@ -41,14 +47,14 @@ public:
             return;
         }
         // TODO Add device ID
-        mqttRoot.publish("telemetry", telemetryDoc);
+        mqttRoot->publish("telemetry", telemetryDoc);
     }
 
     virtual void populateTelemetry(JsonObject& telemetryJson) override {
     }
 
 protected:
-    MqttDriver::MqttRoot mqttRoot;
+    shared_ptr<MqttDriver::MqttRoot> mqttRoot;
 
 private:
     const size_t telemetrySize;
@@ -58,7 +64,7 @@ template <typename TConfig>
 class Peripheral
     : public PeripheralBase {
 public:
-    Peripheral(const String& name, MqttDriver::MqttRoot& mqttRoot)
+    Peripheral(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot)
         : PeripheralBase(name, mqttRoot) {
     }
 
@@ -91,7 +97,7 @@ public:
         : type(type) {
     }
 
-    virtual PeripheralBase* createPeripheral(const String& name, const String& jsonConfig, MqttDriver::MqttRoot mqttRoot) = 0;
+    virtual PeripheralBase* createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) = 0;
 
     const String type;
 };
@@ -105,10 +111,10 @@ public:
 
     virtual TDeviceConfig* createDeviceConfig() = 0;
 
-    PeripheralBase* createPeripheral(const String& name, const String& jsonConfig, MqttDriver::MqttRoot mqttRoot) override {
+    PeripheralBase* createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
         // Use short prefix because SPIFFS has a 32 character limit
         ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/p/" + name);
-        mqttRoot.subscribe("config", [name, configFile](const String&, const JsonObject& configJson) {
+        mqttRoot->subscribe("config", [name, configFile](const String&, const JsonObject& configJson) {
             Log.traceln("Received configuration update for peripheral: %s", name.c_str());
             configFile->update(configJson);
         });
@@ -121,7 +127,7 @@ public:
         return peripheral;
     }
 
-    virtual Peripheral<TConfig>* createPeripheral(const String& name, const TDeviceConfig& deviceConfig, MqttDriver::MqttRoot mqttRoot) = 0;
+    virtual Peripheral<TConfig>* createPeripheral(const String& name, const TDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) = 0;
 };
 
 // Peripheral manager
@@ -180,7 +186,7 @@ private:
         if (it == factories.end()) {
             throw PeripheralCreationException(name, "No factory found for peripheral type '" + type + "'");
         }
-        MqttDriver::MqttRoot mqttRoot(mqtt, "peripherals/" + type + "/" + name);
+        shared_ptr<MqttDriver::MqttRoot> mqttRoot = mqtt.forRoot("peripherals/" + type + "/" + name);
         PeripheralFactoryBase& factory = it->second.get();
         PeripheralBase* peripheral = factory.createPeripheral(name, configJson, mqttRoot);
         return peripheral;

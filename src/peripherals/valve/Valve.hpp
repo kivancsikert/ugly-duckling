@@ -32,7 +32,7 @@ namespace farmhub { namespace peripherals { namespace valve {
 class Valve
     : public Peripheral<ValveConfig> {
 public:
-    Valve(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy, MqttDriver::MqttRoot mqttRoot)
+    Valve(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy, shared_ptr<MqttDriver::MqttRoot> mqttRoot)
         : Peripheral<ValveConfig>(name, mqttRoot)
         , valve(name, controller, strategy, mqttRoot) {
     }
@@ -62,7 +62,7 @@ public:
         return new ValveDeviceConfig(defaultStrategy);
     }
 
-    Valve* createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, MqttDriver::MqttRoot mqttRoot) override {
+    Valve* createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
         PwmMotorDriver& targetMotor = findMotor(name, deviceConfig.motor.get());
         ValveControlStrategy* strategy;
         try {

@@ -151,11 +151,10 @@ private:
 
 class ValveComponent : public Component {
 public:
-    ValveComponent(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy, MqttDriver::MqttRoot mqttRoot)
-        : Component(name)
+    ValveComponent(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy, shared_ptr<MqttDriver::MqttRoot> mqttRoot)
+        : Component(name, mqttRoot)
         , controller(controller)
-        , strategy(strategy)
-        , mqttRoot(mqttRoot) {
+        , strategy(strategy) {
         Log.infoln("Creating valve '%s' with strategy %s",
             name.c_str(), strategy.describe().c_str());
 
@@ -220,7 +219,6 @@ private:
 
     PwmMotorDriver& controller;
     ValveControlStrategy& strategy;
-    MqttDriver::MqttRoot mqttRoot;
 
     ValveState state = ValveState::NONE;
     TaskHandle* task = nullptr;
