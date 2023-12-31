@@ -104,6 +104,10 @@ public:
         vTaskSuspend(nullptr);
     }
 
+    void yield() {
+        taskYIELD();
+    }
+
 #ifdef FARMHUB_DEBUG
     static const uint32_t CONSOLE_BUFFER_INDEX = 1;
 
