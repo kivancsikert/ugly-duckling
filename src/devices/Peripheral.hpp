@@ -106,7 +106,8 @@ public:
     virtual TDeviceConfig* createDeviceConfig() = 0;
 
     PeripheralBase* createPeripheral(const String& name, const String& jsonConfig, MqttDriver::MqttRoot mqttRoot) override {
-        ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/peripherals/" + name + ".json");
+        // Use short prefix because SPIFFS has a 32 character limit
+        ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/p/" + name);
         mqttRoot.subscribe("config", [name, configFile](const String&, const JsonObject& configJson) {
             Log.traceln("Received configuration update for peripheral: %s", name.c_str());
             configFile->update(configJson);
