@@ -3,6 +3,7 @@
 #include <chrono>
 #include <list>
 #include <memory>
+#include <variant>
 
 #include <Arduino.h>
 
@@ -33,9 +34,9 @@ class ValveControlStrategy {
 public:
     virtual void open(PwmMotorDriver& controller) = 0;
     virtual void close(PwmMotorDriver& controller) = 0;
-    virtual ValveState getDefaultState() = 0;
+    virtual ValveState getDefaultState() const = 0;
 
-    virtual String describe() = 0;
+    virtual String describe() const = 0;
 };
 
 class HoldingValveControlStrategy
@@ -83,11 +84,11 @@ public:
         controller.stop();
     }
 
-    ValveState getDefaultState() override {
+    ValveState getDefaultState() const override {
         return ValveState::CLOSED;
     }
 
-    String describe() override {
+    String describe() const override {
         return "normally closed with switch duration " + String((int) switchDuration.count()) + "ms and hold duty " + String(holdDuty * 100) + "%";
     }
 };
@@ -107,11 +108,11 @@ public:
         driveAndHold(controller, ValveState::CLOSED);
     }
 
-    ValveState getDefaultState() override {
+    ValveState getDefaultState() const override {
         return ValveState::OPEN;
     }
 
-    String describe() override {
+    String describe() const override {
         return "normally open with switch duration " + String((int) switchDuration.count()) + "ms and hold duty " + String(holdDuty * 100) + "%";
     }
 };
@@ -136,11 +137,11 @@ public:
         controller.stop();
     }
 
-    ValveState getDefaultState() override {
+    ValveState getDefaultState() const override {
         return ValveState::NONE;
     }
 
-    String describe() override {
+    String describe() const override {
         return "latching with switch duration " + String((int) switchDuration.count()) + "ms with switch duty " + String(switchDuty * 100) + "%";
     }
 
@@ -162,22 +163,57 @@ public:
 
         // TODO Restore stored state?
 
+        mqttRoot->registerCommand("override", [this](const JsonObject& request, JsonObject& response) {
+            ValveState targetState = request["state"].as<ValveState>();
+            if (targetState == ValveState::NONE) {
+                override(ValveState::NONE, time_point<system_clock>());
+            } else {
+                seconds duration = request.containsKey("duration")
+                    ? request["duration"].as<seconds>()
+                    : hours { 1 };
+                override(targetState, system_clock::now() + duration);
+                response["duration"] = duration;
+            }
+            response["state"] = state;
+        });
+
         Task::loop(name, 3072, [this, name](Task& task) {
             auto now = system_clock::now();
-            auto update = ValveScheduler::getStateUpdate(schedules, now, this->strategy.getDefaultState());
-            Log.traceln("Valve '%s' state is %d, will change after %d ms",
-                name.c_str(), static_cast<int>(update.state), update.transitionAfter.count());
+            if (overrideState != ValveState::NONE && now > overrideUntil) {
+                Log.traceln("Valve '%s' override expired", name.c_str());
+                overrideUntil = time_point<system_clock>();
+                overrideState = ValveState::NONE;
+            }
+            ValveStateUpdate update;
+            if (overrideState != ValveState::NONE) {
+                update = { overrideState, duration_cast<ticks>(overrideUntil - now) };
+                Log.traceln("Valve '%s' override state is %d, will change after %d ms",
+                    name.c_str(), static_cast<int>(update.state), update.transitionAfter.count());
+            } else {
+                update = ValveScheduler::getStateUpdate(schedules, now, this->strategy.getDefaultState());
+                Log.traceln("Valve '%s' state is %d, will change after %d ms",
+                    name.c_str(), static_cast<int>(update.state), update.transitionAfter.count());
+            }
             setState(update.state);
-            scheduleQueue.pollIn(update.transitionAfter, [this](const std::list<ValveSchedule>& schedules) {
-                this->schedules = std::list(schedules);
+            updateQueue.pollIn(update.transitionAfter, [this](const std::variant<OverrideSpec, ScheduleSpec>& change) {
+                std::visit([this](auto&& arg) {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, OverrideSpec>) {
+                        overrideState = arg.state;
+                        overrideUntil = arg.until;
+                    } else if constexpr (std::is_same_v<T, ScheduleSpec>) {
+                        schedules = std::list(arg.schedules);
+                    }
+                },
+                    change);
             });
         });
     }
 
-    void setSchedules(std::list<ValveSchedule> schedules) {
+    void setSchedules(const std::list<ValveSchedule>& schedules) {
         Log.traceln("Setting %d schedules for valve %s",
             schedules.size(), name.c_str());
-        scheduleQueue.overwrite(schedules);
+        updateQueue.put(ScheduleSpec { schedules });
     }
 
     void populateTelemetry(JsonObject& telemetry) {
@@ -185,6 +221,10 @@ public:
     }
 
 private:
+    void override(ValveState state, time_point<system_clock> until) {
+        updateQueue.put(OverrideSpec { state, until });
+    }
+
     void open() {
         Log.traceln("Opening valve %s", name.c_str());
         strategy.open(controller);
@@ -221,9 +261,22 @@ private:
     ValveControlStrategy& strategy;
 
     ValveState state = ValveState::NONE;
-    TaskHandle* task = nullptr;
+
+    struct OverrideSpec {
+    public:
+        ValveState state;
+        time_point<system_clock> until;
+    };
+
+    struct ScheduleSpec {
+    public:
+        std::list<ValveSchedule> schedules;
+    };
+
     std::list<ValveSchedule> schedules;
-    Queue<std::list<ValveSchedule>> scheduleQueue { "scheduleQueue", 1 };
+    ValveState overrideState = ValveState::NONE;
+    time_point<system_clock> overrideUntil;
+    Queue<std::variant<OverrideSpec, ScheduleSpec>> updateQueue { "eventQueue", 1 };
 };
 
 }}}    // namespace farmhub::peripherals::valve
