@@ -60,16 +60,11 @@ public:
 };
 
 class FlowControlFactory
-    : public PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig> {
+    : public PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig, ValveControlStrategyType> {
 public:
     FlowControlFactory(const std::list<ServiceRef<PwmMotorDriver>>& motors, ValveControlStrategyType defaultStrategy)
-        : PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig>("flow-control")
-        , motors(motors)
-        , defaultStrategy(defaultStrategy) {
-    }
-
-    FlowControlDeviceConfig* createDeviceConfig() override {
-        return new FlowControlDeviceConfig(defaultStrategy);
+        : PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig, ValveControlStrategyType>("flow-control", defaultStrategy)
+        , motors(motors) {
     }
 
     unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
@@ -109,7 +104,6 @@ public:
 
 private:
     const std::list<ServiceRef<PwmMotorDriver>> motors;
-    const ValveControlStrategyType defaultStrategy;
 };
 
 }}}    // namespace farmhub::peripherals::flow_control

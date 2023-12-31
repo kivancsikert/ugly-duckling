@@ -50,16 +50,11 @@ private:
 };
 
 class ValveFactory
-    : public PeripheralFactory<ValveDeviceConfig, ValveConfig> {
+    : public PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType> {
 public:
     ValveFactory(const std::list<ServiceRef<PwmMotorDriver>>& motors, ValveControlStrategyType defaultStrategy)
-        : PeripheralFactory<ValveDeviceConfig, ValveConfig>("valve")
-        , motors(motors)
-        , defaultStrategy(defaultStrategy) {
-    }
-
-    ValveDeviceConfig* createDeviceConfig() override {
-        return new ValveDeviceConfig(defaultStrategy);
+        : PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType>("valve", defaultStrategy)
+        , motors(motors) {
     }
 
     unique_ptr<Peripheral<ValveConfig>> createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
@@ -87,7 +82,6 @@ public:
 
 private:
     const std::list<ServiceRef<PwmMotorDriver>> motors;
-    const ValveControlStrategyType defaultStrategy;
 };
 
 }}}    // namespace farmhub::peripherals::valve

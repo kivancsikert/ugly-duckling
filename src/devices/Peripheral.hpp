@@ -102,14 +102,14 @@ public:
     const String type;
 };
 
-template <typename TDeviceConfig, typename TConfig>
+template <typename TDeviceConfig, typename TConfig, typename... TDeviceConfigArgs>
 class PeripheralFactory : public PeripheralFactoryBase {
 public:
-    PeripheralFactory(const String& type)
-        : PeripheralFactoryBase(type) {
+    // TODO Use TDeviceConfigArgs&& instead
+    PeripheralFactory(const String& type, TDeviceConfigArgs... deviceConfigArgs)
+        : PeripheralFactoryBase(type)
+        , deviceConfigArgs(std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
-
-    virtual TDeviceConfig* createDeviceConfig() = 0;
 
     unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
         // Use short prefix because SPIFFS has a 32 character limit
@@ -119,15 +119,20 @@ public:
             configFile->update(configJson);
         });
 
-        // TODO Use smart pointers
-        TDeviceConfig* deviceConfig = createDeviceConfig();
-        deviceConfig->loadFromString(jsonConfig);
-        unique_ptr<Peripheral<TConfig>> peripheral = createPeripheral(name, *deviceConfig, mqttRoot);
+        TDeviceConfig deviceConfig = std::apply([](TDeviceConfigArgs... args) {
+            return TDeviceConfig(std::forward<TDeviceConfigArgs>(args)...);
+        },
+            deviceConfigArgs);
+        deviceConfig.loadFromString(jsonConfig);
+        unique_ptr<Peripheral<TConfig>> peripheral = createPeripheral(name, deviceConfig, mqttRoot);
         peripheral->configure(configFile->config);
         return peripheral;
     }
 
     virtual unique_ptr<Peripheral<TConfig>> createPeripheral(const String& name, const TDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) = 0;
+
+private:
+    std::tuple<TDeviceConfigArgs...> deviceConfigArgs;
 };
 
 // Peripheral manager
