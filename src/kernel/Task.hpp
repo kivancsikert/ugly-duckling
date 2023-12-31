@@ -109,7 +109,7 @@ public:
     }
 
 #ifdef FARMHUB_DEBUG
-    static const uint32_t CONSOLE_BUFFER_INDEX = 1;
+    static const BaseType_t CONSOLE_BUFFER_INDEX = 1;
 
     static String* consoleBuffer() {
         String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX));
