@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include <devices/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
@@ -12,6 +14,8 @@ using namespace farmhub::devices;
 using namespace farmhub::kernel::drivers;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
+using std::make_unique;
+using std::unique_ptr;
 
 namespace farmhub { namespace peripherals { namespace flow_control {
 
@@ -68,7 +72,7 @@ public:
         return new FlowControlDeviceConfig(defaultStrategy);
     }
 
-    FlowControl* createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
+    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
         const ValveDeviceConfig& valveConfig = deviceConfig.valve.get();
         const FlowMeterDeviceConfig& flowMeterConfig = deviceConfig.flowMeter.get();
 
@@ -82,7 +86,7 @@ public:
         } catch (const std::exception& e) {
             throw PeripheralCreationException(name, "Failed to create strategy: " + String(e.what()));
         }
-        return new FlowControl(
+        return make_unique<FlowControl>(
             name,
             mqttRoot,
 

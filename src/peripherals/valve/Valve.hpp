@@ -62,7 +62,7 @@ public:
         return new ValveDeviceConfig(defaultStrategy);
     }
 
-    Valve* createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
+    unique_ptr<Peripheral<ValveConfig>> createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
         PwmMotorDriver& targetMotor = findMotor(name, deviceConfig.motor.get());
         ValveControlStrategy* strategy;
         try {
@@ -73,7 +73,7 @@ public:
         } catch (const std::exception& e) {
             throw PeripheralCreationException(name, "Failed to create strategy: " + String(e.what()));
         }
-        return new Valve(name, targetMotor, *strategy, mqttRoot);
+        return make_unique<Valve>(name, targetMotor, *strategy, mqttRoot);
     }
 
     PwmMotorDriver& findMotor(const String& name, const String& motorName) {

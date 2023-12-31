@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include <devices/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
@@ -9,7 +11,8 @@
 using namespace farmhub::devices;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
-
+using std::make_unique;
+using std::unique_ptr;
 namespace farmhub { namespace peripherals { namespace flow_meter {
 
 class FlowMeter
@@ -39,8 +42,8 @@ public:
         return new FlowMeterDeviceConfig();
     }
 
-    FlowMeter* createPeripheral(const String& name, const FlowMeterDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
-        return new FlowMeter(name, mqttRoot, deviceConfig.pin.get(), deviceConfig.qFactor.get(), deviceConfig.measurementFrequency.get());
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const FlowMeterDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
+        return make_unique<FlowMeter>(name, mqttRoot, deviceConfig.pin.get(), deviceConfig.qFactor.get(), deviceConfig.measurementFrequency.get());
     }
 };
 
