@@ -122,7 +122,14 @@ public:
 #endif
 
 private:
+    Task() {
+        Log.traceln("Starting task %s\n",
+            pcTaskGetName(nullptr));
+    }
+
     ~Task() {
+        Log.traceln("Finished task %s\n",
+            pcTaskGetName(nullptr));
 #ifdef FARMHUB_DEBUG
         String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX));
         if (buffer != nullptr) {
@@ -137,12 +144,8 @@ private:
         TaskFunction taskFunction(*taskFunctionParam);
         delete taskFunctionParam;
 
-        Log.traceln("Starting task %s\n",
-            pcTaskGetName(nullptr));
         Task task;
         taskFunction(task);
-        Log.traceln("Finished task %s\n",
-            pcTaskGetName(nullptr));
     }
 
     TickType_t lastWakeTime { xTaskGetTickCount() };
