@@ -10,6 +10,7 @@
 #include <ArduinoLog.h>
 
 #include <devices/Peripheral.hpp>
+#include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/Task.hpp>
@@ -148,10 +149,10 @@ private:
     const double switchDuty;
 };
 
-class ValveComponent {
+class ValveComponent : public Component {
 public:
     ValveComponent(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy, MqttDriver::MqttRoot mqttRoot)
-        : name(name)
+        : Component(name)
         , controller(controller)
         , strategy(strategy)
         , mqttRoot(mqttRoot) {
@@ -185,7 +186,6 @@ public:
     }
 
 private:
-
     void open() {
         Log.traceln("Opening valve %s", name.c_str());
         strategy.open(controller);
@@ -218,7 +218,6 @@ private:
         // TODO Publish event
     }
 
-    const String name;
     PwmMotorDriver& controller;
     ValveControlStrategy& strategy;
     MqttDriver::MqttRoot mqttRoot;

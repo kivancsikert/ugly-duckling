@@ -9,6 +9,7 @@
 #include <ArduinoLog.h>
 
 #include <kernel/BootClock.hpp>
+#include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
@@ -19,7 +20,8 @@ using namespace farmhub::kernel::drivers;
 namespace farmhub { namespace peripherals { namespace flow_meter {
 
 class FlowMeterComponent
-    : public TelemetryProvider {
+    : public Component,
+      public TelemetryProvider {
 public:
     FlowMeterComponent(
         const String& name,
@@ -27,7 +29,7 @@ public:
         gpio_num_t pin,
         double qFactor,
         milliseconds measurementFrequency)
-        : name(name)
+        : Component(name)
         , mqttRoot(mqttRoot)
         , pin(pin)
         , qFactor(qFactor) {
@@ -89,8 +91,6 @@ public:
         pupulateTelemetryUnderLock(json);
         updateMutex.unlock();
     }
-
-    const String name;
 
 private:
     void inline pupulateTelemetryUnderLock(JsonObject& json) {

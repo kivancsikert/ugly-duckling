@@ -6,6 +6,7 @@
 #include <ArduinoLog.h>
 
 #include <kernel/Configuration.hpp>
+#include <kernel/Named.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 
@@ -19,10 +20,11 @@ namespace farmhub { namespace devices {
 // Peripherals
 
 class PeripheralBase
-    : public TelemetryProvider {
+    : public TelemetryProvider
+    , public Named {
 public:
     PeripheralBase(const String& name, MqttDriver::MqttRoot& mqttRoot, size_t telemetrySize = 2048)
-        : name(name)
+        : Named(name)
         , mqttRoot(mqttRoot)
         , telemetrySize(telemetrySize) {
     }
@@ -43,8 +45,6 @@ public:
 
     virtual void populateTelemetry(JsonObject& telemetryJson) {
     }
-
-    const String name;
 
 protected:
     MqttDriver::MqttRoot mqttRoot;
