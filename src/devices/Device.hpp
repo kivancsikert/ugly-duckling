@@ -197,8 +197,6 @@ private:
     TelemetryCollector& telemetryCollector;
 };
 
-typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
-
 class Device : ConsoleProvider {
 public:
     Device() {
@@ -218,17 +216,17 @@ public:
 
         // deviceTelemetryCollector.registerProvider("peripherals", peripheralManager);
 
-        registerCommand(echoCommand);
-        registerCommand(pingCommand);
+        mqttDeviceRoot.registerCommand(echoCommand);
+        mqttDeviceRoot.registerCommand(pingCommand);
         // TODO Add reset-wifi command
-        // registerCommand(resetWifiCommand);
-        registerCommand(restartCommand);
-        registerCommand(sleepCommand);
-        registerCommand(fileListCommand);
-        registerCommand(fileReadCommand);
-        registerCommand(fileWriteCommand);
-        registerCommand(fileRemoveCommand);
-        registerCommand(httpUpdateCommand);
+        // mqttDeviceRoot.registerCommand(resetWifiCommand);
+        mqttDeviceRoot.registerCommand(restartCommand);
+        mqttDeviceRoot.registerCommand(sleepCommand);
+        mqttDeviceRoot.registerCommand(fileListCommand);
+        mqttDeviceRoot.registerCommand(fileReadCommand);
+        mqttDeviceRoot.registerCommand(fileWriteCommand);
+        mqttDeviceRoot.registerCommand(fileRemoveCommand);
+        mqttDeviceRoot.registerCommand(httpUpdateCommand);
 
         peripheralManager.begin();
 
@@ -268,26 +266,6 @@ private:
         peripheralManager.publishTelemetry();
         // TODO Configure telemetry heartbeat interval
         task.delayUntil(milliseconds(60000));
-    }
-
-    void registerCommand(const String& name, CommandHandler handler) {
-        String suffix = "commands/" + name;
-        mqttDeviceRoot.subscribe(suffix, MqttDriver::QoS::ExactlyOnce, [this, name, suffix, handler](const String&, const JsonObject& request) {
-            // Clear topic
-            mqttDeviceRoot.clear(suffix, MqttDriver::Retention::Retain, MqttDriver::QoS::ExactlyOnce);
-            DynamicJsonDocument responseDoc(2048);
-            auto response = responseDoc.to<JsonObject>();
-            handler(request, response);
-            if (response.size() > 0) {
-                mqttDeviceRoot.publish("responses/" + name, responseDoc, MqttDriver::Retention::NoRetain, MqttDriver::QoS::ExactlyOnce);
-            }
-        });
-    }
-
-    void registerCommand(Command& command) {
-        registerCommand(command.name, [&](const JsonObject& request, JsonObject& response) {
-            command.handle(request, response);
-        });
     }
 
     TDeviceDefinition deviceDefinition;

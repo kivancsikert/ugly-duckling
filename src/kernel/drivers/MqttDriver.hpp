@@ -5,6 +5,7 @@
 #include <MQTT.h>
 #include <WiFi.h>
 
+#include <kernel/Command.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/State.hpp>
@@ -28,6 +29,8 @@ public:
         AtLeastOnce = 1,
         ExactlyOnce = 2
     };
+
+    typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
 
     typedef std::function<void(const String&, const JsonObject&)> SubscriptionHandler;
 
@@ -60,6 +63,30 @@ public:
 
         bool subscribe(const String& suffix, SubscriptionHandler handler) {
             return subscribe(suffix, QoS::ExactlyOnce, handler);
+        }
+
+        bool registerCommand(const String& name, CommandHandler handler) {
+            return registerCommand(name, 1024, handler);
+        }
+
+        bool registerCommand(const String& name, size_t responseSize, CommandHandler handler) {
+            String suffix = "commands/" + name;
+            return subscribe(suffix, QoS::ExactlyOnce, [this, name, suffix, responseSize, handler](const String&, const JsonObject& request) {
+                // Clear topic
+                clear(suffix, Retention::Retain, QoS::ExactlyOnce);
+                DynamicJsonDocument responseDoc(responseSize);
+                auto response = responseDoc.to<JsonObject>();
+                handler(request, response);
+                if (response.size() > 0) {
+                    publish("responses/" + name, responseDoc, Retention::NoRetain, QoS::ExactlyOnce);
+                }
+            });
+        }
+
+        void registerCommand(Command& command) {
+            registerCommand(command.name, command.getResponseSize(), [&](const JsonObject& request, JsonObject& response) {
+                command.handle(request, response);
+            });
         }
 
         /**

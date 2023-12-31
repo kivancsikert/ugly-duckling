@@ -21,6 +21,10 @@ class Command : public Named {
 public:
     virtual void handle(const JsonObject& request, JsonObject& response) = 0;
 
+    virtual size_t getResponseSize() {
+        return 1024;
+    }
+
 protected:
     Command(const String& name)
         : Named(name) {
