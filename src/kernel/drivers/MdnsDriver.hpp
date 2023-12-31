@@ -10,7 +10,7 @@
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 
-namespace farmhub { namespace kernel { namespace drivers {
+namespace farmhub::kernel::drivers {
 
 struct MdnsRecord {
     String hostname;
@@ -116,4 +116,4 @@ void convertFromJson(JsonVariantConst src, MdnsRecord& dst) {
     dst.port = jsonRecord["port"].as<int>();
 }
 
-}}}    // namespace farmhub::kernel::drivers
+}    // namespace farmhub::kernel::drivers

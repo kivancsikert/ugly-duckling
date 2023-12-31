@@ -4,7 +4,7 @@
 
 #include <kernel/Named.hpp>
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 template <typename T>
 class ServiceRef : public Named {
@@ -30,4 +30,4 @@ private:
     const std::reference_wrapper<T> reference;
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

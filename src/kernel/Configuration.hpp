@@ -11,7 +11,7 @@ using std::list;
 using std::ref;
 using std::reference_wrapper;
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 class JsonAsString {
 public:
@@ -118,7 +118,6 @@ class EmptyConfiguration : public ConfigurationSection { };
 template <typename TDelegate>
 class NamedConfigurationEntry : public ConfigurationEntry {
 public:
-
     template <typename... Args>
     NamedConfigurationEntry(ConfigurationSection* parent, const String& name, Args&&... args)
         : name(name)
@@ -335,9 +334,9 @@ private:
     std::list<std::function<void(const JsonObject&)>> callbacks;
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel
 
-namespace std { namespace chrono {
+namespace std::chrono {
 
 using namespace std::chrono;
 
@@ -351,4 +350,4 @@ void convertFromJson(JsonVariantConst src, Duration& dst) {
     dst = Duration { src.as<uint64_t>() };
 }
 
-}}    // namespace std::chrono
+}    // namespace std::chrono

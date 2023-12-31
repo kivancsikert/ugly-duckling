@@ -11,7 +11,7 @@
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 
-namespace farmhub { namespace devices {
+namespace farmhub::devices {
 
 class DeviceConfiguration : public ConfigurationSection {
 public:
@@ -73,4 +73,4 @@ public:
     BatteryDriver batteryDriver;
 };
 
-}}    // namespace farmhub::devices
+}    // namespace farmhub::devices

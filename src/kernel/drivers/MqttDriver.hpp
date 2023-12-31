@@ -18,7 +18,7 @@ using namespace farmhub::kernel;
 using std::make_shared;
 using std::shared_ptr;
 
-namespace farmhub { namespace kernel { namespace drivers {
+namespace farmhub::kernel::drivers {
 
 class MqttDriver {
 public:
@@ -374,4 +374,5 @@ private:
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = seconds(1);
     static const int MQTT_BUFFER_SIZE = 2048;
 };
-}}}    // namespace farmhub::kernel::drivers
+
+}    // namespace farmhub::kernel::drivers

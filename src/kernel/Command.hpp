@@ -15,7 +15,7 @@
 
 using namespace std::chrono;
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 class Command : public Named {
 public:
@@ -236,4 +236,4 @@ private:
     const String currentVersion;
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

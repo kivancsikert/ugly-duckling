@@ -17,7 +17,7 @@ using namespace farmhub::peripherals::valve;
 using std::make_unique;
 using std::unique_ptr;
 
-namespace farmhub { namespace peripherals { namespace flow_control {
+namespace farmhub::peripherals::flow_control {
 
 class FlowControlConfig
     : public ValveConfig {
@@ -106,4 +106,4 @@ private:
     const std::list<ServiceRef<PwmMotorDriver>> motors;
 };
 
-}}}    // namespace farmhub::peripherals::flow_control
+}    // namespace farmhub::peripherals::flow_control

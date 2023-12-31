@@ -5,7 +5,7 @@
 
 using namespace farmhub::kernel::drivers;
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 class Component : public Named {
 protected:
@@ -17,4 +17,4 @@ protected:
     shared_ptr<MqttDriver::MqttRoot> mqttRoot;
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

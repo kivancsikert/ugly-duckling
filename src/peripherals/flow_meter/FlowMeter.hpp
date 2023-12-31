@@ -13,7 +13,7 @@ using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 using std::make_unique;
 using std::unique_ptr;
-namespace farmhub { namespace peripherals { namespace flow_meter {
+namespace farmhub::peripherals::flow_meter {
 
 class FlowMeter
     : public Peripheral<EmptyConfiguration> {
@@ -43,4 +43,4 @@ public:
     }
 };
 
-}}}    // namespace farmhub::peripherals::flow_meter
+}    // namespace farmhub::peripherals::flow_meter

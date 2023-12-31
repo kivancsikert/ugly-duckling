@@ -44,7 +44,7 @@ typedef farmhub::devices::Mk6Config TDeviceConfiguration;
 #error "No device defined"
 #endif
 
-namespace farmhub { namespace devices {
+namespace farmhub::devices {
 
 #ifdef FARMHUB_DEBUG
 class ConsolePrinter : public Print {
@@ -295,4 +295,4 @@ private:
     HttpUpdateCommand httpUpdateCommand { kernel.version };
 };
 
-}}    // namespace farmhub::devices
+}    // namespace farmhub::devices

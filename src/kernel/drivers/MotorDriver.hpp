@@ -1,6 +1,6 @@
 #pragma once
 
-namespace farmhub { namespace kernel { namespace drivers {
+namespace farmhub::kernel::drivers {
 
 enum class MotorPhase {
     FORWARD = 1,
@@ -22,4 +22,4 @@ public:
     virtual void drive(MotorPhase phase, double duty = 1) = 0;
 };
 
-}}}    // namespace farmhub::kernel::drivers
+}    // namespace farmhub::kernel::drivers

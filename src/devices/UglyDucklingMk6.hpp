@@ -19,7 +19,7 @@ using namespace farmhub::peripherals::flow_control;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
 
-namespace farmhub { namespace devices {
+namespace farmhub::devices {
 
 class Mk6Config
     : public DeviceConfiguration {
@@ -65,4 +65,4 @@ public:
     FlowControlFactory flowControlFactory { { motorA, motorB }, ValveControlStrategyType::Latching };
 };
 
-}}    // namespace farmhub::devices
+}    // namespace farmhub::devices

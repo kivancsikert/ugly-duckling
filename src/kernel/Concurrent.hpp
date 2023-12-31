@@ -10,7 +10,7 @@
 
 using namespace std::chrono;
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 template <typename TMessage>
 class Queue {
@@ -161,4 +161,4 @@ private:
     const SemaphoreHandle_t mutex;
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

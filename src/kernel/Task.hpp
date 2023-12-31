@@ -12,7 +12,7 @@
 
 using namespace std::chrono;
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 using ticks = std::chrono::duration<uint32_t, std::ratio<1, configTICK_RATE_HZ>>;
 
@@ -151,4 +151,4 @@ private:
     TickType_t lastWakeTime { xTaskGetTickCount() };
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

@@ -14,7 +14,7 @@
 
 using namespace std::chrono;
 
-namespace farmhub { namespace kernel { namespace drivers {
+namespace farmhub::kernel::drivers {
 
 /**
  * @brief Ensures the real-time clock is properly set up and holds a real time.
@@ -121,4 +121,4 @@ private:
     }
 };
 
-}}}    // namespace farmhub::kernel::drivers
+}    // namespace farmhub::kernel::drivers

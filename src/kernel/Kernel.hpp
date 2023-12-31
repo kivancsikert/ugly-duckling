@@ -16,7 +16,7 @@
 
 #include <version.h>
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 using namespace farmhub::kernel::drivers;
 
@@ -174,4 +174,4 @@ public:
     MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt.get(), deviceConfig.instance.get(), mqttReadyState };
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

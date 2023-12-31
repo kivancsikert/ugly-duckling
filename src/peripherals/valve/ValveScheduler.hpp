@@ -4,7 +4,7 @@
 
 using namespace std::chrono;
 
-namespace farmhub { namespace peripherals { namespace valve {
+namespace farmhub::peripherals::valve {
 
 enum class ValveState {
     CLOSED = -1,
@@ -83,4 +83,4 @@ public:
     }
 };
 
-}}}    // namespace farmhub::peripherals::valve
+}    // namespace farmhub::peripherals::valve

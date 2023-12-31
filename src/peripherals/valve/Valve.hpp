@@ -27,7 +27,7 @@ using std::unique_ptr;
 using namespace farmhub::devices;
 using namespace farmhub::kernel::drivers;
 
-namespace farmhub { namespace peripherals { namespace valve {
+namespace farmhub::peripherals::valve {
 
 class Valve
     : public Peripheral<ValveConfig> {
@@ -84,4 +84,4 @@ private:
     const std::list<ServiceRef<PwmMotorDriver>> motors;
 };
 
-}}}    // namespace farmhub::peripherals::valve
+}    // namespace farmhub::peripherals::valve

@@ -3,7 +3,7 @@
 #include <ArduinoJson.h>
 #include <SPIFFS.h>
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 size_t constexpr _docSizeFor(size_t size) {
     return size * 2 + 1024;
@@ -21,4 +21,4 @@ size_t inline docSizeFor(const File file) {
     return _docSizeFor(file.size());
 }
 
-}}
+}    // namespace farmhub::kernel

@@ -17,7 +17,7 @@
 
 using namespace farmhub::kernel::drivers;
 
-namespace farmhub { namespace peripherals { namespace flow_meter {
+namespace farmhub::peripherals::flow_meter {
 
 class FlowMeterComponent
     : public Component,
@@ -116,4 +116,4 @@ private:
     Mutex updateMutex;
 };
 
-}}}    // namespace farmhub::peripherals::flow_meter
+}    // namespace farmhub::peripherals::flow_meter

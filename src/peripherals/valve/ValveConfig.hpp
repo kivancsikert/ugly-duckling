@@ -8,7 +8,7 @@
 
 using namespace farmhub::kernel;
 
-namespace farmhub { namespace peripherals { namespace valve {
+namespace farmhub::peripherals::valve {
 
 enum class ValveControlStrategyType {
     NormallyOpen,
@@ -88,7 +88,7 @@ void convertFromJson(JsonVariantConst src, ValveControlStrategyType& dst) {
     }
 }
 
-}}}    // namespace farmhub::peripherals::valve
+}    // namespace farmhub::peripherals::valve
 
 namespace ArduinoJson {
 

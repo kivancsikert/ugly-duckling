@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 class Named {
 protected:
@@ -14,4 +14,4 @@ public:
     const String name;
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

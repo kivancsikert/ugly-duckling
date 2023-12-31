@@ -16,7 +16,7 @@ using std::unique_ptr;
 
 using namespace farmhub::kernel;
 
-namespace farmhub { namespace devices {
+namespace farmhub::devices {
 
 // Peripherals
 
@@ -204,4 +204,4 @@ private:
     std::list<unique_ptr<PeripheralBase>> peripherals;
 };
 
-}}    // namespace farmhub::devices
+}    // namespace farmhub::devices

@@ -4,7 +4,7 @@
 
 #include <ArduinoLog.h>
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 // TODO Figure out what to do with low/high speed modes
 //      See https://docs.espressif.com/projects/esp-idf/en/release-v4.2/esp32/api-reference/peripherals/ledc.html#ledc-high-and-low-speed-mode
@@ -52,4 +52,4 @@ private:
     uint8_t nextChannel = 0;
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

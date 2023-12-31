@@ -4,7 +4,7 @@
 
 #include <ArduinoLog.h>
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 class FileSystem;
 static FileSystem* initializeFileSystem();
@@ -78,4 +78,4 @@ static FileSystem* initializeFileSystem() {
     return new SpiffsFileSystem();
 }
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

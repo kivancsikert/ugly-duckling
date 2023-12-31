@@ -11,7 +11,7 @@
 
 using namespace std::chrono;
 
-namespace farmhub { namespace kernel { namespace drivers {
+namespace farmhub::kernel::drivers {
 
 class LedDriver {
 public:
@@ -88,4 +88,4 @@ private:
     BlinkPattern currentPattern;
 };
 
-}}}    // namespace farmhub::kernel::drivers
+}    // namespace farmhub::kernel::drivers

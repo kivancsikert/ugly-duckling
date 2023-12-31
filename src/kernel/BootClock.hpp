@@ -5,7 +5,7 @@
 
 using namespace std;
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 /**
  *  @brief Monotonic clock based on ESP's esp_timer_get_time()
@@ -25,4 +25,4 @@ struct boot_clock {
     }
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

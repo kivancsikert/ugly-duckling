@@ -14,7 +14,7 @@
 
 using namespace std::chrono;
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 // 0th bit reserved to indicate that a state has changed
 static const int STATE_CHANGE_BIT_MASK = (1 << 0);
@@ -174,4 +174,4 @@ private:
     int nextEventBit = 1;
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel
