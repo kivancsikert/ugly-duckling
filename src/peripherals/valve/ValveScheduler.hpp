@@ -3,7 +3,10 @@
 #include <chrono>
 #include <list>
 
+#include <kernel/Time.hpp>
+
 using namespace std::chrono;
+using namespace farmhub::kernel;
 
 namespace farmhub::peripherals::valve {
 
@@ -36,7 +39,6 @@ public:
         return duration;
     }
 
-private:
     const time_point<system_clock> start;
     const seconds period;
     const seconds duration;
