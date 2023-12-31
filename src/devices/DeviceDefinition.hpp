@@ -23,8 +23,8 @@ public:
     Property<String> model;
     Property<String> instance;
 
-    MqttDriver::Config mqtt { this, "mqtt" };
-    RtcDriver::Config ntp { this, "ntp" };
+    NamedConfigurationEntry<MqttDriver::Config> mqtt { this, "mqtt" };
+    NamedConfigurationEntry<RtcDriver::Config> ntp { this, "ntp" };
 
     ArrayProperty<JsonAsString> peripherals { this, "peripherals" };
 

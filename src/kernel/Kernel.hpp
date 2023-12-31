@@ -168,10 +168,10 @@ private:
     OtaDriver ota { networkReadyState, deviceConfig.getHostname() };
 #endif
     MdnsDriver mdns { networkReadyState, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
-    RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp, rtcInSyncState };
+    RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp.get(), rtcInSyncState };
 
 public:
-    MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), mqttReadyState };
+    MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt.get(), deviceConfig.instance.get(), mqttReadyState };
 };
 
 }}    // namespace farmhub::kernel

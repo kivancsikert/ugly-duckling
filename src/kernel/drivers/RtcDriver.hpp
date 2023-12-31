@@ -29,12 +29,8 @@ namespace farmhub { namespace kernel { namespace drivers {
  */
 class RtcDriver {
 public:
-    class Config : public NamedConfigurationSection {
+    class Config : public ConfigurationSection {
     public:
-        Config(ConfigurationSection* parent, const String& name)
-            : NamedConfigurationSection(parent, name) {
-        }
-
         Property<String> host { this, "host", "" };
     };
 

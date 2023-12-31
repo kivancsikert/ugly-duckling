@@ -115,17 +115,21 @@ private:
 
 class EmptyConfiguration : public ConfigurationSection { };
 
-class NamedConfigurationSection : public ConfigurationSection {
+template <typename TDelegate>
+class NamedConfigurationEntry : public ConfigurationEntry {
 public:
-    NamedConfigurationSection(ConfigurationSection* parent, const String& name)
-        : name(name) {
+
+    template <typename... Args>
+    NamedConfigurationEntry(ConfigurationSection* parent, const String& name, Args&&... args)
+        : name(name)
+        , delegate(std::forward<Args>(args)...) {
         parent->add(*this);
     }
 
     void load(const JsonObject& json) override {
         if (json.containsKey(name)) {
             namePresentAtLoad = true;
-            ConfigurationSection::load(json[name]);
+            delegate.load(json[name]);
         } else {
             reset();
         }
@@ -134,21 +138,26 @@ public:
     void store(JsonObject& json, bool inlineDefaults) const override {
         if (inlineDefaults || hasValue()) {
             auto section = json.createNestedObject(name);
-            ConfigurationSection::store(section, inlineDefaults);
+            delegate.store(section, inlineDefaults);
         }
     }
 
     bool hasValue() const override {
-        return namePresentAtLoad || ConfigurationSection::hasValue();
+        return namePresentAtLoad || delegate.hasValue();
     }
 
     void reset() override {
         namePresentAtLoad = false;
-        ConfigurationSection::reset();
+        delegate.reset();
+    }
+
+    TDelegate& get() {
+        return delegate;
     }
 
 private:
     const String name;
+    TDelegate delegate;
     bool namePresentAtLoad = false;
 };
 
