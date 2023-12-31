@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <list>
 
 using namespace std::chrono;
 
@@ -15,7 +16,7 @@ enum class ValveState {
 class ValveSchedule {
 public:
     ValveSchedule(
-        const tm& start,
+        time_point<system_clock> start,
         seconds period,
         seconds duration)
         : start(start)
@@ -23,18 +24,20 @@ public:
         , duration(duration) {
     }
 
-    const tm& getStart() const {
+    time_point<system_clock> getStart() const {
         return start;
     }
+
     seconds getPeriod() const {
         return period;
     }
+
     seconds getDuration() const {
         return duration;
     }
 
 private:
-    const tm start;
+    const time_point<system_clock> start;
     const seconds period;
     const seconds duration;
 };
@@ -49,18 +52,15 @@ public:
     static ValveStateUpdate getStateUpdate(std::list<ValveSchedule> schedules, time_point<system_clock> now, ValveState defaultState) {
         ValveStateUpdate next = { defaultState, ticks::max() };
         for (auto& schedule : schedules) {
-            tm scheduleTm = schedule.getStart();
-            auto scheduleStart = mktime(&scheduleTm);
-            auto scheduleStartLocalTime = system_clock::from_time_t(scheduleStart);
-
+            auto start = schedule.getStart();
             auto period = schedule.getPeriod();
             auto duration = schedule.getDuration();
 
-            if (scheduleStartLocalTime > now) {
+            if (start > now) {
                 continue;
             }
 
-            auto diff = duration_cast<ticks>(now - scheduleStartLocalTime);
+            auto diff = duration_cast<ticks>(now - start);
             auto periodPosition = diff % period;
 
             if (periodPosition < duration) {

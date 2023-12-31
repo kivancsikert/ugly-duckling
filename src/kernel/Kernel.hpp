@@ -63,11 +63,12 @@ public:
         Task::loop("status-update", 4096, [this](Task&) { updateState(); });
     }
 
-    void begin() {
-        kernelReadyState.awaitSet();
+    const State& getRtcInSyncState() const {
+        return rtcInSyncState;
+    }
 
-        Log.infoln("Kernel ready in %d ms",
-            millis());
+    const State& getKernelReadyState() const {
+        return kernelReadyState;
     }
 
     const String version;

@@ -97,19 +97,25 @@ template <>
 struct Converter<ValveSchedule> {
     static void toJson(const ValveSchedule& src, JsonVariant dst) {
         JsonObject obj = dst.to<JsonObject>();
+        auto startLocalTime = src.getStart();
+        auto startTime = system_clock::to_time_t(startLocalTime);
+        tm startTm;
+        localtime_r(&startTime, &startTm);
         char buf[64];
-        strftime(buf, sizeof(buf), "%FT%TZ", &src.getStart());
+        strftime(buf, sizeof(buf), "%FT%TZ", &startTm);
         obj["start"] = buf;
         obj["period"] = src.getPeriod().count();
         obj["duration"] = src.getDuration().count();
     }
 
     static ValveSchedule fromJson(JsonVariantConst src) {
-        tm start;
-        strptime(src["start"].as<const char*>(), "%FT%TZ", &start);
+        tm startTm;
+        strptime(src["start"].as<const char*>(), "%FT%TZ", &startTm);
+        auto startTime = mktime(&startTm);
+        auto startLocalTime = system_clock::from_time_t(startTime);
         seconds period = seconds(src["period"].as<int>());
         seconds duration = seconds(src["duration"].as<int>());
-        return ValveSchedule(start, period, duration);
+        return ValveSchedule(startLocalTime, period, duration);
     }
 
     static bool checkJson(JsonVariantConst src) {

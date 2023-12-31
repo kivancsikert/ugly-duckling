@@ -12,7 +12,8 @@ extern "C" void app_main() {
 
     new farmhub::devices::Device();
 
-    Log.infoln("Application initialized, entering idle loop");
+    Log.infoln("Device ready in %d ms, entering idle loop",
+        millis());
 
     while (true) {
         vTaskDelay(portMAX_DELAY);

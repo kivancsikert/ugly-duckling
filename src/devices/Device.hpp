@@ -230,8 +230,6 @@ public:
         mqttDeviceRoot->registerCommand(fileRemoveCommand);
         mqttDeviceRoot->registerCommand(httpUpdateCommand);
 
-        peripheralManager.begin();
-
 #if defined(MK4)
         deviceDefinition.motorDriver.wakeUp();
 #elif defined(MK5)
@@ -240,7 +238,12 @@ public:
         deviceDefinition.motorDriver.wakeUp();
 #endif
 
-        kernel.begin();
+        // We want RTC to be in sync before we start setting up peripherals
+        kernel.getRtcInSyncState().awaitSet();
+
+        peripheralManager.begin();
+
+        kernel.getKernelReadyState().awaitSet();
 
         mqttDeviceRoot->publish(
             "init",
