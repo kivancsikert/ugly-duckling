@@ -1,0 +1,22 @@
+name-template: $NEXT_PATCH_VERSION
+tag-template: $NEXT_PATCH_VERSION
+
+categories:
+  - title: 🚀 New features and improvements
+    labels:
+      - enhancement
+  - title: 🐛 Bug Fixes
+    labels:
+      - bug
+  - title: 🚦 Internal changes
+    labels:
+      - internal
+
+exclude-labels:
+  - no-changelog
+  - duplicate
+  - invalid
+  - wontfix
+
+template: |
+    $CHANGES
