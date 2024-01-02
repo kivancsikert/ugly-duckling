@@ -34,9 +34,16 @@ jobs:
               run: |
                   pip install --upgrade platformio
 
-            - name: Build application (${{matrix.environment}})
+            - name: Cache project build cache for ${{ matrix.environment }}
+              uses: actions/cache@v3
+              with:
+                  path: |
+                      .pio/build-cache
+                  key: ${{ runner.os }}-${{ matrix.environment }}-build-cache
+
+            - name: Build application (${{ matrix.environment }})
               if: matrix.environment != 'native'
-              run: pio run --environment ${{matrix.environment}}
+              run: pio run --environment ${{ matrix.environment }}
 
             - name: Rename firmware artifact
               if: matrix.environment != 'native'
