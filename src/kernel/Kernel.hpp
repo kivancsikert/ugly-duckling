@@ -16,7 +16,7 @@
 
 #include <version.h>
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 using namespace farmhub::kernel::drivers;
 
@@ -63,12 +63,12 @@ public:
         Task::loop("status-update", 4096, [this](Task&) { updateState(); });
     }
 
-    void begin() {
-        kernelReadyState.awaitSet();
+    const State& getRtcInSyncState() const {
+        return rtcInSyncState;
+    }
 
-
-        Log.infoln("Kernel ready in %d ms",
-            millis());
+    const State& getKernelReadyState() const {
+        return kernelReadyState;
     }
 
     const String version;
@@ -169,10 +169,10 @@ private:
     OtaDriver ota { networkReadyState, deviceConfig.getHostname() };
 #endif
     MdnsDriver mdns { networkReadyState, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
-    RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp, rtcInSyncState };
+    RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp.get(), rtcInSyncState };
 
 public:
-    MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt, deviceConfig.instance.get(), mqttReadyState };
+    MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt.get(), deviceConfig.instance.get(), mqttReadyState };
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

@@ -1,10 +1,12 @@
 #pragma once
 
 #include <list>
+#include <memory>
 
 #include <MQTT.h>
 #include <WiFi.h>
 
+#include <kernel/Command.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/State.hpp>
@@ -13,8 +15,10 @@
 #include <kernel/drivers/WiFiDriver.hpp>
 
 using namespace farmhub::kernel;
+using std::make_shared;
+using std::shared_ptr;
 
-namespace farmhub { namespace kernel { namespace drivers {
+namespace farmhub::kernel::drivers {
 
 class MqttDriver {
 public:
@@ -29,6 +33,8 @@ public:
         ExactlyOnce = 2
     };
 
+    typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
+
     typedef std::function<void(const String&, const JsonObject&)> SubscriptionHandler;
 
     class MqttRoot {
@@ -36,11 +42,6 @@ public:
         MqttRoot(MqttDriver& mqtt, const String& rootTopic)
             : mqtt(mqtt)
             , rootTopic(rootTopic) {
-        }
-
-        MqttRoot(const MqttRoot& other)
-            : mqtt(other.mqtt)
-            , rootTopic(other.rootTopic) {
         }
 
         bool publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
@@ -62,6 +63,30 @@ public:
             return subscribe(suffix, QoS::ExactlyOnce, handler);
         }
 
+        bool registerCommand(const String& name, CommandHandler handler) {
+            return registerCommand(name, 1024, handler);
+        }
+
+        bool registerCommand(const String& name, size_t responseSize, CommandHandler handler) {
+            String suffix = "commands/" + name;
+            return subscribe(suffix, QoS::ExactlyOnce, [this, name, suffix, responseSize, handler](const String&, const JsonObject& request) {
+                // Clear topic
+                clear(suffix, Retention::Retain, QoS::ExactlyOnce);
+                DynamicJsonDocument responseDoc(responseSize);
+                auto response = responseDoc.to<JsonObject>();
+                handler(request, response);
+                if (response.size() > 0) {
+                    publish("responses/" + name, responseDoc, Retention::NoRetain, QoS::ExactlyOnce);
+                }
+            });
+        }
+
+        void registerCommand(Command& command) {
+            registerCommand(command.name, command.getResponseSize(), [&](const JsonObject& request, JsonObject& response) {
+                command.handle(request, response);
+            });
+        }
+
         /**
          * @brief Subscribes to the given topic under the topic prefix.
          *
@@ -77,7 +102,7 @@ public:
         }
 
         MqttDriver& mqtt;
-        String rootTopic;
+        const String rootTopic;
     };
 
 private:
@@ -135,12 +160,8 @@ private:
     };
 
 public:
-    class Config : public NamedConfigurationSection {
+    class Config : public ConfigurationSection {
     public:
-        Config(ConfigurationSection* parent, const String& name)
-            : NamedConfigurationSection(parent, name) {
-        }
-
         Property<String> host { this, "host", "" };
         Property<unsigned int> port { this, "port", 1883 };
         Property<String> clientId { this, "clientId", "" };
@@ -151,7 +172,7 @@ public:
     MqttDriver(
         State& networkReady,
         MdnsDriver& mdns,
-        Config& config,
+        const Config& config,
         const String& instanceName,
         StateSource& mqttReady)
         : networkReady(networkReady)
@@ -169,8 +190,8 @@ public:
         });
     }
 
-    MqttRoot forRoot(const String& topic) {
-        return MqttRoot(*this, topic);
+    shared_ptr<MqttRoot> forRoot(const String& topic) {
+        return make_shared<MqttRoot>(*this, topic);
     }
 
 private:
@@ -332,7 +353,7 @@ private:
     State& networkReady;
     WiFiClient wifiClient;
     MdnsDriver& mdns;
-    Config& config;
+    const Config& config;
     const String instanceName;
 
     const String clientId;
@@ -353,4 +374,5 @@ private:
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = seconds(1);
     static const int MQTT_BUFFER_SIZE = 2048;
 };
-}}}    // namespace farmhub::kernel::drivers
+
+}    // namespace farmhub::kernel::drivers

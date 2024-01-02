@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <memory>
 
 #ifndef FARMHUB_LOG_LEVEL
 #ifdef FARMHUB_DEBUG
@@ -19,6 +20,7 @@
 #include <kernel/Task.hpp>
 
 using namespace std::chrono;
+using std::shared_ptr;
 using namespace farmhub::kernel;
 
 #if defined(MK4)
@@ -42,14 +44,12 @@ typedef farmhub::devices::Mk6Config TDeviceConfiguration;
 #error "No device defined"
 #endif
 
-namespace farmhub { namespace devices {
+namespace farmhub::devices {
 
 #ifdef FARMHUB_DEBUG
 class ConsolePrinter : public Print {
 public:
     ConsolePrinter() {
-        Serial.begin(115200);
-
         static const String spinner = "|/-\\";
         static const int spinnerLength = spinner.length();
         Task::loop("console", 8192, 1, [this](Task& task) {
@@ -159,13 +159,20 @@ void printLogLine(Print* printer, int level) {
 class ConsoleProvider {
 public:
     ConsoleProvider() {
+        Serial.begin(115200);
 #ifdef FARMHUB_DEBUG
         Log.begin(FARMHUB_LOG_LEVEL, &consolePrinter);
         Log.setSuffix(printLogLine);
 #else
         Log.begin(FARMHUB_LOG_LEVEL, &Serial);
 #endif
-        Log.infoln("Starting up...");
+        Log.infoln(F("  ______                   _    _       _"));
+        Log.infoln(F(" |  ____|                 | |  | |     | |"));
+        Log.infoln(F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
+        Log.infoln(F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
+        Log.infoln(F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
+        Log.infoln(F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
+        Log.infoln("");
     }
 };
 
@@ -178,21 +185,19 @@ public:
 
 class MqttTelemetryPublisher : public TelemetryPublisher {
 public:
-    MqttTelemetryPublisher(MqttDriver::MqttRoot& mqtt, TelemetryCollector& telemetryCollector)
-        : mqttRoot(mqtt)
+    MqttTelemetryPublisher(shared_ptr<MqttDriver::MqttRoot> mqttRoot, TelemetryCollector& telemetryCollector)
+        : mqttRoot(mqttRoot)
         , telemetryCollector(telemetryCollector) {
     }
 
     void publishTelemetry() {
-        mqttRoot.publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); });
+        mqttRoot->publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); });
     }
 
 private:
-    MqttDriver::MqttRoot& mqttRoot;
+    shared_ptr<MqttDriver::MqttRoot> mqttRoot;
     TelemetryCollector& telemetryCollector;
 };
-
-typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
 
 class Device : ConsoleProvider {
 public:
@@ -213,19 +218,17 @@ public:
 
         // deviceTelemetryCollector.registerProvider("peripherals", peripheralManager);
 
-        registerCommand(echoCommand);
-        registerCommand(pingCommand);
+        mqttDeviceRoot->registerCommand(echoCommand);
+        mqttDeviceRoot->registerCommand(pingCommand);
         // TODO Add reset-wifi command
-        // registerCommand(resetWifiCommand);
-        registerCommand(restartCommand);
-        registerCommand(sleepCommand);
-        registerCommand(fileListCommand);
-        registerCommand(fileReadCommand);
-        registerCommand(fileWriteCommand);
-        registerCommand(fileRemoveCommand);
-        registerCommand(httpUpdateCommand);
-
-        peripheralManager.begin();
+        // mqttDeviceRoot->registerCommand(resetWifiCommand);
+        mqttDeviceRoot->registerCommand(restartCommand);
+        mqttDeviceRoot->registerCommand(sleepCommand);
+        mqttDeviceRoot->registerCommand(fileListCommand);
+        mqttDeviceRoot->registerCommand(fileReadCommand);
+        mqttDeviceRoot->registerCommand(fileWriteCommand);
+        mqttDeviceRoot->registerCommand(fileRemoveCommand);
+        mqttDeviceRoot->registerCommand(httpUpdateCommand);
 
 #if defined(MK4)
         deviceDefinition.motorDriver.wakeUp();
@@ -235,9 +238,14 @@ public:
         deviceDefinition.motorDriver.wakeUp();
 #endif
 
-        kernel.begin();
+        // We want RTC to be in sync before we start setting up peripherals
+        kernel.getRtcInSyncState().awaitSet();
 
-        mqttDeviceRoot.publish(
+        peripheralManager.begin();
+
+        kernel.getKernelReadyState().awaitSet();
+
+        mqttDeviceRoot->publish(
             "init",
             [&](JsonObject& json) {
                 // TODO Remove redundanty mentions of "ugly-duckling"
@@ -265,33 +273,13 @@ private:
         task.delayUntil(milliseconds(60000));
     }
 
-    void registerCommand(const String& name, CommandHandler handler) {
-        String suffix = "commands/" + name;
-        mqttDeviceRoot.subscribe(suffix, MqttDriver::QoS::ExactlyOnce, [this, name, suffix, handler](const String&, const JsonObject& request) {
-            // Clear topic
-            mqttDeviceRoot.clear(suffix, MqttDriver::Retention::Retain, MqttDriver::QoS::ExactlyOnce);
-            DynamicJsonDocument responseDoc(2048);
-            auto response = responseDoc.to<JsonObject>();
-            handler(request, response);
-            if (response.size() > 0) {
-                mqttDeviceRoot.publish("responses/" + name, responseDoc, MqttDriver::Retention::NoRetain, MqttDriver::QoS::ExactlyOnce);
-            }
-        });
-    }
-
-    void registerCommand(Command& command) {
-        registerCommand(command.name, [&](const JsonObject& request, JsonObject& response) {
-            command.handle(request, response);
-        });
-    }
-
     TDeviceDefinition deviceDefinition;
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;
     Kernel<TDeviceConfiguration> kernel { deviceConfig, deviceDefinition.statusLed };
     PeripheralManager peripheralManager { kernel.mqtt, deviceConfig.peripherals };
 
     TelemetryCollector deviceTelemetryCollector;
-    MqttDriver::MqttRoot mqttDeviceRoot = kernel.mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
+    shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };
     PingCommand pingCommand { deviceTelemetryPublisher };
 
@@ -310,4 +298,4 @@ private:
     HttpUpdateCommand httpUpdateCommand { kernel.version };
 };
 
-}}    // namespace farmhub::devices
+}    // namespace farmhub::devices

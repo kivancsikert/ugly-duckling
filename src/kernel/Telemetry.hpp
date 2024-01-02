@@ -6,7 +6,7 @@
 
 #include <kernel/Task.hpp>
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 class TelemetryProvider {
 public:
@@ -39,4 +39,4 @@ public:
     virtual void publishTelemetry() = 0;
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

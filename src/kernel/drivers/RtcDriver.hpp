@@ -14,7 +14,7 @@
 
 using namespace std::chrono;
 
-namespace farmhub { namespace kernel { namespace drivers {
+namespace farmhub::kernel::drivers {
 
 /**
  * @brief Ensures the real-time clock is properly set up and holds a real time.
@@ -29,16 +29,12 @@ namespace farmhub { namespace kernel { namespace drivers {
  */
 class RtcDriver {
 public:
-    class Config : public NamedConfigurationSection {
+    class Config : public ConfigurationSection {
     public:
-        Config(ConfigurationSection* parent, const String& name)
-            : NamedConfigurationSection(parent, name) {
-        }
-
         Property<String> host { this, "host", "" };
     };
 
-    RtcDriver(State& networkReady, MdnsDriver& mdns, Config& ntpConfig, StateSource& rtcInSync) {
+    RtcDriver(State& networkReady, MdnsDriver& mdns, const Config& ntpConfig, StateSource& rtcInSync) {
         Task::run("rtc-check", [&rtcInSync](Task& task) {
             while (true) {
                 time_t now;
@@ -125,4 +121,4 @@ private:
     }
 };
 
-}}}    // namespace farmhub::kernel::drivers
+}    // namespace farmhub::kernel::drivers

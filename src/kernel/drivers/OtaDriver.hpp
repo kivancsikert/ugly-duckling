@@ -9,7 +9,7 @@
 
 #include <kernel/Task.hpp>
 
-namespace farmhub { namespace kernel { namespace drivers {
+namespace farmhub::kernel::drivers {
 
 class OtaDriver {
 
@@ -66,4 +66,4 @@ public:
     }
 };
 
-}}}    // namespace farmhub::kernel::drivers
+}    // namespace farmhub::kernel::drivers

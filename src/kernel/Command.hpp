@@ -10,21 +10,24 @@
 #include <esp_sleep.h>
 
 #include <kernel/FileSystem.hpp>
+#include <kernel/Named.hpp>
 #include <kernel/Telemetry.hpp>
 
 using namespace std::chrono;
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
-class Command {
+class Command : public Named {
 public:
     virtual void handle(const JsonObject& request, JsonObject& response) = 0;
 
-    const String name;
+    virtual size_t getResponseSize() {
+        return 1024;
+    }
 
 protected:
     Command(const String& name)
-        : name(name) {
+        : Named(name) {
     }
 };
 
@@ -233,4 +236,4 @@ private:
     const String currentVersion;
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

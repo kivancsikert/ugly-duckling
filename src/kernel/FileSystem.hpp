@@ -4,7 +4,7 @@
 
 #include <ArduinoLog.h>
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 class FileSystem;
 static FileSystem* initializeFileSystem();
@@ -72,10 +72,10 @@ static FileSystem* initializeFileSystem() {
             break;
         }
         Log.infoln(" - %s (%d bytes)",
-            file.name(), file.size());
+            file.path(), file.size());
         file.close();
     }
     return new SpiffsFileSystem();
 }
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

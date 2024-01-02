@@ -13,7 +13,7 @@
 
 using namespace farmhub::kernel;
 
-namespace farmhub { namespace kernel { namespace drivers {
+namespace farmhub::kernel::drivers {
 
 class WiFiDriver {
 public:
@@ -84,4 +84,4 @@ private:
     Queue<bool> reconnectQueue { "wifi-reconnect", 1 };
 };
 
-}}}    // namespace farmhub::kernel::drivers
+}    // namespace farmhub::kernel::drivers

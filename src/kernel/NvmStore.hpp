@@ -9,7 +9,7 @@
 
 #include <kernel/Concurrent.hpp>
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 /**
  * @brief Thread safe NVM store for JSON serializable objects.
@@ -91,4 +91,4 @@ private:
     static const size_t DEFAULT_BUFFER_SIZE = 2048;
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

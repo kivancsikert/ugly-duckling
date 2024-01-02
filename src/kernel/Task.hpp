@@ -10,11 +10,11 @@
 
 #include <ArduinoLog.h>
 
+#include <kernel/Time.hpp>
+
 using namespace std::chrono;
 
-namespace farmhub { namespace kernel {
-
-using ticks = std::chrono::duration<uint32_t, std::ratio<1, configTICK_RATE_HZ>>;
+namespace farmhub::kernel {
 
 static const uint32_t DEFAULT_STACK_SIZE = 2048;
 static const unsigned int DEFAULT_PRIORITY = 1;
@@ -104,8 +104,12 @@ public:
         vTaskSuspend(nullptr);
     }
 
+    void yield() {
+        taskYIELD();
+    }
+
 #ifdef FARMHUB_DEBUG
-    static const uint32_t CONSOLE_BUFFER_INDEX = 1;
+    static const BaseType_t CONSOLE_BUFFER_INDEX = 1;
 
     static String* consoleBuffer() {
         String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX));
@@ -118,7 +122,14 @@ public:
 #endif
 
 private:
+    Task() {
+        Log.traceln("Starting task %s\n",
+            pcTaskGetName(nullptr));
+    }
+
     ~Task() {
+        Log.traceln("Finished task %s\n",
+            pcTaskGetName(nullptr));
 #ifdef FARMHUB_DEBUG
         String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX));
         if (buffer != nullptr) {
@@ -133,15 +144,11 @@ private:
         TaskFunction taskFunction(*taskFunctionParam);
         delete taskFunctionParam;
 
-        Log.traceln("Starting task %s\n",
-            pcTaskGetName(nullptr));
         Task task;
         taskFunction(task);
-        Log.traceln("Finished task %s\n",
-            pcTaskGetName(nullptr));
     }
 
     TickType_t lastWakeTime { xTaskGetTickCount() };
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

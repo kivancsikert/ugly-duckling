@@ -6,7 +6,7 @@
 
 #include <kernel/Telemetry.hpp>
 
-namespace farmhub { namespace kernel { namespace drivers {
+namespace farmhub::kernel::drivers {
 
 class BatteryDriver
     : public TelemetryProvider {
@@ -35,4 +35,4 @@ private:
     const float voltageDividerRatio;
 };
 
-}}}    // namespace farmhub::kernel::drivers
+}    // namespace farmhub::kernel::drivers

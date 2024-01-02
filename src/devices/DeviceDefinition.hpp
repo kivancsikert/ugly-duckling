@@ -11,7 +11,7 @@
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 
-namespace farmhub { namespace devices {
+namespace farmhub::devices {
 
 class DeviceConfiguration : public ConfigurationSection {
 public:
@@ -23,8 +23,8 @@ public:
     Property<String> model;
     Property<String> instance;
 
-    MqttDriver::Config mqtt { this, "mqtt" };
-    RtcDriver::Config ntp { this, "ntp" };
+    NamedConfigurationEntry<MqttDriver::Config> mqtt { this, "mqtt" };
+    NamedConfigurationEntry<RtcDriver::Config> ntp { this, "ntp" };
 
     ArrayProperty<JsonAsString> peripherals { this, "peripherals" };
 
@@ -73,4 +73,4 @@ public:
     BatteryDriver batteryDriver;
 };
 
-}}    // namespace farmhub::devices
+}    // namespace farmhub::devices

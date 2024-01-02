@@ -2,13 +2,15 @@
 
 #include <functional>
 
-namespace farmhub { namespace kernel {
+#include <kernel/Named.hpp>
+
+namespace farmhub::kernel {
 
 template <typename T>
-class ServiceRef {
+class ServiceRef : public Named {
 public:
     ServiceRef(const String& name, T& instance)
-        : name(name)
+        : Named(name)
         , reference(instance) {
     }
 
@@ -25,8 +27,7 @@ public:
     }
 
 private:
-    const String name;
     const std::reference_wrapper<T> reference;
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel

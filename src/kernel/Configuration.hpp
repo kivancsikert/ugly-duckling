@@ -11,7 +11,7 @@ using std::list;
 using std::ref;
 using std::reference_wrapper;
 
-namespace farmhub { namespace kernel {
+namespace farmhub::kernel {
 
 class JsonAsString {
 public:
@@ -113,17 +113,22 @@ private:
     list<reference_wrapper<ConfigurationEntry>> entries;
 };
 
-class NamedConfigurationSection : public ConfigurationSection {
+class EmptyConfiguration : public ConfigurationSection { };
+
+template <typename TDelegate>
+class NamedConfigurationEntry : public ConfigurationEntry {
 public:
-    NamedConfigurationSection(ConfigurationSection* parent, const String& name)
-        : name(name) {
+    template <typename... Args>
+    NamedConfigurationEntry(ConfigurationSection* parent, const String& name, Args&&... args)
+        : name(name)
+        , delegate(std::forward<Args>(args)...) {
         parent->add(*this);
     }
 
     void load(const JsonObject& json) override {
         if (json.containsKey(name)) {
             namePresentAtLoad = true;
-            ConfigurationSection::load(json[name]);
+            delegate.load(json[name]);
         } else {
             reset();
         }
@@ -132,21 +137,26 @@ public:
     void store(JsonObject& json, bool inlineDefaults) const override {
         if (inlineDefaults || hasValue()) {
             auto section = json.createNestedObject(name);
-            ConfigurationSection::store(section, inlineDefaults);
+            delegate.store(section, inlineDefaults);
         }
     }
 
     bool hasValue() const override {
-        return namePresentAtLoad || ConfigurationSection::hasValue();
+        return namePresentAtLoad || delegate.hasValue();
     }
 
     void reset() override {
         namePresentAtLoad = false;
-        ConfigurationSection::reset();
+        delegate.reset();
+    }
+
+    const TDelegate& get() const {
+        return delegate;
     }
 
 private:
     const String name;
+    TDelegate delegate;
     bool namePresentAtLoad = false;
 };
 
@@ -324,9 +334,9 @@ private:
     std::list<std::function<void(const JsonObject&)>> callbacks;
 };
 
-}}    // namespace farmhub::kernel
+}    // namespace farmhub::kernel
 
-namespace std { namespace chrono {
+namespace std::chrono {
 
 using namespace std::chrono;
 
@@ -340,4 +350,4 @@ void convertFromJson(JsonVariantConst src, Duration& dst) {
     dst = Duration { src.as<uint64_t>() };
 }
 
-}}    // namespace std::chrono
+}    // namespace std::chrono
