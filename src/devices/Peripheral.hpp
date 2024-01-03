@@ -126,6 +126,10 @@ public:
         deviceConfig.loadFromString(jsonConfig);
         unique_ptr<Peripheral<TConfig>> peripheral = createPeripheral(name, deviceConfig, mqttRoot);
         peripheral->configure(configFile->config);
+        mqttRoot->publish("init", [&configFile](JsonObject& json) {
+            auto config = json.createNestedObject("config");
+            configFile->config.store(config, false);
+        });
         return peripheral;
     }
 
