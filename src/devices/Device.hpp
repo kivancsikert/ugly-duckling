@@ -241,21 +241,21 @@ public:
         // We want RTC to be in sync before we start setting up peripherals
         kernel.getRtcInSyncState().awaitSet();
 
-        peripheralManager.begin();
+        peripheralManager.createPeripherals("ugly-duckling/" + deviceConfig.instance.get());
 
         kernel.getKernelReadyState().awaitSet();
 
         mqttDeviceRoot->publish(
             "init",
             [&](JsonObject& json) {
-                // TODO Remove redundanty mentions of "ugly-duckling"
+                // TODO Remove redundant mentions of "ugly-duckling"
                 json["type"] = "ugly-duckling";
                 json["model"] = deviceConfig.model.get();
                 json["instance"] = deviceConfig.instance.get();
                 json["mac"] = getMacAddress();
                 auto device = json.createNestedObject("deviceConfig");
                 deviceConfig.store(device, false);
-                // TODO Remove redundanty mentions of "ugly-duckling"
+                // TODO Remove redundant mentions of "ugly-duckling"
                 json["app"] = "ugly-duckling";
                 json["version"] = kernel.version;
                 json["wakeup"] = esp_sleep_get_wakeup_cause();
