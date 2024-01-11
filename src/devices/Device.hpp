@@ -241,7 +241,7 @@ public:
         // We want RTC to be in sync before we start setting up peripherals
         kernel.getRtcInSyncState().awaitSet();
 
-        peripheralManager.createPeripherals("ugly-duckling/" + deviceConfig.instance.get());
+        peripheralManager.createPeripherals();
 
         kernel.getKernelReadyState().awaitSet();
 
@@ -276,10 +276,10 @@ private:
     TDeviceDefinition deviceDefinition;
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;
     Kernel<TDeviceConfiguration> kernel { deviceConfig, deviceDefinition.statusLed };
-    PeripheralManager peripheralManager { kernel.mqtt, deviceConfig.peripherals };
+    shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
+    PeripheralManager peripheralManager { mqttDeviceRoot, deviceConfig.peripherals };
 
     TelemetryCollector deviceTelemetryCollector;
-    shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };
     PingCommand pingCommand { deviceTelemetryPublisher };
 
