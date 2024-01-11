@@ -44,6 +44,10 @@ public:
             , rootTopic(rootTopic) {
         }
 
+        shared_ptr<MqttRoot> forSuffix(const String& suffix) {
+            return make_shared<MqttRoot>(mqtt, rootTopic + "/" + suffix);
+        }
+
         bool publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce) {
             return mqtt.publish(fullTopic(suffix), json, retain, qos);
         }
