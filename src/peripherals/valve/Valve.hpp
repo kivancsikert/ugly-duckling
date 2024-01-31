@@ -66,7 +66,7 @@ public:
                 deviceConfig.switchDuration.get(),
                 deviceConfig.duty.get() / 100.0);
         } catch (const std::exception& e) {
-            throw PeripheralCreationException(name, "Failed to create strategy: " + String(e.what()));
+            throw PeripheralCreationException(name, "failed to create strategy: " + String(e.what()));
         }
         return make_unique<Valve>(name, targetMotor, *strategy, mqttRoot);
     }
@@ -77,7 +77,7 @@ public:
                 return motor.get();
             }
         }
-        throw PeripheralCreationException(name, "Failed to find motor: " + motorName);
+        throw PeripheralCreationException(name, "failed to find motor: " + motorName);
     }
 
 private:

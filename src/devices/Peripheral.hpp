@@ -15,6 +15,7 @@ using std::shared_ptr;
 using std::unique_ptr;
 
 using namespace farmhub::kernel;
+using namespace farmhub::kernel::drivers;
 
 namespace farmhub::devices {
 
@@ -79,35 +80,40 @@ class PeripheralCreationException
     : public std::exception {
 public:
     PeripheralCreationException(const String& name, const String& reason)
-        : name(name)
-        , reason(reason) {
+        : message(String("PeripheralCreationException: Failed to create peripheral '" + name + "' because " + reason)) {
     }
 
     const char* what() const noexcept override {
-        return String("Failed to create peripheral '" + name + "' because " + reason).c_str();
+        return message.c_str();
     }
 
-    const String name;
-    const String reason;
+    const String message;
 };
 
 class PeripheralFactoryBase {
 public:
-    PeripheralFactoryBase(const String& type)
-        : type(type) {
+    PeripheralFactoryBase(const String& factoryType, const String& peripheralType)
+        : factoryType(factoryType)
+        , peripheralType(peripheralType) {
     }
 
     virtual unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) = 0;
 
-    const String type;
+    const String factoryType;
+    const String peripheralType;
 };
 
 template <typename TDeviceConfig, typename TConfig, typename... TDeviceConfigArgs>
 class PeripheralFactory : public PeripheralFactoryBase {
 public:
+    // By default use the factory type as the peripheral type
     // TODO Use TDeviceConfigArgs&& instead
     PeripheralFactory(const String& type, TDeviceConfigArgs... deviceConfigArgs)
-        : PeripheralFactoryBase(type)
+        : PeripheralFactory(type, type, std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
+    }
+
+    PeripheralFactory(const String& factoryType, const String& peripheralType, TDeviceConfigArgs... deviceConfigArgs)
+        : PeripheralFactoryBase(factoryType, peripheralType)
         , deviceConfigArgs(std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
@@ -145,34 +151,39 @@ class PeripheralManager
     : public TelemetryPublisher {
 public:
     PeripheralManager(
-        const shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot,
-        ArrayProperty<JsonAsString>& peripheralsConfig)
-        : mqttDeviceRoot(mqttDeviceRoot)
-        , peripheralsConfig(peripheralsConfig) {
+        const shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot)
+        : mqttDeviceRoot(mqttDeviceRoot) {
     }
 
     void registerFactory(PeripheralFactoryBase& factory) {
         Log.traceln("Registering peripheral factory: %s",
-            factory.type.c_str());
-        factories.insert(std::make_pair(factory.type, std::reference_wrapper<PeripheralFactoryBase>(factory)));
+            factory.factoryType.c_str());
+        factories.insert(std::make_pair(factory.factoryType, std::reference_wrapper<PeripheralFactoryBase>(factory)));
     }
 
-    void createPeripherals() {
-        Log.infoln("Loading configuration for %d peripherals",
-            peripheralsConfig.get().size());
+    void createPeripheral(const String& peripheralConfig) {
+        Log.info("Creating peripheral with config: %s",
+            peripheralConfig.c_str());
+        PeripheralDeviceConfiguration deviceConfig;
+        try {
+            deviceConfig.loadFromString(peripheralConfig);
+        } catch (const std::exception& e) {
+            Log.errorln("Failed to parse peripheral config because %s:\n%s",
+                e.what(), peripheralConfig.c_str());
+            return;
+        }
 
-        for (auto& perpheralConfigJsonAsString : peripheralsConfig.get()) {
-            PeripheralDeviceConfiguration deviceConfig;
-            deviceConfig.loadFromString(perpheralConfigJsonAsString.get());
-            const String& name = deviceConfig.name.get();
-            const String& type = deviceConfig.type.get();
-            try {
-                unique_ptr<PeripheralBase> peripheral = createPeripheral(name, type, deviceConfig.params.get().get());
-                peripherals.push_back(move(peripheral));
-            } catch (const PeripheralCreationException& e) {
-                Log.errorln("Failed to create peripheral: %s of type %s because %s",
-                    name.c_str(), type.c_str(), e.reason.c_str());
-            }
+        const String& name = deviceConfig.name.get();
+        const String& factory = deviceConfig.type.get();
+        try {
+            unique_ptr<PeripheralBase> peripheral = createPeripheral(name, factory, deviceConfig.params.get().get());
+            peripherals.push_back(move(peripheral));
+        } catch (const std::exception& e) {
+            Log.errorln("Failed to create peripheral '%s' with factory '%s' because %s",
+                name.c_str(), factory.c_str(), e.what());
+        } catch (...) {
+            Log.errorln("Failed to create peripheral '%s' with factory '%s' because of an unknown exception",
+                name.c_str(), factory.c_str());
         }
     }
 
@@ -190,20 +201,20 @@ private:
         Property<JsonAsString> params { this, "params" };
     };
 
-    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& type, const String& configJson) {
-        Log.traceln("Creating peripheral: %s of type %s",
-            name.c_str(), type.c_str());
-        auto it = factories.find(type);
+    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& factoryType, const String& configJson) {
+        Log.traceln("Creating peripheral '%s' with factory '%s'",
+            name.c_str(), factoryType.c_str());
+        auto it = factories.find(factoryType);
         if (it == factories.end()) {
-            throw PeripheralCreationException(name, "No factory found for peripheral type '" + type + "'");
+            throw PeripheralCreationException(name, "Factory not found: '" + factoryType + "'");
         }
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + type + "/" + name);
+        const String& peripheralType = it->second.get().peripheralType;
+        shared_ptr<MqttDriver::MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
         PeripheralFactoryBase& factory = it->second.get();
         return factory.createPeripheral(name, configJson, mqttRoot);
     }
 
     const shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot;
-    ArrayProperty<JsonAsString>& peripheralsConfig;
 
     // TODO Use an unordered_map?
     std::map<String, std::reference_wrapper<PeripheralFactoryBase>> factories;

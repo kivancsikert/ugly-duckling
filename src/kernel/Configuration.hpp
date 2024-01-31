@@ -13,6 +13,20 @@ using std::reference_wrapper;
 
 namespace farmhub::kernel {
 
+class ConfigurationException
+    : public std::exception {
+public:
+    ConfigurationException(const String& message)
+        : message("ConfigurationException: " + message) {
+    }
+
+    const char* what() const noexcept override {
+        return message.c_str();
+    }
+
+    const String message;
+};
+
 class JsonAsString {
 public:
     JsonAsString() {
@@ -63,8 +77,11 @@ public:
     void loadFromString(const String& json) {
         DynamicJsonDocument jsonDocument(docSizeFor(json));
         DeserializationError error = deserializeJson(jsonDocument, json);
+        if (error == DeserializationError::EmptyInput) {
+            return;
+        }
         if (error) {
-            throw "Cannot parse JSON configuration: " + String(error.c_str());
+            throw ConfigurationException("Cannot parse JSON configuration: " + String(error.c_str()) + json);
         }
         load(jsonDocument.as<JsonObject>());
     }
@@ -273,21 +290,21 @@ public:
         } else {
             File file = fs.open(path, FILE_READ);
             if (!file) {
-                throw "Cannot open config file " + path;
+                throw ConfigurationException("Cannot open config file " + path);
             }
 
             DynamicJsonDocument json(docSizeFor(file));
             DeserializationError error = deserializeJson(json, file);
             file.close();
             if (error) {
-                throw "Cannot open config file " + path + " (" + String(error.c_str()) + ")";
+                throw ConfigurationException("Cannot open config file " + path + " (" + String(error.c_str()) + ")");
             }
             update(json.as<JsonObject>());
         }
         onUpdate([&fs, path](const JsonObject& json) {
             File file = fs.open(path, FILE_WRITE);
             if (!file) {
-                throw "Cannot open config file " + path;
+                throw ConfigurationException("Cannot open config file " + path);
             }
 
             serializeJson(json, file);

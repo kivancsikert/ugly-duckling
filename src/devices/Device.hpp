@@ -216,8 +216,6 @@ public:
 
         deviceDefinition.registerPeripheralFactories(peripheralManager);
 
-        // deviceTelemetryCollector.registerProvider("peripherals", peripheralManager);
-
         mqttDeviceRoot->registerCommand(echoCommand);
         mqttDeviceRoot->registerCommand(pingCommand);
         // TODO Add reset-wifi command
@@ -241,7 +239,19 @@ public:
         // We want RTC to be in sync before we start setting up peripherals
         kernel.getRtcInSyncState().awaitSet();
 
-        peripheralManager.createPeripherals();
+        auto builtInPeripheralsCofig = deviceDefinition.getBuiltInPeripherals();
+        Log.traceln("Loading configuration for %d built-in peripherals",
+            builtInPeripheralsCofig.size());
+        for (auto& perpheralConfig : builtInPeripheralsCofig) {
+            peripheralManager.createPeripheral(perpheralConfig);
+        }
+
+        auto& peripheralsConfig = deviceConfig.peripherals.get();
+        Log.infoln("Loading configuration for %d peripherals",
+            peripheralsConfig.size());
+        for (auto& perpheralConfig : peripheralsConfig) {
+            peripheralManager.createPeripheral(perpheralConfig.get());
+        }
 
         kernel.getKernelReadyState().awaitSet();
 
@@ -277,7 +287,7 @@ private:
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;
     Kernel<TDeviceConfiguration> kernel { deviceConfig, deviceDefinition.statusLed };
     shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
-    PeripheralManager peripheralManager { mqttDeviceRoot, deviceConfig.peripherals };
+    PeripheralManager peripheralManager { mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };

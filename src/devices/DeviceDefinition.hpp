@@ -1,15 +1,20 @@
 #pragma once
 
+#include <list>
+
 #include <devices/Peripheral.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/PwmManager.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
+#include <peripherals/environment/EnvironmentSht3x.hpp>
+
 #include <version.h>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::peripherals::environment;
 
 namespace farmhub::devices {
 
@@ -48,6 +53,18 @@ public:
     }
 
     virtual void registerPeripheralFactories(PeripheralManager& peripheralManager) {
+        peripheralManager.registerFactory(sht3xFactory);
+        registerDeviceSpecificPeripheralFactories(peripheralManager);
+    }
+
+    virtual void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) {
+    }
+
+    /**
+     * @brief Returns zero or more JSON configurations for any built-in peripheral of the device.
+     */
+    virtual std::list<String> getBuiltInPeripherals() {
+        return {};
     }
 
 public:
@@ -59,6 +76,9 @@ private:
 
 public:
     TDeviceConfiguration& config = configFile.config;
+
+private:
+    EnvironmentSht3xFactory sht3xFactory;
 };
 
 template <typename TDeviceConfiguration>

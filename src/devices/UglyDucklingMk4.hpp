@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Arduino.h>
+
 #include <kernel/FileSystem.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/Service.hpp>
@@ -36,10 +38,25 @@ public:
             GPIO_NUM_26) {
     }
 
-    void registerPeripheralFactories(PeripheralManager& peripheralManager) override {
+    void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
         peripheralManager.registerFactory(valveFactory);
         peripheralManager.registerFactory(flowMeterFactory);
         peripheralManager.registerFactory(flowControlFactory);
+    }
+
+    std::list<String> getBuiltInPeripherals() override {
+        // Device address is 0x44 = 68
+        return {
+            R"({
+                "type": "environment:sht3x",
+                "name": "environment",
+                "params": {
+                    "address": "0x44",
+                    "sda": 8,
+                    "scl": 9
+                }
+            })"
+        };
     }
 
     Drv8801Driver motorDriver {
