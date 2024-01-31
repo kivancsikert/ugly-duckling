@@ -7,7 +7,7 @@
 #include <kernel/drivers/MqttDriver.hpp>
 #include <peripherals/I2CConfig.hpp>
 
-#include "EnvironmentComponent.hpp"
+#include "EnvironmentSht3xComponent.hpp"
 
 using namespace farmhub::devices;
 using namespace farmhub::kernel;
@@ -16,33 +16,33 @@ using std::make_unique;
 using std::unique_ptr;
 namespace farmhub::peripherals::environment {
 
-class EnvironmentSht31
+class EnvironmentSht3x
     : public Peripheral<EmptyConfiguration> {
 public:
-    EnvironmentSht31(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot, I2CConfig config)
+    EnvironmentSht3x(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot, I2CConfig config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , sht31(name, mqttRoot, config) {
+        , sht3x(name, mqttRoot, config) {
     }
 
     void populateTelemetry(JsonObject& telemetryJson) override {
-        sht31.populateTelemetry(telemetryJson);
+        sht3x.populateTelemetry(telemetryJson);
     }
 
 private:
-    Sht31Component sht31;
+    EnvironmentSht3xComponent sht3x;
 };
 
-class EnvironmentSht31Factory
+class EnvironmentSht3xFactory
     : public PeripheralFactory<I2CDeviceConfig, EmptyConfiguration> {
 public:
-    EnvironmentSht31Factory()
-        : PeripheralFactory<I2CDeviceConfig, EmptyConfiguration>("environment:sht31", "environment") {
+    EnvironmentSht3xFactory()
+        : PeripheralFactory<I2CDeviceConfig, EmptyConfiguration>("environment:sht3x", "environment") {
     }
 
     unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const I2CDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
         auto i2cConfig = deviceConfig.parse(SHT_DEFAULT_ADDRESS, GPIO_NUM_NC, GPIO_NUM_NC);
-        Log.infoln("Creating SHT31 environment sensor %s with %s", name.c_str(), i2cConfig.toString().c_str());
-        return make_unique<EnvironmentSht31>(name, mqttRoot, i2cConfig);
+        Log.infoln("Creating SHT3x environment sensor %s with %s", name.c_str(), i2cConfig.toString().c_str());
+        return make_unique<EnvironmentSht3x>(name, mqttRoot, i2cConfig);
     }
 };
 

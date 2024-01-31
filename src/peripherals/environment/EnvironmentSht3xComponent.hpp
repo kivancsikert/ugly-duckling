@@ -15,36 +15,36 @@ using namespace farmhub::kernel;
 
 namespace farmhub::peripherals::environment {
 
-class Sht31Component
+class EnvironmentSht3xComponent
     : public Component,
       public TelemetryProvider {
 public:
-    Sht31Component(
+    EnvironmentSht3xComponent(
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         I2CConfig config)
         : Component(name, mqttRoot)
         // TODO Add I2C manager to hand out wires
         , wire(1)
-        , sht31(config.address, &wire) {
+        , sht3x(config.address, &wire) {
 
         // TODO Add commands to soft/hard reset the sensor
         // TODO Add configuration for fast / slow measurement
         // TODO Add a separate task to do measurements to unblock telemetry collection?
 
-        Log.infoln("Initializing SHT31 environment sensor with %s", config.toString().c_str());
+        Log.infoln("Initializing SHT3s environment sensor with %s", config.toString().c_str());
         if (!wire.begin(config.sda, config.scl, 100000L)) {
-            Log.errorln("Failed to initialize I2C bus for SHT31 environment sensor");
+            Log.errorln("Failed to initialize I2C bus for SHT3x environment sensor");
             return;
         }
-        if (!sht31.begin()) {
-            Log.errorln("Failed to initialize SHT31 environment sensor: %d",
-                sht31.getError());
+        if (!sht3x.begin()) {
+            Log.errorln("Failed to initialize SHT3x environment sensor: %d",
+                sht3x.getError());
             return;
         }
-        if (!sht31.isConnected()) {
-            Log.errorln("SHT31 environment sensor is not connected: %d",
-                sht31.getError());
+        if (!sht3x.isConnected()) {
+            Log.errorln("SHT3x environment sensor is not connected: %d",
+                sht3x.getError());
             return;
         }
         initialized = true;
@@ -54,18 +54,18 @@ public:
         if (!initialized) {
             return;
         }
-        if (!sht31.read()) {
-            Log.errorln("Failed to read SHT31 environment sensor: %d",
-                sht31.getError());
+        if (!sht3x.read()) {
+            Log.errorln("Failed to read SHT3x environment sensor: %d",
+                sht3x.getError());
             return;
         }
-        json["temperature"] = sht31.getTemperature();
-        json["humidity"] = sht31.getHumidity();
+        json["temperature"] = sht3x.getTemperature();
+        json["humidity"] = sht3x.getHumidity();
     }
 
 private:
     TwoWire wire;
-    SHT31 sht31;
+    SHT31 sht3x;
     bool initialized = false;
 };
 

@@ -8,7 +8,7 @@
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
-#include <peripherals/environment/Environment.hpp>
+#include <peripherals/environment/EnvironmentSht3x.hpp>
 
 #include <version.h>
 
@@ -53,7 +53,7 @@ public:
     }
 
     virtual void registerPeripheralFactories(PeripheralManager& peripheralManager) {
-        peripheralManager.registerFactory(sht31Factory);
+        peripheralManager.registerFactory(sht3xFactory);
         registerDeviceSpecificPeripheralFactories(peripheralManager);
     }
 
@@ -78,7 +78,7 @@ public:
     TDeviceConfiguration& config = configFile.config;
 
 private:
-    EnvironmentSht31Factory sht31Factory;
+    EnvironmentSht3xFactory sht3xFactory;
 };
 
 template <typename TDeviceConfiguration>

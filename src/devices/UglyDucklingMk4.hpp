@@ -48,7 +48,7 @@ public:
         // Device address is 0x44 = 68
         return {
             R"({
-                "type": "environment:sht31",
+                "type": "environment:sht3x",
                 "name": "environment",
                 "params": {
                     "address": "0x44",
