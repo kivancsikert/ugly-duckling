@@ -93,21 +93,28 @@ public:
 
 class PeripheralFactoryBase {
 public:
-    PeripheralFactoryBase(const String& type)
-        : type(type) {
+    PeripheralFactoryBase(const String& factoryType, const String& peripheralType)
+        : factoryType(factoryType)
+        , peripheralType(peripheralType) {
     }
 
     virtual unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) = 0;
 
-    const String type;
+    const String factoryType;
+    const String peripheralType;
 };
 
 template <typename TDeviceConfig, typename TConfig, typename... TDeviceConfigArgs>
 class PeripheralFactory : public PeripheralFactoryBase {
 public:
+    // By default use the factory type as the peripheral type
     // TODO Use TDeviceConfigArgs&& instead
     PeripheralFactory(const String& type, TDeviceConfigArgs... deviceConfigArgs)
-        : PeripheralFactoryBase(type)
+        : PeripheralFactory(type, type, deviceConfigArgs...) {
+    }
+
+    PeripheralFactory(const String& type, const String& peripheralType, TDeviceConfigArgs... deviceConfigArgs)
+        : PeripheralFactoryBase(type, peripheralType)
         , deviceConfigArgs(std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
@@ -153,8 +160,8 @@ public:
 
     void registerFactory(PeripheralFactoryBase& factory) {
         Log.traceln("Registering peripheral factory: %s",
-            factory.type.c_str());
-        factories.insert(std::make_pair(factory.type, std::reference_wrapper<PeripheralFactoryBase>(factory)));
+            factory.factoryType.c_str());
+        factories.insert(std::make_pair(factory.factoryType, std::reference_wrapper<PeripheralFactoryBase>(factory)));
     }
 
     void createPeripherals() {
@@ -165,13 +172,13 @@ public:
             PeripheralDeviceConfiguration deviceConfig;
             deviceConfig.loadFromString(perpheralConfigJsonAsString.get());
             const String& name = deviceConfig.name.get();
-            const String& type = deviceConfig.type.get();
+            const String& factory = deviceConfig.type.get();
             try {
-                unique_ptr<PeripheralBase> peripheral = createPeripheral(name, type, deviceConfig.params.get().get());
+                unique_ptr<PeripheralBase> peripheral = createPeripheral(name, factory, deviceConfig.params.get().get());
                 peripherals.push_back(move(peripheral));
             } catch (const PeripheralCreationException& e) {
-                Log.errorln("Failed to create peripheral: %s of type %s because %s",
-                    name.c_str(), type.c_str(), e.reason.c_str());
+                Log.errorln("Failed to create peripheral '%s' with factory '%s' because %s",
+                    name.c_str(), factory.c_str(), e.reason.c_str());
             }
         }
     }
@@ -190,14 +197,15 @@ private:
         Property<JsonAsString> params { this, "params" };
     };
 
-    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& type, const String& configJson) {
-        Log.traceln("Creating peripheral: %s of type %s",
-            name.c_str(), type.c_str());
-        auto it = factories.find(type);
+    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& factoryType, const String& configJson) {
+        Log.traceln("Creating peripheral '%s' with factory '%s'",
+            name.c_str(), factoryType.c_str());
+        auto it = factories.find(factoryType);
         if (it == factories.end()) {
-            throw PeripheralCreationException(name, "No factory found for peripheral type '" + type + "'");
+            throw PeripheralCreationException(name, "Factory not found: '" + factoryType + "'");
         }
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + type + "/" + name);
+        const String& peripheralType = it->second.get().peripheralType;
+        shared_ptr<MqttDriver::MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
         PeripheralFactoryBase& factory = it->second.get();
         return factory.createPeripheral(name, configJson, mqttRoot);
     }
