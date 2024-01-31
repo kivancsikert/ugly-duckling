@@ -44,6 +44,21 @@ public:
         peripheralManager.registerFactory(flowControlFactory);
     }
 
+    std::list<String> getBuiltInPeripherals() override {
+        // Device address is 0x44 = 68
+        return {
+            R"({
+                "type": "environment:sht31",
+                "name": "environment",
+                "params": {
+                    "address": "0x44",
+                    "sda": 8,
+                    "scl": 9
+                }
+            })"
+        };
+    }
+
     Drv8801Driver motorDriver {
         pwm,
         GPIO_NUM_10,    // Enable
