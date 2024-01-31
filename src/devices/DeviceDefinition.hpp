@@ -53,6 +53,7 @@ public:
     }
 
     virtual void registerPeripheralFactories(PeripheralManager& peripheralManager) {
+        peripheralManager.registerFactory(sht31Factory);
         registerDeviceSpecificPeripheralFactories(peripheralManager);
     }
 
@@ -75,6 +76,9 @@ private:
 
 public:
     TDeviceConfiguration& config = configFile.config;
+
+private:
+    EnvironmentSht31Factory sht31Factory;
 };
 
 template <typename TDeviceConfiguration>
