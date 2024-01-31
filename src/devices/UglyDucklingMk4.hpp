@@ -38,7 +38,7 @@ public:
             GPIO_NUM_26) {
     }
 
-    void registerPeripheralFactories(PeripheralManager& peripheralManager) override {
+    void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
         peripheralManager.registerFactory(valveFactory);
         peripheralManager.registerFactory(flowMeterFactory);
         peripheralManager.registerFactory(flowControlFactory);

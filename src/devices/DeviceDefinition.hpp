@@ -53,6 +53,10 @@ public:
     }
 
     virtual void registerPeripheralFactories(PeripheralManager& peripheralManager) {
+        registerDeviceSpecificPeripheralFactories(peripheralManager);
+    }
+
+    virtual void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) {
     }
 
     /**
