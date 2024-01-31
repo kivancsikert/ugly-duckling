@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Arduino.h>
+
 #include <kernel/FileSystem.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/Service.hpp>

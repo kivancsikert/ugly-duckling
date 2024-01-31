@@ -8,10 +8,13 @@
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
+#include <peripherals/environment/Environment.hpp>
+
 #include <version.h>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::peripherals::environment;
 
 namespace farmhub::devices {
 

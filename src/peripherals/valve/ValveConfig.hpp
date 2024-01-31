@@ -4,6 +4,7 @@
 #include <ArduinoLog.h>
 
 #include <kernel/Configuration.hpp>
+#include <peripherals/valve/ValveComponent.hpp>
 #include <peripherals/valve/ValveScheduler.hpp>
 
 using namespace farmhub::kernel;

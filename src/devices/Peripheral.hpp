@@ -15,6 +15,7 @@ using std::shared_ptr;
 using std::unique_ptr;
 
 using namespace farmhub::kernel;
+using namespace farmhub::kernel::drivers;
 
 namespace farmhub::devices {
 
