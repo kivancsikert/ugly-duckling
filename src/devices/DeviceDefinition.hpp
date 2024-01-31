@@ -1,5 +1,7 @@
 #pragma once
 
+#include <list>
+
 #include <devices/Peripheral.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/PwmManager.hpp>
@@ -48,6 +50,13 @@ public:
     }
 
     virtual void registerPeripheralFactories(PeripheralManager& peripheralManager) {
+    }
+
+    /**
+     * @brief Returns zero or more JSON configurations for any built-in peripheral of the device.
+     */
+    virtual std::list<String> getBuiltInPeripherals() {
+        return {};
     }
 
 public:
