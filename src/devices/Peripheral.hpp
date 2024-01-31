@@ -80,16 +80,14 @@ class PeripheralCreationException
     : public std::exception {
 public:
     PeripheralCreationException(const String& name, const String& reason)
-        : name(name)
-        , reason(reason) {
+        : message(String("PeripheralCreationException: Failed to create peripheral '" + name + "' because " + reason)) {
     }
 
     const char* what() const noexcept override {
-        return String("Failed to create peripheral '" + name + "' because " + reason).c_str();
+        return message.c_str();
     }
 
-    const String name;
-    const String reason;
+    const String message;
 };
 
 class PeripheralFactoryBase {
@@ -111,11 +109,11 @@ public:
     // By default use the factory type as the peripheral type
     // TODO Use TDeviceConfigArgs&& instead
     PeripheralFactory(const String& type, TDeviceConfigArgs... deviceConfigArgs)
-        : PeripheralFactory(type, type, deviceConfigArgs...) {
+        : PeripheralFactory(type, type, std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
-    PeripheralFactory(const String& type, const String& peripheralType, TDeviceConfigArgs... deviceConfigArgs)
-        : PeripheralFactoryBase(type, peripheralType)
+    PeripheralFactory(const String& factoryType, const String& peripheralType, TDeviceConfigArgs... deviceConfigArgs)
+        : PeripheralFactoryBase(factoryType, peripheralType)
         , deviceConfigArgs(std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
@@ -180,12 +178,12 @@ public:
         try {
             unique_ptr<PeripheralBase> peripheral = createPeripheral(name, factory, deviceConfig.params.get().get());
             peripherals.push_back(move(peripheral));
-        } catch (const PeripheralCreationException& e) {
-            Log.errorln("Failed to create peripheral '%s' with factory '%s' because %s",
-                name.c_str(), factory.c_str(), e.reason.c_str());
         } catch (const std::exception& e) {
             Log.errorln("Failed to create peripheral '%s' with factory '%s' because %s",
                 name.c_str(), factory.c_str(), e.what());
+        } catch (...) {
+            Log.errorln("Failed to create peripheral '%s' with factory '%s' because of an unknown exception",
+                name.c_str(), factory.c_str());
         }
     }
 
