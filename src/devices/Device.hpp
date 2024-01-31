@@ -216,8 +216,6 @@ public:
 
         deviceDefinition.registerPeripheralFactories(peripheralManager);
 
-        // deviceTelemetryCollector.registerProvider("peripherals", peripheralManager);
-
         mqttDeviceRoot->registerCommand(echoCommand);
         mqttDeviceRoot->registerCommand(pingCommand);
         // TODO Add reset-wifi command
