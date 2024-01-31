@@ -272,15 +272,17 @@ public:
                 json["bootCount"] = bootCount++;
                 json["time"] = time(nullptr);
             });
-        Task::loop("telemetry", 8192, [this](Task& task) { publishTelemetry(task); });
+        Task::loop("telemetry", 8192, [this](Task& task) {
+            publishTelemetry();
+            // TODO Configure telemetry heartbeat interval
+            task.delayUntil(milliseconds(60000));
+        });
     }
 
 private:
-    void publishTelemetry(Task& task) {
+    void publishTelemetry() {
         deviceTelemetryPublisher.publishTelemetry();
         peripheralManager.publishTelemetry();
-        // TODO Configure telemetry heartbeat interval
-        task.delayUntil(milliseconds(60000));
     }
 
     TDeviceDefinition deviceDefinition;
@@ -291,7 +293,9 @@ private:
 
     TelemetryCollector deviceTelemetryCollector;
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };
-    PingCommand pingCommand { deviceTelemetryPublisher };
+    PingCommand pingCommand { [this]() {
+        publishTelemetry();
+    } };
 
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
     MemoryTelemetryProvider memoryTelemetryProvider;

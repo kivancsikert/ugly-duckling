@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <functional>
 
 #include <ArduinoJson.h>
 #include <ArduinoLog.h>
@@ -11,7 +12,6 @@
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/Named.hpp>
-#include <kernel/Telemetry.hpp>
 
 using namespace std::chrono;
 
@@ -43,18 +43,24 @@ public:
 
 class PingCommand : public Command {
 public:
-    PingCommand(TelemetryPublisher& telemetryPublisher)
+    PingCommand(const std::function<void()> pingResponse)
         : Command("ping")
-        , telemetryPublisher(telemetryPublisher) {
+        , pingResponse(pingResponse) {
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
-        telemetryPublisher.publishTelemetry();
+        try {
+            pingResponse();
+        } catch (const std::exception& e) {
+            Log.errorln("Failed to send ping response: %s", e.what());
+        } catch (...) {
+            Log.errorln("Failed to send ping response");
+        }
         response["pong"] = millis();
     }
 
 private:
-    TelemetryPublisher& telemetryPublisher;
+    const std::function<void()> pingResponse;
 };
 
 class RestartCommand : public Command {
