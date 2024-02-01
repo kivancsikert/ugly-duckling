@@ -1,8 +1,6 @@
 #include <atomic>
 #include <chrono>
 
-#include <Arduino.h>
-
 #include <ArduinoLog.h>
 
 #include <devices/Device.hpp>
