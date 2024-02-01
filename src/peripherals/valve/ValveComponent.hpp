@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <list>
 #include <memory>
@@ -179,14 +180,14 @@ public:
 
         Task::loop(name, 3072, [this, name](Task& task) {
             auto now = system_clock::now();
-            if (overrideState != ValveState::NONE && now > overrideUntil) {
+            if (overrideState != ValveState::NONE && now > overrideUntil.load()) {
                 Log.traceln("Valve '%s' override expired", name.c_str());
                 overrideUntil = time_point<system_clock>();
                 overrideState = ValveState::NONE;
             }
             ValveStateUpdate update;
             if (overrideState != ValveState::NONE) {
-                update = { overrideState, duration_cast<ticks>(overrideUntil - now) };
+                update = { overrideState, duration_cast<ticks>(overrideUntil.load() - now) };
                 Log.traceln("Valve '%s' override state is %d, will change after %F sec",
                     name.c_str(), static_cast<int>(update.state), update.transitionAfter.count() / 1000.0);
             } else {
@@ -197,15 +198,16 @@ public:
             setState(update.state);
             // TODO Account for time spent in setState()
             updateQueue.pollIn(update.transitionAfter, [this](const std::variant<OverrideSpec, ScheduleSpec>& change) {
-                std::visit([this](auto&& arg) {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, OverrideSpec>) {
-                        overrideState = arg.state;
-                        overrideUntil = arg.until;
-                    } else if constexpr (std::is_same_v<T, ScheduleSpec>) {
-                        schedules = std::list(arg.schedules);
-                    }
-                },
+                std::visit(
+                    [this](auto&& arg) {
+                        using T = std::decay_t<decltype(arg)>;
+                        if constexpr (std::is_same_v<T, OverrideSpec>) {
+                            overrideState = arg.state;
+                            overrideUntil = arg.until;
+                        } else if constexpr (std::is_same_v<T, ScheduleSpec>) {
+                            schedules = std::list(arg.schedules);
+                        }
+                    },
                     change);
             });
         });
@@ -274,9 +276,9 @@ private:
         std::list<ValveSchedule> schedules;
     };
 
-    std::list<ValveSchedule> schedules;
-    ValveState overrideState = ValveState::NONE;
-    time_point<system_clock> overrideUntil;
+    std::list<ValveSchedule> schedules = {};
+    std::atomic<ValveState> overrideState = ValveState::NONE;
+    std::atomic<time_point<system_clock>> overrideUntil = time_point<system_clock>();
     Queue<std::variant<OverrideSpec, ScheduleSpec>> updateQueue { "eventQueue", 1 };
 };
 
