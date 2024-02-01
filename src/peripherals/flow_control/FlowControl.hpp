@@ -29,7 +29,9 @@ public:
         PwmMotorDriver& controller, ValveControlStrategy& strategy,
         gpio_num_t pin, double qFactor, milliseconds measurementFrequency)
         : Peripheral<FlowControlConfig>(name, mqttRoot)
-        , valve(name, controller, strategy, mqttRoot)
+        , valve(name, controller, strategy, mqttRoot, [this]() {
+            publishTelemetry();
+        })
         , flowMeter(name, mqttRoot, pin, qFactor, measurementFrequency) {
     }
 

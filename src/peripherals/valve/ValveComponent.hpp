@@ -16,6 +16,7 @@
 #include <kernel/Concurrent.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/Task.hpp>
+#include <kernel/Time.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 
@@ -153,10 +154,11 @@ private:
 
 class ValveComponent : public Component {
 public:
-    ValveComponent(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy, shared_ptr<MqttDriver::MqttRoot> mqttRoot)
+    ValveComponent(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy, shared_ptr<MqttDriver::MqttRoot> mqttRoot, std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
         , controller(controller)
-        , strategy(strategy) {
+        , strategy(strategy)
+        , publishTelemetry(publishTelemetry) {
         Log.infoln("Creating valve '%s' with strategy %s",
             name.c_str(), strategy.describe().c_str());
 
@@ -269,10 +271,12 @@ private:
         mqttRoot->publish("events/state", [=](JsonObject& json) {
             json["state"] = state;
         });
+        publishTelemetry();
     }
 
     PwmMotorDriver& controller;
     ValveControlStrategy& strategy;
+    std::function<void()> publishTelemetry;
 
     ValveState state = ValveState::NONE;
 
