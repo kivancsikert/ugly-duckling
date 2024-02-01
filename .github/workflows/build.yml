@@ -5,7 +5,6 @@ on:
         types: [published]
 
 jobs:
-
     build:
         runs-on: ubuntu-latest
         strategy:
@@ -28,7 +27,7 @@ jobs:
             - name: Set up Python
               uses: actions/setup-python@v5
               with:
-                  python-version: '3.9'
+                  python-version: "3.9"
 
             - name: Install PlatformIO
               run: |
@@ -73,9 +72,10 @@ jobs:
               run: ls -R
 
             - name: Release
-              uses: softprops/action-gh-release@v1
+              uses: AButler/upload-release-assets@v3.0
               with:
                   files: firmware-*/*
+                  repo-token: ${{ secrets.GITHUB_TOKEN }}
 
     ready-to-merge:
         needs: build
