@@ -15,11 +15,11 @@ using namespace farmhub::kernel;
 
 namespace farmhub::peripherals::environment {
 
-class EnvironmentSht3xComponent
+class Sht3xComponent
     : public Component,
       public TelemetryProvider {
 public:
-    EnvironmentSht3xComponent(
+    Sht3xComponent(
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         I2CConfig config)

@@ -8,7 +8,7 @@
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
-#include <peripherals/environment/EnvironmentSht3x.hpp>
+#include <peripherals/environment/Environment.hpp>
 
 #include <version.h>
 
@@ -78,7 +78,7 @@ public:
     TDeviceConfiguration& config = configFile.config;
 
 private:
-    EnvironmentSht3xFactory sht3xFactory;
+    I2CEnvironmentFactory<Sht3xComponent> sht3xFactory { "environment:sht3x", 0x44 };
 };
 
 template <typename TDeviceConfiguration>
