@@ -221,6 +221,15 @@ public:
 
     void populateTelemetry(JsonObject& telemetry) {
         telemetry["state"] = this->state;
+        auto overrideUntil = this->overrideUntil.load();
+        if (overrideUntil != time_point<system_clock>()) {
+            time_t rawtime = system_clock::to_time_t(overrideUntil);
+            auto timeinfo = gmtime(&rawtime);
+            char buffer[80];
+            strftime(buffer, 80, "%FT%TZ", timeinfo);
+            telemetry["overrideEnd"] = string(buffer);
+            telemetry["overrideState"] = this->overrideState.load();
+        }
     }
 
 private:
