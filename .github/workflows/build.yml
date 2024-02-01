@@ -13,12 +13,12 @@ jobs:
             matrix:
                 environment: [mk4, mk5, mk6, native]
         steps:
-            - uses: actions/checkout@v3
+            - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
 
             - name: Cache PlatformIO
-              uses: actions/cache@v3
+              uses: actions/cache@v4
               with:
                   path: |
                       ~/.cache/pip
@@ -26,7 +26,7 @@ jobs:
                   key: ${{ runner.os }}-pio
 
             - name: Set up Python
-              uses: actions/setup-python@v4
+              uses: actions/setup-python@v5
               with:
                   python-version: '3.9'
 
@@ -35,7 +35,7 @@ jobs:
                   pip install --upgrade platformio
 
             - name: Cache project build cache for ${{ matrix.environment }}
-              uses: actions/cache@v3
+              uses: actions/cache@v4
               with:
                   path: |
                       .pio/build-cache
@@ -51,8 +51,9 @@ jobs:
 
             - name: Upload firmware artifact
               if: matrix.environment != 'native'
-              uses: "actions/upload-artifact@v3"
+              uses: "actions/upload-artifact@v4"
               with:
+                  name: firmware-${{ matrix.environment }}
                   path: ugly-duckling-${{ matrix.environment }}.bin
                   if-no-files-found: error
 
@@ -66,7 +67,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Download artifacts
-              uses: actions/download-artifact@v3
+              uses: actions/download-artifact@v4
 
             - name: Display structure of downloaded files
               run: ls -R
