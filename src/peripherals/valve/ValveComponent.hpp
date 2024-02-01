@@ -266,7 +266,9 @@ private:
                 // Ignore
                 break;
         }
-        // TODO Publish event
+        mqttRoot->publish("events/state", [=](JsonObject& json) {
+            json["state"] = state;
+        });
     }
 
     PwmMotorDriver& controller;
