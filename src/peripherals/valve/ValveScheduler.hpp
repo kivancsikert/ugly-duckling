@@ -39,9 +39,10 @@ public:
         return duration;
     }
 
-    const time_point<system_clock> start;
-    const seconds period;
-    const seconds duration;
+private:
+    time_point<system_clock> start;
+    seconds period;
+    seconds duration;
 };
 
 struct ValveStateUpdate {

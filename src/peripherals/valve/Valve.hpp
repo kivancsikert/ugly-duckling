@@ -34,7 +34,9 @@ class Valve
 public:
     Valve(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy, shared_ptr<MqttDriver::MqttRoot> mqttRoot)
         : Peripheral<ValveConfig>(name, mqttRoot)
-        , valve(name, controller, strategy, mqttRoot) {
+        , valve(name, controller, strategy, mqttRoot, [this]() {
+            publishTelemetry();
+        }) {
     }
 
     void configure(const ValveConfig& config) override {

@@ -31,9 +31,9 @@ public:
 
 TEST_F(ValveSchedulerTest, can_create_schedule) {
     ValveSchedule schedule(base, hours { 1 }, minutes { 1 });
-    EXPECT_EQ(schedule.start, base);
-    EXPECT_EQ(schedule.period, hours { 1 });
-    EXPECT_EQ(schedule.duration, minutes { 1 });
+    EXPECT_EQ(schedule.getStart(), base);
+    EXPECT_EQ(schedule.getPeriod(), hours { 1 });
+    EXPECT_EQ(schedule.getDuration(), minutes { 1 });
 }
 
 // TEST_F(ValveSchedulerTest, can_create_schedule_from_json) {
