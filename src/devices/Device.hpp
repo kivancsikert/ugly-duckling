@@ -228,14 +228,6 @@ public:
         mqttDeviceRoot->registerCommand(fileRemoveCommand);
         mqttDeviceRoot->registerCommand(httpUpdateCommand);
 
-#if defined(MK4)
-        deviceDefinition.motorDriver.wakeUp();
-#elif defined(MK5)
-        deviceDefinition.motorADriver.wakeUp();
-#elif defined(MK6)
-        deviceDefinition.motorDriver.wakeUp();
-#endif
-
         // We want RTC to be in sync before we start setting up peripherals
         kernel.getRtcInSyncState().awaitSet();
 

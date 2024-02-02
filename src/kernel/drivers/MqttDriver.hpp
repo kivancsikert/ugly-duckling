@@ -362,7 +362,7 @@ private:
             topic.c_str(), qos);
         bool success = mqttClient.subscribe(topic.c_str(), static_cast<int>(qos));
         if (!success) {
-            Log.error("MQTT: Error subscribing to topic '%s', error = %d\n",
+            Log.errorln("MQTT: Error subscribing to topic '%s', error = %d\n",
                 topic.c_str(), mqttClient.lastError());
         }
         return success;
