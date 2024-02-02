@@ -245,7 +245,7 @@ public:
         }
 
         auto& peripheralsConfig = deviceConfig.peripherals.get();
-        Log.infoln("Loading configuration for %d peripherals",
+        Log.infoln("Loading configuration for %d user-configured peripherals",
             peripheralsConfig.size());
         for (auto& perpheralConfig : peripheralsConfig) {
             peripheralManager.createPeripheral(perpheralConfig.get());
