@@ -185,16 +185,16 @@ public:
         , instanceName(instanceName)
         , clientId(getClientId(config.clientId.get(), instanceName))
         , mqttReady(mqttReady) {
-        Task::run("mqtt:outgoing", 4096, 1, [this](Task& task) {
+        Task::run("mqtt:init", 4096, [this](Task& task) {
             setup();
-            while (true) {
+            Task::loop("mqtt:outgoing", 4096, [this](Task& task) {
                 auto delay = loopAndDelay();
                 task.delay(delay);
-            }
-        });
-        Task::loop("mqtt:incoming", 4096, 1, [this](Task& task) {
-            incomingQueue.take([&](const Message& message) {
-                processIncomingMessage(message);
+            });
+            Task::loop("mqtt:incoming", 4096, [this](Task& task) {
+                incomingQueue.take([&](const Message& message) {
+                    processIncomingMessage(message);
+                });
             });
         });
     }
