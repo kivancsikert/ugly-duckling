@@ -226,6 +226,8 @@ private:
     }
 
     void setup() {
+        networkReady.awaitSet();
+
         if (config.host.get().length() > 0) {
             mqttServer.hostname = config.host.get();
             mqttServer.port = config.port.get();
