@@ -162,7 +162,7 @@ public:
     }
 
     void createPeripheral(const String& peripheralConfig) {
-        Log.info("Creating peripheral with config: %s",
+        Log.infoln("Creating peripheral with config: %s",
             peripheralConfig.c_str());
         PeripheralDeviceConfiguration deviceConfig;
         try {
