@@ -7,6 +7,7 @@
 #include <kernel/drivers/MqttDriver.hpp>
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>
 #include <peripherals/flow_meter/FlowMeterConfig.hpp>
+#include <peripherals/valve/Valve.hpp>
 #include <peripherals/valve/ValveComponent.hpp>
 #include <peripherals/valve/ValveConfig.hpp>
 
@@ -73,7 +74,7 @@ public:
         const ValveDeviceConfig& valveConfig = deviceConfig.valve.get();
         const FlowMeterDeviceConfig& flowMeterConfig = deviceConfig.flowMeter.get();
 
-        PwmMotorDriver& targetMotor = findMotor(name, valveConfig.motor.get());
+        PwmMotorDriver& targetMotor = ValveFactory::findMotor(name, valveConfig.motor.get(), motors);
         ValveControlStrategy* strategy;
         try {
             strategy = createValveControlStrategy(
@@ -93,15 +94,6 @@ public:
             flowMeterConfig.pin.get(),
             flowMeterConfig.qFactor.get(),
             flowMeterConfig.measurementFrequency.get());
-    }
-
-    PwmMotorDriver& findMotor(const String& name, const String& motorName) {
-        for (auto& motor : motors) {
-            if (motor.getName() == motorName) {
-                return motor.get();
-            }
-        }
-        throw PeripheralCreationException(name, "failed to find motor: " + motorName);
     }
 
 private:
