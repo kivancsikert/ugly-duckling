@@ -61,9 +61,11 @@ public:
     void drive(MotorPhase phase, double duty = 1) override {
         if (duty == 0) {
             Log.traceln("Stopping");
+            sleep();
             digitalWrite(enablePin, LOW);
             return;
         }
+        wakeUp();
         digitalWrite(enablePin, HIGH);
 
         int direction = (phase == MotorPhase::FORWARD ? 1 : -1);
