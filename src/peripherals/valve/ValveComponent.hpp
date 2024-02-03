@@ -54,21 +54,26 @@ protected:
     void driveAndHold(PwmMotorDriver& controller, ValveState targetState) {
         switch (targetState) {
             case ValveState::OPEN:
-                controller.drive(MotorPhase::FORWARD, holdDuty);
+                driveAndHold(controller, MotorPhase::FORWARD);
                 break;
             case ValveState::CLOSED:
-                controller.drive(MotorPhase::REVERSE, holdDuty);
+                driveAndHold(controller, MotorPhase::REVERSE);
                 break;
             default:
                 // Ignore
                 break;
         }
-        delay(switchDuration.count());
-        controller.stop();
     }
 
     const milliseconds switchDuration;
     const double holdDuty;
+
+private:
+    void driveAndHold(PwmMotorDriver& controller, MotorPhase phase) {
+        controller.drive(phase, 1.0);
+        delay(switchDuration.count());
+        controller.drive(phase, holdDuty);
+    }
 };
 
 class NormallyClosedValveControlStrategy
