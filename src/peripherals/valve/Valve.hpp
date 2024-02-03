@@ -60,7 +60,7 @@ public:
     }
 
     unique_ptr<Peripheral<ValveConfig>> createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
-        PwmMotorDriver& targetMotor = findMotor(name, deviceConfig.motor.get());
+        PwmMotorDriver& targetMotor = findMotor(name, deviceConfig.motor.get(), motors);
         ValveControlStrategy* strategy;
         try {
             strategy = createValveControlStrategy(
@@ -73,7 +73,11 @@ public:
         return make_unique<Valve>(name, targetMotor, *strategy, mqttRoot);
     }
 
-    PwmMotorDriver& findMotor(const String& name, const String& motorName) {
+    static PwmMotorDriver& findMotor(const String& name, const String& motorName, const std::list<ServiceRef<PwmMotorDriver>>& motors) {
+        // If there's only one motor and no name is specified, use it
+        if (motorName.isEmpty() && motors.size() == 1) {
+            return motors.front().get();
+        }
         for (auto& motor : motors) {
             if (motor.getName() == motorName) {
                 return motor.get();
