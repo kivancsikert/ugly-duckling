@@ -72,9 +72,9 @@ public:
 
     const ServiceRef<PwmMotorDriver> motor { "motor", motorDriver };
 
-    ValveFactory valveFactory { { motor }, ValveControlStrategyType::Latching };
+    ValveFactory valveFactory { { motor }, ValveControlStrategyType::NormallyClosed };
     FlowMeterFactory flowMeterFactory;
-    FlowControlFactory flowControlFactory { { motor }, ValveControlStrategyType::Latching };
+    FlowControlFactory flowControlFactory { { motor }, ValveControlStrategyType::NormallyClosed };
 };
 
 }    // namespace farmhub::devices
