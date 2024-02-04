@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <list>
 #include <memory>
 
@@ -75,7 +76,7 @@ public:
             String suffix = "commands/" + name;
             return subscribe(suffix, QoS::ExactlyOnce, [this, name, suffix, responseSize, handler](const String&, const JsonObject& request) {
                 // Clear topic and wait for it to be cleared
-                mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, xTaskGetCurrentTaskHandle(), ticks::max());
+                mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, xTaskGetCurrentTaskHandle(), std::chrono::seconds { 5 });
 
                 DynamicJsonDocument responseDoc(responseSize);
                 auto response = responseDoc.to<JsonObject>();
