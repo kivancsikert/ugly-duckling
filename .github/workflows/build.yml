@@ -76,11 +76,3 @@ jobs:
               with:
                   files: firmware-*/*
                   repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-    ready-to-merge:
-        needs: build
-        if: ${{ github.ref != 'refs/heads/main' }}
-        runs-on: ubuntu-latest
-        steps:
-            - name: Dummy
-              run: echo "Everything is green across the board on ${{ github.ref }}"
