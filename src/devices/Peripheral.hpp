@@ -47,7 +47,6 @@ public:
             Log.verboseln("No telemetry to publish for peripheral: %s", name.c_str());
             return;
         }
-        // TODO Add device ID
         mqttRoot->publish("telemetry", telemetryDoc);
     }
 
