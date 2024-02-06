@@ -199,7 +199,13 @@ private:
     TelemetryCollector& telemetryCollector;
 };
 
-class Device : ConsoleProvider {
+class ConfiguredKernel : ConsoleProvider {
+public:
+    TDeviceDefinition deviceDefinition;
+    Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.statusLed };
+};
+
+class Device {
 public:
     Device() {
 
@@ -277,9 +283,11 @@ private:
         peripheralManager.publishTelemetry();
     }
 
-    TDeviceDefinition deviceDefinition;
+    ConfiguredKernel configuredKernel;
+    Kernel<TDeviceConfiguration>& kernel = configuredKernel.kernel;
+    TDeviceDefinition& deviceDefinition = configuredKernel.deviceDefinition;
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;
-    Kernel<TDeviceConfiguration> kernel { deviceConfig, deviceDefinition.statusLed };
+
     shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
     PeripheralManager peripheralManager { mqttDeviceRoot };
 
