@@ -60,7 +60,7 @@ public:
             deviceConfig.instance.get().c_str(),
             deviceConfig.getHostname());
 
-        Task::loop("status-update", 4096, [this](Task&) { updateState(); });
+        Task::loop("status-update", 2048, [this](Task&) { updateState(); });
     }
 
     const State& getRtcInSyncState() const {
