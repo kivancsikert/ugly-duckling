@@ -2,13 +2,18 @@
 
 #include <list>
 
+#include <SHT2x.h>
+#include <SHT31.h>
+
 #include <devices/Peripheral.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/PwmManager.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
-#include <peripherals/environment/EnvironmentSht3x.hpp>
+#include <peripherals/environment/Environment.hpp>
+#include <peripherals/environment/Sht2xComponent.hpp>
+#include <peripherals/environment/Sht31Component.hpp>
 
 #include <version.h>
 
@@ -54,6 +59,8 @@ public:
 
     virtual void registerPeripheralFactories(PeripheralManager& peripheralManager) {
         peripheralManager.registerFactory(sht3xFactory);
+        peripheralManager.registerFactory(sht2xFactory);
+        peripheralManager.registerFactory(htu2xFactory);
         registerDeviceSpecificPeripheralFactories(peripheralManager);
     }
 
@@ -78,7 +85,9 @@ public:
     TDeviceConfiguration& config = configFile.config;
 
 private:
-    EnvironmentSht3xFactory sht3xFactory;
+    I2CEnvironmentFactory<Sht31Component> sht3xFactory { "sht3x", 0x44 /* Also supports 0x45 */ };
+    I2CEnvironmentFactory<Sht2xComponent<SHT2x>> sht2xFactory { "sht2x", 0x40 /* Not configurable */ };
+    I2CEnvironmentFactory<Sht2xComponent<HTU21>> htu2xFactory { "htu2x", 0x40 /* Not configurable */ };
 };
 
 template <typename TDeviceConfiguration>
