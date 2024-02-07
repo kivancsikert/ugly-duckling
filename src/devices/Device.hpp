@@ -52,7 +52,7 @@ public:
     ConsolePrinter() {
         static const String spinner = "|/-\\";
         static const int spinnerLength = spinner.length();
-        Task::loop("console", 8192, 1, [this](Task& task) {
+        Task::loop("console", 2048, 1, [this](Task& task) {
             String status;
 
             counter = (counter + 1) % spinnerLength;
@@ -199,7 +199,13 @@ private:
     TelemetryCollector& telemetryCollector;
 };
 
-class Device : ConsoleProvider {
+class ConfiguredKernel : ConsoleProvider {
+public:
+    TDeviceDefinition deviceDefinition;
+    Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.statusLed };
+};
+
+class Device {
 public:
     Device() {
 
@@ -277,9 +283,11 @@ private:
         peripheralManager.publishTelemetry();
     }
 
-    TDeviceDefinition deviceDefinition;
+    ConfiguredKernel configuredKernel;
+    Kernel<TDeviceConfiguration>& kernel = configuredKernel.kernel;
+    TDeviceDefinition& deviceDefinition = configuredKernel.deviceDefinition;
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;
-    Kernel<TDeviceConfiguration> kernel { deviceConfig, deviceDefinition.statusLed };
+
     shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
     PeripheralManager peripheralManager { mqttDeviceRoot };
 
@@ -293,7 +301,7 @@ private:
     MemoryTelemetryProvider memoryTelemetryProvider;
 #endif
 
-    FileSystem& fs { FileSystem::get() };
+    FileSystem& fs { kernel.fs };
     EchoCommand echoCommand;
     RestartCommand restartCommand;
     SleepCommand sleepCommand;
@@ -301,7 +309,9 @@ private:
     FileReadCommand fileReadCommand { fs };
     FileWriteCommand fileWriteCommand { fs };
     FileRemoveCommand fileRemoveCommand { fs };
-    HttpUpdateCommand httpUpdateCommand { kernel.version };
+    HttpUpdateCommand httpUpdateCommand { [this](const String& url) {
+        kernel.prepareUpdate(url);
+    } };
 };
 
 }    // namespace farmhub::devices

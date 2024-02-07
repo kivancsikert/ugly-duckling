@@ -5,13 +5,13 @@
 
 #include <ArduinoJson.h>
 #include <ArduinoLog.h>
-#include <HTTPUpdate.h>
 #include <SPIFFS.h>
 
 #include <esp_sleep.h>
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/Named.hpp>
+#include <kernel/Task.hpp>
 
 using namespace std::chrono;
 
@@ -200,9 +200,9 @@ public:
 
 class HttpUpdateCommand : public Command {
 public:
-    HttpUpdateCommand(const String& currentVersion)
+    HttpUpdateCommand(const std::function<void(const String&)> prepareUpdate)
         : Command("update")
-        , currentVersion(currentVersion) {
+        , prepareUpdate(prepareUpdate) {
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
@@ -215,30 +215,17 @@ public:
             response["failure"] = "Command contains empty url";
             return;
         }
-        httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-        response["failure"] = update(url, currentVersion);
+        prepareUpdate(url);
+        response["success"] = true;
+        Task::run("update", [](Task& task) {
+            Log.infoln("Restarting in 5 seconds to apply update");
+            delay(5000);
+            ESP.restart();
+        });
     }
 
 private:
-    static String update(const String& url, const String& currentVersion) {
-        Log.infoln("Updating from version %s via URL %s",
-            currentVersion.c_str(), url.c_str());
-        WiFiClientSecure client;
-        // Allow insecure connections for testing
-        client.setInsecure();
-        HTTPUpdateResult result = httpUpdate.update(client, url, currentVersion);
-        switch (result) {
-            case HTTP_UPDATE_FAILED:
-                return httpUpdate.getLastErrorString() + " (" + String(httpUpdate.getLastError()) + ")";
-            case HTTP_UPDATE_NO_UPDATES:
-                return "No updates available";
-            case HTTP_UPDATE_OK:
-                return "Update OK";
-            default:
-                return "Unknown response";
-        }
-    }
-
+    const std::function<void(const String&)> prepareUpdate;
     const String currentVersion;
 };
 
