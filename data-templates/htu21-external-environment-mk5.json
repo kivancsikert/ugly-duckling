@@ -1,0 +1,13 @@
+{
+  "instance": "incubator",
+  "peripherals": [
+    {
+      "name": "external-environment",
+      "type": "environment:htu2x",
+      "params": {
+        "sda": 35,
+        "scl": 36
+      }
+    }
+  ]
+}
