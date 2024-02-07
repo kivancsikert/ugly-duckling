@@ -3,10 +3,13 @@
 #include <functional>
 #include <optional>
 
+#include <HTTPUpdate.h>
+
 #include <freertos/FreeRTOS.h>
 
 #include <ArduinoLog.h>
 
+#include <kernel/FileSystem.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
@@ -24,6 +27,8 @@ template <typename TConfiguration>
 class Kernel;
 
 static RTC_DATA_ATTR int bootCount = 0;
+
+static const String UPDATE_FILE = "/update.json";
 
 // TODO Move this to a separate file
 static const String& getMacAddress() {
@@ -61,6 +66,12 @@ public:
             deviceConfig.getHostname());
 
         Task::loop("status-update", 2048, [this](Task&) { updateState(); });
+
+        httpUpdateResult = handleHttpUpdate();
+    }
+
+    const State& getNetworkReadyState() const {
+        return networkReadyState;
     }
 
     const State& getRtcInSyncState() const {
@@ -71,7 +82,21 @@ public:
         return kernelReadyState;
     }
 
+    const String& getHttpUpdateResult() const {
+        return httpUpdateResult;
+    }
+
+    void prepareUpdate(const String& url) {
+        auto fUpdate = fs.open(UPDATE_FILE, FILE_WRITE);
+        DynamicJsonDocument doc(docSizeFor(url));
+        doc["url"] = url;
+        serializeJson(doc, fUpdate);
+        fUpdate.close();
+    }
+
     const String version;
+
+    FileSystem& fs { FileSystem::get() };
 
 private:
     enum class KernelState {
@@ -146,6 +171,60 @@ private:
         stateManager.awaitStateChange();
     }
 
+    String handleHttpUpdate() {
+        if (!fs.exists(UPDATE_FILE)) {
+            return "";
+        }
+
+        Log.infoln("Starting update...");
+        auto fUpdate = fs.open(UPDATE_FILE, FILE_READ);
+        DynamicJsonDocument doc(farmhub::kernel::docSizeFor(fUpdate));
+        auto error = deserializeJson(doc, fUpdate);
+        fUpdate.close();
+        fs.remove(UPDATE_FILE);
+
+        if (error) {
+            return "Failed to parse update.json: " + String(error.c_str());
+        }
+        String url = doc["url"];
+        if (url.length() == 0) {
+            return "Command contains empty url";
+        }
+
+        Log.traceln("Waiting for network...");
+        if (!networkReadyState.awaitSet(seconds(60))) {
+            return "Network not ready, aborting update";
+        }
+
+        httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+        Log.infoln("Updating from version %s via URL %s",
+            VERSION, url.c_str());
+
+        HTTPUpdateResult result = HTTP_UPDATE_NO_UPDATES;
+        // Run in separate task to allocate enough stack
+        SemaphoreHandle_t completionSemaphore = xSemaphoreCreateBinary();
+        Task::run("update", 8192, [&](Task& task) {
+            // Allocate on heap to avoid wasting stack
+            std::unique_ptr<WiFiClientSecure> client = std::make_unique<WiFiClientSecure>();
+            // Allow insecure connections for testing
+            client->setInsecure();
+            result = httpUpdate.update(*client, url, VERSION);
+            xSemaphoreGive(completionSemaphore);
+        });
+        xSemaphoreTake(completionSemaphore, portMAX_DELAY);
+
+        switch (result) {
+            case HTTP_UPDATE_FAILED:
+                return httpUpdate.getLastErrorString() + " (" + String(httpUpdate.getLastError()) + ")";
+            case HTTP_UPDATE_NO_UPDATES:
+                return "No updates available";
+            case HTTP_UPDATE_OK:
+                return "Update OK";
+            default:
+                return "Unknown response";
+        }
+    }
+
     TDeviceConfiguration& deviceConfig;
 
     LedDriver& statusLed;
@@ -170,6 +249,8 @@ private:
 #endif
     MdnsDriver mdns { networkReadyState, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
     RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp.get(), rtcInSyncState };
+
+    String httpUpdateResult;
 
 public:
     MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt.get(), deviceConfig.instance.get(), mqttReadyState };

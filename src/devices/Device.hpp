@@ -301,7 +301,7 @@ private:
     MemoryTelemetryProvider memoryTelemetryProvider;
 #endif
 
-    FileSystem& fs { FileSystem::get() };
+    FileSystem& fs { kernel.fs };
     EchoCommand echoCommand;
     RestartCommand restartCommand;
     SleepCommand sleepCommand;
@@ -309,7 +309,9 @@ private:
     FileReadCommand fileReadCommand { fs };
     FileWriteCommand fileWriteCommand { fs };
     FileRemoveCommand fileRemoveCommand { fs };
-    HttpUpdateCommand httpUpdateCommand { kernel.version };
+    HttpUpdateCommand httpUpdateCommand { [this](const String& url) {
+        kernel.prepareUpdate(url);
+    } };
 };
 
 }    // namespace farmhub::devices
