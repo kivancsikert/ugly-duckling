@@ -34,8 +34,13 @@ public:
         Property<String> host { this, "host", "" };
     };
 
-    RtcDriver(State& networkReady, MdnsDriver& mdns, const Config& ntpConfig, StateSource& rtcInSync) {
-        Task::run("rtc-check", [&rtcInSync](Task& task) {
+    RtcDriver(State& networkReady, MdnsDriver& mdns, const Config& ntpConfig, StateSource& rtcInSync)
+        : networkReady(networkReady)
+        , mdns(mdns)
+        , ntpConfig(ntpConfig)
+        , rtcInSync(rtcInSync) {
+        // TODO We should not need two separate tasks here
+        Task::run("rtc-check", [this](Task& task) {
             while (true) {
                 time_t now;
                 time(&now);
@@ -43,48 +48,26 @@ public:
                 // much higher, then it means the RTC is set.
                 if (seconds(now) > hours((2022 - 1970) * 365 * 24)) {
                     Log.infoln("RTC: time is set, exiting task");
-                    rtcInSync.set();
+                    this->rtcInSync.set();
                     break;
                 }
                 task.delayUntil(seconds(1));
             }
         });
-        Task::run("ntp-sync", 4096, [&networkReady, &mdns, &ntpConfig](Task& task) {
-            WiFiUDP udp;
-            NTPClient* ntpClient;
-            if (ntpConfig.host.get().length() > 0) {
-                Log.infoln("RTC: using NTP server %s from configuration",
-                    ntpConfig.host.get().c_str());
-                ntpClient = new NTPClient(udp, ntpConfig.host.get().c_str());
-            } else {
-                MdnsRecord ntpServer;
-                if (mdns.lookupService("ntp", "udp", ntpServer)) {
-                    Log.infoln("RTC: using NTP server %s:%d (%p) from mDNS",
-                        ntpServer.hostname.c_str(),
-                        ntpServer.port,
-                        ntpServer.ip);
-                    ntpClient = new NTPClient(udp, ntpServer.ip);
-                } else {
-                    Log.infoln("RTC: no NTP server configured, using default");
-                    ntpClient = new NTPClient(udp);
-                }
-            }
-
-            networkReady.awaitSet();
-
-            // TODO Use built in configTime() instead
-            //      We are using the external NTP client library, because the built in configTime() does not
-            //      reliably update the time for some reason.
-            ntpClient->begin();
-
+        Task::run("ntp-sync", 4096, [this](Task& task) {
             while (true) {
+                ensureConnected();
                 if (ntpClient->forceUpdate()) {
+                    trustMdnsCache = true;
                     setOrAdjustTime(ntpClient->getEpochTime());
 
                     // We are good for a while now
                     task.delay(hours(1));
                 } else {
-                    // Attempt a retry
+                    // Attempt a retry, but with mDNS cache disabled
+                    Log.traceln("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
+                    ntpClient = nullptr;
+                    trustMdnsCache = false;
                     task.delay(seconds(10));
                 }
             }
@@ -92,6 +75,37 @@ public:
     }
 
 private:
+    void ensureConnected() {
+        networkReady.awaitSet();
+
+        if (ntpClient != nullptr) {
+            return;
+        }
+
+        if (ntpConfig.host.get().length() > 0) {
+            Log.infoln("RTC: using NTP server %s from configuration",
+                ntpConfig.host.get().c_str());
+            ntpClient = new NTPClient(udp, ntpConfig.host.get().c_str());
+        } else {
+            MdnsRecord ntpServer;
+            if (mdns.lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
+                Log.infoln("RTC: using NTP server %s:%d (%p) from mDNS",
+                    ntpServer.hostname.c_str(),
+                    ntpServer.port,
+                    ntpServer.ip);
+                ntpClient = new NTPClient(udp, ntpServer.ip);
+            } else {
+                Log.infoln("RTC: no NTP server configured, using default");
+                ntpClient = new NTPClient(udp);
+            }
+        }
+
+        // TODO Use built in configTime() instead
+        //      We are using the external NTP client library, because the built in configTime() does not
+        //      reliably update the time for some reason.
+        ntpClient->begin();
+    }
+
     static void setOrAdjustTime(long newEpochTime) {
         // Threshold in seconds for deciding between settimeofday and adjtime
         const long threshold = 30;
@@ -119,6 +133,15 @@ private:
             Log.traceln("RTC: Time is already correct");
         }
     }
+
+    State& networkReady;
+    MdnsDriver& mdns;
+    const Config& ntpConfig;
+    StateSource& rtcInSync;
+
+    WiFiUDP udp;
+    NTPClient* ntpClient = nullptr;
+    bool trustMdnsCache = true;
 };
 
 }    // namespace farmhub::kernel::drivers

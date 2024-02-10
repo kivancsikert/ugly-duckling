@@ -55,14 +55,6 @@ public:
         return result;
     }
 
-    bool clearService(const String& serviceName) {
-        // Wait indefinitely
-        lookupMutex.lock();
-        auto result = lookupServiceUnderMutex(serviceName, port, record);
-        lookupMutex.unlock();
-        return result;
-    }
-
 private:
     bool lookupServiceUnderMutex(const String& serviceName, const String& port, MdnsRecord& record, bool loadFromCache) {
         // TODO Use a callback and retry if cached entry doesn't work
@@ -80,7 +72,7 @@ private:
                 }
             }
         } else {
-            Log.traceln("mDNS: removing %s from NVM cache",
+            Log.traceln("mDNS: removing untrusted record for %s from NVM cache",
                 cacheKey.c_str());
             nvm.remove(cacheKey);
         }
