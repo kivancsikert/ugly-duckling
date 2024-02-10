@@ -1,0 +1,17 @@
+{
+  "instance": "germinator",
+  "peripherals": [
+    {
+      "name": "flow-control-a",
+      "type": "flow-control",
+      "params": {
+        "valve": {
+          "motor": "a"
+        },
+        "flow-meter": {
+          "pin": 6
+        }
+      }
+    }
+  ]
+}
