@@ -279,21 +279,16 @@ private:
 #endif
             incomingQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, payload, Retention::NoRetain, QoS::ExactlyOnce, nullptr);
         });
-
-        if (mqttServer.ip == IPAddress()) {
-            mqttClient.begin(mqttServer.hostname.c_str(), mqttServer.port, wifiClient);
-        } else {
-            mqttClient.begin(mqttServer.ip.toString().c_str(), mqttServer.port, wifiClient);
-        }
-
-        Log.infoln("MQTT: server: %s:%d, client ID is '%s'",
-            mqttServer.hostname.c_str(), mqttServer.port, clientId.c_str());
     }
 
     ticks loopAndDelay() {
         networkReady.awaitSet();
 
         if (!mqttClient.connected()) {
+            Log.infoln("MQTT: Disconnected, connecting");
+            mqttReady.clear();
+
+            MdnsRecord mqttServer;
             if (config.host.get().length() > 0) {
                 mqttServer.hostname = config.host.get();
                 mqttServer.port = config.port.get();
@@ -301,8 +296,16 @@ private:
                 // TODO Handle lookup failure
                 mdns.lookupService("mqtt", "tcp", mqttServer, trustMdnsCache);
             }
-            Log.infoln("MQTT: Disconnected, connecting");
-            mqttReady.clear();
+
+            if (mqttServer.ip == IPAddress()) {
+                Log.infoln("MQTT: server: %s:%d, client ID is '%s'",
+                    mqttServer.ip.toString().c_str(), mqttServer.port, clientId.c_str());
+                mqttClient.begin(mqttServer.hostname.c_str(), mqttServer.port, wifiClient);
+            } else {
+                Log.infoln("MQTT: server: %s:%d, client ID is '%s'",
+                    mqttServer.hostname.c_str(), mqttServer.port, clientId.c_str());
+                mqttClient.begin(mqttServer.ip.toString().c_str(), mqttServer.port, wifiClient);
+            }
 
             if (!mqttClient.connect(clientId.c_str())) {
                 Log.errorln("MQTT: Connection failed, error = %d",
@@ -412,7 +415,6 @@ private:
 
     StateSource& mqttReady;
 
-    MdnsRecord mqttServer;
     MQTTClient mqttClient { MQTT_BUFFER_SIZE };
     Queue<Message> publishQueue { "mqtt-publish", config.queueSize.get() };
     Queue<Message> incomingQueue { "mqtt-incoming", config.queueSize.get() };
