@@ -47,7 +47,15 @@ public:
         });
     }
 
-    bool lookupService(const String& serviceName, const String& port, MdnsRecord& record) {
+    bool lookupService(const String& serviceName, const String& port, MdnsRecord& record, bool loadFromCache = true) {
+        // Wait indefinitely
+        lookupMutex.lock();
+        auto result = lookupServiceUnderMutex(serviceName, port, record, loadFromCache);
+        lookupMutex.unlock();
+        return result;
+    }
+
+    bool clearService(const String& serviceName) {
         // Wait indefinitely
         lookupMutex.lock();
         auto result = lookupServiceUnderMutex(serviceName, port, record);
@@ -56,19 +64,25 @@ public:
     }
 
 private:
-    bool lookupServiceUnderMutex(const String& serviceName, const String& port, MdnsRecord& record) {
+    bool lookupServiceUnderMutex(const String& serviceName, const String& port, MdnsRecord& record, bool loadFromCache) {
         // TODO Use a callback and retry if cached entry doesn't work
         String cacheKey = serviceName + "." + port;
-        if (nvm.get(cacheKey, record)) {
-            if (record.validate()) {
-                Log.traceln("mDNS: found %s in NVM cache: %s",
-                    cacheKey.c_str(), record.hostname.c_str());
-                return true;
-            } else {
-                Log.traceln("mDNS: invalid record in NVM cache for %s, removing",
-                    cacheKey.c_str());
-                nvm.remove(cacheKey);
+        if (loadFromCache) {
+            if (nvm.get(cacheKey, record)) {
+                if (record.validate()) {
+                    Log.traceln("mDNS: found %s in NVM cache: %s",
+                        cacheKey.c_str(), record.hostname.c_str());
+                    return true;
+                } else {
+                    Log.traceln("mDNS: invalid record in NVM cache for %s, removing",
+                        cacheKey.c_str());
+                    nvm.remove(cacheKey);
+                }
             }
+        } else {
+            Log.traceln("mDNS: removing %s from NVM cache",
+                cacheKey.c_str());
+            nvm.remove(cacheKey);
         }
 
         mdnsReady.awaitSet();

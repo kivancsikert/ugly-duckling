@@ -269,15 +269,6 @@ private:
     }
 
     void setup() {
-        networkReady.awaitSet();
-
-        if (config.host.get().length() > 0) {
-            mqttServer.hostname = config.host.get();
-            mqttServer.port = config.port.get();
-        } else {
-            // TODO Handle lookup failure
-            mdns.lookupService("mqtt", "tcp", mqttServer);
-        }
         // TODO Figure out the right keep alive value
         mqttClient.setKeepAlive(180);
 
@@ -303,14 +294,24 @@ private:
         networkReady.awaitSet();
 
         if (!mqttClient.connected()) {
+            if (config.host.get().length() > 0) {
+                mqttServer.hostname = config.host.get();
+                mqttServer.port = config.port.get();
+            } else {
+                // TODO Handle lookup failure
+                mdns.lookupService("mqtt", "tcp", mqttServer, trustMdnsCache);
+            }
             Log.infoln("MQTT: Disconnected, connecting");
             mqttReady.clear();
 
             if (!mqttClient.connect(clientId.c_str())) {
                 Log.errorln("MQTT: Connection failed, error = %d",
                     mqttClient.lastError());
+                trustMdnsCache = false;
                 // TODO Implement exponential backoff
                 return MQTT_DISCONNECTED_CHECK_INTERVAL;
+            } else {
+                trustMdnsCache = true;
             }
 
             // Re-subscribe to existing subscriptions
@@ -403,6 +404,7 @@ private:
     State& networkReady;
     WiFiClient wifiClient;
     MdnsDriver& mdns;
+    bool trustMdnsCache = true;
     const Config& config;
     const String instanceName;
 
