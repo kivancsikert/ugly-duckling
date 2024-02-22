@@ -50,6 +50,13 @@ public:
     }
 
     void drive(MotorPhase phase, double duty = 1) override {
+        if (duty == 0) {
+            Log.traceln("Stopping motor");
+            sleep();
+            return;
+        }
+        wakeUp();
+
         int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
         Log.traceln("Driving motor %s at %d%%",
             phase == MotorPhase::FORWARD ? "forward" : "reverse",
