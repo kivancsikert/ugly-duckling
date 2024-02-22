@@ -9,7 +9,7 @@
           "motor": "a"
         },
         "flow-meter": {
-          "pin": 6
+          "pin": 5
         }
       }
     }
