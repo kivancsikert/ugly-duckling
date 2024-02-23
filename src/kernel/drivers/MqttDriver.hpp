@@ -184,7 +184,7 @@ public:
         Property<String> host { this, "host", "" };
         Property<unsigned int> port { this, "port", 1883 };
         Property<String> clientId { this, "clientId", "" };
-        Property<String> topic { this, "topic", "" };
+        Property<String> location { this, "location", "" };
         Property<size_t> queueSize { this, "queueSize", 16 };
         ArrayProperty<String> serverCert { this, "serverCert" };
         ArrayProperty<String> clientCert { this, "clientCert" };
@@ -213,7 +213,9 @@ public:
     }
 
     shared_ptr<MqttRoot> forRoot(const String& topic) {
-        return make_shared<MqttRoot>(*this, topic);
+        const String& location = config.location.get();
+        String localizedTopic = location.isEmpty() ? topic : location + "/" + topic;
+        return make_shared<MqttRoot>(*this, localizedTopic);
     }
 
 private:
