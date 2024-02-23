@@ -32,6 +32,7 @@ public:
 
     Property<String> model;
     Property<String> instance;
+    Property<String> location { this, "location" };
 
     NamedConfigurationEntry<MqttDriver::Config> mqtt { this, "mqtt" };
     NamedConfigurationEntry<RtcDriver::Config> ntp { this, "ntp" };

@@ -283,12 +283,20 @@ private:
         peripheralManager.publishTelemetry();
     }
 
+    String locationPrefix() {
+        if (deviceConfig.location.hasValue()) {
+            return deviceConfig.location.get() + "/";
+        } else {
+            return "";
+        }
+    }
+
     ConfiguredKernel configuredKernel;
     Kernel<TDeviceConfiguration>& kernel = configuredKernel.kernel;
     TDeviceDefinition& deviceDefinition = configuredKernel.deviceDefinition;
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;
 
-    shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
+    shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig.instance.get());
     PeripheralManager peripheralManager { mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;
