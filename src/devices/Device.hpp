@@ -269,7 +269,7 @@ public:
                 json["wakeup"] = esp_sleep_get_wakeup_cause();
                 json["bootCount"] = bootCount++;
                 json["time"] = time(nullptr);
-            });
+            }, MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, milliseconds::zero(), 8192);
         Task::loop("telemetry", 8192, [this](Task& task) {
             publishTelemetry();
             // TODO Configure telemetry heartbeat interval
