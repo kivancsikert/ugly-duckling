@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 
 #include <MQTTPubSubClient.h>
 
@@ -185,6 +186,9 @@ public:
         Property<String> clientId { this, "clientId", "" };
         Property<String> topic { this, "topic", "" };
         Property<size_t> queueSize { this, "queueSize", 16 };
+        ArrayProperty<String> serverCert { this, "serverCert" };
+        ArrayProperty<String> clientCert { this, "clientCert" };
+        ArrayProperty<String> clientKey { this, "clientKey" };
     };
 
     MqttDriver(
@@ -201,7 +205,7 @@ public:
         , mqttReady(mqttReady) {
         Task::run("mqtt:init", 4096, [this](Task& task) {
             setup();
-            Task::loop("mqtt", 4096, [this](Task& task) {
+            Task::loop("mqtt", 8192, [this](Task& task) {
                 auto delay = loopAndDelay();
                 task.delay(delay);
             });
@@ -269,6 +273,17 @@ private:
         mqttClient.setKeepAliveTimeout(180);
     }
 
+    String joinStrings(std::list<String> strings) {
+        if (strings.empty()) {
+            return "";
+        }
+        String result;
+        for (auto& str : strings) {
+            result += str + "\n";
+        }
+        return result;
+    }
+
     ticks loopAndDelay() {
         networkReady.awaitSet();
 
@@ -276,26 +291,48 @@ private:
             Log.infoln("MQTT: Disconnected, connecting");
             mqttReady.clear();
 
+            String serverCert;
+            String clientCert;
+            String clientKey;
+
             MdnsRecord mqttServer;
             if (config.host.get().length() > 0) {
                 mqttServer.hostname = config.host.get();
                 mqttServer.port = config.port.get();
+                if (config.serverCert.hasValue()) {
+                    serverCert = joinStrings(config.serverCert.get());
+                    clientCert = joinStrings(config.clientCert.get());
+                    clientKey = joinStrings(config.clientKey.get());
+                }
             } else {
                 // TODO Handle lookup failure
                 mdns.lookupService("mqtt", "tcp", mqttServer, trustMdnsCache);
             }
 
+            String hostname;
             if (mqttServer.ip == IPAddress()) {
-                Log.infoln("MQTT: server: %s:%d, client ID is '%s'",
-                    mqttServer.ip.toString().c_str(), mqttServer.port, clientId.c_str());
-                wifiClient.connect(mqttServer.hostname.c_str(), mqttServer.port);
+                hostname = mqttServer.hostname;
             } else {
-                Log.infoln("MQTT: server: %s:%d, client ID is '%s'",
-                    mqttServer.hostname.c_str(), mqttServer.port, clientId.c_str());
-                wifiClient.connect(mqttServer.ip.toString().c_str(), mqttServer.port);
+                hostname = mqttServer.ip.toString();
             }
 
-            mqttClient.begin(wifiClient);
+            if (serverCert.isEmpty()) {
+                Log.infoln("MQTT: server: %s:%d, client ID is '%s'",
+                    hostname.c_str(), mqttServer.port, clientId.c_str());
+                wifiClient.connect(mqttServer.hostname.c_str(), mqttServer.port);
+                mqttClient.begin(wifiClient);
+            } else {
+                Log.infoln("MQTT: server: %s:%d, client ID is '%s', using TLS",
+                    hostname.c_str(), mqttServer.port, clientId.c_str());
+                Log.infoln("Server cert: %s", serverCert.c_str());
+                Log.infoln("Client cert: %s", clientCert.c_str());
+                wifiClientSecure.setCACert(serverCert.c_str());
+                wifiClientSecure.setCertificate(clientCert.c_str());
+                wifiClientSecure.setPrivateKey(clientKey.c_str());
+                wifiClientSecure.connect(mqttServer.hostname.c_str(), mqttServer.port);
+                mqttClient.begin(wifiClientSecure);
+            }
+
             if (!mqttClient.connect(clientId.c_str())) {
                 Log.errorln("MQTT: Connection failed, error = %d",
                     mqttClient.getLastError());
@@ -388,6 +425,7 @@ private:
 
     State& networkReady;
     WiFiClient wifiClient;
+    WiFiClientSecure wifiClientSecure;
     MdnsDriver& mdns;
     bool trustMdnsCache = true;
     const Config& config;
