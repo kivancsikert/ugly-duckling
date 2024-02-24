@@ -54,9 +54,10 @@ static const String& getMacAddress() {
 template <typename TDeviceConfiguration>
 class Kernel {
 public:
-    Kernel(TDeviceConfiguration& deviceConfig, LedDriver& statusLed)
+    Kernel(TDeviceConfiguration& deviceConfig, MqttDriver::Config& mqttConfig, LedDriver& statusLed)
         : version(VERSION)
         , deviceConfig(deviceConfig)
+        , mqttConfig(mqttConfig)
         , statusLed(statusLed) {
 
         Log.infoln("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s'",
@@ -226,6 +227,7 @@ private:
     }
 
     TDeviceConfiguration& deviceConfig;
+    MqttDriver::Config& mqttConfig;
 
     LedDriver& statusLed;
     KernelState state = KernelState::BOOTING;
@@ -253,7 +255,7 @@ private:
     String httpUpdateResult;
 
 public:
-    MqttDriver mqtt { networkReadyState, mdns, deviceConfig.mqtt.get(), deviceConfig.instance.get(), mqttReadyState };
+    MqttDriver mqtt { networkReadyState, mdns, mqttConfig, deviceConfig.instance.get(), mqttReadyState };
 };
 
 }    // namespace farmhub::kernel

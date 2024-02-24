@@ -202,7 +202,7 @@ private:
 class ConfiguredKernel : ConsoleProvider {
 public:
     TDeviceDefinition deviceDefinition;
-    Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.statusLed };
+    Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.mqttConfig, deviceDefinition.statusLed };
 };
 
 class Device {

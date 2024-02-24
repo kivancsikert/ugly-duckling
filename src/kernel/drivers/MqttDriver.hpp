@@ -199,7 +199,6 @@ public:
         : networkReady(networkReady)
         , mdns(mdns)
         , config(config)
-        , instanceName(instanceName)
         , clientId(getClientId(config.clientId.get(), instanceName))
         , mqttReady(mqttReady) {
         Task::run("mqtt:init", 4096, [this](Task& task) {
@@ -428,7 +427,6 @@ private:
     MdnsDriver& mdns;
     bool trustMdnsCache = true;
     const Config& config;
-    const String instanceName;
 
     const String clientId;
 
