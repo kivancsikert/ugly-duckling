@@ -317,7 +317,7 @@ private:
             if (serverCert.isEmpty()) {
                 Log.infoln("MQTT: server: %s:%d, client ID is '%s'",
                     hostname.c_str(), mqttServer.port, clientId.c_str());
-                wifiClient.connect(mqttServer.hostname.c_str(), mqttServer.port);
+                wifiClient.connect(hostname.c_str(), mqttServer.port);
                 mqttClient.begin(wifiClient);
             } else {
                 Log.infoln("MQTT: server: %s:%d, client ID is '%s', using TLS",
