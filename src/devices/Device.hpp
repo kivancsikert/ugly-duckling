@@ -3,6 +3,8 @@
 #include <chrono>
 #include <memory>
 
+#include <esp_pm.h>
+
 #ifndef FARMHUB_LOG_LEVEL
 #ifdef FARMHUB_DEBUG
 #define FARMHUB_LOG_LEVEL LOG_LEVEL_VERBOSE
@@ -42,6 +44,18 @@ typedef farmhub::devices::Mk6Config TDeviceConfiguration;
 
 #else
 #error "No device defined"
+#endif
+
+// FIXME Why do we need to define these manually?
+#if CONFIG_IDF_TARGET_ESP32
+typedef esp_pm_config_esp32_t esp_pm_config_t;
+#define DEFAULT_CPU_FREQ_MHZ CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ
+#elif CONFIG_IDF_TARGET_ESP32S2
+typedef esp_pm_config_esp32s2_t esp_pm_config_t;
+#define DEFAULT_CPU_FREQ_MHZ CONFIG_ESP32S2_DEFAULT_CPU_FREQ_MHZ
+#elif CONFIG_IDF_TARGET_ESP32S3
+typedef esp_pm_config_esp32s3_t esp_pm_config_t;
+#define DEFAULT_CPU_FREQ_MHZ CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ
 #endif
 
 namespace farmhub::devices {
@@ -209,8 +223,11 @@ class Device {
 public:
     Device() {
 
+
 #ifdef HAS_BATTERY
+
 #ifdef FARMHUB_DEBUG
+
         consolePrinter.registerBattery(deviceDefinition.batteryDriver);
 #endif
         deviceTelemetryCollector.registerProvider("battery", deviceDefinition.batteryDriver);
@@ -253,6 +270,8 @@ public:
 
         kernel.getKernelReadyState().awaitSet();
 
+        bool sleepWhenIdle = enableSleepWhenIdle();
+
         mqttDeviceRoot->publish(
             "init",
             [&](JsonObject& json) {
@@ -269,7 +288,9 @@ public:
                 json["wakeup"] = esp_sleep_get_wakeup_cause();
                 json["bootCount"] = bootCount++;
                 json["time"] = time(nullptr);
-            }, MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, milliseconds::zero(), 8192);
+                json["sleepWhenIdle"] = sleepWhenIdle;
+            },
+            MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, milliseconds::zero(), 8192);
         Task::loop("telemetry", 8192, [this](Task& task) {
             publishTelemetry();
             // TODO Configure telemetry heartbeat interval
@@ -281,6 +302,43 @@ private:
     void publishTelemetry() {
         deviceTelemetryPublisher.publishTelemetry();
         peripheralManager.publishTelemetry();
+    }
+
+    bool enableSleepWhenIdle() {
+        if (deviceConfig.sleepWhenIdle.get()) {
+#if FARMHUB_DEBUG
+            Log.warningln("Light sleep is disabled in debug mode");
+            return false;
+#else    // FARMHUB_DEBUG
+#if not(CONFIG_PM_ENABLE)
+            Log.warningln("Light sleep is disabled because CONFIG_PM_ENABLE is not set");
+            return false;
+#else    // CONFIG_PM_ENABLE
+
+#if CONFIG_FREERTOS_USE_TICKLESS_IDLE
+            Log.infoln("Light sleep is enabled");
+            bool sleepWhenIdle = true;
+#else
+            Log.warningln("Light sleep is disabled because CONFIG_FREERTOS_USE_TICKLESS_IDLE is not set");
+            bool sleepWhenIdle = false;
+#endif    // CONFIG_FREERTOS_USE_TICKLESS_IDLE
+
+            // Configure dynamic frequency scaling:
+            // maximum and minimum frequencies are set in sdkconfig,
+            // automatic light sleep is enabled if tickless idle support is enabled.
+            esp_pm_config_t pm_config = {
+                .max_freq_mhz = 240,
+                .min_freq_mhz = 40,
+                .light_sleep_enable = sleepWhenIdle
+            };
+            ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
+            return sleepWhenIdle;
+#endif    // CONFIG_PM_ENABLE
+#endif    // FARMHUB_DEBUG
+        } else {
+            Log.traceln("Light sleep is disabled");
+            return false;
+        }
     }
 
     String locationPrefix() {

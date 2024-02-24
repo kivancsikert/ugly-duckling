@@ -38,6 +38,8 @@ public:
 
     ArrayProperty<JsonAsString> peripherals { this, "peripherals" };
 
+    Property<bool> sleepWhenIdle { this, "sleepWhenIdle", false };
+
     virtual bool isResetButtonPressed() {
         return false;
     }
