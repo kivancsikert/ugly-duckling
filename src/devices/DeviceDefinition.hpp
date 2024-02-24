@@ -32,8 +32,8 @@ public:
 
     Property<String> model;
     Property<String> instance;
+    Property<String> location { this, "location" };
 
-    NamedConfigurationEntry<MqttDriver::Config> mqtt { this, "mqtt" };
     NamedConfigurationEntry<RtcDriver::Config> ntp { this, "ntp" };
 
     ArrayProperty<JsonAsString> peripherals { this, "peripherals" };
@@ -80,9 +80,11 @@ public:
 
 private:
     ConfigurationFile<TDeviceConfiguration> configFile { FileSystem::get(), "/device-config.json" };
+    ConfigurationFile<MqttDriver::Config> mqttConfigFile { FileSystem::get(), "/mqtt-config.json" };
 
 public:
     TDeviceConfiguration& config = configFile.config;
+    MqttDriver::Config& mqttConfig = mqttConfigFile.config;
 
 private:
     I2CEnvironmentFactory<Sht31Component> sht3xFactory { "sht3x", 0x44 /* Also supports 0x45 */ };

@@ -202,7 +202,7 @@ private:
 class ConfiguredKernel : ConsoleProvider {
 public:
     TDeviceDefinition deviceDefinition;
-    Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.statusLed };
+    Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.mqttConfig, deviceDefinition.statusLed };
 };
 
 class Device {
@@ -269,7 +269,7 @@ public:
                 json["wakeup"] = esp_sleep_get_wakeup_cause();
                 json["bootCount"] = bootCount++;
                 json["time"] = time(nullptr);
-            });
+            }, MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, milliseconds::zero(), 8192);
         Task::loop("telemetry", 8192, [this](Task& task) {
             publishTelemetry();
             // TODO Configure telemetry heartbeat interval
@@ -283,12 +283,20 @@ private:
         peripheralManager.publishTelemetry();
     }
 
+    String locationPrefix() {
+        if (deviceConfig.location.hasValue()) {
+            return deviceConfig.location.get() + "/";
+        } else {
+            return "";
+        }
+    }
+
     ConfiguredKernel configuredKernel;
     Kernel<TDeviceConfiguration>& kernel = configuredKernel.kernel;
     TDeviceDefinition& deviceDefinition = configuredKernel.deviceDefinition;
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;
 
-    shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot("devices/ugly-duckling/" + deviceConfig.instance.get());
+    shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig.instance.get());
     PeripheralManager peripheralManager { mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;
