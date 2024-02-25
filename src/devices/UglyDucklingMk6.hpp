@@ -37,6 +37,10 @@ public:
             GPIO_NUM_2,
             // Battery
             GPIO_NUM_1, 1.2424) {
+        // Switch off strapping pin
+        // TODO: Add a LED driver instead
+        pinMode(GPIO_NUM_46, OUTPUT);
+        digitalWrite(GPIO_NUM_46, HIGH);
     }
 
     void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
