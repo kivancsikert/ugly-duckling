@@ -286,7 +286,7 @@ private:
         networkReady.awaitSet();
 
         if (!mqttClient.isConnected()) {
-            Log.infoln("MQTT: Disconnected, connecting");
+            Log.infoln("MQTT: Connecting to MQTT server");
             mqttReady.clear();
 
             String serverCert;
