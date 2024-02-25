@@ -273,8 +273,6 @@ public:
             peripheralManager.createPeripheral(perpheralConfig.get());
         }
 
-        kernel.getKernelReadyState().awaitSet();
-
         bool sleepWhenIdle = enableSleepWhenIdle();
 
         mqttDeviceRoot->publish(
@@ -295,12 +293,15 @@ public:
                 json["time"] = time(nullptr);
                 json["sleepWhenIdle"] = sleepWhenIdle;
             },
-            MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, milliseconds::zero(), 8192);
+            MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::max(), 8192);
+
         Task::loop("telemetry", 8192, [this](Task& task) {
             publishTelemetry();
             // TODO Configure telemetry heartbeat interval
             task.delayUntil(milliseconds(60000));
         });
+
+        kernel.getKernelReadyState().set();
     }
 
 private:
