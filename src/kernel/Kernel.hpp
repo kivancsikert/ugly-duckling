@@ -79,7 +79,7 @@ public:
         return rtcInSyncState;
     }
 
-    const State& getKernelReadyState() const {
+    const StateSource& getKernelReadyState() {
         return kernelReadyState;
     }
 
@@ -106,27 +106,13 @@ private:
         NETWORK_CONFIGURING,
         RTC_SYNCING,
         MQTT_CONNECTING,
+        INIT_FINISHING,
         READY
     };
 
     void updateState() {
         KernelState newState;
-        if (networkReadyState.isSet()) {
-            // We have network
-            if (rtcInSyncState.isSet()) {
-                // We have some valid time
-                if (mqttReadyState.isSet()) {
-                    // We have MQTT conenction
-                    newState = KernelState::READY;
-                } else {
-                    // We are waiting for MQTT connection
-                    newState = KernelState::MQTT_CONNECTING;
-                }
-            } else {
-                // We are waiting for NTP sync
-                newState = KernelState::RTC_SYNCING;
-            }
-        } else {
+        if (!networkReadyState.isSet()) {
             // We don't have network
             if (configPortalRunningState.isSet()) {
                 // We are waiting for the user to configure the network
@@ -135,6 +121,16 @@ private:
                 // We are waiting for network connection
                 newState = KernelState::NETWORK_CONNECTING;
             }
+        } else if (!rtcInSyncState.isSet()) {
+            newState = KernelState::RTC_SYNCING;
+        } else if (!mqttReadyState.isSet()) {
+            // We are waiting for MQTT connection
+            newState = KernelState::MQTT_CONNECTING;
+        } else if (!kernelReadyState.isSet()) {
+            // We are waiting for init to finish
+            newState = KernelState::INIT_FINISHING;
+        } else {
+            newState = KernelState::READY;
         }
 
         if (newState != state) {
@@ -159,10 +155,13 @@ private:
                     });
                     break;
                 case KernelState::RTC_SYNCING:
-                    statusLed.blink(milliseconds(1000));
+                    statusLed.blink(milliseconds(500));
                     break;
                 case KernelState::MQTT_CONNECTING:
-                    statusLed.blink(milliseconds(2000));
+                    statusLed.blink(milliseconds(1000));
+                    break;
+                case KernelState::INIT_FINISHING:
+                    statusLed.blink(milliseconds(1500));
                     break;
                 case KernelState::READY:
                     statusLed.turnOn();
@@ -238,12 +237,7 @@ private:
     StateSource rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
     StateSource mdnsReadyState = stateManager.createStateSource("mdns-ready");
     StateSource mqttReadyState = stateManager.createStateSource("mqtt-ready");
-    State kernelReadyState = stateManager.combineStates("kernel-ready",
-        {
-            networkReadyState,
-            rtcInSyncState,
-            mqttReadyState,
-        });
+    StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
     WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
 #ifdef OTA_UPDATE
