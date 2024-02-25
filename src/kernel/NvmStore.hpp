@@ -20,6 +20,16 @@ public:
         : name(name) {
     }
 
+    bool contains(const String& key) {
+        return contains(key.c_str());
+    }
+
+    bool contains(const char* key) {
+        return withPreferences(true, [&]() {
+            return preferences.isKey(key);
+        });
+    }
+
     template <typename T>
     bool get(const String& key, T& value, size_t bufferSize = DEFAULT_BUFFER_SIZE) {
         return get(key.c_str(), value, bufferSize);
@@ -28,10 +38,10 @@ public:
     template <typename T>
     bool get(const char* key, T& value, size_t bufferSize = DEFAULT_BUFFER_SIZE) {
         return withPreferences(true, [&]() {
-            String jsonString = preferences.getString(key);
-            if (jsonString.length() == 0) {
+            if (!preferences.isKey(key)) {
                 return false;
             }
+            String jsonString = preferences.getString(key);
             Log.verboseln("NVM: get(%s) = %s",
                 key, jsonString.c_str());
             DynamicJsonDocument jsonDocument(bufferSize);
@@ -70,7 +80,11 @@ public:
         return withPreferences(false, [&]() {
             Log.verboseln("NVM: remove(%s)",
                 key);
-            return preferences.remove(key);
+            if (preferences.isKey(key)) {
+                return preferences.remove(key);
+            } else {
+                return false;
+            }
         });
     }
 
