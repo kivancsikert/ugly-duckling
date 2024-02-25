@@ -76,11 +76,10 @@ public:
 
 private:
     bool withPreferences(bool readOnly, std::function<bool()> action) {
-        preferencesMutex.lock();
+        Lock lock(preferencesMutex);
         preferences.begin(name.c_str(), readOnly);
         bool result = action();
         preferences.end();
-        preferencesMutex.unlock();
         return result;
     }
 

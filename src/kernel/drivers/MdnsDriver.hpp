@@ -49,9 +49,8 @@ public:
 
     bool lookupService(const String& serviceName, const String& port, MdnsRecord& record, bool loadFromCache = true) {
         // Wait indefinitely
-        lookupMutex.lock();
+        Lock lock(lookupMutex);
         auto result = lookupServiceUnderMutex(serviceName, port, record, loadFromCache);
-        lookupMutex.unlock();
         return result;
     }
 

@@ -70,13 +70,12 @@ public:
 
                 if (pulses > 0) {
                     pcnt_counter_clear(PCNT_UNIT_0);
-                    updateMutex.lock();
+                    Lock lock(updateMutex);
                     double currentVolume = pulses / this->qFactor / 60.0f;
                     Log.verboseln("Counted %d pulses, %F l/min, %F l",
                         pulses, currentVolume / (elapsed.count() / 1000.0f / 60.0f), currentVolume);
                     volume += currentVolume;
                     lastSeenFlow = now;
-                    updateMutex.unlock();
                 }
             }
             task.delayUntil(measurementFrequency);
@@ -86,9 +85,8 @@ public:
     virtual ~FlowMeterComponent() = default;
 
     void populateTelemetry(JsonObject& json) override {
-        updateMutex.lock();
+        Lock lock(updateMutex);
         pupulateTelemetryUnderLock(json);
-        updateMutex.unlock();
     }
 
 private:
