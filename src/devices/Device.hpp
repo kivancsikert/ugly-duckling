@@ -342,7 +342,7 @@ private:
 #endif    // CONFIG_PM_ENABLE
 #endif    // FARMHUB_DEBUG
         } else {
-            Log.traceln("Light sleep is disabled");
+            Log.infoln("Light sleep is disabled");
             return false;
         }
     }
