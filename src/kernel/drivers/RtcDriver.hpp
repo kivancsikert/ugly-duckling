@@ -47,7 +47,7 @@ public:
                 // The MCU boots with a timestamp of 0 seconds, so if the value is
                 // much higher, then it means the RTC is set.
                 if (seconds(now) > hours((2022 - 1970) * 365 * 24)) {
-                    Log.infoln("RTC: time is set, exiting task");
+                    Log.infoln("RTC: time is set");
                     this->rtcInSync.set();
                     break;
                 }
