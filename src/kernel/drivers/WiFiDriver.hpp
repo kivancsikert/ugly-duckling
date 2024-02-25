@@ -20,6 +20,8 @@ namespace farmhub::kernel::drivers {
 class WiFiDriver {
 public:
     WiFiDriver(StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode) {
+        Log.infoln("WiFi: initializing");
+
         wifiManager.setHostname(hostname.c_str());
         wifiManager.setConfigPortalTimeout(180);
         wifiManager.setAPCallback([this, &configPortalRunning](WiFiManager* wifiManager) {
