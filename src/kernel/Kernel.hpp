@@ -214,6 +214,7 @@ private:
         });
         xSemaphoreTake(completionSemaphore, portMAX_DELAY);
 
+
         switch (result) {
             case HTTP_UPDATE_FAILED:
                 return httpUpdate.getLastErrorString() + " (" + String(httpUpdate.getLastError()) + ")";
@@ -244,7 +245,7 @@ private:
             mqttReadyState,
         });
 
-    WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname() };
+    WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
 #ifdef OTA_UPDATE
     // Only include OTA when needed for debugging
     OtaDriver ota { networkReadyState, deviceConfig.getHostname() };

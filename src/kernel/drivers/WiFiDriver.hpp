@@ -4,6 +4,8 @@
 
 #include <WiFi.h>
 
+#include <esp_wifi.h>
+
 #include <ArduinoLog.h>
 #include <WiFiManager.h>
 
@@ -17,7 +19,7 @@ namespace farmhub::kernel::drivers {
 
 class WiFiDriver {
 public:
-    WiFiDriver(StateSource& networkReady, StateSource& configPortalRunning, const String& hostname) {
+    WiFiDriver(StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode) {
         wifiManager.setHostname(hostname.c_str());
         wifiManager.setConfigPortalTimeout(180);
         wifiManager.setAPCallback([this, &configPortalRunning](WiFiManager* wifiManager) {
@@ -62,10 +64,25 @@ public:
             },
             ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
-        Task::run("wifi", 3072, [this, &networkReady, hostname](Task& task) {
+        Task::run("wifi", 3072, [this, &networkReady, hostname, powerSaveMode](Task& task) {
             while (true) {
                 bool connected = WiFi.isConnected() || wifiManager.autoConnect(hostname.c_str());
                 if (connected) {
+                    if (powerSaveMode) {
+                        esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+
+                        wifi_config_t conf;
+                        ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &conf));
+                        conf.sta.listen_interval = 50;
+                        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &conf));
+
+                        ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &conf));
+                        wifi_ps_type_t psType;
+                        ESP_ERROR_CHECK(esp_wifi_get_ps(&psType));
+                        Log.infoln("WiFi: PS mode: %d, listen interval: %d",
+                            psType,
+                            conf.sta.listen_interval);
+                    }
                     reconnectQueue.take();
                 } else {
                     reconnectQueue.clear();
