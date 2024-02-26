@@ -217,7 +217,6 @@ private:
         });
         xSemaphoreTake(completionSemaphore, portMAX_DELAY);
 
-
         switch (result) {
             case HTTP_UPDATE_FAILED:
                 return httpUpdate.getLastErrorString() + " (" + String(httpUpdate.getLastError()) + ")";
