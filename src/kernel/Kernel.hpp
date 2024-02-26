@@ -164,7 +164,11 @@ private:
                     statusLed.blink(milliseconds(1500));
                     break;
                 case KernelState::READY:
-                    statusLed.turnOn();
+                    if (deviceConfig.sleepWhenIdle.get()) {
+                        statusLed.turnOff();
+                    } else {
+                        statusLed.turnOn();
+                    }
                     break;
             };
         }
