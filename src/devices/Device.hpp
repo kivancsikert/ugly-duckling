@@ -3,6 +3,7 @@
 #include <chrono>
 #include <memory>
 
+#include <Arduino.h>
 #include <esp_pm.h>
 
 #ifndef FARMHUB_LOG_LEVEL
@@ -56,11 +57,6 @@ typedef esp_pm_config_esp32s2_t esp_pm_config_t;
 #elif CONFIG_IDF_TARGET_ESP32S3
 typedef esp_pm_config_esp32s3_t esp_pm_config_t;
 #define DEFAULT_CPU_FREQ_MHZ CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ
-#endif
-
-#if CONFIG_IDF_TARGET_ESP32S3
-// TODO Why do we need this for the S3? Maybe use NO_GLOBAL_SERIAL and define our own?
-#define Serial Serial0
 #endif
 
 namespace farmhub::devices {
