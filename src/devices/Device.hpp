@@ -224,6 +224,7 @@ class Device {
 public:
     Device() {
 
+        deviceDefinition.registerFactoryReset(kernel.buttonManager);
 
 #ifdef HAS_BATTERY
 

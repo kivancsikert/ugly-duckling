@@ -35,6 +35,8 @@ public:
         : BatteryPoweredDeviceDefinition<Mk6Config>(
             // Status LED
             GPIO_NUM_2,
+            // Boot pin
+            GPIO_NUM_0,
             // Battery
             GPIO_NUM_1, 1.2424) {
         // Switch off strapping pin

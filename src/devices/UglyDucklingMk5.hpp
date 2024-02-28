@@ -35,6 +35,8 @@ public:
         : BatteryPoweredDeviceDefinition<Mk5Config>(
             // Status LED
             GPIO_NUM_2,
+            // Boot pin
+            GPIO_NUM_0,
             // Battery
             // TODO Calibrate battery voltage divider ratio
             GPIO_NUM_1, 2.4848) {

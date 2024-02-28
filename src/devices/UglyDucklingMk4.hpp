@@ -32,10 +32,12 @@ public:
 
 class UglyDucklingMk4 : public DeviceDefinition<Mk4Config> {
 public:
-    UglyDucklingMk4()
+    UglyDucklingMk4(GPIO_NUM_0)
         : DeviceDefinition<Mk4Config>(
             // Status LED
-            GPIO_NUM_26) {
+            GPIO_NUM_26,
+            // Boot pin
+            GPIO_NUM_0) {
     }
 
     void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
