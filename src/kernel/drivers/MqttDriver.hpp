@@ -286,7 +286,7 @@ private:
         networkReady.awaitSet();
 
         if (!mqttClient.isConnected()) {
-            Log.infoln("MQTT: Disconnected, connecting");
+            Log.infoln("MQTT: Connecting to MQTT server");
             mqttReady.clear();
 
             String serverCert;
@@ -387,7 +387,7 @@ private:
 
     // Actually subscribe to the given topic
     bool registerSubscriptionWithMqtt(const Subscription& subscription) {
-        Log.infoln("MQTT: Subscribing to topic '%s' (qos = %d)",
+        Log.traceln("MQTT: Subscribing to topic '%s' (qos = %d)",
             subscription.topic.c_str(), subscription.qos);
         bool success = mqttClient.subscribe(subscription.topic, static_cast<int>(subscription.qos), [subscription](const String& payload, const size_t size) {
             if (payload.isEmpty()) {

@@ -32,10 +32,11 @@ public:
         StateSource& mdnsReady)
         : mdnsReady(mdnsReady) {
         // TODO Add error handling
-        MDNS.begin(hostname);
         Task::run("mdns", 4096, [&networkReady, &mdnsReady, instanceName, hostname, version](Task& task) {
+            Log.infoln("mDNS: initializing");
             networkReady.awaitSet();
 
+            MDNS.begin(hostname);
             MDNS.setInstanceName(instanceName);
             Log.traceln("mDNS: Advertising service %s on %s.local, version: %s",
                 instanceName.c_str(), hostname.c_str(), version.c_str());
@@ -49,9 +50,8 @@ public:
 
     bool lookupService(const String& serviceName, const String& port, MdnsRecord& record, bool loadFromCache = true) {
         // Wait indefinitely
-        lookupMutex.lock();
+        Lock lock(lookupMutex);
         auto result = lookupServiceUnderMutex(serviceName, port, record, loadFromCache);
-        lookupMutex.unlock();
         return result;
     }
 

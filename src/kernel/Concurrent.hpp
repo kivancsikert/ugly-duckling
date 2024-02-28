@@ -161,4 +161,23 @@ private:
     const SemaphoreHandle_t mutex;
 };
 
+class  Lock {
+public:
+    Lock(Mutex& mutex)
+        : mutex(mutex) {
+        mutex.lock();
+    }
+
+    ~Lock() {
+        mutex.unlock();
+    }
+
+    // Delete copy constructor and assignment operator to prevent copying
+    Lock(const Lock&) = delete;
+    Lock& operator=(const Lock&) = delete;
+
+private:
+    Mutex& mutex;
+};
+
 }    // namespace farmhub::kernel
