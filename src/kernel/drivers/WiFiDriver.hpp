@@ -35,12 +35,12 @@ public:
 
         WiFi.onEvent(
             [](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.traceln("WiFi: connected to %s", String(info.wifi_sta_connected.ssid, info.wifi_sta_connected.ssid_len).c_str());
+                Log.infoln("WiFi: connected to %s", String(info.wifi_sta_connected.ssid, info.wifi_sta_connected.ssid_len).c_str());
             },
             ARDUINO_EVENT_WIFI_STA_CONNECTED);
         WiFi.onEvent(
             [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.traceln("WiFi: got IP %p, netmask %p, gateway %p",
+                Log.infoln("WiFi: got IP %p, netmask %p, gateway %p",
                     IPAddress(info.got_ip.ip_info.ip.addr),
                     IPAddress(info.got_ip.ip_info.netmask.addr),
                     IPAddress(info.got_ip.ip_info.gw.addr));
@@ -50,7 +50,7 @@ public:
             ARDUINO_EVENT_WIFI_STA_GOT_IP);
         WiFi.onEvent(
             [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.traceln("WiFi: lost IP address");
+                Log.infoln("WiFi: lost IP address");
                 // TODO What should we do here?
                 networkReady.clearFromISR();
                 reconnectQueue.overwriteFromISR(true);
@@ -58,7 +58,7 @@ public:
             ARDUINO_EVENT_WIFI_STA_LOST_IP);
         WiFi.onEvent(
             [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.traceln("WiFi: disconnected from %s, reason: %s",
+                Log.infoln("WiFi: disconnected from %s, reason: %s",
                     String(info.wifi_sta_disconnected.ssid, info.wifi_sta_disconnected.ssid_len).c_str(),
                     WiFi.disconnectReasonName(static_cast<wifi_err_reason_t>(info.wifi_sta_disconnected.reason)));
                 networkReady.clearFromISR();
@@ -71,19 +71,14 @@ public:
                 bool connected = WiFi.isConnected() || wifiManager.autoConnect(hostname.c_str());
                 if (connected) {
                     if (powerSaveMode) {
+                        auto listenInterval = 50;
+                        Log.traceln("WiFi enabling power save mode, listen interval: %d",
+                            listenInterval);
                         esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
-
                         wifi_config_t conf;
                         ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &conf));
-                        conf.sta.listen_interval = 50;
+                        conf.sta.listen_interval = listenInterval;
                         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &conf));
-
-                        ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &conf));
-                        wifi_ps_type_t psType;
-                        ESP_ERROR_CHECK(esp_wifi_get_ps(&psType));
-                        Log.infoln("WiFi: PS mode: %d, listen interval: %d",
-                            psType,
-                            conf.sta.listen_interval);
                     }
                     reconnectQueue.take();
                 } else {
