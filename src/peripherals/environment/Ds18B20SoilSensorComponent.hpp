@@ -16,6 +16,11 @@ using namespace farmhub::kernel;
 
 namespace farmhub::peripherals::environment {
 
+/**
+ * @brief Support for DS18B20 soil temperature sensor.
+ *
+ * Note: Needs a 4.7k pull-up resistor between the data and power lines.
+ */
 class Ds18B20SoilSensorComponent
     : public Component,
       public TelemetryProvider {
@@ -26,10 +31,9 @@ public:
         gpio_num_t pin)
         : Component(name, mqttRoot) {
 
-        Log.infoln("Initializing DS18B20 environment sensor on pin %d",
+        Log.infoln("Initializing DS18B20 soil temperature sensor on pin %d",
             pin);
 
-        pinMode(pin, INPUT_PULLUP);
         oneWire.begin(pin);
 
         // locate devices on the bus

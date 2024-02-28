@@ -9,7 +9,7 @@
 using namespace std::chrono;
 using namespace farmhub::kernel;
 
-namespace farmhub::peripherals::environment {
+namespace farmhub::peripherals {
 
 struct I2CConfig {
 public:

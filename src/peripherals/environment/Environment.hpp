@@ -12,6 +12,7 @@ using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 using std::make_unique;
 using std::unique_ptr;
+
 namespace farmhub::peripherals::environment {
 
 template <typename TComponent>
