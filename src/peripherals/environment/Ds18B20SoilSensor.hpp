@@ -5,21 +5,17 @@
 #include <devices/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
+#include <peripherals/SinglePinDeviceConfig.hpp>
 
 #include "Ds18B20SoilSensorComponent.hpp"
 
 using namespace farmhub::devices;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::peripherals;
 using std::make_unique;
 using std::unique_ptr;
 namespace farmhub::peripherals::environment {
-
-class Ds18B20SoilSensorDeviceConfig
-    : public ConfigurationSection {
-public:
-    Property<gpio_num_t> pin { this, "pin", GPIO_NUM_NC };
-};
 
 class Ds18B20SoilSensor
     : public Peripheral<EmptyConfiguration> {
@@ -38,13 +34,13 @@ private:
 };
 
 class Ds18B20SoilSensorFactory
-    : public PeripheralFactory<Ds18B20SoilSensorDeviceConfig, EmptyConfiguration> {
+    : public PeripheralFactory<SinglePinDeviceConfig, EmptyConfiguration> {
 public:
     Ds18B20SoilSensorFactory()
-        : PeripheralFactory<Ds18B20SoilSensorDeviceConfig, EmptyConfiguration>("environment:ds18b20") {
+        : PeripheralFactory<SinglePinDeviceConfig, EmptyConfiguration>("environment:ds18b20") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const Ds18B20SoilSensorDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const SinglePinDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
         return make_unique<Ds18B20SoilSensor>(name, mqttRoot, deviceConfig.pin.get());
     }
 };
