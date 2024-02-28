@@ -32,7 +32,7 @@ public:
 
 class UglyDucklingMk4 : public DeviceDefinition<Mk4Config> {
 public:
-    UglyDucklingMk4(GPIO_NUM_0)
+    UglyDucklingMk4()
         : DeviceDefinition<Mk4Config>(
             // Status LED
             GPIO_NUM_26,
