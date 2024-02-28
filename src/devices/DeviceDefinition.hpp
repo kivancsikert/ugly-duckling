@@ -14,6 +14,7 @@
 #include <peripherals/environment/Environment.hpp>
 #include <peripherals/environment/Sht2xComponent.hpp>
 #include <peripherals/environment/Sht31Component.hpp>
+#include <peripherals/environment/Ds18B20SoilSensor.hpp>
 
 #include <version.h>
 
@@ -63,6 +64,7 @@ public:
         peripheralManager.registerFactory(sht3xFactory);
         peripheralManager.registerFactory(sht2xFactory);
         peripheralManager.registerFactory(htu2xFactory);
+        peripheralManager.registerFactory(ds18b20SoilSensorFactory);
         registerDeviceSpecificPeripheralFactories(peripheralManager);
     }
 
@@ -92,6 +94,8 @@ private:
     I2CEnvironmentFactory<Sht31Component> sht3xFactory { "sht3x", 0x44 /* Also supports 0x45 */ };
     I2CEnvironmentFactory<Sht2xComponent<SHT2x>> sht2xFactory { "sht2x", 0x40 /* Not configurable */ };
     I2CEnvironmentFactory<Sht2xComponent<HTU21>> htu2xFactory { "htu2x", 0x40 /* Not configurable */ };
+
+    Ds18B20SoilSensorFactory ds18b20SoilSensorFactory;
 };
 
 template <typename TDeviceConfiguration>
