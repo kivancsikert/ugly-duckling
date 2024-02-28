@@ -13,18 +13,32 @@ using namespace std::chrono;
 namespace farmhub::kernel {
 
 template <typename TMessage>
-class Queue {
-public:
-    Queue(const String& name, size_t capacity = 16)
+class BaseQueue {
+protected:
+    BaseQueue(const String& name, size_t capacity)
         : name(name)
         , queue(xQueueCreate(capacity, sizeof(TMessage*))) {
     }
 
-    ~Queue() {
+    ~BaseQueue() {
         vQueueDelete(queue);
     }
 
-    typedef std::function<void(const TMessage&)> MessageHandler;
+public:
+    virtual void clear() = 0;
+
+protected:
+
+    const String name;
+    const QueueHandle_t queue;
+};
+
+template <typename TMessage>
+class Queue : public BaseQueue<TMessage> {
+public:
+    Queue(const String& name, size_t capacity = 16)
+        : BaseQueue<TMessage>(name, capacity) {
+    }
 
     template <typename... Args>
     void put(Args&&... args) {
@@ -39,42 +53,22 @@ public:
     template <typename... Args>
     bool offerIn(ticks timeout, Args&&... args) {
         TMessage* copy = new TMessage(std::forward<Args>(args)...);
-        bool sentWithoutDropping = xQueueSend(queue, &copy, timeout.count()) == pdTRUE;
+        bool sentWithoutDropping = xQueueSend(this->queue, &copy, timeout.count()) == pdTRUE;
         if (!sentWithoutDropping) {
             Serial.printf("Overflow in queue '%s', dropping message\n",
-                name.c_str());
+                this->name.c_str());
             delete copy;
         }
-        return sentWithoutDropping;
-    }
-
-    template <typename... Args>
-    bool offerFromISR(Args&&... args) {
-        TMessage* copy = new TMessage(std::forward<Args>(args)...);
-        BaseType_t xHigherPriorityTaskWoken;
-        bool sentWithoutDropping = xQueueSendFromISR(queue, &copy, &xHigherPriorityTaskWoken) == pdTRUE;
-        if (!sentWithoutDropping) {
-            Serial.printf("Overflow in queue '%s', dropping message\n",
-                name.c_str());
-            delete copy;
-        }
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
         return sentWithoutDropping;
     }
 
     template <typename... Args>
     void overwrite(Args&&... args) {
         TMessage* copy = new TMessage(std::forward<Args>(args)...);
-        xQueueOverwrite(queue, &copy);
+        xQueueOverwrite(this->queue, &copy);
     }
 
-    template <typename... Args>
-    void overwriteFromISR(Args&&... args) {
-        TMessage* copy = new TMessage(std::forward<Args>(args)...);
-        BaseType_t xHigherPriorityTaskWoken;
-        xQueueOverwriteFromISR(queue, &copy, &xHigherPriorityTaskWoken);
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-    }
+    typedef std::function<void(TMessage&)> MessageHandler;
 
     size_t drain(MessageHandler handler) {
         return drain(SIZE_MAX, handler);
@@ -113,7 +107,7 @@ public:
 
     bool pollIn(ticks timeout, MessageHandler handler) {
         TMessage* message;
-        if (!xQueueReceive(queue, &message, timeout.count())) {
+        if (!xQueueReceive(this->queue, &message, timeout.count())) {
             return false;
         }
         handler(*message);
@@ -121,13 +115,42 @@ public:
         return true;
     }
 
-    void clear() {
-        xQueueReset(queue);
+    void clear() override {
+        this->drain([](const TMessage& message) {});
+    }
+};
+
+template <typename TMessage>
+
+class InterrputQueue : public BaseQueue<TMessage> {
+public:
+    InterrputQueue(const String& name, size_t capacity = 16)
+        : BaseQueue<TMessage>(name, capacity) {
     }
 
-private:
-    const String name;
-    const QueueHandle_t queue;
+    bool IRAM_ATTR offerFromISR(TMessage* message) {
+        BaseType_t xHigherPriorityTaskWoken;
+        bool sentWithoutDropping = xQueueSendFromISR(this->queue, &message, &xHigherPriorityTaskWoken) == pdTRUE;
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        return sentWithoutDropping;
+    }
+
+    void IRAM_ATTR overwriteFromISR(TMessage* message) {
+        BaseType_t xHigherPriorityTaskWoken;
+        xQueueOverwriteFromISR(this->queue, &message, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
+
+    TMessage& take() {
+        TMessage* message;
+        while (!xQueueReceive(this->queue, &message, ticks::max().count())) {
+        }
+        return *message;
+    }
+
+    void clear() {
+        xQueueReset(this->queue);
+    }
 };
 
 class Mutex {
