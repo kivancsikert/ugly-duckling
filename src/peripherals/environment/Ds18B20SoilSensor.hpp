@@ -2,11 +2,14 @@
 
 #include <memory>
 
+#include <Arduino.h>
+
 #include <DallasTemperature.h>
 #include <OneWire.h>
 
 #include <devices/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
+#include <kernel/Component.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 #include <peripherals/SinglePinDeviceConfig.hpp>
 

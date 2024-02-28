@@ -45,15 +45,15 @@ public:
                     IPAddress(info.got_ip.ip_info.netmask.addr),
                     IPAddress(info.got_ip.ip_info.gw.addr));
                 reconnectQueue.clear();
-                networkReady.setFromISR();
+                networkReady.set();
             },
             ARDUINO_EVENT_WIFI_STA_GOT_IP);
         WiFi.onEvent(
             [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
                 Log.infoln("WiFi: lost IP address");
                 // TODO What should we do here?
-                networkReady.clearFromISR();
-                reconnectQueue.overwriteFromISR(true);
+                networkReady.clear();
+                reconnectQueue.overwrite(true);
             },
             ARDUINO_EVENT_WIFI_STA_LOST_IP);
         WiFi.onEvent(
@@ -61,8 +61,8 @@ public:
                 Log.infoln("WiFi: disconnected from %s, reason: %s",
                     String(info.wifi_sta_disconnected.ssid, info.wifi_sta_disconnected.ssid_len).c_str(),
                     WiFi.disconnectReasonName(static_cast<wifi_err_reason_t>(info.wifi_sta_disconnected.reason)));
-                networkReady.clearFromISR();
-                reconnectQueue.overwriteFromISR(true);
+                networkReady.clear();
+                reconnectQueue.overwrite(true);
             },
             ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 

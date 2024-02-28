@@ -4,6 +4,7 @@
 #include <memory>
 
 #include <Arduino.h>
+
 #include <esp_pm.h>
 
 #ifndef FARMHUB_LOG_LEVEL
@@ -129,7 +130,7 @@ public:
         size_t len = buffer->endsWith("\n") ? buffer->length() - 1 : buffer->length();
         String copy = "[\033[0;31m" + String(pcTaskGetName(nullptr)) + "\033[0m/\033[0;32m" + String(xPortGetCoreID()) + "\033[0m] " + buffer->substring(pos, pos + len);
         buffer->clear();
-        if (!consoleQueue.offerFromISR(copy)) {
+        if (!consoleQueue.offer(copy)) {
             Serial.println(copy);
         }
     }
@@ -224,6 +225,9 @@ class Device {
 public:
     Device() {
 
+        kernel.buttonManager.registerButtonPressHandler(deviceDefinition.bootPin, ButtonMode::PullUp, seconds { 5 }, [this](gpio_num_t) {
+            kernel.performFactoryReset();
+        });
 
 #ifdef HAS_BATTERY
 

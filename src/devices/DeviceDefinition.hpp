@@ -11,10 +11,10 @@
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
+#include <peripherals/environment/Ds18B20SoilSensor.hpp>
 #include <peripherals/environment/Environment.hpp>
 #include <peripherals/environment/Sht2xComponent.hpp>
 #include <peripherals/environment/Sht31Component.hpp>
-#include <peripherals/environment/Ds18B20SoilSensor.hpp>
 #include <peripherals/environment/SoilMoistureSensor.hpp>
 
 #include <version.h>
@@ -57,8 +57,9 @@ public:
 template <typename TDeviceConfiguration>
 class DeviceDefinition {
 public:
-    DeviceDefinition(gpio_num_t statusPin)
-        : statusLed("status", statusPin) {
+    DeviceDefinition(gpio_num_t statusPin, gpio_num_t bootPin)
+        : statusLed("status", statusPin)
+        , bootPin(bootPin) {
     }
 
     virtual void registerPeripheralFactories(PeripheralManager& peripheralManager) {
@@ -83,6 +84,7 @@ public:
 public:
     LedDriver statusLed;
     PwmManager pwm;
+    const gpio_num_t bootPin;
 
 private:
     ConfigurationFile<TDeviceConfiguration> configFile { FileSystem::get(), "/device-config.json" };
@@ -104,8 +106,8 @@ private:
 template <typename TDeviceConfiguration>
 class BatteryPoweredDeviceDefinition : public DeviceDefinition<TDeviceConfiguration> {
 public:
-    BatteryPoweredDeviceDefinition(gpio_num_t statusPin, gpio_num_t batteryPin, float batteryVoltageDividerRatio)
-        : DeviceDefinition<TDeviceConfiguration>(statusPin)
+    BatteryPoweredDeviceDefinition(gpio_num_t statusPin, gpio_num_t bootPin, gpio_num_t batteryPin, float batteryVoltageDividerRatio)
+        : DeviceDefinition<TDeviceConfiguration>(statusPin, bootPin)
         , batteryDriver(batteryPin, batteryVoltageDividerRatio) {
     }
 

@@ -6,7 +6,7 @@
 #include <ArduinoLog.h>
 
 #include <kernel/Concurrent.hpp>
-#include <kernel/NvmStore.hpp>
+#include <kernel/NvsStore.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 
@@ -60,21 +60,21 @@ private:
         // TODO Use a callback and retry if cached entry doesn't work
         String cacheKey = serviceName + "." + port;
         if (loadFromCache) {
-            if (nvm.get(cacheKey, record)) {
+            if (nvs.get(cacheKey, record)) {
                 if (record.validate()) {
-                    Log.traceln("mDNS: found %s in NVM cache: %s",
+                    Log.traceln("mDNS: found %s in NVS cache: %s",
                         cacheKey.c_str(), record.hostname.c_str());
                     return true;
                 } else {
-                    Log.traceln("mDNS: invalid record in NVM cache for %s, removing",
+                    Log.traceln("mDNS: invalid record in NVS cache for %s, removing",
                         cacheKey.c_str());
-                    nvm.remove(cacheKey);
+                    nvs.remove(cacheKey);
                 }
             }
         } else {
-            Log.traceln("mDNS: removing untrusted record for %s from NVM cache",
+            Log.traceln("mDNS: removing untrusted record for %s from NVS cache",
                 cacheKey.c_str());
-            nvm.remove(cacheKey);
+            nvs.remove(cacheKey);
         }
 
         mdnsReady.awaitSet();
@@ -96,7 +96,7 @@ private:
         record.ip = MDNS.IP(0);
         record.port = MDNS.port(0);
 
-        nvm.set(cacheKey, record);
+        nvs.set(cacheKey, record);
 
         return true;
     }
@@ -105,7 +105,7 @@ private:
 
     Mutex lookupMutex;
 
-    NvmStore nvm { "mdns" };
+    NvsStore nvs { "mdns" };
 };
 
 bool convertToJson(const MdnsRecord& src, JsonVariant dst) {
