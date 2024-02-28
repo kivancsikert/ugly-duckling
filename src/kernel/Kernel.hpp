@@ -9,6 +9,7 @@
 
 #include <ArduinoLog.h>
 
+#include <kernel/ButtonManager.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
@@ -254,6 +255,7 @@ private:
 
 public:
     MqttDriver mqtt { networkReadyState, mdns, mqttConfig, deviceConfig.instance.get(), mqttReadyState };
+    ButtonManager buttonManager;
 };
 
 }    // namespace farmhub::kernel
