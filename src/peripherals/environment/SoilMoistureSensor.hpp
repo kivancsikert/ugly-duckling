@@ -84,7 +84,7 @@ class SoilMoistureSensorFactory
     : public PeripheralFactory<SoilMoistureSensorDeviceConfig, EmptyConfiguration> {
 public:
     SoilMoistureSensorFactory()
-        : PeripheralFactory<SoilMoistureSensorDeviceConfig, EmptyConfiguration>("environment:soil-moisture") {
+        : PeripheralFactory<SoilMoistureSensorDeviceConfig, EmptyConfiguration>("environment:soil-moisture", "environment") {
     }
 
     unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const SoilMoistureSensorDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
