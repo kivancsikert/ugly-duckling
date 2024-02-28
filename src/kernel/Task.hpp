@@ -46,7 +46,6 @@ public:
     }
 
     void abort() {
-        suspend();
         vTaskDelete(handle);
     }
 
