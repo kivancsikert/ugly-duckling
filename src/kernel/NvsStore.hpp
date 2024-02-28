@@ -12,11 +12,11 @@
 namespace farmhub::kernel {
 
 /**
- * @brief Thread safe NVM store for JSON serializable objects.
+ * @brief Thread safe NVS store for JSON serializable objects.
  */
-class NvmStore {
+class NvsStore {
 public:
-    NvmStore(const String& name)
+    NvsStore(const String& name)
         : name(name) {
     }
 
@@ -42,7 +42,7 @@ public:
                 return false;
             }
             String jsonString = preferences.getString(key);
-            Log.verboseln("NVM: get(%s) = %s",
+            Log.verboseln("NVS: get(%s) = %s",
                 key, jsonString.c_str());
             DynamicJsonDocument jsonDocument(bufferSize);
             deserializeJson(jsonDocument, jsonString);
@@ -66,7 +66,7 @@ public:
             jsonDocument.set(value);
             String jsonString;
             serializeJson(jsonDocument, jsonString);
-            Log.verboseln("NVM: set(%s) = %s",
+            Log.verboseln("NVS: set(%s) = %s",
                 key, jsonString.c_str());
             return preferences.putString(key, jsonString.c_str());
         });
@@ -78,7 +78,7 @@ public:
 
     bool remove(const char* key) {
         return withPreferences(false, [&]() {
-            Log.verboseln("NVM: remove(%s)",
+            Log.verboseln("NVS: remove(%s)",
                 key);
             if (preferences.isKey(key)) {
                 return preferences.remove(key);
