@@ -17,6 +17,8 @@ public:
 
     virtual bool remove(const String& path) const = 0;
 
+    virtual bool reset() const = 0;
+
     static FileSystem& get() {
         static FileSystem* instance = initializeFileSystem();
         return *instance;
@@ -39,6 +41,10 @@ public:
     bool remove(const String& path) const override {
         return SPIFFS.remove(path);
     }
+
+    bool reset() const override {
+        return SPIFFS.format();
+    }
 };
 
 class UninitializedFileSystem : public FileSystem {
@@ -55,6 +61,10 @@ public:
     }
 
     bool remove(const String& path) const override {
+        return false;
+    }
+
+    bool reset() const override {
         return false;
     }
 };
