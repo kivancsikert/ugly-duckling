@@ -62,12 +62,6 @@ public:
         , bootPin(bootPin) {
     }
 
-    void registerFactoryReset(ButtonManager& buttonManager) {
-        buttonManager.registerButtonPressHandler(bootPin, ButtonMode::PullUp, seconds { 5 }, [this](gpio_num_t) {
-            Log.warningln("Performing factory reset");
-        });
-    }
-
     virtual void registerPeripheralFactories(PeripheralManager& peripheralManager) {
         peripheralManager.registerFactory(sht3xFactory);
         peripheralManager.registerFactory(sht2xFactory);
@@ -90,10 +84,9 @@ public:
 public:
     LedDriver statusLed;
     PwmManager pwm;
-
-private:
     const gpio_num_t bootPin;
 
+private:
     ConfigurationFile<TDeviceConfiguration> configFile { FileSystem::get(), "/device-config.json" };
     ConfigurationFile<MqttDriver::Config> mqttConfigFile { FileSystem::get(), "/mqtt-config.json" };
 

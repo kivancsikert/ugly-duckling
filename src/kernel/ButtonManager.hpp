@@ -26,10 +26,12 @@ struct ButtonState {
     gpio_num_t pin;
     ButtonMode mode;
     milliseconds pressTimeout;
+
     ButtonPressHandler handler;
 
-    bool pressed;
+    bool pressed = false;
     time_point<system_clock> lastPressTime;
+    Mutex triggered;
     TaskHandle task = nullptr;
 };
 
@@ -63,14 +65,15 @@ public:
                 state.pressed = pressed;
                 if (pressed) {
                     state.lastPressTime = system_clock::now();
-                    state.task = Task::run("button-handler", [state](Task& task) {
+                    state.task = Task::run("button-handler", [&state](Task& task) {
                         task.delay(state.pressTimeout);
+                        Lock lock(state.triggered);
                         Log.verboseln("Button %d pressed for %d ms, triggering",
                             state.pin, duration_cast<milliseconds>(state.pressTimeout).count());
                         state.handler(state.pin);
                     });
                 } else {
-                    auto now = system_clock::now();
+                    Lock lock(state.triggered);
                     state.task.abort();
                     state.task = nullptr;
                 }
@@ -105,7 +108,10 @@ public:
             default:
                 throw new std::runtime_error("Too many buttons");
         }
-        *button = { pin, mode, pressTimeout, handler, false, system_clock::now(), nullptr };
+        button->pin = pin;
+        button->mode = mode;
+        button->pressTimeout = pressTimeout;
+        button->handler = handler;
 
         attachInterrupt(digitalPinToInterrupt(pin), interruptHandler, CHANGE);
     }

@@ -5,6 +5,8 @@
 
 #include <HTTPUpdate.h>
 
+#include <nvs_flash.h>
+
 #include <freertos/FreeRTOS.h>
 
 #include <ArduinoLog.h>
@@ -94,6 +96,31 @@ public:
         doc["url"] = url;
         serializeJson(doc, fUpdate);
         fUpdate.close();
+    }
+
+    void performFactoryReset() {
+        Serial.println("Performing factory reset");
+        Serial.flush();
+
+        statusLed.turnOn();
+        delay(1000);
+        statusLed.turnOff();
+        delay(1000);
+        statusLed.turnOn();
+
+        Serial.println(" - Deleting the file system...");
+        Serial.flush();
+        fs.reset();
+
+        Serial.println(" - Clearing NVS...");
+        Serial.flush();
+
+        nvs_flash_erase();
+
+        Serial.println(" - Restarting...");
+        Serial.flush();
+
+        ESP.restart();
     }
 
     const String version;

@@ -4,6 +4,7 @@
 #include <memory>
 
 #include <Arduino.h>
+
 #include <esp_pm.h>
 
 #ifndef FARMHUB_LOG_LEVEL
@@ -224,7 +225,9 @@ class Device {
 public:
     Device() {
 
-        deviceDefinition.registerFactoryReset(kernel.buttonManager);
+        kernel.buttonManager.registerButtonPressHandler(deviceDefinition.bootPin, ButtonMode::PullUp, seconds { 5 }, [this](gpio_num_t) {
+            kernel.performFactoryReset();
+        });
 
 #ifdef HAS_BATTERY
 
