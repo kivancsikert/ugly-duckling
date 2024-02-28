@@ -129,7 +129,7 @@ public:
         size_t len = buffer->endsWith("\n") ? buffer->length() - 1 : buffer->length();
         String copy = "[\033[0;31m" + String(pcTaskGetName(nullptr)) + "\033[0m/\033[0;32m" + String(xPortGetCoreID()) + "\033[0m] " + buffer->substring(pos, pos + len);
         buffer->clear();
-        if (!consoleQueue.offerFromISR(copy)) {
+        if (!consoleQueue.offer(copy)) {
             Serial.println(copy);
         }
     }

@@ -90,7 +90,7 @@ public:
         return hasAllBits(setBits(eventBits | STATE_CHANGE_BIT_MASK));
     }
 
-    bool setFromISR() const {
+    bool IRAM_ATTR setFromISR() const {
         return hasAllBits(setBitsFromISR(eventBits | STATE_CHANGE_BIT_MASK));
     }
 
@@ -100,7 +100,7 @@ public:
         return cleared;
     }
 
-    bool clearFromISR() const {
+    bool IRAM_ATTR clearFromISR() const {
         bool cleared = hasAllBits(xEventGroupClearBitsFromISR(eventGroup, eventBits));
         setBitsFromISR(STATE_CHANGE_BIT_MASK);
         return cleared;
