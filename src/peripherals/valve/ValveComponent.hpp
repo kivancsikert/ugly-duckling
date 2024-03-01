@@ -16,8 +16,8 @@
 #include <kernel/Concurrent.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/Task.hpp>
-#include <kernel/Time.hpp>
 #include <kernel/Telemetry.hpp>
+#include <kernel/Time.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 
 #include <peripherals/valve/ValveScheduler.hpp>
@@ -159,11 +159,19 @@ private:
 
 class ValveComponent : public Component {
 public:
-    ValveComponent(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy, shared_ptr<MqttDriver::MqttRoot> mqttRoot, std::function<void()> publishTelemetry)
+    ValveComponent(
+        const String& name,
+        SleepManager& sleepManager,
+        PwmMotorDriver& controller,
+        ValveControlStrategy& strategy,
+        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
+        , sleepManager(sleepManager)
         , controller(controller)
         , strategy(strategy)
         , publishTelemetry(publishTelemetry) {
+
         Log.infoln("Creating valve '%s' with strategy %s",
             name.c_str(), strategy.describe().c_str());
 
@@ -246,12 +254,14 @@ private:
 
     void open() {
         Log.traceln("Opening valve %s", name.c_str());
+        KeepAwake keepAwake(sleepManager);
         strategy.open(controller);
         this->state = ValveState::OPEN;
     }
 
     void close() {
         Log.traceln("Closing valve");
+        KeepAwake keepAwake(sleepManager);
         strategy.close(controller);
         this->state = ValveState::CLOSED;
     }
@@ -279,6 +289,7 @@ private:
         publishTelemetry();
     }
 
+    SleepManager& sleepManager;
     PwmMotorDriver& controller;
     ValveControlStrategy& strategy;
     std::function<void()> publishTelemetry;
