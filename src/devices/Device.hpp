@@ -273,8 +273,6 @@ public:
             peripheralManager.createPeripheral(perpheralConfig.get());
         }
 
-        bool sleepWhenIdle = enableSleepWhenIdle();
-
         mqttDeviceRoot->publish(
             "init",
             [&](JsonObject& json) {
@@ -291,7 +289,7 @@ public:
                 json["wakeup"] = esp_sleep_get_wakeup_cause();
                 json["bootCount"] = bootCount++;
                 json["time"] = time(nullptr);
-                json["sleepWhenIdle"] = sleepWhenIdle;
+                json["sleepWhenIdle"] = kernel.sleepManager.sleepWhenIdle;
             },
             MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::max(), 8192);
 
@@ -308,43 +306,6 @@ private:
     void publishTelemetry() {
         deviceTelemetryPublisher.publishTelemetry();
         peripheralManager.publishTelemetry();
-    }
-
-    bool enableSleepWhenIdle() {
-        if (deviceConfig.sleepWhenIdle.get()) {
-#if FARMHUB_DEBUG
-            Log.warningln("Light sleep is disabled in debug mode");
-            return false;
-#else    // FARMHUB_DEBUG
-#if not(CONFIG_PM_ENABLE)
-            Log.warningln("Light sleep is disabled because CONFIG_PM_ENABLE is not set");
-            return false;
-#else    // CONFIG_PM_ENABLE
-
-#if CONFIG_FREERTOS_USE_TICKLESS_IDLE
-            Log.infoln("Light sleep is enabled");
-            bool sleepWhenIdle = true;
-#else
-            Log.warningln("Light sleep is disabled because CONFIG_FREERTOS_USE_TICKLESS_IDLE is not set");
-            bool sleepWhenIdle = false;
-#endif    // CONFIG_FREERTOS_USE_TICKLESS_IDLE
-
-            // Configure dynamic frequency scaling:
-            // maximum and minimum frequencies are set in sdkconfig,
-            // automatic light sleep is enabled if tickless idle support is enabled.
-            esp_pm_config_t pm_config = {
-                .max_freq_mhz = 240,
-                .min_freq_mhz = 40,
-                .light_sleep_enable = sleepWhenIdle
-            };
-            ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
-            return sleepWhenIdle;
-#endif    // CONFIG_PM_ENABLE
-#endif    // FARMHUB_DEBUG
-        } else {
-            Log.infoln("Light sleep is disabled");
-            return false;
-        }
     }
 
     String locationPrefix() {
