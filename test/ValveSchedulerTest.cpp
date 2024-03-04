@@ -37,7 +37,7 @@ TEST_F(ValveSchedulerTest, can_create_schedule) {
 }
 
 // TEST_F(ValveSchedulerTest, can_create_schedule_from_json) {
-//     DynamicJsonDocument doc(2048);
+//     JsonDocument doc;
 //     deserializeJson(doc, R"({
 //         "start": "2020-01-01T00:00:00Z",
 //         "period": 60,

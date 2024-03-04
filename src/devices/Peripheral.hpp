@@ -7,6 +7,7 @@
 
 #include <kernel/Configuration.hpp>
 #include <kernel/Named.hpp>
+#include <kernel/SleepManager.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 
@@ -39,7 +40,7 @@ public:
     virtual ~PeripheralBase() = default;
 
     void publishTelemetry() {
-        DynamicJsonDocument telemetryDoc(telemetrySize);
+        JsonDocument telemetryDoc;
         JsonObject telemetryJson = telemetryDoc.to<JsonObject>();
         populateTelemetry(telemetryJson);
         if (telemetryJson.begin() == telemetryJson.end()) {
@@ -136,7 +137,7 @@ public:
         unique_ptr<Peripheral<TConfig>> peripheral = createPeripheral(name, deviceConfig, mqttRoot, services);
         peripheral->configure(configFile->config);
         mqttRoot->publish("init", [&](JsonObject& json) {
-            auto config = json.createNestedObject("config");
+            auto config = json["config"].to<JsonObject>();
             configFile->config.store(config, false);
         });
         return peripheral;

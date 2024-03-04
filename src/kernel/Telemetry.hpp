@@ -20,7 +20,7 @@ public:
         for (auto& entry : providers) {
             auto& name = entry.first;
             auto& provider = entry.second;
-            JsonObject telemetryRoot = root.createNestedObject(name);
+            JsonObject telemetryRoot = root[name].to<JsonObject>();
             provider.get().populateTelemetry(telemetryRoot);
         }
     }

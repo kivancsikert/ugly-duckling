@@ -108,13 +108,13 @@ public:
 
     void handle(const JsonObject& request, JsonObject& response) override {
         File root = fs.open("/", FILE_READ);
-        JsonArray files = response.createNestedArray("files");
+        JsonArray files = response["files"].to<JsonArray>();
         while (true) {
             File entry = root.openNextFile();
             if (!entry) {
                 break;
             }
-            JsonObject file = files.createNestedObject();
+            JsonObject file = files.add<JsonObject>();
             file["name"] = String(entry.name());
             file["size"] = entry.size();
             file["type"] = entry.isDirectory()
