@@ -13,6 +13,7 @@
 
 #include <kernel/ButtonManager.hpp>
 #include <kernel/FileSystem.hpp>
+#include <kernel/SleepManager.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
@@ -258,6 +259,11 @@ private:
     }
 
     TDeviceConfiguration& deviceConfig;
+
+public:
+    SleepManager sleepManager { deviceConfig.sleepWhenIdle.get() };
+
+private:
     MqttDriver::Config& mqttConfig;
 
     LedDriver& statusLed;

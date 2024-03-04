@@ -47,7 +47,7 @@ public:
         , defaultAddress(defaultAddress) {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const I2CDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const I2CDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         auto i2cConfig = deviceConfig.parse(defaultAddress, GPIO_NUM_NC, GPIO_NUM_NC);
         Log.infoln("Creating %s sensor %s with %s",
             sensorType.c_str(), name.c_str(), i2cConfig.toString().c_str());

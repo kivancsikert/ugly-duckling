@@ -111,7 +111,7 @@ public:
         : PeripheralFactory<SinglePinDeviceConfig, EmptyConfiguration>("environment:ds18b20", "environment") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const SinglePinDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const SinglePinDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         return make_unique<Ds18B20SoilSensor>(name, mqttRoot, deviceConfig.pin.get());
     }
 };

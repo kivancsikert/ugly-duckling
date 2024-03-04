@@ -38,7 +38,7 @@ public:
         : PeripheralFactory<FlowMeterDeviceConfig, EmptyConfiguration>("flow-meter") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const FlowMeterDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const FlowMeterDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         return make_unique<FlowMeter>(name, mqttRoot, deviceConfig.pin.get(), deviceConfig.qFactor.get(), deviceConfig.measurementFrequency.get());
     }
 };

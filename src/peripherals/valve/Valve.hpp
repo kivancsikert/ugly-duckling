@@ -11,6 +11,7 @@
 
 #include <devices/Peripheral.hpp>
 #include <kernel/Service.hpp>
+#include <kernel/SleepManager.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
@@ -32,9 +33,14 @@ namespace farmhub::peripherals::valve {
 class Valve
     : public Peripheral<ValveConfig> {
 public:
-    Valve(const String& name, PwmMotorDriver& controller, ValveControlStrategy& strategy, shared_ptr<MqttDriver::MqttRoot> mqttRoot)
+    Valve(
+        const String& name,
+        SleepManager& sleepManager,
+        PwmMotorDriver& controller,
+        ValveControlStrategy& strategy,
+        shared_ptr<MqttDriver::MqttRoot> mqttRoot)
         : Peripheral<ValveConfig>(name, mqttRoot)
-        , valve(name, controller, strategy, mqttRoot, [this]() {
+        , valve(name, sleepManager, controller, strategy, mqttRoot, [this]() {
             publishTelemetry();
         }) {
     }
@@ -54,12 +60,14 @@ private:
 class ValveFactory
     : public PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType> {
 public:
-    ValveFactory(const std::list<ServiceRef<PwmMotorDriver>>& motors, ValveControlStrategyType defaultStrategy)
+    ValveFactory(
+        const std::list<ServiceRef<PwmMotorDriver>>& motors,
+        ValveControlStrategyType defaultStrategy)
         : PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType>("valve", defaultStrategy)
         , motors(motors) {
     }
 
-    unique_ptr<Peripheral<ValveConfig>> createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
+    unique_ptr<Peripheral<ValveConfig>> createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         PwmMotorDriver& targetMotor = findMotor(name, deviceConfig.motor.get(), motors);
         ValveControlStrategy* strategy;
         try {
@@ -70,7 +78,7 @@ public:
         } catch (const std::exception& e) {
             throw PeripheralCreationException(name, "failed to create strategy: " + String(e.what()));
         }
-        return make_unique<Valve>(name, targetMotor, *strategy, mqttRoot);
+        return make_unique<Valve>(name, services.sleepManager, targetMotor, *strategy, mqttRoot);
     }
 
     static PwmMotorDriver& findMotor(const String& name, const String& motorName, const std::list<ServiceRef<PwmMotorDriver>>& motors) {

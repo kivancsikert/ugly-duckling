@@ -4,6 +4,7 @@
 
 #include <devices/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
+#include <kernel/SleepManager.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>
 #include <peripherals/flow_meter/FlowMeterConfig.hpp>
@@ -26,11 +27,17 @@ class FlowControlConfig
 
 class FlowControl : public Peripheral<FlowControlConfig> {
 public:
-    FlowControl(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot,
-        PwmMotorDriver& controller, ValveControlStrategy& strategy,
-        gpio_num_t pin, double qFactor, milliseconds measurementFrequency)
+    FlowControl(
+        const String& name,
+        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        SleepManager& sleepManager,
+        PwmMotorDriver& controller,
+        ValveControlStrategy& strategy,
+        gpio_num_t pin,
+        double qFactor,
+        milliseconds measurementFrequency)
         : Peripheral<FlowControlConfig>(name, mqttRoot)
-        , valve(name, controller, strategy, mqttRoot, [this]() {
+        , valve(name, sleepManager, controller, strategy, mqttRoot, [this]() {
             publishTelemetry();
         })
         , flowMeter(name, mqttRoot, pin, qFactor, measurementFrequency) {
@@ -65,12 +72,14 @@ public:
 class FlowControlFactory
     : public PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig, ValveControlStrategyType> {
 public:
-    FlowControlFactory(const std::list<ServiceRef<PwmMotorDriver>>& motors, ValveControlStrategyType defaultStrategy)
+    FlowControlFactory(
+        const std::list<ServiceRef<PwmMotorDriver>>& motors,
+         ValveControlStrategyType defaultStrategy)
         : PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig, ValveControlStrategyType>("flow-control", defaultStrategy)
         , motors(motors) {
     }
 
-    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
+    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         const ValveDeviceConfig& valveConfig = deviceConfig.valve.get();
         const FlowMeterDeviceConfig& flowMeterConfig = deviceConfig.flowMeter.get();
 
@@ -88,6 +97,7 @@ public:
             name,
             mqttRoot,
 
+            services.sleepManager,
             targetMotor,
             *strategy,
 

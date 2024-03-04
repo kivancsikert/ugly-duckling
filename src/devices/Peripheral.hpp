@@ -89,6 +89,10 @@ public:
     const String message;
 };
 
+struct PeripheralServices {
+    SleepManager& sleepManager;
+};
+
 class PeripheralFactoryBase {
 public:
     PeripheralFactoryBase(const String& factoryType, const String& peripheralType)
@@ -96,7 +100,7 @@ public:
         , peripheralType(peripheralType) {
     }
 
-    virtual unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) = 0;
+    virtual unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) = 0;
 
     const String factoryType;
     const String peripheralType;
@@ -116,7 +120,7 @@ public:
         , deviceConfigArgs(std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
-    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
+    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         // Use short prefix because SPIFFS has a 32 character limit
         ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/p/" + name);
         mqttRoot->subscribe("config", [name, configFile](const String&, const JsonObject& configJson) {
@@ -129,7 +133,7 @@ public:
         },
             deviceConfigArgs);
         deviceConfig.loadFromString(jsonConfig);
-        unique_ptr<Peripheral<TConfig>> peripheral = createPeripheral(name, deviceConfig, mqttRoot);
+        unique_ptr<Peripheral<TConfig>> peripheral = createPeripheral(name, deviceConfig, mqttRoot, services);
         peripheral->configure(configFile->config);
         mqttRoot->publish("init", [&](JsonObject& json) {
             auto config = json.createNestedObject("config");
@@ -138,7 +142,7 @@ public:
         return peripheral;
     }
 
-    virtual unique_ptr<Peripheral<TConfig>> createPeripheral(const String& name, const TDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) = 0;
+    virtual unique_ptr<Peripheral<TConfig>> createPeripheral(const String& name, const TDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) = 0;
 
 private:
     std::tuple<TDeviceConfigArgs...> deviceConfigArgs;
@@ -150,8 +154,10 @@ class PeripheralManager
     : public TelemetryPublisher {
 public:
     PeripheralManager(
+        SleepManager& sleepManager,
         const shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot)
-        : mqttDeviceRoot(mqttDeviceRoot) {
+        : sleepManager(sleepManager)
+        , mqttDeviceRoot(mqttDeviceRoot) {
     }
 
     void registerFactory(PeripheralFactoryBase& factory) {
@@ -210,9 +216,11 @@ private:
         const String& peripheralType = it->second.get().peripheralType;
         shared_ptr<MqttDriver::MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
         PeripheralFactoryBase& factory = it->second.get();
-        return factory.createPeripheral(name, configJson, mqttRoot);
+        PeripheralServices services = { sleepManager };
+        return factory.createPeripheral(name, configJson, mqttRoot, services);
     }
 
+    SleepManager& sleepManager;
     const shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot;
 
     // TODO Use an unordered_map?

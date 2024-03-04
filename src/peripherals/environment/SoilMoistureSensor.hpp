@@ -87,7 +87,7 @@ public:
         : PeripheralFactory<SoilMoistureSensorDeviceConfig, EmptyConfiguration>("environment:soil-moisture", "environment") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const SoilMoistureSensorDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const SoilMoistureSensorDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         return std::make_unique<SoilMoistureSensor>(name, mqttRoot, deviceConfig);
     }
 };
