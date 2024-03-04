@@ -71,7 +71,7 @@ private:
     }
 
     Mutex requestCountMutex;
-    int requestCount;
+    int requestCount = 0;
 
     void keepAwake() {
         Lock lock(requestCountMutex);
