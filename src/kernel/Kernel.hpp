@@ -70,7 +70,8 @@ public:
             deviceConfig.instance.get().c_str(),
             deviceConfig.getHostname());
 
-        Task::loop("status-update", 2048, [this](Task&) { updateState(); });
+        // TODO Allocate less memory when FARMHUB_DEBUG is disabled
+        Task::loop("status-update", 2560, [this](Task&) { updateState(); });
 
         httpUpdateResult = handleHttpUpdate();
     }

@@ -128,7 +128,8 @@ public:
         }
         size_t pos = (buffer->startsWith("\r") || buffer->startsWith("\n")) ? 1 : 0;
         size_t len = buffer->endsWith("\n") ? buffer->length() - 1 : buffer->length();
-        String copy = "[\033[0;31m" + String(pcTaskGetName(nullptr)) + "\033[0m/\033[0;32m" + String(xPortGetCoreID()) + "\033[0m] " + buffer->substring(pos, pos + len);
+        sprintf(timeBuffer, "%8.3f", millis() / 1000.0);
+        String copy = "\033[0;90m" + String(timeBuffer) + "\033[0m [\033[0;31m" + String(pcTaskGetName(nullptr)) + "\033[0m/\033[0;32m" + String(xPortGetCoreID()) + "\033[0m] " + buffer->substring(pos, pos + len);
         buffer->clear();
         if (!consoleQueue.offer(copy)) {
             Serial.println(copy);
@@ -160,6 +161,7 @@ private:
     }
 
     int counter;
+    char timeBuffer[12];
     std::atomic<BatteryDriver*> battery { nullptr };
 
     Queue<String> consoleQueue { "console", 128 };
