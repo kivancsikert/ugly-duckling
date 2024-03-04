@@ -10,14 +10,15 @@
 
 // FIXME Why do we need to define these manually?
 #if CONFIG_IDF_TARGET_ESP32
-typedef esp_pm_config_esp32_t esp_pm_config_t;
-#define DEFAULT_CPU_FREQ_MHZ CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ
+#error "ESP32 is not supported"
 #elif CONFIG_IDF_TARGET_ESP32S2
 typedef esp_pm_config_esp32s2_t esp_pm_config_t;
-#define DEFAULT_CPU_FREQ_MHZ CONFIG_ESP32S2_DEFAULT_CPU_FREQ_MHZ
+#define MAX_CPU_FREQ_MHZ CONFIG_ESP32S2_DEFAULT_CPU_FREQ_MHZ
+#define MIN_CPU_FREQ_MHZ 80
 #elif CONFIG_IDF_TARGET_ESP32S3
 typedef esp_pm_config_esp32s3_t esp_pm_config_t;
-#define DEFAULT_CPU_FREQ_MHZ CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ
+#define MAX_CPU_FREQ_MHZ CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ
+#define MIN_CPU_FREQ_MHZ 40
 #endif
 
 namespace farmhub::kernel {
@@ -59,14 +60,14 @@ public:
 
 private:
     void configurePowerManagement(bool enableLightSleep) {
-        Log.verboseln("Configuring power management, light sleep is %s",
-            enableLightSleep ? "enabled" : "disabled");
+        Log.verboseln("Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
+            MAX_CPU_FREQ_MHZ, MIN_CPU_FREQ_MHZ, enableLightSleep ? "enabled" : "disabled");
         // Configure dynamic frequency scaling:
         // maximum and minimum frequencies are set in sdkconfig,
         // automatic light sleep is enabled if tickless idle support is enabled.
         esp_pm_config_t pm_config = {
-            .max_freq_mhz = 240,
-            .min_freq_mhz = 40,
+            .max_freq_mhz = MAX_CPU_FREQ_MHZ,
+            .min_freq_mhz = MIN_CPU_FREQ_MHZ,
             .light_sleep_enable = enableLightSleep
         };
         ESP_ERROR_CHECK(esp_pm_configure(&pm_config));

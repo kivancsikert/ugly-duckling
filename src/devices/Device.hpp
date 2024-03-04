@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 
+#include <esp32/clk.h>
 #include <esp_pm.h>
 
 #ifndef FARMHUB_LOG_LEVEL
@@ -48,18 +49,6 @@ typedef farmhub::devices::Mk6Config TDeviceConfiguration;
 #error "No device defined"
 #endif
 
-// FIXME Why do we need to define these manually?
-#if CONFIG_IDF_TARGET_ESP32
-typedef esp_pm_config_esp32_t esp_pm_config_t;
-#define DEFAULT_CPU_FREQ_MHZ CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ
-#elif CONFIG_IDF_TARGET_ESP32S2
-typedef esp_pm_config_esp32s2_t esp_pm_config_t;
-#define DEFAULT_CPU_FREQ_MHZ CONFIG_ESP32S2_DEFAULT_CPU_FREQ_MHZ
-#elif CONFIG_IDF_TARGET_ESP32S3
-typedef esp_pm_config_esp32s3_t esp_pm_config_t;
-#define DEFAULT_CPU_FREQ_MHZ CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ
-#endif
-
 namespace farmhub::devices {
 
 #ifdef FARMHUB_DEBUG
@@ -90,6 +79,8 @@ public:
             status += ", UTC: \033[33m" + String(buffer) + "\033[0m";
 
             status += ", heap: \033[33m" + String(float(ESP.getFreeHeap()) / 1024.0f, 2) + "\033[0m kB";
+
+            status += ", CPU: \033[33m" + String(esp_clk_cpu_freq() / 1000000) + "\033[0m MHz";
 
             BatteryDriver* battery = this->battery.load();
             if (battery != nullptr) {
