@@ -126,37 +126,22 @@ public:
     };
 
 private:
-    struct Message {
-        const String topic;
-        const String payload;
-        const Retention retain;
-        const QoS qos;
-        const TaskHandle_t waitingTask;
+    struct OutgoingMessage {
+        String topic;
+        String payload;
+        Retention retain;
+        QoS qos;
+        TaskHandle_t waitingTask;
 
         static const uint32_t PUBLISH_SUCCESS = 1;
         static const uint32_t PUBLISH_FAILED = 2;
 
-        Message(const String& topic, const String& payload, Retention retention, QoS qos, TaskHandle_t waitingTask)
+        OutgoingMessage(const String& topic, const String& payload, Retention retention, QoS qos, TaskHandle_t waitingTask)
             : topic(topic)
             , payload(payload)
             , retain(retention)
             , qos(qos)
             , waitingTask(waitingTask) {
-        }
-
-        Message(const String& topic, const JsonDocument& payload, Retention retention, QoS qos, TaskHandle_t waitingTask)
-            : topic(topic)
-            , payload(serializeJsonToString(payload))
-            , retain(retention)
-            , qos(qos)
-            , waitingTask(waitingTask) {
-        }
-
-    private:
-        static String serializeJsonToString(const JsonDocument& jsonPayload) {
-            String payload;
-            serializeJson(jsonPayload, payload);
-            return payload;
         }
     };
 
@@ -222,8 +207,10 @@ private:
         Log.infoln("MQTT: Queuing topic '%s'%s (qos = %d): %s",
             topic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), qos, serializedJson.c_str());
 #endif
+        String payload;
+        serializeJson(json, payload);
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
-            return publishQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, json, retain, qos, waitingTask);
+            return publishQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, payload, retain, qos, waitingTask);
         });
     }
 
@@ -248,9 +235,9 @@ private:
         switch (status) {
             case 0:
                 return PublishStatus::TimeOut;
-            case Message::PUBLISH_SUCCESS:
+            case OutgoingMessage::PUBLISH_SUCCESS:
                 return PublishStatus::Success;
-            case Message::PUBLISH_FAILED:
+            case OutgoingMessage::PUBLISH_FAILED:
             default:
                 return PublishStatus::Failed;
         }
@@ -360,7 +347,7 @@ private:
         // Process incoming network traffic
         mqttClient.update();
 
-        publishQueue.drain([&](const Message& message) {
+        publishQueue.drain([&](const OutgoingMessage& message) {
             bool success = mqttClient.publish(message.topic, message.payload, message.retain == Retention::Retain, static_cast<int>(message.qos));
 #ifdef DUMP_MQTT
             Log.infoln("MQTT: Published to '%s' (size: %d)",
@@ -371,7 +358,7 @@ private:
                     message.topic.c_str(), mqttClient.getLastError());
             }
             if (message.waitingTask != nullptr) {
-                uint32_t status = success ? Message::PUBLISH_SUCCESS : Message::PUBLISH_FAILED;
+                uint32_t status = success ? OutgoingMessage::PUBLISH_SUCCESS : OutgoingMessage::PUBLISH_FAILED;
                 xTaskNotify(message.waitingTask, status, eSetValueWithOverwrite);
             }
         });
@@ -435,7 +422,7 @@ private:
     static constexpr int MQTT_BUFFER_SIZE = 2048;
     MQTTPubSub::PubSubClient<MQTT_BUFFER_SIZE> mqttClient;
 
-    Queue<Message> publishQueue { "mqtt-publish", config.queueSize.get() };
+    Queue<OutgoingMessage> publishQueue { "mqtt-publish", config.queueSize.get() };
     Queue<Subscription> subscribeQueue { "mqtt-subscribe", config.queueSize.get() };
     // TODO Use a map instead
     std::list<Subscription> subscriptions;
