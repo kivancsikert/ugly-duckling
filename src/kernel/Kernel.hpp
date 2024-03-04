@@ -93,7 +93,7 @@ public:
 
     void prepareUpdate(const String& url) {
         auto fUpdate = fs.open(UPDATE_FILE, FILE_WRITE);
-        DynamicJsonDocument doc(docSizeFor(url));
+        JsonDocument doc;
         doc["url"] = url;
         serializeJson(doc, fUpdate);
         fUpdate.close();
@@ -211,7 +211,7 @@ private:
 
         Log.infoln("Starting update...");
         auto fUpdate = fs.open(UPDATE_FILE, FILE_READ);
-        DynamicJsonDocument doc(farmhub::kernel::docSizeFor(fUpdate));
+        JsonDocument doc;
         auto error = deserializeJson(doc, fUpdate);
         fUpdate.close();
         fs.remove(UPDATE_FILE);

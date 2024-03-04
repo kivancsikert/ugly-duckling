@@ -31,12 +31,12 @@ public:
     }
 
     template <typename T>
-    bool get(const String& key, T& value, size_t bufferSize = DEFAULT_BUFFER_SIZE) {
-        return get(key.c_str(), value, bufferSize);
+    bool get(const String& key, T& value) {
+        return get(key.c_str(), value);
     }
 
     template <typename T>
-    bool get(const char* key, T& value, size_t bufferSize = DEFAULT_BUFFER_SIZE) {
+    bool get(const char* key, T& value) {
         return withPreferences(true, [&]() {
             if (!preferences.isKey(key)) {
                 return false;
@@ -44,7 +44,7 @@ public:
             String jsonString = preferences.getString(key);
             Log.verboseln("NVS: get(%s) = %s",
                 key, jsonString.c_str());
-            DynamicJsonDocument jsonDocument(bufferSize);
+            JsonDocument jsonDocument;
             deserializeJson(jsonDocument, jsonString);
             if (jsonDocument.isNull()) {
                 return false;
@@ -55,14 +55,14 @@ public:
     }
 
     template <typename T>
-    bool set(const String& key, const T& value, size_t bufferSize = DEFAULT_BUFFER_SIZE) {
-        return set(key.c_str(), value, bufferSize);
+    bool set(const String& key, const T& value) {
+        return set(key.c_str(), value);
     }
 
     template <typename T>
-    bool set(const char* key, const T& value, size_t bufferSize = DEFAULT_BUFFER_SIZE) {
+    bool set(const char* key, const T& value) {
         return withPreferences(false, [&]() {
-            DynamicJsonDocument jsonDocument(bufferSize);
+            JsonDocument jsonDocument;
             jsonDocument.set(value);
             String jsonString;
             serializeJson(jsonDocument, jsonString);
@@ -100,8 +100,6 @@ private:
     Preferences preferences;
     Mutex preferencesMutex;
     const String name;
-
-    static const size_t DEFAULT_BUFFER_SIZE = 2048;
 };
 
 }    // namespace farmhub::kernel

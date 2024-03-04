@@ -63,8 +63,8 @@ public:
             return mqtt.publish(fullTopic(suffix), json, retain, qos, timeout);
         }
 
-        PublishStatus publish(const String& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero(), int size = MQTT_BUFFER_SIZE) {
-            DynamicJsonDocument doc(size);
+        PublishStatus publish(const String& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero()) {
+            JsonDocument doc;
             JsonObject root = doc.to<JsonObject>();
             populate(root);
             return publish(suffix, doc, retain, qos, timeout);
@@ -92,7 +92,7 @@ public:
                     Log.errorln("MQTT: Failed to clear retained command topic '%s', status: %d", suffix.c_str(), clearStatus);
                 }
 
-                DynamicJsonDocument responseDoc(responseSize);
+                JsonDocument responseDoc;
                 auto response = responseDoc.to<JsonObject>();
                 handler(request, response);
                 if (response.size() > 0) {
@@ -403,7 +403,7 @@ private:
                 subscription.topic.c_str(), size);
 #endif
 
-            DynamicJsonDocument json(docSizeFor(payload));
+            JsonDocument json;
             deserializeJson(json, payload);
             subscription.handle(subscription.topic, json.as<JsonObject>());
         });

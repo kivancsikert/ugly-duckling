@@ -281,7 +281,7 @@ public:
                 json["model"] = deviceConfig.model.get();
                 json["instance"] = deviceConfig.instance.get();
                 json["mac"] = getMacAddress();
-                auto device = json.createNestedObject("deviceConfig");
+                auto device = json["deviceConfig"].to<JsonObject>();
                 deviceConfig.store(device, false);
                 // TODO Remove redundant mentions of "ugly-duckling"
                 json["app"] = "ugly-duckling";
@@ -291,7 +291,7 @@ public:
                 json["time"] = time(nullptr);
                 json["sleepWhenIdle"] = kernel.sleepManager.sleepWhenIdle;
             },
-            MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::max(), 8192);
+            MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::max());
 
         Task::loop("telemetry", 8192, [this](Task& task) {
             publishTelemetry();

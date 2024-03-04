@@ -5,7 +5,6 @@
 #include <list>
 
 #include <kernel/FileSystem.hpp>
-#include <kernel/Json.hpp>
 
 using std::list;
 using std::ref;
@@ -54,7 +53,7 @@ private:
 
 bool convertToJson(const JsonAsString& src, JsonVariant dst) {
     const String& stringValue = src.get();
-    DynamicJsonDocument doc(docSizeFor(stringValue));
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, stringValue);
 
     if (error) {
@@ -75,7 +74,7 @@ bool convertFromJson(JsonVariantConst src, JsonAsString& dst) {
 class ConfigurationEntry {
 public:
     void loadFromString(const String& json) {
-        DynamicJsonDocument jsonDocument(docSizeFor(json));
+        JsonDocument jsonDocument;
         DeserializationError error = deserializeJson(jsonDocument, json);
         if (error == DeserializationError::EmptyInput) {
             return;
@@ -153,7 +152,7 @@ public:
 
     void store(JsonObject& json, bool inlineDefaults) const override {
         if (inlineDefaults || hasValue()) {
-            auto section = json.createNestedObject(name);
+            auto section = json[name].to<JsonObject>();
             delegate.store(section, inlineDefaults);
         }
     }
@@ -268,7 +267,7 @@ public:
     }
 
     void store(JsonObject& json, bool inlineDefaults) const override {
-        auto jsonArray = json.createNestedArray(name);
+        auto jsonArray = json[name].to<JsonArray>();
         for (auto& entry : entries) {
             jsonArray.add(entry);
         }
@@ -293,7 +292,7 @@ public:
                 throw ConfigurationException("Cannot open config file " + path);
             }
 
-            DynamicJsonDocument json(docSizeFor(file));
+            JsonDocument json;
             DeserializationError error = deserializeJson(json, file);
             file.close();
             if (error) {
@@ -322,8 +321,7 @@ public:
         // TODO Check hash to see if there really was a change
 
         // Print effective configuration
-        // TODO Estimate size of printed JSON based on the size of the configuration
-        DynamicJsonDocument prettyJson(8192);
+        JsonDocument prettyJson;
         auto prettyRoot = prettyJson.to<JsonObject>();
         store(prettyRoot, true);
         String jsonString;
