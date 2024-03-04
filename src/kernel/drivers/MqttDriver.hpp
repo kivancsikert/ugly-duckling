@@ -145,6 +145,16 @@ private:
         }
     };
 
+    struct IncomingMessage {
+        String topic;
+        String payload;
+
+        IncomingMessage(const String& topic, const String& payload)
+            : topic(topic)
+            , payload(payload) {
+        }
+    };
+
     struct Subscription {
         const String topic;
         const QoS qos;
@@ -157,9 +167,7 @@ private:
         }
 
         Subscription(const Subscription& other)
-            : topic(other.topic)
-            , qos(other.qos)
-            , handle(other.handle) {
+            : Subscription(other.topic, other.qos, other.handle) {
         }
     };
 
@@ -188,9 +196,14 @@ public:
         , mqttReady(mqttReady) {
         Task::run("mqtt:init", 4096, [this](Task& task) {
             setup();
-            Task::loop("mqtt", 8192, [this](Task& task) {
+            Task::loop("mqtt", 4096, [this](Task& task) {
                 auto delay = loopAndDelay();
                 task.delay(delay);
+            });
+            Task::loop("mqtt:incoming", 4096, [this](Task& task) {
+                incomingQueue.take([&](const IncomingMessage& message) {
+                    processIncomingMessage(message);
+                });
             });
         });
     }
@@ -256,6 +269,9 @@ private:
     void setup() {
         // TODO Figure out the right keep alive value
         mqttClient.setKeepAliveTimeout(180);
+        mqttClient.subscribe([this](const String& topic, const String& payload, const size_t size) {
+            incomingQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, payload);
+        });
     }
 
     String joinStrings(std::list<String> strings) {
@@ -372,27 +388,40 @@ private:
         });
     }
 
+    void processIncomingMessage(const IncomingMessage& message) {
+        const String& topic = message.topic;
+        const String& payload = message.payload;
+
+        if (payload.isEmpty()) {
+            Log.verboseln("MQTT: Ignoring empty payload");
+            return;
+        }
+
+#ifdef DUMP_MQTT
+        Log.infoln("MQTT: Received '%s' (size: %d): %s",
+            topic.c_str(), payload.length(), payload.c_str());
+#else
+        Log.traceln("MQTT: Received '%s' (size: %d)",
+            topic.c_str(), payload.length());
+#endif
+        for (auto subscription : subscriptions) {
+            if (subscription.topic == topic) {
+                JsonDocument json;
+                deserializeJson(json, payload);
+                subscription.handle(topic, json.as<JsonObject>());
+                return;
+            }
+        }
+        Log.warningln("MQTT: No handler for topic '%s'",
+            topic.c_str());
+    }
+
     // Actually subscribe to the given topic
     bool registerSubscriptionWithMqtt(const Subscription& subscription) {
         Log.traceln("MQTT: Subscribing to topic '%s' (qos = %d)",
             subscription.topic.c_str(), subscription.qos);
-        bool success = mqttClient.subscribe(subscription.topic, static_cast<int>(subscription.qos), [subscription](const String& payload, const size_t size) {
-            if (payload.isEmpty()) {
-                Log.verboseln("MQTT: Ignoring empty payload");
-                return;
-            }
-
-#ifdef DUMP_MQTT
-            Log.infoln("MQTT: Received '%s' (size: %d): %s",
-                subscription.topic.c_str(), size, payload.c_str());
-#else
-            Log.traceln("MQTT: Received '%s' (size: %d)",
-                subscription.topic.c_str(), size);
-#endif
-
-            JsonDocument json;
-            deserializeJson(json, payload);
-            subscription.handle(subscription.topic, json.as<JsonObject>());
+        bool success = mqttClient.subscribe(subscription.topic, static_cast<int>(subscription.qos), [](const String& payload, const size_t size) {
+            // Global handler will take care of putting the received message on the incoming queue
         });
         if (!success) {
             Log.errorln("MQTT: Error subscribing to topic '%s', error = %d\n",
@@ -424,6 +453,7 @@ private:
 
     Queue<OutgoingMessage> publishQueue { "mqtt-publish", config.queueSize.get() };
     Queue<Subscription> subscribeQueue { "mqtt-subscribe", config.queueSize.get() };
+    Queue<IncomingMessage> incomingQueue { "mqtt-incoming", config.queueSize.get() };
     // TODO Use a map instead
     std::list<Subscription> subscriptions;
 
