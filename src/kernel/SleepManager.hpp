@@ -59,6 +59,8 @@ public:
 
 private:
     void configurePowerManagement(bool enableLightSleep) {
+        Log.verboseln("Configuring power management, light sleep is %s",
+            enableLightSleep ? "enabled" : "disabled");
         // Configure dynamic frequency scaling:
         // maximum and minimum frequencies are set in sdkconfig,
         // automatic light sleep is enabled if tickless idle support is enabled.
@@ -76,7 +78,7 @@ private:
     void keepAwake() {
         Lock lock(requestCountMutex);
         requestCount++;
-        Log.infoln("Task %s requested the device to keep awake, counter at %d",
+        Log.traceln("Task %s requested the device to keep awake, counter at %d",
             pcTaskGetName(nullptr), requestCount);
         if (requestCount == 1) {
             configurePowerManagement(false);
@@ -86,7 +88,7 @@ private:
     void allowSleep() {
         Lock lock(requestCountMutex);
         requestCount--;
-        Log.infoln("Task %s finished with insomniac activity, counter at %d",
+        Log.traceln("Task %s finished with insomniac activity, counter at %d",
             pcTaskGetName(nullptr), requestCount);
         if (requestCount == 0) {
             configurePowerManagement(true);
