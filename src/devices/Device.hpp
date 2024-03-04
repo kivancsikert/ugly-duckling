@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 
+#include <esp32/clk.h>
 #include <esp_pm.h>
 
 #ifndef FARMHUB_LOG_LEVEL
@@ -78,6 +79,8 @@ public:
             status += ", UTC: \033[33m" + String(buffer) + "\033[0m";
 
             status += ", heap: \033[33m" + String(float(ESP.getFreeHeap()) / 1024.0f, 2) + "\033[0m kB";
+
+            status += ", CPU: \033[33m" + String(esp_clk_cpu_freq() / 1000000) + "\033[0m MHz";
 
             BatteryDriver* battery = this->battery.load();
             if (battery != nullptr) {
