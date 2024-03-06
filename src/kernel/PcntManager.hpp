@@ -46,6 +46,10 @@ struct PcntUnit {
         return count;
     }
 
+    gpio_num_t getPin() {
+        return pin;
+    }
+
 private:
     pcnt_unit_t unit;
     gpio_num_t pin;
