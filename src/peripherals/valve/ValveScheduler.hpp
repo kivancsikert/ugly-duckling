@@ -81,8 +81,10 @@ public:
             if (start > now) {
                 // Schedule has not started yet; valve should be closed according to this schedule
                 // Calculate when this schedule will start for the first time
-                targetState = ValveState::CLOSED;
-                validFor = min(validFor, duration_cast<ticks>(start - now));
+                if (targetState != ValveState::OPEN) {
+                    targetState = ValveState::CLOSED;
+                    validFor = min(validFor, duration_cast<ticks>(start - now));
+                }
             } else {
                 // This schedule has started; determine if the valve should be open or closed according to this schedule
                 auto diff = duration_cast<ticks>(now - start);
