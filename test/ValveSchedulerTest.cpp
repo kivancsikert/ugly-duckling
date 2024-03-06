@@ -3,6 +3,7 @@
 // TODO Move this someplace else?
 #define configTICK_RATE_HZ 1000
 
+#include <chrono>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -14,6 +15,8 @@
 #include <peripherals/valve/ValveScheduler.hpp>
 
 using namespace std::chrono;
+using namespace std::chrono_literals;
+
 namespace farmhub::peripherals::valve {
 
 static time_point<system_clock> parseTime(const char* str) {
@@ -55,24 +58,11 @@ public:
 };
 
 TEST_F(ValveSchedulerTest, can_create_schedule) {
-    ValveSchedule schedule(base, hours(1), minutes(1));
+    ValveSchedule schedule(base, 1h, 1min);
     EXPECT_EQ(schedule.getStart(), base);
-    EXPECT_EQ(schedule.getPeriod(), hours(1));
-    EXPECT_EQ(schedule.getDuration(), minutes(1));
+    EXPECT_EQ(schedule.getPeriod(), 1h);
+    EXPECT_EQ(schedule.getDuration(), 1min);
 }
-
-// TEST_F(ValveSchedulerTest, can_create_schedule_from_json) {
-//     JsonDocument doc;
-//     deserializeJson(doc, R"({
-//         "start": "2020-01-01T00:00:00Z",
-//         "period": 60,
-//         "duration": 15
-//     })");
-//     ValveSchedule schedule(doc.as<JsonObject>());
-//     EXPECT_EQ(schedule.getStart(), time_point<system_clock> { system_clock::from_time_t(1577836800) });
-//     EXPECT_EQ(schedule.getPeriod(), minutes(1));
-//     EXPECT_EQ(schedule.getDuration(), seconds(15));
-// }
 
 TEST_F(ValveSchedulerTest, not_scheduled_when_empty) {
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
@@ -83,30 +73,30 @@ TEST_F(ValveSchedulerTest, not_scheduled_when_empty) {
 
 TEST_F(ValveSchedulerTest, keeps_closed_until_schedule_starts) {
     std::list<ValveSchedule> schedules {
-        ValveSchedule(base, hours(1), seconds(15)),
+        ValveSchedule(base, 1h, 15s),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base - seconds(1), defaultState), (ValveStateUpdate { ValveState::CLOSED, seconds(1) }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base - 1s, defaultState), (ValveStateUpdate { ValveState::CLOSED, 1s }));
     }
 }
 
 TEST_F(ValveSchedulerTest, keeps_open_when_schedule_is_started_and_in_period) {
     std::list<ValveSchedule> schedules {
-        ValveSchedule(base, hours(1), seconds(15)),
+        ValveSchedule(base, 1h, 15s),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base, defaultState), (ValveStateUpdate { ValveState::OPEN, seconds(15) }));
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds(1), defaultState), (ValveStateUpdate { ValveState::OPEN, seconds(14) }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base, defaultState), (ValveStateUpdate { ValveState::OPEN, 15s }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + 1s, defaultState), (ValveStateUpdate { ValveState::OPEN, 14s }));
     }
 }
 
 TEST_F(ValveSchedulerTest, keeps_closed_when_schedule_is_started_and_outside_period) {
     std::list<ValveSchedule> schedules {
-        ValveSchedule(base, hours(1), seconds(15)),
+        ValveSchedule(base, 1h, 15s),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds(15), defaultState), (ValveStateUpdate { ValveState::CLOSED, hours(1) - seconds(15) }));
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds(16), defaultState), (ValveStateUpdate { ValveState::CLOSED, hours(1) - seconds(16) }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + 15s, defaultState), (ValveStateUpdate { ValveState::CLOSED, 1h - 15s }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + 16s, defaultState), (ValveStateUpdate { ValveState::CLOSED, 1h - 16s }));
     }
 }
 
@@ -114,35 +104,34 @@ TEST_F(ValveSchedulerTest, when_there_are_overlapping_schedules_keep_closed_unti
     // --OOOOOO--------------
     // ----OOOOOO------------
     std::list<ValveSchedule> schedules {
-        ValveSchedule(base + minutes(5), hours(1), minutes(15)),
-        ValveSchedule(base + minutes(10), hours(1), minutes(15)),
+        ValveSchedule(base + 5min, 1h, 15min),
+        ValveSchedule(base + 10min, 1h, 15min),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
         // Keep closed until first schedule starts
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base, defaultState), (ValveStateUpdate { ValveState::CLOSED, minutes(5) }));
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds(1), defaultState), (ValveStateUpdate { ValveState::CLOSED, minutes(5) - seconds(1) }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base, defaultState), (ValveStateUpdate { ValveState::CLOSED, 5min }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + 1s, defaultState), (ValveStateUpdate { ValveState::CLOSED, 5min - 1s }));
     }
 }
-
 
 TEST_F(ValveSchedulerTest, when_there_are_overlapping_schedules_keep_open_until_latest_closes) {
     // --OOOOOO--------------
     // ----OOOOOO------------
     std::list<ValveSchedule> schedules {
-        ValveSchedule(base + minutes(5), hours(1), minutes(15)),
-        ValveSchedule(base + minutes(10), hours(1), minutes(15)),
+        ValveSchedule(base + 5min, 1h, 15min),
+        ValveSchedule(base + 10min, 1h, 15min),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
         // Open when first schedule starts, and keep open
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + minutes(5), defaultState), (ValveStateUpdate { ValveState::OPEN, minutes(15) }));
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + minutes(5) + seconds(1), defaultState), (ValveStateUpdate { ValveState::OPEN, minutes(15) - seconds(1) }));
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + minutes(10), defaultState), (ValveStateUpdate { ValveState::OPEN, minutes(15) }));
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + minutes(15), defaultState), (ValveStateUpdate { ValveState::OPEN, minutes(10) }));
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + minutes(25) - seconds(1), defaultState), (ValveStateUpdate { ValveState::OPEN, seconds(1) }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + 5min, defaultState), (ValveStateUpdate { ValveState::OPEN, 15min }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + 5min + 1s, defaultState), (ValveStateUpdate { ValveState::OPEN, 15min - 1s }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + 10min, defaultState), (ValveStateUpdate { ValveState::OPEN, 15min }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + 15min, defaultState), (ValveStateUpdate { ValveState::OPEN, 10min }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + 25min - 1s, defaultState), (ValveStateUpdate { ValveState::OPEN, 1s }));
 
         // Close again after later schedule ends, and reopen when first schedule starts again
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + minutes(25), defaultState), (ValveStateUpdate { ValveState::CLOSED, minutes(40) }));
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + minutes(25) + seconds(1), defaultState), (ValveStateUpdate { ValveState::CLOSED, minutes(40) - seconds(1) }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + 25min, defaultState), (ValveStateUpdate { ValveState::CLOSED, 40min }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + 25min + 1s, defaultState), (ValveStateUpdate { ValveState::CLOSED, 40min - 1s }));
     }
 }
 
