@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <chrono>
 #include <list>
 
@@ -47,42 +48,79 @@ private:
 
 struct ValveStateUpdate {
     ValveState state;
-    ticks transitionAfter;
+    ticks validFor;
+
+    bool operator==(const ValveStateUpdate& other) const {
+        return state == other.state && validFor == other.validFor;
+    }
 };
 
 class ValveScheduler {
 public:
-    static ValveStateUpdate getStateUpdate(std::list<ValveSchedule> schedules, time_point<system_clock> now, ValveState defaultState) {
-        ValveStateUpdate next = { defaultState, ticks::max() };
-        for (auto& schedule : schedules) {
+    /**
+     * @brief Determines the current valve state, and the next transition time based on given schedules and the current time.
+     *
+     * This function examines a list of valve schedules and the current time to decide the next state of the valve
+     * and when the transition should occur. It accounts for overlapping schedules, preferring to keep the valve open
+     * if any schedule demands it, and calculates the earliest necessary transition.
+     *
+     * @param schedules The list of ValveSchedule objects representing the valve's operating schedule.
+     * @param now The current time_point.
+     * @param defaultState The default state of the valve when no schedules apply.
+     * @return ValveStateUpdate A structure indicating the current state of the valve, and the time after which the next transition should occur.
+     */
+    static ValveStateUpdate getStateUpdate(const std::list<ValveSchedule>& schedules, time_point<system_clock> now, ValveState defaultState) {
+        auto targetState = ValveState::NONE;
+        auto validFor = ticks::max();
+
+        for (const auto& schedule : schedules) {
             auto start = schedule.getStart();
             auto period = schedule.getPeriod();
             auto duration = schedule.getDuration();
 
             if (start > now) {
-                continue;
-            }
-
-            auto diff = duration_cast<ticks>(now - start);
-            auto periodPosition = diff % period;
-
-            if (periodPosition < duration) {
-                // We should be open
-                auto transitionAfter = duration - periodPosition;
-                if (next.state == ValveState::OPEN && transitionAfter < next.transitionAfter) {
-                    continue;
+                // Schedule has not started yet; valve should be closed according to this schedule
+                // Calculate when this schedule will start for the first time
+                if (targetState != ValveState::OPEN) {
+                    targetState = ValveState::CLOSED;
+                    validFor = min(validFor, duration_cast<ticks>(start - now));
                 }
-                next = { ValveState::OPEN, transitionAfter };
             } else {
-                auto transitionAfter = period - periodPosition;
-                if (next.state == ValveState::OPEN || transitionAfter > next.transitionAfter) {
-                    continue;
+                // This schedule has started; determine if the valve should be open or closed according to this schedule
+                auto diff = duration_cast<ticks>(now - start);
+                auto periodPosition = diff % period;
+
+                if (periodPosition < duration) {
+                    // The valve should be open according to this schedule
+                    // Calculate when this opening period will end
+                    ticks closeAfter = duration - periodPosition;
+                    if (targetState == ValveState::OPEN) {
+                        // We already found a schedule to keep this valve open, extend the period if possible
+                        validFor = max(validFor, closeAfter);
+                    } else {
+                        // This is the first schedule to keep the valve open
+                        targetState = ValveState::OPEN;
+                        validFor = closeAfter;
+                    }
+                } else {
+                    // The valve should be closed according to this schedule
+                    if (targetState != ValveState::OPEN) {
+                        // There are no other schedules to keep the valve open yet,
+                        // calculate when the next opening period will start
+                        targetState = ValveState::CLOSED;
+                        ticks openAfter = period - periodPosition;
+                        validFor = min(validFor, openAfter);
+                    }
                 }
-                next = { ValveState::CLOSED, transitionAfter };
             }
         }
 
-        return next;
+        // If there are no schedules, return the default state with no transition
+        if (targetState == ValveState::NONE) {
+            targetState = defaultState;
+        }
+
+        return { targetState, validFor };
     }
 };
 
