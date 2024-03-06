@@ -81,14 +81,23 @@ TEST_F(ValveSchedulerTest, not_scheduled_when_empty) {
     }
 }
 
-TEST_F(ValveSchedulerTest, matches_single_schedule) {
+TEST_F(ValveSchedulerTest, keeps_closed_until_schedule_starts) {
     std::list<ValveSchedule> schedules {
         ValveSchedule(base, hours { 1 }, seconds { 15 }),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
         EXPECT_EQ(scheduler.getStateUpdate(schedules, base - seconds { 1 }, defaultState), (ValveStateUpdate { ValveState::CLOSED, seconds { 1 } }));
     }
+}
 
+TEST_F(ValveSchedulerTest, keeps_open_when_schedule_is_started) {
+    std::list<ValveSchedule> schedules {
+        ValveSchedule(base, hours { 1 }, seconds { 15 }),
+    };
+    for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base, defaultState), (ValveStateUpdate { ValveState::OPEN, seconds { 15 } }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds { 1 }, defaultState), (ValveStateUpdate { ValveState::OPEN, seconds { 14 } }));
+    }
     // EXPECT_TRUE(scheduler.isScheduled(schedules, base));
     // EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 1 }));
     // EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 14 }));
