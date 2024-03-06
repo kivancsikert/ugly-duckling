@@ -55,10 +55,10 @@ public:
 };
 
 TEST_F(ValveSchedulerTest, can_create_schedule) {
-    ValveSchedule schedule(base, hours { 1 }, minutes { 1 });
+    ValveSchedule schedule(base, hours(1), minutes(1));
     EXPECT_EQ(schedule.getStart(), base);
-    EXPECT_EQ(schedule.getPeriod(), hours { 1 });
-    EXPECT_EQ(schedule.getDuration(), minutes { 1 });
+    EXPECT_EQ(schedule.getPeriod(), hours(1));
+    EXPECT_EQ(schedule.getDuration(), minutes(1));
 }
 
 // TEST_F(ValveSchedulerTest, can_create_schedule_from_json) {
@@ -70,8 +70,8 @@ TEST_F(ValveSchedulerTest, can_create_schedule) {
 //     })");
 //     ValveSchedule schedule(doc.as<JsonObject>());
 //     EXPECT_EQ(schedule.getStart(), time_point<system_clock> { system_clock::from_time_t(1577836800) });
-//     EXPECT_EQ(schedule.getPeriod(), minutes { 1 });
-//     EXPECT_EQ(schedule.getDuration(), seconds { 15 });
+//     EXPECT_EQ(schedule.getPeriod(), minutes(1));
+//     EXPECT_EQ(schedule.getDuration(), seconds(15));
 // }
 
 TEST_F(ValveSchedulerTest, not_scheduled_when_empty) {
@@ -83,74 +83,65 @@ TEST_F(ValveSchedulerTest, not_scheduled_when_empty) {
 
 TEST_F(ValveSchedulerTest, keeps_closed_until_schedule_starts) {
     std::list<ValveSchedule> schedules {
-        ValveSchedule(base, hours { 1 }, seconds { 15 }),
+        ValveSchedule(base, hours(1), seconds(15)),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base - seconds { 1 }, defaultState), (ValveStateUpdate { ValveState::CLOSED, seconds { 1 } }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base - seconds(1), defaultState), (ValveStateUpdate { ValveState::CLOSED, seconds(1) }));
     }
 }
 
 TEST_F(ValveSchedulerTest, keeps_open_when_schedule_is_started_and_in_period) {
     std::list<ValveSchedule> schedules {
-        ValveSchedule(base, hours { 1 }, seconds { 15 }),
+        ValveSchedule(base, hours(1), seconds(15)),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base, defaultState), (ValveStateUpdate { ValveState::OPEN, seconds { 15 } }));
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds { 1 }, defaultState), (ValveStateUpdate { ValveState::OPEN, seconds { 14 } }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base, defaultState), (ValveStateUpdate { ValveState::OPEN, seconds(15) }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds(1), defaultState), (ValveStateUpdate { ValveState::OPEN, seconds(14) }));
     }
 }
 
 TEST_F(ValveSchedulerTest, keeps_closed_when_schedule_is_started_and_outside_period) {
     std::list<ValveSchedule> schedules {
-        ValveSchedule(base, hours { 1 }, seconds { 15 }),
+        ValveSchedule(base, hours(1), seconds(15)),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds { 15 }, defaultState), (ValveStateUpdate { ValveState::CLOSED, hours { 1 } - seconds { 15 } }));
-        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds { 16 }, defaultState), (ValveStateUpdate { ValveState::CLOSED, hours { 1 } - seconds { 16 } }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds(15), defaultState), (ValveStateUpdate { ValveState::CLOSED, hours(1) - seconds(15) }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds(16), defaultState), (ValveStateUpdate { ValveState::CLOSED, hours(1) - seconds(16) }));
     }
-    // EXPECT_TRUE(scheduler.isScheduled(schedules, base));
-    // EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 1 }));
-    // EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 14 }));
-    // EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds { 15 }));
-    // EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds { 30 }));
-    // EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds { 59 }));
-    // EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 60 }));
-    // EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 74 }));
-    // EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds { 75 }));
 }
 
 // TEST_F(ValveSchedulerTest, does_not_match_schedule_not_yet_started) {
 //     std::list<ValveSchedule> schedules {
-//         ValveSchedule(base, minutes { 1 }, minutes { 1 }),
+//         ValveSchedule(base, minutes(1), minutes(1)),
 //     };
-//     EXPECT_FALSE(scheduler.isScheduled(schedules, base - seconds { 1 }));
+//     EXPECT_FALSE(scheduler.isScheduled(schedules, base - seconds(1)));
 //     EXPECT_TRUE(scheduler.isScheduled(schedules, base));
 // }
 
 // TEST_F(ValveSchedulerTest, matches_multiple_schedules) {
 //     std::list<ValveSchedule> schedules {
-//         ValveSchedule(base, minutes { 1 }, seconds { 15 }),
-//         ValveSchedule(base, minutes { 5 }, seconds { 60 }),
+//         ValveSchedule(base, minutes(1), seconds(15)),
+//         ValveSchedule(base, minutes(5), seconds(60)),
 //     };
 //     EXPECT_TRUE(scheduler.isScheduled(schedules, base));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 1 }));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 14 }));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 15 }));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 30 }));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 59 }));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 60 }));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 74 }));
-//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds { 75 }));
+//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds(1)));
+//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds(14)));
+//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds(15)));
+//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds(30)));
+//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds(59)));
+//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds(60)));
+//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds(74)));
+//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds(75)));
 
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + minutes { 2 }));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + minutes { 2 } + seconds { 1 }));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + minutes { 2 } + seconds { 14 }));
-//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + minutes { 2 } + seconds { 15 }));
-//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + minutes { 2 } + seconds { 30 }));
-//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + minutes { 2 } + seconds { 59 }));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + minutes { 2 } + seconds { 60 }));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + minutes { 2 } + seconds { 74 }));
-//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + minutes { 2 } + seconds { 75 }));
+//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + minutes(2)));
+//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + minutes(2) + seconds(1)));
+//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + minutes(2) + seconds(14)));
+//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + minutes(2) + seconds(15)));
+//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + minutes(2) + seconds(30)));
+//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + minutes(2) + seconds(59)));
+//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + minutes(2) + seconds(60)));
+//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + minutes(2) + seconds(74)));
+//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + minutes(2) + seconds(75)));
 // }
 
 }    // namespace farmhub::peripherals::valve
