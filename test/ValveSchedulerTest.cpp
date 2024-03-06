@@ -90,13 +90,23 @@ TEST_F(ValveSchedulerTest, keeps_closed_until_schedule_starts) {
     }
 }
 
-TEST_F(ValveSchedulerTest, keeps_open_when_schedule_is_started) {
+TEST_F(ValveSchedulerTest, keeps_open_when_schedule_is_started_and_in_period) {
     std::list<ValveSchedule> schedules {
         ValveSchedule(base, hours { 1 }, seconds { 15 }),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
         EXPECT_EQ(scheduler.getStateUpdate(schedules, base, defaultState), (ValveStateUpdate { ValveState::OPEN, seconds { 15 } }));
         EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds { 1 }, defaultState), (ValveStateUpdate { ValveState::OPEN, seconds { 14 } }));
+    }
+}
+
+TEST_F(ValveSchedulerTest, keeps_closed_when_schedule_is_started_and_outside_period) {
+    std::list<ValveSchedule> schedules {
+        ValveSchedule(base, hours { 1 }, seconds { 15 }),
+    };
+    for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds { 15 }, defaultState), (ValveStateUpdate { ValveState::CLOSED, hours { 1 } - seconds { 15 } }));
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base + seconds { 16 }, defaultState), (ValveStateUpdate { ValveState::CLOSED, hours { 1 } - seconds { 16 } }));
     }
     // EXPECT_TRUE(scheduler.isScheduled(schedules, base));
     // EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 1 }));
