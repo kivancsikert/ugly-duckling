@@ -1,5 +1,7 @@
 #pragma once
 
+#include <limits>
+
 #include <driver/pcnt.h>
 
 #include <Arduino.h>
@@ -61,6 +63,8 @@ public:
         pcntConfig.hctrl_mode = PCNT_MODE_KEEP;
         pcntConfig.pos_mode = PCNT_COUNT_INC;
         pcntConfig.neg_mode = PCNT_COUNT_DIS;
+        pcntConfig.counter_h_lim = std::numeric_limits<int16_t>::max();
+        pcntConfig.counter_l_lim = std::numeric_limits<int16_t>::min();
         pcntConfig.unit = unit;
         pcntConfig.channel = PCNT_CHANNEL_0;
 
