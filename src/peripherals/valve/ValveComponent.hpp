@@ -204,15 +204,15 @@ public:
             if (overrideState != ValveState::NONE) {
                 update = { overrideState, duration_cast<ticks>(overrideUntil.load() - now) };
                 Log.traceln("Valve '%s' override state is %d, will change after %F sec",
-                    name.c_str(), static_cast<int>(update.state), update.transitionAfter.count() / 1000.0);
+                    name.c_str(), static_cast<int>(update.state), update.validFor.count() / 1000.0);
             } else {
                 update = ValveScheduler::getStateUpdate(schedules, now, this->strategy.getDefaultState());
                 Log.traceln("Valve '%s' state is %d, will change after %F s",
-                    name.c_str(), static_cast<int>(update.state), update.transitionAfter.count() / 1000.0);
+                    name.c_str(), static_cast<int>(update.state), update.validFor.count() / 1000.0);
             }
             setState(update.state);
             // TODO Account for time spent in setState()
-            updateQueue.pollIn(update.transitionAfter, [this](const std::variant<OverrideSpec, ScheduleSpec>& change) {
+            updateQueue.pollIn(update.validFor, [this](const std::variant<OverrideSpec, ScheduleSpec>& change) {
                 std::visit(
                     [this](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;

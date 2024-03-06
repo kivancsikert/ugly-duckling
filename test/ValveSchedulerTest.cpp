@@ -44,7 +44,7 @@ std::ostream& operator<<(std::ostream& os, const ticks& val) {
 }
 
 std::ostream& operator<<(std::ostream& os, const ValveStateUpdate& val) {
-    os << "{ state: " << val.state << ", transitionAfter: " << val.transitionAfter << " }";
+    os << "{ state: " << val.state << ", transitionAfter: " << val.validFor << " }";
     return os;
 }
 
@@ -81,20 +81,24 @@ TEST_F(ValveSchedulerTest, not_scheduled_when_empty) {
     }
 }
 
-// TEST_F(ValveSchedulerTest, matches_single_schedule) {
-//     std::list<ValveSchedule> schedules {
-//         ValveSchedule(base, minutes { 1 }, seconds { 15 }),
-//     };
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 1 }));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 14 }));
-//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds { 15 }));
-//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds { 30 }));
-//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds { 59 }));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 60 }));
-//     EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 74 }));
-//     EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds { 75 }));
-// }
+TEST_F(ValveSchedulerTest, matches_single_schedule) {
+    std::list<ValveSchedule> schedules {
+        ValveSchedule(base, hours { 1 }, seconds { 15 }),
+    };
+    for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
+        EXPECT_EQ(scheduler.getStateUpdate(schedules, base - seconds { 1 }, defaultState), (ValveStateUpdate { ValveState::CLOSED, seconds { 1 } }));
+    }
+
+    // EXPECT_TRUE(scheduler.isScheduled(schedules, base));
+    // EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 1 }));
+    // EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 14 }));
+    // EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds { 15 }));
+    // EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds { 30 }));
+    // EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds { 59 }));
+    // EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 60 }));
+    // EXPECT_TRUE(scheduler.isScheduled(schedules, base + seconds { 74 }));
+    // EXPECT_FALSE(scheduler.isScheduled(schedules, base + seconds { 75 }));
+}
 
 // TEST_F(ValveSchedulerTest, does_not_match_schedule_not_yet_started) {
 //     std::list<ValveSchedule> schedules {
