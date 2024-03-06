@@ -44,14 +44,18 @@ TEST_F(ValveSchedulerTest, can_create_schedule) {
 //         "duration": 15
 //     })");
 //     ValveSchedule schedule(doc.as<JsonObject>());
-//     EXPECT_EQ(schedule.start, time_point<system_clock> { system_clock::from_time_t(1577836800) });
-//     EXPECT_EQ(schedule.period, minutes { 1 });
-//     EXPECT_EQ(schedule.duration, seconds { 15 });
+//     EXPECT_EQ(schedule.getStart(), time_point<system_clock> { system_clock::from_time_t(1577836800) });
+//     EXPECT_EQ(schedule.getPeriod(), minutes { 1 });
+//     EXPECT_EQ(schedule.getDuration(), seconds { 15 });
 // }
 
-// TEST_F(ValveSchedulerTest, not_scheduled_when_empty) {
-//     EXPECT_FALSE(scheduler.isScheduled({}, base));
-// }
+TEST_F(ValveSchedulerTest, not_scheduled_when_empty) {
+    for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
+        ValveStateUpdate update = scheduler.getStateUpdate({}, base, defaultState);
+        EXPECT_EQ(update.state, defaultState);
+        EXPECT_EQ(update.transitionAfter, ticks::max());
+    }
+}
 
 // TEST_F(ValveSchedulerTest, matches_single_schedule) {
 //     std::list<ValveSchedule> schedules {
