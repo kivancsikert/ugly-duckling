@@ -14,13 +14,38 @@
 #include <peripherals/valve/ValveScheduler.hpp>
 
 using namespace std::chrono;
-using namespace farmhub::peripherals::valve;
+namespace farmhub::peripherals::valve {
 
 static time_point<system_clock> parseTime(const char* str) {
     tm time;
     std::istringstream ss(str);
     ss >> std::get_time(&time, "%Y-%m-%d %H:%M:%S");
     return system_clock::from_time_t(mktime(&time));
+}
+
+std::ostream& operator<<(std::ostream& os, const ValveState& val) {
+    switch (val) {
+        case ValveState::CLOSED:
+            os << "CLOSED";
+            break;
+        case ValveState::NONE:
+            os << "NONE";
+            break;
+        case ValveState::OPEN:
+            os << "OPEN";
+            break;
+    }
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const ticks& val) {
+    os << duration_cast<milliseconds>(val).count() << " ms";
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const ValveStateUpdate& val) {
+    os << "{ state: " << val.state << ", transitionAfter: " << val.transitionAfter << " }";
+    return os;
 }
 
 class ValveSchedulerTest : public testing::Test {
@@ -52,8 +77,7 @@ TEST_F(ValveSchedulerTest, can_create_schedule) {
 TEST_F(ValveSchedulerTest, not_scheduled_when_empty) {
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
         ValveStateUpdate update = scheduler.getStateUpdate({}, base, defaultState);
-        EXPECT_EQ(update.state, defaultState);
-        EXPECT_EQ(update.transitionAfter, ticks::max());
+        EXPECT_EQ(update, (ValveStateUpdate { defaultState, ticks::max() }));
     }
 }
 
@@ -105,3 +129,5 @@ TEST_F(ValveSchedulerTest, not_scheduled_when_empty) {
 //     EXPECT_TRUE(scheduler.isScheduled(schedules, base + minutes { 2 } + seconds { 74 }));
 //     EXPECT_FALSE(scheduler.isScheduled(schedules, base + minutes { 2 } + seconds { 75 }));
 // }
+
+}    // namespace farmhub::peripherals::valve

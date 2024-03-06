@@ -48,6 +48,10 @@ private:
 struct ValveStateUpdate {
     ValveState state;
     ticks transitionAfter;
+
+    bool operator==(const ValveStateUpdate& other) const {
+        return state == other.state && transitionAfter == other.transitionAfter;
+    }
 };
 
 class ValveScheduler {
