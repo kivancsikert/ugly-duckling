@@ -7,6 +7,8 @@
 
 #include <kernel/Configuration.hpp>
 #include <kernel/Named.hpp>
+#include <kernel/PcntManager.hpp>
+#include <kernel/PwmManager.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
@@ -91,6 +93,8 @@ public:
 };
 
 struct PeripheralServices {
+    PcntManager& pcntManager;
+    PwmManager& pwmManager;
     SleepManager& sleepManager;
 };
 
@@ -155,9 +159,11 @@ class PeripheralManager
     : public TelemetryPublisher {
 public:
     PeripheralManager(
+        PcntManager& pcntManager,
+        PwmManager& pwmManager,
         SleepManager& sleepManager,
         const shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot)
-        : sleepManager(sleepManager)
+        : services(PeripheralServices { pcntManager, pwmManager, sleepManager })
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 
@@ -217,11 +223,12 @@ private:
         const String& peripheralType = it->second.get().peripheralType;
         shared_ptr<MqttDriver::MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
         PeripheralFactoryBase& factory = it->second.get();
-        PeripheralServices services = { sleepManager };
         return factory.createPeripheral(name, configJson, mqttRoot, services);
     }
 
-    SleepManager& sleepManager;
+    // TODO Make this immutable somehow
+    PeripheralServices services;
+
     const shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot;
 
     // TODO Use an unordered_map?
