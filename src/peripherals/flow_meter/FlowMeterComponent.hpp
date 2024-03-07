@@ -2,8 +2,6 @@
 
 #include <chrono>
 
-#include <driver/pcnt.h>
-
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ArduinoLog.h>
@@ -11,6 +9,7 @@
 #include <kernel/BootClock.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
+#include <kernel/PcntManager.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
@@ -26,50 +25,31 @@ public:
     FlowMeterComponent(
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        PcntManager& pcnt,
         gpio_num_t pin,
         double qFactor,
         milliseconds measurementFrequency)
         : Component(name, mqttRoot)
-        , pin(pin)
         , qFactor(qFactor) {
 
         Log.infoln("Initializing flow meter on pin %d with Q = %F", pin, qFactor);
 
-        pinMode(pin, INPUT);
-
-        // TODO Manage PCNT globally
-        pcnt_config_t pcntConfig = {};
-        pcntConfig.pulse_gpio_num = pin;
-        pcntConfig.ctrl_gpio_num = PCNT_PIN_NOT_USED;
-        pcntConfig.lctrl_mode = PCNT_MODE_KEEP;
-        pcntConfig.hctrl_mode = PCNT_MODE_KEEP;
-        pcntConfig.pos_mode = PCNT_COUNT_INC;
-        pcntConfig.neg_mode = PCNT_COUNT_DIS;
-        pcntConfig.unit = PCNT_UNIT_0;
-        pcntConfig.channel = PCNT_CHANNEL_0;
-
-        pcnt_unit_config(&pcntConfig);
-        pcnt_intr_disable(PCNT_UNIT_0);
-        pcnt_set_filter_value(PCNT_UNIT_0, 1023);
-        pcnt_filter_enable(PCNT_UNIT_0);
-        pcnt_counter_clear(PCNT_UNIT_0);
+        pcntUnit = pcnt.registerUnit(pin);
 
         auto now = boot_clock::now();
         lastMeasurement = now;
         lastSeenFlow = now;
         lastPublished = now;
 
-        Task::loop(name, 2048, [this, measurementFrequency](Task& task) {
+        Task::loop(name, 2560, [this, measurementFrequency](Task& task) {
             auto now = boot_clock::now();
             milliseconds elapsed = duration_cast<milliseconds>(now - lastMeasurement);
             if (elapsed.count() > 0) {
                 lastMeasurement = now;
 
-                int16_t pulses;
-                pcnt_get_counter_value(PCNT_UNIT_0, &pulses);
+                int16_t pulses = pcntUnit.getAndClearCount();
 
                 if (pulses > 0) {
-                    pcnt_counter_clear(PCNT_UNIT_0);
                     Lock lock(updateMutex);
                     double currentVolume = pulses / this->qFactor / 60.0f;
                     Log.verboseln("Counted %d pulses, %F l/min, %F l",
@@ -103,7 +83,7 @@ private:
         lastPublished = lastMeasurement;
     }
 
-    const gpio_num_t pin;
+    PcntUnit pcntUnit;
     const double qFactor;
 
     time_point<boot_clock> lastMeasurement;

@@ -4,6 +4,7 @@
 
 #include <devices/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
+#include <kernel/PcntManager.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>
@@ -30,6 +31,7 @@ public:
     FlowControl(
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        PcntManager& pcnt,
         SleepManager& sleepManager,
         PwmMotorDriver& controller,
         ValveControlStrategy& strategy,
@@ -40,7 +42,7 @@ public:
         , valve(name, sleepManager, controller, strategy, mqttRoot, [this]() {
             publishTelemetry();
         })
-        , flowMeter(name, mqttRoot, pin, qFactor, measurementFrequency) {
+        , flowMeter(name, mqttRoot, pcnt, pin, qFactor, measurementFrequency) {
     }
 
     void configure(const FlowControlConfig& config) override {
@@ -97,6 +99,7 @@ public:
             name,
             mqttRoot,
 
+            services.pcntManager,
             services.sleepManager,
             targetMotor,
             *strategy,
