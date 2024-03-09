@@ -5,7 +5,6 @@
 #include <driver/pcnt.h>
 
 #include <Arduino.h>
-#include <Wire.h>
 
 #include <ArduinoLog.h>
 
