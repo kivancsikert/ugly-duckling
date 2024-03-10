@@ -115,7 +115,6 @@ template <typename TDeviceConfig, typename TConfig, typename... TDeviceConfigArg
 class PeripheralFactory : public PeripheralFactoryBase {
 public:
     // By default use the factory type as the peripheral type
-    // TODO Use TDeviceConfigArgs&& instead
     PeripheralFactory(const String& type, TDeviceConfigArgs... deviceConfigArgs)
         : PeripheralFactory(type, type, std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
