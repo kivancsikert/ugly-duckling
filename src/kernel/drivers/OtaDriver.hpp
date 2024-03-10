@@ -19,53 +19,45 @@ class OtaDriver {
 
 public:
     OtaDriver(State& networkReady, const String& hostname) {
-        Task::run("ota", 3072, [&networkReady, hostname](Task& task) {
+        Task::run("ota:init", 3072, [&networkReady, hostname, this](Task& task) {
             networkReady.awaitSet();
 
             ArduinoOTA.setHostname(hostname.c_str());
 
-            bool updating = false;
             ArduinoOTA.onStart([&]() {
-                Serial.println("Start");
-                updating = true;
+                Log.infoln("OTA update started");
             });
             ArduinoOTA.onEnd([&]() {
-                Serial.println("\nEnd");
-                updating = false;
+                Log.infoln("OTA update finished");
             });
             ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
                 Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
             });
             ArduinoOTA.onError([&](ota_error_t error) {
-                Serial.printf("Web socket error[%u]\n", error);
+                Log.errorln("Web socket error[%u]", error);
                 if (error == OTA_AUTH_ERROR) {
-                    Serial.println("Auth Failed");
+                    Log.errorln("Auth Failed");
                 } else if (error == OTA_BEGIN_ERROR) {
-                    Serial.println("Begin Failed");
+                    Log.errorln("Begin Failed");
                 } else if (error == OTA_CONNECT_ERROR) {
-                    Serial.println("Connect Failed");
+                    Log.errorln("Connect Failed");
                 } else if (error == OTA_RECEIVE_ERROR) {
-                    Serial.println("Receive Failed");
+                    Log.errorln("Receive Failed");
                 } else if (error == OTA_END_ERROR) {
-                    Serial.println("End Failed");
+                    Log.errorln("End Failed");
                 } else {
-                    Serial.println("Other error");
+                    Log.errorln("Other error");
                 }
-                updating = false;
             });
             ArduinoOTA.begin();
 
             Log.infoln("OTA initialized on hostname %s",
                 hostname.c_str());
 
-            // TODO Update wake time before loop to avoid task "missing" first deadline
-
-            while (true) {
+            Task::loop("ota", 3072, [this](Task& task) {
                 ArduinoOTA.handle();
-                task.delayUntil(updating
-                        ? 0s
-                        : 1s);
-            }
+                task.delayUntil(1s);
+            });
         });
     }
 };
