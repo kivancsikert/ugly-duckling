@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 #include <Arduino.h>
 #include <ArduinoOTA.h>
 
@@ -8,6 +10,8 @@
 #include <kernel/drivers/WiFiDriver.hpp>
 
 #include <kernel/Task.hpp>
+
+using namespace std::chrono_literals;
 
 namespace farmhub::kernel::drivers {
 
@@ -59,8 +63,8 @@ public:
             while (true) {
                 ArduinoOTA.handle();
                 task.delayUntil(updating
-                        ? seconds::zero()
-                        : seconds(1));
+                        ? 0s
+                        : 1s);
             }
         });
     }

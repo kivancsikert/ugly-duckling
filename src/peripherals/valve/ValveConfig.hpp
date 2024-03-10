@@ -1,11 +1,16 @@
 #pragma once
 
+#include <chrono>
+
 #include <ArduinoJson.h>
 #include <ArduinoLog.h>
 
 #include <kernel/Configuration.hpp>
 #include <peripherals/valve/ValveComponent.hpp>
 #include <peripherals/valve/ValveScheduler.hpp>
+
+using namespace std::chrono;
+using namespace std::chrono_literals;
 
 using namespace farmhub::kernel;
 
@@ -46,7 +51,7 @@ public:
     Property<String> motor { this, "motor" };
     Property<ValveControlStrategyType> strategy;
     Property<double> duty { this, "duty", 100 };
-    Property<milliseconds> switchDuration { this, "switchDuration", milliseconds(500) };
+    Property<milliseconds> switchDuration { this, "switchDuration", 500ms };
 };
 
 // JSON: ValveState

@@ -25,6 +25,7 @@
 #include <kernel/Task.hpp>
 
 using namespace std::chrono;
+using namespace std::chrono_literals;
 using std::shared_ptr;
 using namespace farmhub::kernel;
 
@@ -94,7 +95,7 @@ public:
             });
 
             Serial.print(status);
-            task.delayUntil(milliseconds(100));
+            task.delayUntil(100ms);
         });
     }
 
@@ -290,9 +291,9 @@ public:
             publishTelemetry();
             // TODO Configure telemetry these intervals
             // Publishing interval
-            const auto interval = seconds(60);
+            const auto interval = 1min;
             // We always wait at least this much between telemetry updates
-            const auto debounceInterval = seconds(1);
+            const auto debounceInterval = 1s;
             task.delayUntil(debounceInterval);
             // Allow other tasks to trigger telemetry updates
             telemetryPublishQueue.pollIn(task.ticksUntil(interval - debounceInterval));

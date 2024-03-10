@@ -13,6 +13,7 @@
 #include <kernel/drivers/MdnsDriver.hpp>
 
 using namespace std::chrono;
+using namespace std::chrono_literals;
 
 namespace farmhub::kernel::drivers {
 
@@ -51,7 +52,7 @@ public:
                     this->rtcInSync.set();
                     break;
                 }
-                task.delayUntil(seconds(1));
+                task.delayUntil(1s);
             }
         });
         Task::run("ntp-sync", 4096, [this](Task& task) {
@@ -62,13 +63,13 @@ public:
                     setOrAdjustTime(ntpClient->getEpochTime());
 
                     // We are good for a while now
-                    task.delay(hours(1));
+                    task.delay(1h);
                 } else {
                     // Attempt a retry, but with mDNS cache disabled
                     Log.traceln("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
                     ntpClient = nullptr;
                     trustMdnsCache = false;
-                    task.delay(seconds(10));
+                    task.delay(10s);
                 }
             }
         });
