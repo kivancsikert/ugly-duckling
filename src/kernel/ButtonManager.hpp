@@ -57,7 +57,7 @@ static void IRAM_ATTR triggerButton3Isr() {
 class ButtonManager {
 public:
     ButtonManager() {
-        Task::loop("button-manager", [this](Task& task) {
+        Task::loop("button-manager", 2560, [this](Task& task) {
             ButtonState& state = buttonStateInterrupts.take();
             auto pressed = digitalRead(state.pin) == (state.mode == ButtonMode::PullUp ? LOW : HIGH);
             Log.verboseln("Button %d %s", state.pin, pressed ? "pressed" : "released");
