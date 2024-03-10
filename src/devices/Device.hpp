@@ -300,6 +300,9 @@ public:
         });
 
         kernel.getKernelReadyState().set();
+
+        Log.infoln("Device ready in %F s, %s",
+            millis() / 1000.0, kernel.sleepManager.sleepWhenIdle ? "entering idle loop" : "staying awake");
     }
 
 private:
