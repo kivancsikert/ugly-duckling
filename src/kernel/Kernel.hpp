@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <functional>
 #include <optional>
 
@@ -23,9 +24,11 @@
 
 #include <version.h>
 
-namespace farmhub::kernel {
-
+using namespace std::chrono;
+using namespace std::chrono_literals;
 using namespace farmhub::kernel::drivers;
+
+namespace farmhub::kernel {
 
 template <typename TConfiguration>
 class Kernel;
@@ -172,26 +175,19 @@ private:
                     statusLed.turnOff();
                     break;
                 case KernelState::NETWORK_CONNECTING:
-                    statusLed.blink(milliseconds(200));
+                    statusLed.blink(200ms);
                     break;
                 case KernelState::NETWORK_CONFIGURING:
-                    statusLed.blinkPattern({
-                        milliseconds(100),
-                        milliseconds(-100),
-                        milliseconds(100),
-                        milliseconds(-100),
-                        milliseconds(100),
-                        milliseconds(-500),
-                    });
+                    statusLed.blinkPattern({ 100ms, -100ms, 100ms, -100ms, 100ms, -500ms });
                     break;
                 case KernelState::RTC_SYNCING:
-                    statusLed.blink(milliseconds(500));
+                    statusLed.blink(500ms);
                     break;
                 case KernelState::MQTT_CONNECTING:
-                    statusLed.blink(milliseconds(1000));
+                    statusLed.blink(1000ms);
                     break;
                 case KernelState::INIT_FINISHING:
-                    statusLed.blink(milliseconds(1500));
+                    statusLed.blink(1500ms);
                     break;
                 case KernelState::READY:
                     if (deviceConfig.sleepWhenIdle.get()) {
@@ -226,7 +222,7 @@ private:
         }
 
         Log.traceln("Waiting for network...");
-        if (!networkReadyState.awaitSet(seconds(60))) {
+        if (!networkReadyState.awaitSet(1min)) {
             return "Network not ready, aborting update";
         }
 

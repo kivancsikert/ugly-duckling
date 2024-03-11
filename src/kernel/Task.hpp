@@ -99,6 +99,28 @@ public:
         return false;
     }
 
+    /**
+     * @brief Ticks to wait until the given `time` since last task wake time.
+     *
+     * @param time The time period the caller wants elapsed since the last wake time.
+     * @return ticks The number of ticks to delay until the given `time` has elapsed since the last wake time,
+     *     or zero if the time has already elapsed.
+     */
+    ticks ticksUntil(ticks time) {
+        auto currentTime = ticks(xTaskGetTickCount());
+        // Handling tick overflow. If 'currentTime' is less than 'lastWakeTime',
+        // it means the tick count has rolled over.
+        if (currentTime - ticks(lastWakeTime) < time) {
+            // This means 'targetTime' is still in the future, taking into account possible overflow.
+            return time - (currentTime - ticks(lastWakeTime));
+        } else {
+            // 'currentTime' has surpassed our target time, indicating the delay has expired.
+            Serial.printf("Task '%s' missed deadline by %lld ms\n",
+                pcTaskGetName(nullptr), duration_cast<milliseconds>(currentTime - ticks(lastWakeTime)).count());
+            return ticks::zero();
+        }
+    }
+
     void suspend() {
         vTaskSuspend(nullptr);
     }

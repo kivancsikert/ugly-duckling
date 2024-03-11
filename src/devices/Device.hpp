@@ -25,6 +25,7 @@
 #include <kernel/Task.hpp>
 
 using namespace std::chrono;
+using namespace std::chrono_literals;
 using std::shared_ptr;
 using namespace farmhub::kernel;
 
@@ -94,7 +95,7 @@ public:
             });
 
             Serial.print(status);
-            task.delayUntil(milliseconds(100));
+            task.delayUntil(100ms);
         });
     }
 
@@ -288,11 +289,20 @@ public:
 
         Task::loop("telemetry", 8192, [this](Task& task) {
             publishTelemetry();
-            // TODO Configure telemetry heartbeat interval
-            task.delayUntil(milliseconds(60000));
+            // TODO Configure telemetry these intervals
+            // Publishing interval
+            const auto interval = 1min;
+            // We always wait at least this much between telemetry updates
+            const auto debounceInterval = 1s;
+            task.delayUntil(debounceInterval);
+            // Allow other tasks to trigger telemetry updates
+            telemetryPublishQueue.pollIn(task.ticksUntil(interval - debounceInterval));
         });
 
         kernel.getKernelReadyState().set();
+
+        Log.infoln("Device ready in %F s, %s",
+            millis() / 1000.0, kernel.sleepManager.sleepWhenIdle ? "entering idle loop" : "staying awake");
     }
 
 private:
@@ -320,7 +330,7 @@ private:
     TelemetryCollector deviceTelemetryCollector;
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };
     PingCommand pingCommand { [this]() {
-        publishTelemetry();
+        telemetryPublishQueue.offer(true);
     } };
 
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
@@ -338,6 +348,8 @@ private:
     HttpUpdateCommand httpUpdateCommand { [this](const String& url) {
         kernel.prepareUpdate(url);
     } };
+
+    Queue<bool> telemetryPublishQueue { "telemetry-publish", 1 };
 };
 
 }    // namespace farmhub::devices

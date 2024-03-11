@@ -1,11 +1,11 @@
 #pragma once
 
+#include <chrono>
 #include <list>
 
 #include <driver/pcnt.h>
 
 #include <Arduino.h>
-#include <Wire.h>
 
 #include <ArduinoLog.h>
 
@@ -15,6 +15,7 @@
 #include <kernel/PcntManager.hpp>
 #include <kernel/Telemetry.hpp>
 
+using namespace std::chrono_literals;
 using namespace farmhub::devices;
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
@@ -30,7 +31,7 @@ class ElectricFenceMonitorDeviceConfig
     : public ConfigurationSection {
 public:
     ArrayProperty<FencePinConfig> pins { this, "pins" };
-    Property<seconds> measurementFrequency { this, "measurementFrequency", seconds(10) };
+    Property<seconds> measurementFrequency { this, "measurementFrequency", 10s };
 };
 
 bool convertToJson(const FencePinConfig& src, JsonVariant dst) {

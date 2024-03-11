@@ -17,6 +17,7 @@
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
 
+using namespace std::chrono_literals;
 using namespace farmhub::kernel;
 using std::make_shared;
 using std::shared_ptr;
@@ -458,9 +459,9 @@ private:
     std::list<Subscription> subscriptions;
 
     // TODO Review these values
-    static constexpr milliseconds MQTT_LOOP_INTERVAL = seconds(1);
-    static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = seconds(1);
-    static constexpr milliseconds MQTT_QUEUE_TIMEOUT = seconds(1);
+    static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
+    static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = 1s;
+    static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
 };
 
 }    // namespace farmhub::kernel::drivers

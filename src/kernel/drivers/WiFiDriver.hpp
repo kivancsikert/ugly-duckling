@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <list>
 
 #include <WiFi.h>
@@ -13,6 +14,7 @@
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 
+using namespace std::chrono_literals;
 using namespace farmhub::kernel;
 
 namespace farmhub::kernel::drivers {
@@ -85,7 +87,7 @@ public:
                     reconnectQueue.clear();
                 }
                 // TODO Add exponential backoff
-                task.delay(seconds(5));
+                task.delay(5s);
                 Log.infoln("WiFi: Reconnecting...");
             }
         });

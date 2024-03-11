@@ -1,0 +1,34 @@
+{
+  "instance": "test-mk6-2",
+  "peripherals": [
+    {
+      "name": "flow-control-a",
+      "type": "flow-control",
+      "params": {
+        "valve": {
+          "motor": "a"
+        },
+        "flow-meter": {
+          "pin": 6
+        }
+      }
+    },
+    {
+      "name": "soil-temperature",
+      "type": "environment:ds18b20",
+      "params": {
+        "pin": 21
+      }
+    },
+    {
+      "name": "soil-moisture",
+      "type": "environment:soil-moisture",
+      "params": {
+        "air": 3017,
+        "pin": 14,
+        "water": 1105
+      }
+    }
+  ],
+  "sleepWhenIdle": false
+}
