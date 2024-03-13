@@ -6,9 +6,9 @@
 #include <ArduinoLog.h>
 #include <SHT31.h>
 
-#include <peripherals/Peripheral.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/Telemetry.hpp>
+#include <peripherals/Peripheral.hpp>
 
 #include <peripherals/I2CConfig.hpp>
 
@@ -39,16 +39,13 @@ public:
             sensorType.c_str(), config.toString().c_str());
 
         if (!wire.begin(config.sda, config.scl, 100000L)) {
-            throw PeripheralCreationException(name,
-                "Failed to initialize I2C bus for environment sensor");
+            throw PeripheralCreationException("Failed to initialize I2C bus for environment sensor");
         }
         if (!sensor.begin()) {
-            throw PeripheralCreationException(name,
-                "Failed to initialize environment sensor: " + String(sensor.getError()));
+            throw PeripheralCreationException("Failed to initialize environment sensor: " + String(sensor.getError()));
         }
         if (!sensor.isConnected()) {
-            throw PeripheralCreationException(name,
-                "Environment sensor is not connected: " + String(sensor.getError()));
+            throw PeripheralCreationException("Environment sensor is not connected: " + String(sensor.getError()));
         }
     }
 

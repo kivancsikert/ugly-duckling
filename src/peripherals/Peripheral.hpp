@@ -81,8 +81,8 @@ public:
 class PeripheralCreationException
     : public std::exception {
 public:
-    PeripheralCreationException(const String& name, const String& reason)
-        : message(String("PeripheralCreationException: Failed to create peripheral '" + name + "' because " + reason)) {
+    PeripheralCreationException(const String& reason)
+        : message(String("PeripheralCreationException: " + reason)) {
     }
 
     const char* what() const noexcept override {
@@ -217,7 +217,7 @@ private:
             name.c_str(), factoryType.c_str());
         auto it = factories.find(factoryType);
         if (it == factories.end()) {
-            throw PeripheralCreationException(name, "Factory not found: '" + factoryType + "'");
+            throw PeripheralCreationException("Factory not found: '" + factoryType + "'");
         }
         const String& peripheralType = it->second.get().peripheralType;
         shared_ptr<MqttDriver::MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);

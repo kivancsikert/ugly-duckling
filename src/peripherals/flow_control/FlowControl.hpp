@@ -2,12 +2,12 @@
 
 #include <memory>
 
-#include <peripherals/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 #include <peripherals/Motorized.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>
 #include <peripherals/flow_meter/FlowMeterConfig.hpp>
 #include <peripherals/valve/Valve.hpp>
@@ -87,7 +87,7 @@ public:
         const ValveDeviceConfig& valveConfig = deviceConfig.valve.get();
         const FlowMeterDeviceConfig& flowMeterConfig = deviceConfig.flowMeter.get();
 
-        PwmMotorDriver& targetMotor = findMotor(name, valveConfig.motor.get());
+        PwmMotorDriver& targetMotor = findMotor(valveConfig.motor.get());
         ValveControlStrategy* strategy;
         try {
             strategy = createValveControlStrategy(
@@ -95,7 +95,7 @@ public:
                 valveConfig.switchDuration.get(),
                 valveConfig.duty.get() / 100.0);
         } catch (const std::exception& e) {
-            throw PeripheralCreationException(name, "failed to create strategy: " + String(e.what()));
+            throw PeripheralCreationException("failed to create strategy: " + String(e.what()));
         }
         return make_unique<FlowControl>(
             name,

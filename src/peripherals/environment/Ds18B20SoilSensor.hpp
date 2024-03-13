@@ -49,7 +49,7 @@ public:
 
         DeviceAddress thermometer;
         if (!sensors.getAddress(thermometer, 0)) {
-            throw PeripheralCreationException(name, "unable to find address for device");
+            throw PeripheralCreationException("unable to find address for device");
         }
 
         // show the addresses we found on the bus

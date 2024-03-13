@@ -20,7 +20,7 @@ public:
     }
 
 protected:
-    PwmMotorDriver& findMotor(const String& name, const String& motorName) {
+    PwmMotorDriver& findMotor(const String& motorName) {
         // If there's only one motor and no name is specified, use it
         if (motorName.isEmpty() && motors.size() == 1) {
             return motors.front().get();
@@ -30,7 +30,7 @@ protected:
                 return motor.get();
             }
         }
-        throw PeripheralCreationException(name, "failed to find motor: " + motorName);
+        throw PeripheralCreationException("failed to find motor: " + motorName);
     }
 
 private:
