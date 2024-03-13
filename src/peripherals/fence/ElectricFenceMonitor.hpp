@@ -9,11 +9,11 @@
 
 #include <ArduinoLog.h>
 
-#include <peripherals/Peripheral.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/Telemetry.hpp>
+#include <peripherals/Peripheral.hpp>
 
 using namespace std::chrono_literals;
 using namespace farmhub::kernel;
