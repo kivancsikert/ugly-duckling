@@ -44,10 +44,6 @@ public:
 
     Property<bool> sleepWhenIdle { this, "sleepWhenIdle", false };
 
-    virtual bool isResetButtonPressed() {
-        return false;
-    }
-
     virtual const String getHostname() {
         String hostname = instance.get();
         hostname.replace(":", "-");
