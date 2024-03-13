@@ -4,6 +4,8 @@
 #include <functional>
 #include <map>
 
+#include <driver/gpio.h>
+
 #include <Arduino.h>
 
 #include <ArduinoLog.h>
@@ -37,21 +39,10 @@ struct ButtonState {
 
 static InterrputQueue<ButtonState> buttonStateInterrupts("button-state-interrupts", 4);
 
-static ButtonState button0;
-static void IRAM_ATTR triggerButton0Isr() {
-    buttonStateInterrupts.offerFromISR(&button0);
-}
-static ButtonState button1;
-static void IRAM_ATTR triggerButton1Isr() {
-    buttonStateInterrupts.offerFromISR(&button1);
-}
-static ButtonState button2;
-static void IRAM_ATTR triggerButton2Isr() {
-    buttonStateInterrupts.offerFromISR(&button2);
-}
-static ButtonState button3;
-static void IRAM_ATTR triggerButton3Isr() {
-    buttonStateInterrupts.offerFromISR(&button3);
+// ISR handler for GPIO interrupt
+static void IRAM_ATTR handleButtonInterrupt(void* arg) {
+    ButtonState* state = (ButtonState*) arg;
+    buttonStateInterrupts.offerFromISR(state);
 }
 
 class ButtonManager {
@@ -84,40 +75,23 @@ public:
     void registerButtonPressHandler(gpio_num_t pin, ButtonMode mode, milliseconds pressTimeout, ButtonPressHandler handler) {
         Log.infoln("Registering button on pin %d, mode %s",
             pin, mode == ButtonMode::PullUp ? "pull-up" : "pull-down");
-        pinMode(pin, mode == ButtonMode::PullUp ? INPUT_PULLUP : INPUT_PULLDOWN);
 
-        void (*interruptHandler)();
-        ButtonState* button;
-        switch (registeredButtonCount++) {
-            case 0:
-                button = &button0;
-                interruptHandler = triggerButton0Isr;
-                break;
-            case 1:
-                button = &button0;
-                interruptHandler = triggerButton1Isr;
-                break;
-            case 2:
-                button = &button1;
-                interruptHandler = triggerButton2Isr;
-                break;
-            case 3:
-                button = &button2;
-                interruptHandler = triggerButton3Isr;
-                break;
-            default:
-                throw new std::runtime_error("Too many buttons");
-        }
+        // Configure PIN_INPUT as input
+        gpio_pad_select_gpio(pin);
+        gpio_set_direction(pin, GPIO_MODE_INPUT);
+        gpio_set_pull_mode(pin, mode == ButtonMode::PullUp ? GPIO_PULLUP_ONLY : GPIO_PULLDOWN_ONLY);
+
+        ButtonState* button = new ButtonState();
         button->pin = pin;
         button->mode = mode;
         button->pressTimeout = pressTimeout;
         button->handler = handler;
 
-        attachInterrupt(digitalPinToInterrupt(pin), interruptHandler, CHANGE);
+        // Install GPIO ISR
+        gpio_install_isr_service(0);
+        gpio_isr_handler_add(pin, handleButtonInterrupt, button);
+        gpio_set_intr_type(pin, GPIO_INTR_ANYEDGE);
     }
-
-private:
-    int registeredButtonCount = 0;
 };
 
 }    // namespace farmhub::kernel
