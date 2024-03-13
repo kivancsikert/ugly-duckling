@@ -22,11 +22,7 @@ public:
     Property<gpio_num_t> sda { this, "sda", GPIO_NUM_NC };
     Property<gpio_num_t> scl { this, "scl", GPIO_NUM_NC };
 
-    I2CConfig parse() const {
-        return parse(-1, GPIO_NUM_NC, GPIO_NUM_NC);
-    }
-
-    I2CConfig parse(uint8_t defaultAddress, gpio_num_t defaultSda, gpio_num_t defaultScl) const {
+    I2CConfig parse(uint8_t defaultAddress = 0xFF, gpio_num_t defaultSda = GPIO_NUM_NC, gpio_num_t defaultScl = GPIO_NUM_NC) const {
         return {
             address.get().isEmpty()
                 ? defaultAddress
