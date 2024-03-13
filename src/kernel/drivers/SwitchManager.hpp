@@ -28,49 +28,7 @@ public:
     virtual gpio_num_t getPin() = 0;
 };
 
-typedef std::function<void(const Switch&)> SwitchEngagementHandler;
-typedef std::function<void(const Switch&, milliseconds duration)> SwitchReleaseHandler;
-
-class SwitchManager;
 static void handleSwitchInterrupt(void* arg);
-
-struct SwitchState : public Switch {
-public:
-    const String& getName() override {
-        return name;
-    }
-
-    gpio_num_t getPin() override {
-        return pin;
-    }
-
-private:
-    String name;
-    gpio_num_t pin;
-    SwitchMode mode;
-
-    SwitchEngagementHandler engagementHandler;
-    SwitchReleaseHandler releaseHandler;
-
-    time_point<system_clock> engagementStarted;
-
-    friend class SwitchManager;
-    friend void handleSwitchInterrupt(void* arg);
-};
-
-struct SwitchStateChange {
-    SwitchState* switchState;
-    bool engaged;
-};
-
-static CopyQueue<SwitchStateChange> switchStateInterrupts("switchState-state-interrupts", 4);
-
-// ISR handler for GPIO interrupt
-static void IRAM_ATTR handleSwitchInterrupt(void* arg) {
-    SwitchState* state = (SwitchState*) arg;
-    bool engaged = digitalRead(state->pin) == (state->mode == SwitchMode::PullUp ? LOW : HIGH);
-    switchStateInterrupts.offerFromISR(SwitchStateChange { state, engaged });
-}
 
 class SwitchManager {
 public:
@@ -90,6 +48,9 @@ public:
             }
         });
     }
+
+    typedef std::function<void(const Switch&)> SwitchEngagementHandler;
+    typedef std::function<void(const Switch&, milliseconds duration)> SwitchReleaseHandler;
 
     void onEngaged(const String& name, gpio_num_t pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
         registerHandler(name, pin, mode, engagementHandler, [](const Switch&, milliseconds) {});
@@ -113,6 +74,7 @@ public:
         switchState->name = name;
         switchState->pin = pin;
         switchState->mode = mode;
+        switchState->manager = this;
         switchState->engagementHandler = engagementHandler;
         switchState->releaseHandler = releaseHandler;
 
@@ -121,6 +83,51 @@ public:
         gpio_isr_handler_add(pin, handleSwitchInterrupt, switchState);
         gpio_set_intr_type(pin, GPIO_INTR_ANYEDGE);
     }
+
+private:
+    struct SwitchState : public Switch {
+    public:
+        const String& getName() override {
+            return name;
+        }
+
+        gpio_num_t getPin() override {
+            return pin;
+        }
+
+    private:
+        String name;
+        gpio_num_t pin;
+        SwitchMode mode;
+
+        SwitchEngagementHandler engagementHandler;
+        SwitchReleaseHandler releaseHandler;
+
+        time_point<system_clock> engagementStarted;
+        SwitchManager* manager;
+
+        friend class SwitchManager;
+        friend void handleSwitchInterrupt(void* arg);
+    };
+
+    struct SwitchStateChange {
+        SwitchState* switchState;
+        bool engaged;
+    };
+
+    void inline queueSwitchStateChange(SwitchState* state, bool engaged) {
+        switchStateInterrupts.offerFromISR(SwitchStateChange { state, engaged });
+    }
+
+    CopyQueue<SwitchStateChange> switchStateInterrupts { "switchState-state-interrupts", 4 };
+    friend void handleSwitchInterrupt(void* arg);
 };
+
+// ISR handler for GPIO interrupt
+static void IRAM_ATTR handleSwitchInterrupt(void* arg) {
+    SwitchManager::SwitchState* state = static_cast<SwitchManager::SwitchState*>(arg);
+    bool engaged = digitalRead(state->pin) == (state->mode == SwitchMode::PullUp ? LOW : HIGH);
+    state->manager->queueSwitchStateChange(state, engaged);
+}
 
 }    // namespace farmhub::kernel::drivers
