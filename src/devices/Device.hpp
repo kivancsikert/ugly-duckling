@@ -28,6 +28,7 @@ using namespace std::chrono;
 using namespace std::chrono_literals;
 using std::shared_ptr;
 using namespace farmhub::kernel;
+using namespace farmhub::kernel::drivers;
 
 #if defined(MK4)
 #include <devices/UglyDucklingMk4.hpp>
@@ -218,7 +219,7 @@ public:
 class Device {
 public:
     Device() {
-        kernel.buttonManager.registerButtonReleaseHandler("factory-reset", deviceDefinition.bootPin, ButtonMode::PullUp, [this](const Button&, milliseconds duration) {
+        kernel.switches.registerSwitchReleaseHandler("factory-reset", deviceDefinition.bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 5s) {
                 kernel.performFactoryReset();
             }

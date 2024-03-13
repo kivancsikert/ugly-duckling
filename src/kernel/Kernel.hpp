@@ -12,7 +12,6 @@
 
 #include <ArduinoLog.h>
 
-#include <kernel/ButtonManager.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -20,6 +19,7 @@
 #include <kernel/drivers/MqttDriver.hpp>
 #include <kernel/drivers/OtaDriver.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
+#include <kernel/drivers/SwitchManager.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
 
 #include <version.h>
@@ -285,7 +285,7 @@ private:
 
 public:
     MqttDriver mqtt { networkReadyState, mdns, mqttConfig, deviceConfig.instance.get(), mqttReadyState };
-    ButtonManager buttonManager;
+    SwitchManager switches;
 };
 
 }    // namespace farmhub::kernel
