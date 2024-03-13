@@ -26,9 +26,8 @@ using namespace farmhub::peripherals;
 namespace farmhub::peripherals::light_sensor {
 
 class Bh1750DeviceConfig
-    : public ConfigurationSection {
+    : public I2CDeviceConfig {
 public:
-    NamedConfigurationEntry<I2CDeviceConfig> i2c { this, "i2c" };
     Property<seconds> measurementFrequency { this, "measurementFrequency", 1s };
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
 };
@@ -76,7 +75,7 @@ public:
         });
     }
 
-    double getLevel() {
+    double getCurrentLevel() {
         Lock lock(updateAverageMutex);
         return averageLevel;
     }
@@ -127,7 +126,7 @@ public:
     }
 
     unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const Bh1750DeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
-        I2CConfig i2cConfig = deviceConfig.i2c.get().parse(0x23);
+        I2CConfig i2cConfig = deviceConfig.parse(0x23);
         return std::make_unique<Bh1750>(name, mqttRoot, services.i2c, i2cConfig, deviceConfig.measurementFrequency.get(), deviceConfig.latencyInterval.get());
     }
 };

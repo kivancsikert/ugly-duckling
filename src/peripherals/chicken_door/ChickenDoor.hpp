@@ -18,10 +18,12 @@
 #include <kernel/drivers/SwitchManager.hpp>
 #include <peripherals/Motorized.hpp>
 #include <peripherals/Peripheral.hpp>
+#include <peripherals/light_sensor/Bh1750.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 using namespace farmhub::peripherals;
+using namespace farmhub::peripherals::light_sensor;
 using namespace std::chrono;
 using namespace std::chrono_literals;
 namespace farmhub::peripherals::chicken_door {
@@ -43,8 +45,12 @@ class ChickenDoorDeviceConfig
     : public ConfigurationSection {
 public:
     Property<String> motor { this, "motor" };
+    Property<double> openLevel { this, "openLevel", 500 };
+    Property<double> closeLevel { this, "closeLevel", 10 };
     Property<gpio_num_t> openPin { this, "openPin", GPIO_NUM_NC };
     Property<gpio_num_t> closedPin { this, "closedPin", GPIO_NUM_NC };
+
+    NamedConfigurationEntry<Bh1750DeviceConfig> lightSensor { this, "lightSensor" };
 };
 
 class ChickenDoorComponent
@@ -57,11 +63,17 @@ public:
         SleepManager& sleepManager,
         SwitchManager& switches,
         PwmMotorDriver& motor,
+        Bh1750Component& lightSensor,
+        double openLevel,
+        double closeLevel,
         gpio_num_t openPin,
         gpio_num_t closedPin)
         : Component(name, mqttRoot)
         , sleepManager(sleepManager)
         , motor(motor)
+        , lightSensor(lightSensor)
+        , openLevel(openLevel)
+        , closeLevel(closeLevel)
         , openSwitch(switches.registerHandler(
               name + ":open",
               openPin,
@@ -95,11 +107,13 @@ public:
         });
 
         Task::loop(name, 4096, [&](Task& task) {
-            DoorState state = determineCurrentState();
-            DoorState targetState = determineTargetState();
-            if (state != targetState) {
-                Log.infoln("Going from state %d to %d",
-                    state, targetState);
+            DoorState currentState = determineCurrentState();
+            DoorState targetState = determineTargetState(currentState);
+            if (currentState != targetState) {
+                if (currentState != lastState) {
+                    Log.infoln("Going from state %d to %d",
+                        currentState, targetState);
+                }
                 switch (targetState) {
                     case DoorState::OPEN:
                         motor.drive(MotorPhase::FORWARD, 1);
@@ -112,12 +126,16 @@ public:
                         break;
                 }
             } else {
-                motor.stop();
+                if (currentState != lastState) {
+                    motor.stop();
+                }
             }
+            lastState = currentState;
             auto now = system_clock::now();
             auto overrideWaitTime = overrideUntil < now
                 ? ticks::max()
                 : duration_cast<ticks>(overrideUntil - now);
+            // TODO Use measurement frequency as the default wait time
             auto waitTime = std::min(overrideWaitTime, duration_cast<ticks>(1s));
             updateQueue.pollIn(waitTime, [this](auto& change) {
                 std::visit(
@@ -167,7 +185,7 @@ private:
         }
     }
 
-    DoorState determineTargetState() {
+    DoorState determineTargetState(DoorState currentState) {
         if (overrideUntil >= system_clock::now()) {
             return overrideState;
         } else {
@@ -176,12 +194,25 @@ private:
                 overrideState = DoorState::NONE;
                 overrideUntil = time_point<system_clock>::min();
             }
-            return DoorState::CLOSED;
+            auto lightLevel = lightSensor.getCurrentLevel();
+            if (lightLevel >= openLevel) {
+                return DoorState::OPEN;
+            } else if (lightLevel <= closeLevel) {
+                return DoorState::CLOSED;
+            }
+            return currentState == DoorState::NONE
+                ? DoorState::CLOSED
+                : currentState;
         }
     }
 
     SleepManager& sleepManager;
     PwmMotorDriver& motor;
+    Bh1750Component& lightSensor;
+
+    const double openLevel;
+    const double closeLevel;
+
     const Switch& openSwitch;
     const Switch& closedSwitch;
 
@@ -197,6 +228,7 @@ private:
 
     Queue<std::variant<StateUpdated, StateOverride>> updateQueue { "chicken-door-status", 2 };
 
+    DoorState lastState = DoorState::NONE;
     DoorState overrideState = DoorState::NONE;
     time_point<system_clock> overrideUntil = time_point<system_clock>::min();
 };
@@ -207,20 +239,40 @@ public:
     ChickenDoor(
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        I2CManager& i2c,
         SleepManager& sleepManager,
         SwitchManager& switches,
         PwmMotorDriver& motor,
         const ChickenDoorDeviceConfig& config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , component(name, mqttRoot, sleepManager, switches, motor, config.openPin.get(), config.closedPin.get()) {
+        , lightSensor(
+              name + ":light",
+              mqttRoot,
+              i2c,
+              config.lightSensor.get().parse(0x23),
+              config.lightSensor.get().measurementFrequency.get(),
+              config.lightSensor.get().latencyInterval.get())
+        , doorComponent(
+              name,
+              mqttRoot,
+              sleepManager,
+              switches,
+              motor,
+              lightSensor,
+              config.openLevel.get(),
+              config.closeLevel.get(),
+              config.openPin.get(),
+              config.closedPin.get()) {
     }
 
     void populateTelemetry(JsonObject& telemetryJson) override {
-        component.populateTelemetry(telemetryJson);
+        lightSensor.populateTelemetry(telemetryJson);
+        doorComponent.populateTelemetry(telemetryJson);
     }
 
 private:
-    ChickenDoorComponent component;
+    Bh1750Component lightSensor;
+    ChickenDoorComponent doorComponent;
 };
 
 class ChickenDoorFactory
@@ -234,7 +286,7 @@ public:
 
     unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const ChickenDoorDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         PwmMotorDriver& motor = findMotor(deviceConfig.motor.get());
-        return std::make_unique<ChickenDoor>(name, mqttRoot, services.sleepManager, services.switches, motor, deviceConfig);
+        return std::make_unique<ChickenDoor>(name, mqttRoot, services.i2c, services.sleepManager, services.switches, motor, deviceConfig);
     }
 };
 
