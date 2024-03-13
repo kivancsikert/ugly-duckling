@@ -6,7 +6,7 @@
 #include <ArduinoLog.h>
 #include <SHT2x.h>
 
-#include <devices/Peripheral.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/Telemetry.hpp>
 

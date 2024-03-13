@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <devices/Peripheral.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/SleepManager.hpp>

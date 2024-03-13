@@ -5,7 +5,7 @@
 #include <SHT2x.h>
 #include <SHT31.h>
 
-#include <devices/Peripheral.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/PwmManager.hpp>

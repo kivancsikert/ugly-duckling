@@ -5,7 +5,7 @@
 #include <Arduino.h>
 #include <ArduinoLog.h>
 
-#include <devices/Peripheral.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 

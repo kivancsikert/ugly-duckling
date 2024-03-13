@@ -8,7 +8,7 @@
 #include <kernel/drivers/LedDriver.hpp>
 
 #include <devices/DeviceDefinition.hpp>
-#include <devices/Peripheral.hpp>
+#include <peripherals/Peripheral.hpp>
 
 #include <peripherals/flow_control/FlowControl.hpp>
 #include <peripherals/flow_meter/FlowMeter.hpp>

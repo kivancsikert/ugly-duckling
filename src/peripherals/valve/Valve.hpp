@@ -9,7 +9,7 @@
 #include <ArduinoJson.h>
 #include <ArduinoLog.h>
 
-#include <devices/Peripheral.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/Task.hpp>

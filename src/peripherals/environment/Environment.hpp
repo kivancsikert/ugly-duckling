@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include <devices/Peripheral.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 #include <peripherals/I2CConfig.hpp>

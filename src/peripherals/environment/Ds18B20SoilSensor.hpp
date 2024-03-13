@@ -7,7 +7,7 @@
 #include <DallasTemperature.h>
 #include <OneWire.h>
 
-#include <devices/Peripheral.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
