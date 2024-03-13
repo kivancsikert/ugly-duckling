@@ -22,59 +22,53 @@ enum class ButtonMode {
     PullDown
 };
 
-typedef std::function<void(gpio_num_t)> ButtonPressHandler;
+typedef std::function<void(gpio_num_t, milliseconds duration)> ButtonPressHandler;
 
 struct ButtonState {
+    String name;
     gpio_num_t pin;
     ButtonMode mode;
-    milliseconds pressTimeout;
 
     ButtonPressHandler handler;
 
-    bool pressed = false;
-    time_point<system_clock> lastPressTime;
-    Mutex triggered;
-    TaskHandle task = nullptr;
+    time_point<system_clock> pressTime;
 };
 
-static InterrputQueue<ButtonState> buttonStateInterrupts("button-state-interrupts", 4);
+struct ButtonStateChange {
+    ButtonState* button;
+    bool pressed;
+};
+
+static CopyQueue<ButtonStateChange> buttonStateInterrupts("button-state-interrupts", 4);
 
 // ISR handler for GPIO interrupt
 static void IRAM_ATTR handleButtonInterrupt(void* arg) {
     ButtonState* state = (ButtonState*) arg;
-    buttonStateInterrupts.offerFromISR(state);
+    bool pressed = digitalRead(state->pin) == (state->mode == ButtonMode::PullUp ? LOW : HIGH);
+    buttonStateInterrupts.offerFromISR(ButtonStateChange { state, pressed });
 }
 
 class ButtonManager {
 public:
     ButtonManager() {
         Task::loop("button-manager", 2560, [this](Task& task) {
-            ButtonState& state = buttonStateInterrupts.take();
-            auto pressed = digitalRead(state.pin) == (state.mode == ButtonMode::PullUp ? LOW : HIGH);
-            Log.verboseln("Button %d %s", state.pin, pressed ? "pressed" : "released");
-            if (pressed != state.pressed) {
-                state.pressed = pressed;
-                if (pressed) {
-                    state.lastPressTime = system_clock::now();
-                    state.task = Task::run("button-handler", [&state](Task& task) {
-                        task.delay(state.pressTimeout);
-                        Lock lock(state.triggered);
-                        Log.verboseln("Button %d pressed for %d ms, triggering",
-                            state.pin, duration_cast<milliseconds>(state.pressTimeout).count());
-                        state.handler(state.pin);
-                    });
-                } else {
-                    Lock lock(state.triggered);
-                    state.task.abort();
-                    state.task = nullptr;
-                }
+            ButtonStateChange stateChange = buttonStateInterrupts.take();
+            auto state = stateChange.button;
+            auto pressed = stateChange.pressed;
+            Log.verboseln("Button %s %s", state->pin,
+                state->name.c_str(), pressed ? "pressed" : "released");
+            if (pressed) {
+                state->pressTime = system_clock::now();
+            } else {
+                auto pressDuration = duration_cast<milliseconds>(system_clock::now() - state->pressTime);
+                state->handler(state->pin, pressDuration);
             }
         });
     }
 
-    void registerButtonPressHandler(gpio_num_t pin, ButtonMode mode, milliseconds pressTimeout, ButtonPressHandler handler) {
-        Log.infoln("Registering button on pin %d, mode %s",
-            pin, mode == ButtonMode::PullUp ? "pull-up" : "pull-down");
+    void registerButtonPressHandler(const String& name, gpio_num_t pin, ButtonMode mode, ButtonPressHandler handler) {
+        Log.infoln("Registering button %s on pin %d, mode %s",
+            name.c_str(), pin, mode == ButtonMode::PullUp ? "pull-up" : "pull-down");
 
         // Configure PIN_INPUT as input
         gpio_pad_select_gpio(pin);
@@ -82,9 +76,9 @@ public:
         gpio_set_pull_mode(pin, mode == ButtonMode::PullUp ? GPIO_PULLUP_ONLY : GPIO_PULLDOWN_ONLY);
 
         ButtonState* button = new ButtonState();
+        button->name = name;
         button->pin = pin;
         button->mode = mode;
-        button->pressTimeout = pressTimeout;
         button->handler = handler;
 
         // Install GPIO ISR

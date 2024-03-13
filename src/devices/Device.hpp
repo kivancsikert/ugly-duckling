@@ -219,8 +219,11 @@ class Device {
 public:
     Device() {
 
-        kernel.buttonManager.registerButtonPressHandler(deviceDefinition.bootPin, ButtonMode::PullUp, seconds { 5 }, [this](gpio_num_t) {
-            kernel.performFactoryReset();
+        kernel.buttonManager.registerButtonPressHandler("factory-reset", deviceDefinition.bootPin, ButtonMode::PullUp, [this](gpio_num_t, milliseconds duration) {
+            Log.infoln("Button pressed for %d ms", duration.count());
+            if (duration >= 5s) {
+                kernel.performFactoryReset();
+            }
         });
 
 #ifdef HAS_BATTERY

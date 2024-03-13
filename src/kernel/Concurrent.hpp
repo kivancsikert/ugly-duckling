@@ -12,12 +12,11 @@ using namespace std::chrono;
 
 namespace farmhub::kernel {
 
-template <typename TMessage>
 class BaseQueue {
 protected:
-    BaseQueue(const String& name, size_t capacity)
+    BaseQueue(const String& name, size_t messageSize, size_t capacity)
         : name(name)
-        , queue(xQueueCreate(capacity, sizeof(TMessage*))) {
+        , queue(xQueueCreate(capacity, messageSize)) {
     }
 
     ~BaseQueue() {
@@ -34,10 +33,10 @@ protected:
 };
 
 template <typename TMessage>
-class Queue : public BaseQueue<TMessage> {
+class Queue : public BaseQueue {
 public:
     Queue(const String& name, size_t capacity = 16)
-        : BaseQueue<TMessage>(name, capacity) {
+        : BaseQueue(name, sizeof(TMessage*), capacity) {
     }
 
     template <typename... Args>
@@ -122,30 +121,30 @@ public:
 
 template <typename TMessage>
 
-class InterrputQueue : public BaseQueue<TMessage> {
+class CopyQueue : public BaseQueue {
 public:
-    InterrputQueue(const String& name, size_t capacity = 16)
-        : BaseQueue<TMessage>(name, capacity) {
+    CopyQueue(const String& name, size_t capacity = 16)
+        : BaseQueue(name, sizeof(TMessage), capacity) {
     }
 
-    bool IRAM_ATTR offerFromISR(TMessage* message) {
+    bool IRAM_ATTR offerFromISR(const TMessage& message) {
         BaseType_t xHigherPriorityTaskWoken;
         bool sentWithoutDropping = xQueueSendFromISR(this->queue, &message, &xHigherPriorityTaskWoken) == pdTRUE;
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
         return sentWithoutDropping;
     }
 
-    void IRAM_ATTR overwriteFromISR(TMessage* message) {
+    void IRAM_ATTR overwriteFromISR(const TMessage& message) {
         BaseType_t xHigherPriorityTaskWoken;
         xQueueOverwriteFromISR(this->queue, &message, &xHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 
-    TMessage& take() {
-        TMessage* message;
+    TMessage take() {
+        TMessage message;
         while (!xQueueReceive(this->queue, &message, ticks::max().count())) {
         }
-        return *message;
+        return message;
     }
 
     void clear() {
