@@ -13,7 +13,6 @@
 #include <kernel/drivers/MqttDriver.hpp>
 #include <peripherals/SinglePinDeviceConfig.hpp>
 
-using namespace farmhub::devices;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 using namespace farmhub::peripherals;

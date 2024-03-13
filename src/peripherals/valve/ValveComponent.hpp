@@ -27,8 +27,8 @@ using std::make_unique;
 using std::move;
 using std::unique_ptr;
 
-using namespace farmhub::devices;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::valve {
 

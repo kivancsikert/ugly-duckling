@@ -16,7 +16,6 @@
 #include <kernel/Telemetry.hpp>
 
 using namespace std::chrono_literals;
-using namespace farmhub::devices;
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
 

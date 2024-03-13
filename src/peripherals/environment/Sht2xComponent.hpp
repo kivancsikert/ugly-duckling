@@ -12,8 +12,8 @@
 
 #include <peripherals/I2CConfig.hpp>
 
-using namespace farmhub::devices;
 using namespace farmhub::kernel;
+using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::environment {
 

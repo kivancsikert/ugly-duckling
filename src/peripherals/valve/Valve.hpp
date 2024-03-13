@@ -16,6 +16,7 @@
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 
+#include <peripherals/Motorized.hpp>
 #include <peripherals/valve/ValveComponent.hpp>
 #include <peripherals/valve/ValveConfig.hpp>
 #include <peripherals/valve/ValveScheduler.hpp>
@@ -25,8 +26,8 @@ using std::make_unique;
 using std::move;
 using std::unique_ptr;
 
-using namespace farmhub::devices;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::valve {
 
@@ -58,17 +59,18 @@ private:
 };
 
 class ValveFactory
-    : public PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType> {
+    : public PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType>,
+      protected Motorized {
 public:
     ValveFactory(
         const std::list<ServiceRef<PwmMotorDriver>>& motors,
         ValveControlStrategyType defaultStrategy)
         : PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType>("valve", defaultStrategy)
-        , motors(motors) {
+        , Motorized(motors) {
     }
 
     unique_ptr<Peripheral<ValveConfig>> createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
-        PwmMotorDriver& targetMotor = findMotor(name, deviceConfig.motor.get(), motors);
+        PwmMotorDriver& targetMotor = findMotor(name, deviceConfig.motor.get());
         ValveControlStrategy* strategy;
         try {
             strategy = createValveControlStrategy(
@@ -80,22 +82,6 @@ public:
         }
         return make_unique<Valve>(name, services.sleepManager, targetMotor, *strategy, mqttRoot);
     }
-
-    static PwmMotorDriver& findMotor(const String& name, const String& motorName, const std::list<ServiceRef<PwmMotorDriver>>& motors) {
-        // If there's only one motor and no name is specified, use it
-        if (motorName.isEmpty() && motors.size() == 1) {
-            return motors.front().get();
-        }
-        for (auto& motor : motors) {
-            if (motor.getName() == motorName) {
-                return motor.get();
-            }
-        }
-        throw PeripheralCreationException(name, "failed to find motor: " + motorName);
-    }
-
-private:
-    const std::list<ServiceRef<PwmMotorDriver>> motors;
 };
 
 }    // namespace farmhub::peripherals::valve

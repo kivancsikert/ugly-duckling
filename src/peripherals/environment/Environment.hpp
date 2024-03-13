@@ -7,9 +7,9 @@
 #include <kernel/drivers/MqttDriver.hpp>
 #include <peripherals/I2CConfig.hpp>
 
-using namespace farmhub::devices;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::peripherals;
 using std::make_unique;
 using std::unique_ptr;
 

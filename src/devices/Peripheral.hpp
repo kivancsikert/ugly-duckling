@@ -20,7 +20,7 @@ using std::unique_ptr;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 
-namespace farmhub::devices {
+namespace farmhub::peripherals {
 
 // Peripherals
 
@@ -235,4 +235,4 @@ private:
     std::list<unique_ptr<PeripheralBase>> peripherals;
 };
 
-}    // namespace farmhub::devices
+}    // namespace farmhub::peripherals

@@ -9,9 +9,9 @@
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>
 #include <peripherals/flow_meter/FlowMeterConfig.hpp>
 
-using namespace farmhub::devices;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::peripherals;
 using std::make_unique;
 using std::unique_ptr;
 namespace farmhub::peripherals::flow_meter {
