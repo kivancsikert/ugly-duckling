@@ -43,7 +43,8 @@ public:
         const I2CConfig& config,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : Component(name, mqttRoot) {
+        : Component(name, mqttRoot)
+        , measurementFrequency(measurementFrequency) {
 
         Log.infoln("Initializing BH1750 light sensor with %s",
             config.toString().c_str());
@@ -80,6 +81,10 @@ public:
         return averageLevel;
     }
 
+    seconds getMeasurementFrequency() {
+        return measurementFrequency;
+    }
+
     void populateTelemetry(JsonObject& json) override {
         Lock lock(updateAverageMutex);
         json["light"] = averageLevel;
@@ -87,6 +92,7 @@ public:
 
 private:
     BH1750 sensor;
+    const seconds measurementFrequency;
 
     std::deque<double> measurements;
     double sum;

@@ -78,14 +78,14 @@ public:
               name + ":open",
               openPin,
               SwitchMode::PullUp,
-              [this](const Switch&) { updateState("open switch engaged"); },
-              [this](const Switch&, milliseconds) { updateState("open switch released"); }))
+              [this](const Switch&) { updateState(); },
+              [this](const Switch&, milliseconds) { updateState(); }))
         , closedSwitch(switches.registerHandler(
               name + ":closed",
               closedPin,
               SwitchMode::PullUp,
-              [this](const Switch&) { updateState("close switch engaged"); },
-              [this](const Switch&, milliseconds) { updateState("close switch released"); })) {
+              [this](const Switch&) { updateState(); },
+              [this](const Switch&, milliseconds) { updateState(); })) {
 
         Log.infoln("Initializing chicken door %s, open switch %d, close switch %d",
             name.c_str(), openSwitch.getPin(), closedSwitch.getPin());
@@ -111,8 +111,8 @@ public:
             DoorState targetState = determineTargetState(currentState);
             if (currentState != targetState) {
                 if (currentState != lastState) {
-                    Log.infoln("Going from state %d to %d",
-                        currentState, targetState);
+                    Log.verboseln("Going from state %d to %d (light level %F)",
+                        currentState, targetState, lightSensor.getCurrentLevel());
                 }
                 switch (targetState) {
                     case DoorState::OPEN:
@@ -127,6 +127,8 @@ public:
                 }
             } else {
                 if (currentState != lastState) {
+                    Log.verboseln("Staying in state %d (light level %F)",
+                        currentState, lightSensor.getCurrentLevel());
                     motor.stop();
                 }
             }
@@ -135,17 +137,15 @@ public:
             auto overrideWaitTime = overrideUntil < now
                 ? ticks::max()
                 : duration_cast<ticks>(overrideUntil - now);
-            // TODO Use measurement frequency as the default wait time
-            auto waitTime = std::min(overrideWaitTime, duration_cast<ticks>(1s));
+            auto waitTime = std::min(overrideWaitTime, duration_cast<ticks>(lightSensor.getMeasurementFrequency()));
             updateQueue.pollIn(waitTime, [this](auto& change) {
                 std::visit(
                     [this](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
                         if constexpr (std::is_same_v<T, StateUpdated>) {
-                            Log.verboseln("State update received");
-                            //
+                            // State update received
                         } else if constexpr (std::is_same_v<T, StateOverride>) {
-                            Log.verboseln("Override received");
+                            Log.infoln("Override received");
                             overrideState = arg.state;
                             overrideUntil = arg.until;
                         }
@@ -164,9 +164,7 @@ public:
     }
 
 private:
-    void updateState(const String& mesage) {
-        Log.verboseln("Updating state because %s",
-            mesage.c_str());
+    void updateState() {
         updateQueue.offer(StateUpdated {});
     }
 
