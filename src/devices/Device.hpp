@@ -218,9 +218,7 @@ public:
 class Device {
 public:
     Device() {
-
-        kernel.buttonManager.registerButtonPressHandler("factory-reset", deviceDefinition.bootPin, ButtonMode::PullUp, [this](gpio_num_t, milliseconds duration) {
-            Log.infoln("Button pressed for %d ms", duration.count());
+        kernel.buttonManager.registerButtonReleaseHandler("factory-reset", deviceDefinition.bootPin, ButtonMode::PullUp, [this](const Button&, milliseconds duration) {
             if (duration >= 5s) {
                 kernel.performFactoryReset();
             }

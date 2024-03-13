@@ -22,16 +22,39 @@ enum class ButtonMode {
     PullDown
 };
 
-typedef std::function<void(gpio_num_t, milliseconds duration)> ButtonPressHandler;
+class Button {
+public:
+    virtual const String& getName() = 0;
+    virtual gpio_num_t getPin() = 0;
+};
 
-struct ButtonState {
+typedef std::function<void(const Button&)> ButtonPressHandler;
+typedef std::function<void(const Button&, milliseconds duration)> ButtonReleaseHandler;
+
+class ButtonManager;
+
+struct ButtonState : public Button {
+public:
+    const String& getName() override {
+        return name;
+    }
+
+    gpio_num_t getPin() override {
+        return pin;
+    }
+
+private:
     String name;
     gpio_num_t pin;
     ButtonMode mode;
 
-    ButtonPressHandler handler;
+    ButtonPressHandler pressHandler;
+    ButtonReleaseHandler releaseHandler;
 
     time_point<system_clock> pressTime;
+
+    friend class ButtonManager;
+    friend void handleButtonInterrupt(void* arg);
 };
 
 struct ButtonStateChange {
@@ -59,14 +82,24 @@ public:
                 state->name.c_str(), pressed ? "pressed" : "released");
             if (pressed) {
                 state->pressTime = system_clock::now();
+                state->pressHandler(*state);
             } else {
                 auto pressDuration = duration_cast<milliseconds>(system_clock::now() - state->pressTime);
-                state->handler(state->pin, pressDuration);
+                state->releaseHandler(*state, pressDuration);
             }
         });
     }
 
-    void registerButtonPressHandler(const String& name, gpio_num_t pin, ButtonMode mode, ButtonPressHandler handler) {
+    void registerButtonPressHandler(const String& name, gpio_num_t pin, ButtonMode mode, ButtonPressHandler pressHandler) {
+        registerButtonHandler(name, pin, mode, pressHandler, [](const Button&, milliseconds) {});
+    }
+
+    void registerButtonReleaseHandler(const String& name, gpio_num_t pin, ButtonMode mode, ButtonReleaseHandler releaseHandler) {
+        registerButtonHandler(
+            name, pin, mode, [](const Button&) {}, releaseHandler);
+    }
+
+    void registerButtonHandler(const String& name, gpio_num_t pin, ButtonMode mode, ButtonPressHandler pressHandler, ButtonReleaseHandler releaseHandler) {
         Log.infoln("Registering button %s on pin %d, mode %s",
             name.c_str(), pin, mode == ButtonMode::PullUp ? "pull-up" : "pull-down");
 
@@ -79,7 +112,8 @@ public:
         button->name = name;
         button->pin = pin;
         button->mode = mode;
-        button->handler = handler;
+        button->pressHandler = pressHandler;
+        button->releaseHandler = releaseHandler;
 
         // Install GPIO ISR
         gpio_install_isr_service(0);
