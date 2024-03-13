@@ -12,6 +12,7 @@
 #include <kernel/SleepManager.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
+#include <kernel/drivers/SwitchManager.hpp>
 
 using std::move;
 using std::shared_ptr;
@@ -96,6 +97,7 @@ struct PeripheralServices {
     PcntManager& pcntManager;
     PwmManager& pwmManager;
     SleepManager& sleepManager;
+    SwitchManager& switchManager;
 };
 
 class PeripheralFactoryBase {
@@ -161,8 +163,9 @@ public:
         PcntManager& pcntManager,
         PwmManager& pwmManager,
         SleepManager& sleepManager,
+        SwitchManager& switchManager,
         const shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot)
-        : services(PeripheralServices { pcntManager, pwmManager, sleepManager })
+        : services({ pcntManager, pwmManager, sleepManager, switchManager })
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 
