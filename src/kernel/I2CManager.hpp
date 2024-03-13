@@ -2,6 +2,7 @@
 
 #include <map>
 #include <utility>
+#include <exception>
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -39,7 +40,10 @@ public:
         } else {
             Log.verboseln("Creating new I2C bus for SDA: %d, SCL: %d", sda, scl);
             TwoWire* wire = new TwoWire(nextBus++);
-            wire->begin(sda, scl);
+            if (!wire->begin(sda, scl)) {
+                throw std::runtime_error(
+                    String("Failed to initialize I2C bus for SDA: " + String(sda) + ", SCL: " + String(scl)).c_str());
+            }
             wireMap[key] = wire;
             return *wire;
         }

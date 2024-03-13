@@ -1,12 +1,12 @@
 #pragma once
 
 #include <Arduino.h>
-#include <Wire.h>
 
 #include <ArduinoLog.h>
 #include <SHT31.h>
 
 #include <kernel/Component.hpp>
+#include <kernel/I2CManager.hpp>
 #include <kernel/Telemetry.hpp>
 #include <peripherals/Peripheral.hpp>
 
@@ -25,11 +25,10 @@ public:
         const String& name,
         const String& sensorType,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        I2CManager& i2c,
         I2CConfig config)
         : Component(name, mqttRoot)
-        // TODO Add I2C manager to hand out wires
-        , wire(1)
-        , sensor(config.address, &wire) {
+        , sensor(config.address, &i2c.getWireFor(config)) {
 
         // TODO Add commands to soft/hard reset the sensor
         // TODO Add configuration for fast / slow measurement
@@ -38,9 +37,6 @@ public:
         Log.infoln("Initializing %s environment sensor with %s",
             sensorType.c_str(), config.toString().c_str());
 
-        if (!wire.begin(config.sda, config.scl, 100000L)) {
-            throw PeripheralCreationException("Failed to initialize I2C bus for environment sensor");
-        }
         if (!sensor.begin()) {
             throw PeripheralCreationException("Failed to initialize environment sensor: " + String(sensor.getError()));
         }
@@ -60,7 +56,6 @@ public:
     }
 
 private:
-    TwoWire wire;
     SHT31 sensor;
 };
 
