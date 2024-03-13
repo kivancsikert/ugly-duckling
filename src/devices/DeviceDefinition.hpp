@@ -18,6 +18,7 @@
 #include <peripherals/environment/Sht31Component.hpp>
 #include <peripherals/environment/SoilMoistureSensor.hpp>
 #include <peripherals/fence/ElectricFenceMonitor.hpp>
+#include <peripherals/light_sensor/Bh1750.hpp>
 
 #include <version.h>
 
@@ -67,6 +68,7 @@ public:
         peripheralManager.registerFactory(ds18b20SoilSensorFactory);
         peripheralManager.registerFactory(soilMoistureSensorFactory);
         peripheralManager.registerFactory(electricFenceMonitorFactory);
+        peripheralManager.registerFactory(bh1750Factory);
         registerDeviceSpecificPeripheralFactories(peripheralManager);
     }
 
@@ -103,6 +105,8 @@ private:
     Ds18B20SoilSensorFactory ds18b20SoilSensorFactory;
 
     farmhub::peripherals::fence::ElectricFenceMonitorFactory electricFenceMonitorFactory;
+
+    farmhub::peripherals::light_sensor::Bh1750Factory bh1750Factory;
 };
 
 template <typename TDeviceConfiguration>
