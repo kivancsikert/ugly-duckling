@@ -20,7 +20,6 @@ template <typename TComponent>
 class Environment
     : public Peripheral<EmptyConfiguration> {
 public:
-    // TODO Use TComponentArgs&& instead
     Environment(
         const String& name,
         const String& sensorType,
