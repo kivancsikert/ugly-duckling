@@ -17,6 +17,15 @@ enum class ValveState {
     OPEN = 1
 };
 
+// JSON: ValveState
+
+bool convertToJson(const ValveState& src, JsonVariant dst) {
+    return dst.set(static_cast<int>(src));
+}
+void convertFromJson(JsonVariantConst src, ValveState& dst) {
+    dst = static_cast<ValveState>(src.as<int>());
+}
+
 class ValveSchedule {
 public:
     ValveSchedule(

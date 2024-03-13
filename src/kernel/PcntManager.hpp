@@ -28,7 +28,7 @@ struct PcntUnit {
         : PcntUnit(other.unit, other.pin) {
     }
 
-    int16_t getCount() {
+    int16_t getCount() const {
         int16_t count;
         pcnt_get_counter_value(unit, &count);
         return count;
@@ -46,7 +46,7 @@ struct PcntUnit {
         return count;
     }
 
-    gpio_num_t getPin() {
+    gpio_num_t getPin() const {
         return pin;
     }
 

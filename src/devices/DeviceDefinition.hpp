@@ -5,12 +5,12 @@
 #include <SHT2x.h>
 #include <SHT31.h>
 
-#include <peripherals/Peripheral.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/PwmManager.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
+#include <peripherals/Peripheral.hpp>
 
 #include <peripherals/environment/Ds18B20SoilSensor.hpp>
 #include <peripherals/environment/Environment.hpp>

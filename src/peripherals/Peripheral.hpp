@@ -97,7 +97,7 @@ struct PeripheralServices {
     PcntManager& pcntManager;
     PwmManager& pwmManager;
     SleepManager& sleepManager;
-    SwitchManager& switchManager;
+    SwitchManager& switches;
 };
 
 class PeripheralFactoryBase {

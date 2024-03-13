@@ -54,15 +54,6 @@ public:
     Property<milliseconds> switchDuration { this, "switchDuration", 500ms };
 };
 
-// JSON: ValveState
-
-bool convertToJson(const ValveState& src, JsonVariant dst) {
-    return dst.set(static_cast<int>(src));
-}
-void convertFromJson(JsonVariantConst src, ValveState& dst) {
-    dst = static_cast<ValveState>(src.as<int>());
-}
-
 // JSON: ValveControlStrategyType
 
 bool convertToJson(const ValveControlStrategyType& src, JsonVariant dst) {
