@@ -13,6 +13,7 @@
 #include <ArduinoLog.h>
 
 #include <kernel/FileSystem.hpp>
+#include <kernel/I2CManager.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
@@ -286,6 +287,7 @@ private:
 public:
     MqttDriver mqtt { networkReadyState, mdns, mqttConfig, deviceConfig.instance.get(), mqttReadyState };
     SwitchManager switches;
+    I2CManager i2c;
 };
 
 }    // namespace farmhub::kernel

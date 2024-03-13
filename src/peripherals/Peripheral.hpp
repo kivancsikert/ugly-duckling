@@ -6,6 +6,7 @@
 #include <ArduinoLog.h>
 
 #include <kernel/Configuration.hpp>
+#include <kernel/I2CManager.hpp>
 #include <kernel/Named.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/PwmManager.hpp>
@@ -94,6 +95,7 @@ public:
 };
 
 struct PeripheralServices {
+    I2CManager& i2c;
     PcntManager& pcntManager;
     PwmManager& pwmManager;
     SleepManager& sleepManager;
@@ -160,12 +162,13 @@ class PeripheralManager
     : public TelemetryPublisher {
 public:
     PeripheralManager(
+        I2CManager& i2c,
         PcntManager& pcntManager,
         PwmManager& pwmManager,
         SleepManager& sleepManager,
         SwitchManager& switchManager,
         const shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot)
-        : services({ pcntManager, pwmManager, sleepManager, switchManager })
+        : services({ i2c, pcntManager, pwmManager, sleepManager, switchManager })
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 

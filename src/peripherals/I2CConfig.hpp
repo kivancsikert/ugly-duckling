@@ -5,22 +5,12 @@
 #include <Arduino.h>
 
 #include <kernel/Configuration.hpp>
+#include <kernel/I2CManager.hpp>
 
 using namespace std::chrono;
 using namespace farmhub::kernel;
 
 namespace farmhub::peripherals {
-
-struct I2CConfig {
-public:
-    uint8_t address;
-    gpio_num_t sda;
-    gpio_num_t scl;
-
-    String toString() {
-        return String("I2C address: 0x") + String(address, HEX) + ", SDA: " + String(sda) + ", SCL: " + String(scl);
-    }
-};
 
 class I2CDeviceConfig
     : public ConfigurationSection {
