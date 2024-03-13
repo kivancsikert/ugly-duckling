@@ -219,7 +219,7 @@ public:
 class Device {
 public:
     Device() {
-        kernel.switches.registerSwitchReleaseHandler("factory-reset", deviceDefinition.bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
+        kernel.switches.onReleased("factory-reset", deviceDefinition.bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 5s) {
                 kernel.performFactoryReset();
             }

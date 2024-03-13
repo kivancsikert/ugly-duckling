@@ -91,16 +91,16 @@ public:
         });
     }
 
-    void registerSwitchEngagementHandler(const String& name, gpio_num_t pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
-        registerSwitchHandler(name, pin, mode, engagementHandler, [](const Switch&, milliseconds) {});
+    void onEngaged(const String& name, gpio_num_t pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
+        registerHandler(name, pin, mode, engagementHandler, [](const Switch&, milliseconds) {});
     }
 
-    void registerSwitchReleaseHandler(const String& name, gpio_num_t pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
-        registerSwitchHandler(
+    void onReleased(const String& name, gpio_num_t pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
+        registerHandler(
             name, pin, mode, [](const Switch&) {}, releaseHandler);
     }
 
-    void registerSwitchHandler(const String& name, gpio_num_t pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
+    void registerHandler(const String& name, gpio_num_t pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
         Log.infoln("Registering switch %s on pin %d, mode %s",
             name.c_str(), pin, mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
 
