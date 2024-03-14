@@ -1,0 +1,31 @@
+{
+  "instance": "test-mk6-8",
+  "peripherals": [
+    {
+      "name": "flow-control-a",
+      "type": "flow-control",
+      "params": {
+        "valve": {
+          "motor": "a"
+        },
+        "flow-meter": {
+          "pin": 6
+        }
+      }
+    },
+    {
+      "name": "chicken-door-a",
+      "type": "chicken-door",
+      "params": {
+        "motor": "b",
+        "openPin": 45,
+        "closedPin": 5,
+        "lightSensor": {
+          "scl": 47,
+          "sda": 21
+        }
+      }
+    }
+  ],
+  "sleepWhenIdle": true
+}
