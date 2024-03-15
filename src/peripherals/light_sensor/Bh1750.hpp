@@ -16,6 +16,7 @@
 #include <kernel/Telemetry.hpp>
 #include <peripherals/I2CConfig.hpp>
 #include <peripherals/Peripheral.hpp>
+#include <peripherals/light_sensor/AbstractLightSensor.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -33,8 +34,7 @@ public:
 };
 
 class Bh1750Component
-    : public Component,
-      public TelemetryProvider {
+    : public AbstractLightSensorComponent {
 public:
     Bh1750Component(
         const String& name,
@@ -43,8 +43,7 @@ public:
         const I2CConfig& config,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : Component(name, mqttRoot)
-        , measurementFrequency(measurementFrequency) {
+        : AbstractLightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval) {
 
         Log.infoln("Initializing BH1750 light sensor with %s",
             config.toString().c_str());
@@ -55,50 +54,15 @@ public:
         if (!sensor.begin(BH1750::CONTINUOUS_LOW_RES_MODE, config.address, &i2c.getWireFor(config))) {
             throw PeripheralCreationException("Failed to initialize BH1750 light sensor");
         }
-
-        Task::loop(name, 3072, [this, measurementFrequency, latencyInterval](Task& task) {
-            auto currentLevel = sensor.readLightLevel();
-
-            size_t maxMaxmeasurements = latencyInterval.count() / measurementFrequency.count();
-            while (measurements.size() >= maxMaxmeasurements) {
-                sum -= measurements.front();
-                measurements.pop_front();
-            }
-            measurements.emplace_back(currentLevel);
-            sum += currentLevel;
-
-            {
-                Lock lock(updateAverageMutex);
-                averageLevel = sum / measurements.size();
-            }
-
-            task.delayUntil(measurementFrequency);
-        });
     }
 
-    double getCurrentLevel() {
-        Lock lock(updateAverageMutex);
-        return averageLevel;
-    }
-
-    seconds getMeasurementFrequency() {
-        return measurementFrequency;
-    }
-
-    void populateTelemetry(JsonObject& json) override {
-        Lock lock(updateAverageMutex);
-        json["light"] = averageLevel;
+protected:
+    double readLightLevel() override {
+        return sensor.readLightLevel();
     }
 
 private:
     BH1750 sensor;
-    const seconds measurementFrequency;
-
-    std::deque<double> measurements;
-    double sum;
-
-    Mutex updateAverageMutex;
-    double averageLevel = 0;
 };
 
 class Bh1750
