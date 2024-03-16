@@ -8,7 +8,9 @@
 #include <Wire.h>
 
 #include <ArduinoLog.h>
-#include <BH1750.h>
+
+#include <Adafruit_Sensor.h>
+#include <Adafruit_TSL2591.h>
 
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>
@@ -26,17 +28,17 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::light_sensor {
 
-class Bh1750DeviceConfig
+class Tsl2591DeviceConfig
     : public I2CDeviceConfig {
 public:
     Property<seconds> measurementFrequency { this, "measurementFrequency", 1s };
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
 };
 
-class Bh1750Component
+class Tsl2591Component
     : public LightSensorComponent {
 public:
-    Bh1750Component(
+    Tsl2591Component(
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         I2CManager& i2c,
@@ -45,31 +47,37 @@ public:
         seconds latencyInterval)
         : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval) {
 
-        Log.infoln("Initializing BH1750 light sensor with %s",
+        Log.infoln("Initializing TSL2591 light sensor with %s",
             config.toString().c_str());
 
-        // TODO Make mode configurable
-        // TODO What's the difference between one-time and continuous mode here?
-        //      Can we save some battery by using one-time mode? Are we losing anything by doing so?
-        if (!sensor.begin(BH1750::CONTINUOUS_LOW_RES_MODE, config.address, &i2c.getWireFor(config))) {
-            throw PeripheralCreationException("Failed to initialize BH1750 light sensor");
+        if (!sensor.begin(&i2c.getWireFor(config), config.address)) {
+            throw PeripheralCreationException("Failed to initialize TSL2591 light sensor");
         }
+
+        // TODO Make these configurable
+        sensor.setGain(TSL2591_GAIN_MED);
+        sensor.setTiming(TSL2591_INTEGRATIONTIME_300MS);
+
+        sensor_t sensorInfo;
+        sensor.getSensor(&sensorInfo);
+        Log.traceln("Found sensor: %s, driver version: %d, unique ID: %d, max value: %F lux, min value: %F lux, resolution: %F lux",
+            sensorInfo.name, sensorInfo.version, sensorInfo.sensor_id, sensorInfo.max_value, sensorInfo.min_value, sensorInfo.resolution);
     }
 
 protected:
     double readLightLevel() override {
-        return sensor.readLightLevel();
+        return sensor.getLuminosity(TSL2591_VISIBLE);
     }
 
 private:
-    BH1750 sensor;
+    Adafruit_TSL2591 sensor;
 };
 
-class Bh1750
+class Tsl2591
     : public Peripheral<EmptyConfiguration> {
 
 public:
-    Bh1750(
+    Tsl2591(
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         I2CManager& i2c,
@@ -85,19 +93,19 @@ public:
     }
 
 private:
-    Bh1750Component component;
+    Tsl2591Component component;
 };
 
-class Bh1750Factory
-    : public PeripheralFactory<Bh1750DeviceConfig, EmptyConfiguration> {
+class Tsl2591Factory
+    : public PeripheralFactory<Tsl2591DeviceConfig, EmptyConfiguration> {
 public:
-    Bh1750Factory()
-        : PeripheralFactory<Bh1750DeviceConfig, EmptyConfiguration>("light-sensor:bh1750", "light-sensor") {
+    Tsl2591Factory()
+        : PeripheralFactory<Tsl2591DeviceConfig, EmptyConfiguration>("light-sensor:tsl2591", "light-sensor") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const Bh1750DeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
-        I2CConfig i2cConfig = deviceConfig.parse(0x23);
-        return std::make_unique<Bh1750>(name, mqttRoot, services.i2c, i2cConfig, deviceConfig.measurementFrequency.get(), deviceConfig.latencyInterval.get());
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const Tsl2591DeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
+        I2CConfig i2cConfig = deviceConfig.parse(TSL2591_ADDR);
+        return std::make_unique<Tsl2591>(name, mqttRoot, services.i2c, i2cConfig, deviceConfig.measurementFrequency.get(), deviceConfig.latencyInterval.get());
     }
 };
 

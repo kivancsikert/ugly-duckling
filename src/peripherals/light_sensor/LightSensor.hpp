@@ -25,11 +25,11 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::light_sensor {
 
-class AbstractLightSensorComponent
+class LightSensorComponent
     : public Component,
       public TelemetryProvider {
 public:
-    AbstractLightSensorComponent(
+    LightSensorComponent(
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         seconds measurementFrequency,
