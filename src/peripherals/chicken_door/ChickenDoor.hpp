@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <limits>
 #include <list>
 #include <variant>
 
@@ -51,16 +52,21 @@ public:
     Property<seconds> measurementFrequency { this, "measurementFrequency", 1s };
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
 };
+
 class ChickenDoorDeviceConfig
     : public ConfigurationSection {
 public:
     Property<String> motor { this, "motor" };
-    Property<double> openLevel { this, "openLevel", 500 };
-    Property<double> closeLevel { this, "closeLevel", 10 };
     Property<gpio_num_t> openPin { this, "openPin", GPIO_NUM_NC };
     Property<gpio_num_t> closedPin { this, "closedPin", GPIO_NUM_NC };
 
     NamedConfigurationEntry<ChickenDoorLightSensorConfig> lightSensor { this, "lightSensor" };
+};
+
+class ChickenDoorConfig : public ConfigurationSection {
+public:
+    Property<double> openLevel { this, "openLevel", 250 };
+    Property<double> closeLevel { this, "closeLevel", 10 };
 };
 
 template <typename TLightSensorComponent>
@@ -75,16 +81,12 @@ public:
         SwitchManager& switches,
         PwmMotorDriver& motor,
         TLightSensorComponent& lightSensor,
-        double openLevel,
-        double closeLevel,
         gpio_num_t openPin,
         gpio_num_t closedPin)
         : Component(name, mqttRoot)
         , sleepManager(sleepManager)
         , motor(motor)
         , lightSensor(lightSensor)
-        , openLevel(openLevel)
-        , closeLevel(closeLevel)
         , openSwitch(switches.registerHandler(
               name + ":open",
               openPin,
@@ -174,6 +176,13 @@ public:
         }
     }
 
+    void configure(const ChickenDoorConfig& config) {
+        openLevel = config.openLevel.get();
+        closeLevel = config.closeLevel.get();
+        Log.infoln("Configured chicken door %s to close at %F lux, and open at %F lux",
+            name.c_str(), closeLevel, openLevel);
+    }
+
 private:
     void updateState() {
         updateQueue.offer(StateUpdated {});
@@ -219,8 +228,8 @@ private:
     PwmMotorDriver& motor;
     TLightSensorComponent& lightSensor;
 
-    const double openLevel;
-    const double closeLevel;
+    double openLevel = std::numeric_limits<double>::max();
+    double closeLevel = std::numeric_limits<double>::min();
 
     const Switch& openSwitch;
     const Switch& closedSwitch;
@@ -244,7 +253,7 @@ private:
 
 template <typename TLightSensorComponent>
 class ChickenDoor
-    : public Peripheral<EmptyConfiguration> {
+    : public Peripheral<ChickenDoorConfig> {
 public:
     ChickenDoor(
         const String& name,
@@ -255,7 +264,7 @@ public:
         SwitchManager& switches,
         PwmMotorDriver& motor,
         const ChickenDoorDeviceConfig& config)
-        : Peripheral<EmptyConfiguration>(name, mqttRoot)
+        : Peripheral<ChickenDoorConfig>(name, mqttRoot)
         , lightSensor(
               name + ":light",
               mqttRoot,
@@ -270,8 +279,6 @@ public:
               switches,
               motor,
               lightSensor,
-              config.openLevel.get(),
-              config.closeLevel.get(),
               config.openPin.get(),
               config.closedPin.get()) {
     }
@@ -281,21 +288,25 @@ public:
         doorComponent.populateTelemetry(telemetryJson);
     }
 
+    void configure(const ChickenDoorConfig& config) override {
+        doorComponent.configure(config);
+    }
+
 private:
     TLightSensorComponent lightSensor;
     ChickenDoorComponent<TLightSensorComponent> doorComponent;
 };
 
 class ChickenDoorFactory
-    : public PeripheralFactory<ChickenDoorDeviceConfig, EmptyConfiguration>,
+    : public PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig>,
       protected Motorized {
 public:
     ChickenDoorFactory(const std::list<ServiceRef<PwmMotorDriver>>& motors)
-        : PeripheralFactory<ChickenDoorDeviceConfig, EmptyConfiguration>("chicken-door")
+        : PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig>("chicken-door")
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const ChickenDoorDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const String& name, const ChickenDoorDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         PwmMotorDriver& motor = findMotor(deviceConfig.motor.get());
         auto lightSensorType = deviceConfig.lightSensor.get().type.get();
         if (lightSensorType == "bh1750") {
