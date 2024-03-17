@@ -19,6 +19,8 @@
 #include <peripherals/Motorized.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/light_sensor/Bh1750.hpp>
+#include <peripherals/light_sensor/LightSensor.hpp>
+#include <peripherals/light_sensor/Tsl2591.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
@@ -41,6 +43,14 @@ void convertFromJson(JsonVariantConst src, DoorState& dst) {
     dst = static_cast<DoorState>(src.as<int>());
 }
 
+class ChickenDoorLightSensorConfig
+    : public I2CDeviceConfig {
+public:
+    Property<String> type { this, "type", "bh1750" };
+    Property<String> i2c { this, "i2c" };
+    Property<seconds> measurementFrequency { this, "measurementFrequency", 1s };
+    Property<seconds> latencyInterval { this, "latencyInterval", 5s };
+};
 class ChickenDoorDeviceConfig
     : public ConfigurationSection {
 public:
@@ -50,9 +60,10 @@ public:
     Property<gpio_num_t> openPin { this, "openPin", GPIO_NUM_NC };
     Property<gpio_num_t> closedPin { this, "closedPin", GPIO_NUM_NC };
 
-    NamedConfigurationEntry<Bh1750DeviceConfig> lightSensor { this, "lightSensor" };
+    NamedConfigurationEntry<ChickenDoorLightSensorConfig> lightSensor { this, "lightSensor" };
 };
 
+template <typename TLightSensorComponent>
 class ChickenDoorComponent
     : public Component,
       public TelemetryProvider {
@@ -63,7 +74,7 @@ public:
         SleepManager& sleepManager,
         SwitchManager& switches,
         PwmMotorDriver& motor,
-        Bh1750Component& lightSensor,
+        TLightSensorComponent& lightSensor,
         double openLevel,
         double closeLevel,
         gpio_num_t openPin,
@@ -206,7 +217,7 @@ private:
 
     SleepManager& sleepManager;
     PwmMotorDriver& motor;
-    Bh1750Component& lightSensor;
+    TLightSensorComponent& lightSensor;
 
     const double openLevel;
     const double closeLevel;
@@ -231,6 +242,7 @@ private:
     time_point<system_clock> overrideUntil = time_point<system_clock>::min();
 };
 
+template <typename TLightSensorComponent>
 class ChickenDoor
     : public Peripheral<EmptyConfiguration> {
 public:
@@ -238,6 +250,7 @@ public:
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         I2CManager& i2c,
+        uint8_t lightSensorAddress,
         SleepManager& sleepManager,
         SwitchManager& switches,
         PwmMotorDriver& motor,
@@ -247,7 +260,7 @@ public:
               name + ":light",
               mqttRoot,
               i2c,
-              config.lightSensor.get().parse(0x23),
+              config.lightSensor.get().parse(lightSensorAddress),
               config.lightSensor.get().measurementFrequency.get(),
               config.lightSensor.get().latencyInterval.get())
         , doorComponent(
@@ -269,8 +282,8 @@ public:
     }
 
 private:
-    Bh1750Component lightSensor;
-    ChickenDoorComponent doorComponent;
+    TLightSensorComponent lightSensor;
+    ChickenDoorComponent<TLightSensorComponent> doorComponent;
 };
 
 class ChickenDoorFactory
@@ -284,7 +297,14 @@ public:
 
     unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const ChickenDoorDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         PwmMotorDriver& motor = findMotor(deviceConfig.motor.get());
-        return std::make_unique<ChickenDoor>(name, mqttRoot, services.i2c, services.sleepManager, services.switches, motor, deviceConfig);
+        auto lightSensorType = deviceConfig.lightSensor.get().type.get();
+        if (lightSensorType == "bh1750") {
+            return std::make_unique<ChickenDoor<Bh1750Component>>(name, mqttRoot, services.i2c, 0x23, services.sleepManager, services.switches, motor, deviceConfig);
+        } else if (lightSensorType == "tsl2591") {
+            return std::make_unique<ChickenDoor<Tsl2591Component>>(name, mqttRoot, services.i2c, TSL2591_ADDR, services.sleepManager, services.switches, motor, deviceConfig);
+        } else {
+            throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
+        }
     }
 };
 
