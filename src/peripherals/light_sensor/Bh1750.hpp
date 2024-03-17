@@ -54,6 +54,8 @@ public:
         if (!sensor.begin(BH1750::CONTINUOUS_LOW_RES_MODE, config.address, &i2c.getWireFor(config))) {
             throw PeripheralCreationException("Failed to initialize BH1750 light sensor");
         }
+
+        runLoop();
     }
 
 protected:

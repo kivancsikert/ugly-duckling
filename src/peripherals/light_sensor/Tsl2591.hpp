@@ -63,6 +63,7 @@ public:
         Log.traceln("Found sensor: %s, driver version: %d, unique ID: %d, max value: %F lux, min value: %F lux, resolution: %F mlux",
             sensorInfo.name, sensorInfo.version, sensorInfo.sensor_id, sensorInfo.max_value, sensorInfo.min_value, sensorInfo.resolution * 1000);
 
+        runLoop();
     }
 
 protected:
