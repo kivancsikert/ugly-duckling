@@ -93,6 +93,7 @@ public:
 
             consoleQueue.drain([](String line) {
                 Serial.println(line);
+                Serial0.println(line);
             });
 
             Serial.print(status);
@@ -126,6 +127,7 @@ public:
         buffer->clear();
         if (!consoleQueue.offer(copy)) {
             Serial.println(copy);
+            Serial0.println(copy);
         }
     }
 
@@ -171,6 +173,7 @@ class ConsoleProvider {
 public:
     ConsoleProvider() {
         Serial.begin(115200);
+        Serial0.begin(115200);
 #ifdef FARMHUB_DEBUG
         Log.begin(FARMHUB_LOG_LEVEL, &consolePrinter);
         Log.setSuffix(printLogLine);
@@ -327,7 +330,7 @@ private:
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;
 
     shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig.instance.get());
-    PeripheralManager peripheralManager { deviceDefinition.pcnt, deviceDefinition.pwm, kernel.sleepManager, mqttDeviceRoot };
+    PeripheralManager peripheralManager { kernel.i2c, deviceDefinition.pcnt, deviceDefinition.pwm, kernel.sleepManager, kernel.switches, mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };

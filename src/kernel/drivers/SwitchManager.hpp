@@ -24,8 +24,9 @@ enum class SwitchMode {
 
 class Switch {
 public:
-    virtual const String& getName() = 0;
-    virtual gpio_num_t getPin() = 0;
+    virtual const String& getName() const = 0;
+    virtual gpio_num_t getPin() const = 0;
+    virtual bool isEngaged() const = 0;
 };
 
 static void handleSwitchInterrupt(void* arg);
@@ -52,16 +53,17 @@ public:
     typedef std::function<void(const Switch&)> SwitchEngagementHandler;
     typedef std::function<void(const Switch&, milliseconds duration)> SwitchReleaseHandler;
 
-    void onEngaged(const String& name, gpio_num_t pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
-        registerHandler(name, pin, mode, engagementHandler, [](const Switch&, milliseconds) {});
+    const Switch& onEngaged(const String& name, gpio_num_t pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
+        return registerHandler(
+            name, pin, mode, engagementHandler, [](const Switch&, milliseconds) {});
     }
 
-    void onReleased(const String& name, gpio_num_t pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
-        registerHandler(
+    const Switch& onReleased(const String& name, gpio_num_t pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
+        return registerHandler(
             name, pin, mode, [](const Switch&) {}, releaseHandler);
     }
 
-    void registerHandler(const String& name, gpio_num_t pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
+    const Switch& registerHandler(const String& name, gpio_num_t pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
         Log.infoln("Registering switch %s on pin %d, mode %s",
             name.c_str(), pin, mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
 
@@ -82,17 +84,23 @@ public:
         gpio_install_isr_service(0);
         gpio_isr_handler_add(pin, handleSwitchInterrupt, switchState);
         gpio_set_intr_type(pin, GPIO_INTR_ANYEDGE);
+
+        return *switchState;
     }
 
 private:
     struct SwitchState : public Switch {
     public:
-        const String& getName() override {
+        const String& getName() const override {
             return name;
         }
 
-        gpio_num_t getPin() override {
+        gpio_num_t getPin() const override {
             return pin;
+        }
+
+        bool isEngaged() const override {
+            return digitalRead(pin) == (mode == SwitchMode::PullUp ? LOW : HIGH);
         }
 
     private:

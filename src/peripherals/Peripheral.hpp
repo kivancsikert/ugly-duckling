@@ -6,12 +6,14 @@
 #include <ArduinoLog.h>
 
 #include <kernel/Configuration.hpp>
+#include <kernel/I2CManager.hpp>
 #include <kernel/Named.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/PwmManager.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
+#include <kernel/drivers/SwitchManager.hpp>
 
 using std::move;
 using std::shared_ptr;
@@ -20,7 +22,7 @@ using std::unique_ptr;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 
-namespace farmhub::devices {
+namespace farmhub::peripherals {
 
 // Peripherals
 
@@ -81,8 +83,8 @@ public:
 class PeripheralCreationException
     : public std::exception {
 public:
-    PeripheralCreationException(const String& name, const String& reason)
-        : message(String("PeripheralCreationException: Failed to create peripheral '" + name + "' because " + reason)) {
+    PeripheralCreationException(const String& reason)
+        : message(String("PeripheralCreationException: " + reason)) {
     }
 
     const char* what() const noexcept override {
@@ -93,9 +95,11 @@ public:
 };
 
 struct PeripheralServices {
+    I2CManager& i2c;
     PcntManager& pcntManager;
     PwmManager& pwmManager;
     SleepManager& sleepManager;
+    SwitchManager& switches;
 };
 
 class PeripheralFactoryBase {
@@ -158,11 +162,13 @@ class PeripheralManager
     : public TelemetryPublisher {
 public:
     PeripheralManager(
+        I2CManager& i2c,
         PcntManager& pcntManager,
         PwmManager& pwmManager,
         SleepManager& sleepManager,
+        SwitchManager& switchManager,
         const shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot)
-        : services(PeripheralServices { pcntManager, pwmManager, sleepManager })
+        : services({ i2c, pcntManager, pwmManager, sleepManager, switchManager })
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 
@@ -217,7 +223,7 @@ private:
             name.c_str(), factoryType.c_str());
         auto it = factories.find(factoryType);
         if (it == factories.end()) {
-            throw PeripheralCreationException(name, "Factory not found: '" + factoryType + "'");
+            throw PeripheralCreationException("Factory not found: '" + factoryType + "'");
         }
         const String& peripheralType = it->second.get().peripheralType;
         shared_ptr<MqttDriver::MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
@@ -235,4 +241,4 @@ private:
     std::list<unique_ptr<PeripheralBase>> peripherals;
 };
 
-}    // namespace farmhub::devices
+}    // namespace farmhub::peripherals

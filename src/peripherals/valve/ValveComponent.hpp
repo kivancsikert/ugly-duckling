@@ -11,7 +11,7 @@
 #include <ArduinoJson.h>
 #include <ArduinoLog.h>
 
-#include <devices/Peripheral.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/Service.hpp>
@@ -27,8 +27,8 @@ using std::make_unique;
 using std::move;
 using std::unique_ptr;
 
-using namespace farmhub::devices;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::valve {
 

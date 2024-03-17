@@ -41,7 +41,7 @@ public:
         , ntpConfig(ntpConfig)
         , rtcInSync(rtcInSync) {
         // TODO We should not need two separate tasks here
-        Task::run("rtc-check", [this](Task& task) {
+        Task::run("rtc-check", 2560, [this](Task& task) {
             while (true) {
                 time_t now;
                 time(&now);

@@ -11,11 +11,13 @@
 
 #include <devices/DeviceDefinition.hpp>
 
+#include <peripherals/chicken_door/ChickenDoor.hpp>
 #include <peripherals/flow_control/FlowControl.hpp>
 #include <peripherals/flow_meter/FlowMeter.hpp>
 #include <peripherals/valve/Valve.hpp>
 
 using namespace farmhub::kernel;
+using namespace farmhub::peripherals::chicken_door;
 using namespace farmhub::peripherals::flow_control;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
@@ -44,6 +46,7 @@ public:
         peripheralManager.registerFactory(valveFactory);
         peripheralManager.registerFactory(flowMeterFactory);
         peripheralManager.registerFactory(flowControlFactory);
+        peripheralManager.registerFactory(chickenDoorFactory);
     }
 
     std::list<String> getBuiltInPeripherals() override {
@@ -73,10 +76,12 @@ public:
     };
 
     const ServiceRef<PwmMotorDriver> motor { "motor", motorDriver };
+    const std::list<ServiceRef<PwmMotorDriver>> motors { motor };
 
-    ValveFactory valveFactory { { motor }, ValveControlStrategyType::NormallyClosed };
+    ValveFactory valveFactory { motors, ValveControlStrategyType::NormallyClosed };
     FlowMeterFactory flowMeterFactory;
-    FlowControlFactory flowControlFactory { { motor }, ValveControlStrategyType::NormallyClosed };
+    FlowControlFactory flowControlFactory { motors, ValveControlStrategyType::NormallyClosed };
+    ChickenDoorFactory chickenDoorFactory { motors };
 };
 
 }    // namespace farmhub::devices

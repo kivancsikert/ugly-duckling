@@ -7,11 +7,10 @@
 
 #include <ArduinoLog.h>
 
-#include <devices/Peripheral.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/Telemetry.hpp>
 
-using namespace farmhub::devices;
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
 

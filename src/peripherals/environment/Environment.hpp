@@ -2,14 +2,15 @@
 
 #include <memory>
 
-#include <devices/Peripheral.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
+#include <kernel/I2CManager.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 #include <peripherals/I2CConfig.hpp>
 
-using namespace farmhub::devices;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::peripherals;
 using std::make_unique;
 using std::unique_ptr;
 
@@ -19,14 +20,14 @@ template <typename TComponent>
 class Environment
     : public Peripheral<EmptyConfiguration> {
 public:
-    // TODO Use TComponentArgs&& instead
     Environment(
         const String& name,
         const String& sensorType,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        I2CManager& i2c,
         I2CConfig config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , component(name, sensorType, mqttRoot, config) {
+        , component(name, sensorType, mqttRoot, i2c, config) {
     }
 
     void populateTelemetry(JsonObject& telemetryJson) override {
@@ -51,7 +52,7 @@ public:
         auto i2cConfig = deviceConfig.parse(defaultAddress, GPIO_NUM_NC, GPIO_NUM_NC);
         Log.infoln("Creating %s sensor %s with %s",
             sensorType.c_str(), name.c_str(), i2cConfig.toString().c_str());
-        return make_unique<Environment<TComponent>>(name, sensorType, mqttRoot, i2cConfig);
+        return make_unique<Environment<TComponent>>(name, sensorType, mqttRoot, services.i2c, i2cConfig);
     }
 
 private:

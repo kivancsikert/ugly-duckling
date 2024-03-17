@@ -5,12 +5,12 @@
 #include <SHT2x.h>
 #include <SHT31.h>
 
-#include <devices/Peripheral.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/PwmManager.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
+#include <peripherals/Peripheral.hpp>
 
 #include <peripherals/environment/Ds18B20SoilSensor.hpp>
 #include <peripherals/environment/Environment.hpp>
@@ -18,6 +18,8 @@
 #include <peripherals/environment/Sht31Component.hpp>
 #include <peripherals/environment/SoilMoistureSensor.hpp>
 #include <peripherals/fence/ElectricFenceMonitor.hpp>
+#include <peripherals/light_sensor/Bh1750.hpp>
+#include <peripherals/light_sensor/Tsl2591.hpp>
 
 #include <version.h>
 
@@ -67,6 +69,8 @@ public:
         peripheralManager.registerFactory(ds18b20SoilSensorFactory);
         peripheralManager.registerFactory(soilMoistureSensorFactory);
         peripheralManager.registerFactory(electricFenceMonitorFactory);
+        peripheralManager.registerFactory(bh1750Factory);
+        peripheralManager.registerFactory(tsl2591Factory);
         registerDeviceSpecificPeripheralFactories(peripheralManager);
     }
 
@@ -103,6 +107,9 @@ private:
     Ds18B20SoilSensorFactory ds18b20SoilSensorFactory;
 
     farmhub::peripherals::fence::ElectricFenceMonitorFactory electricFenceMonitorFactory;
+
+    farmhub::peripherals::light_sensor::Bh1750Factory bh1750Factory;
+    farmhub::peripherals::light_sensor::Tsl2591Factory tsl2591Factory;
 };
 
 template <typename TDeviceConfiguration>

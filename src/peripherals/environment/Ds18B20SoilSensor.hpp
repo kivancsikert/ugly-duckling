@@ -7,13 +7,12 @@
 #include <DallasTemperature.h>
 #include <OneWire.h>
 
-#include <devices/Peripheral.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 #include <peripherals/SinglePinDeviceConfig.hpp>
 
-using namespace farmhub::devices;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 using namespace farmhub::peripherals;
@@ -50,7 +49,7 @@ public:
 
         DeviceAddress thermometer;
         if (!sensors.getAddress(thermometer, 0)) {
-            throw PeripheralCreationException(name, "unable to find address for device");
+            throw PeripheralCreationException("unable to find address for device");
         }
 
         // show the addresses we found on the bus
