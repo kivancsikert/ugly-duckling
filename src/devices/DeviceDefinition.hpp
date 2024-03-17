@@ -19,6 +19,7 @@
 #include <peripherals/environment/SoilMoistureSensor.hpp>
 #include <peripherals/fence/ElectricFenceMonitor.hpp>
 #include <peripherals/light_sensor/Bh1750.hpp>
+#include <peripherals/light_sensor/Tsl2591.hpp>
 
 #include <version.h>
 
@@ -69,6 +70,7 @@ public:
         peripheralManager.registerFactory(soilMoistureSensorFactory);
         peripheralManager.registerFactory(electricFenceMonitorFactory);
         peripheralManager.registerFactory(bh1750Factory);
+        peripheralManager.registerFactory(tsl2591Factory);
         registerDeviceSpecificPeripheralFactories(peripheralManager);
     }
 
@@ -107,6 +109,7 @@ private:
     farmhub::peripherals::fence::ElectricFenceMonitorFactory electricFenceMonitorFactory;
 
     farmhub::peripherals::light_sensor::Bh1750Factory bh1750Factory;
+    farmhub::peripherals::light_sensor::Tsl2591Factory tsl2591Factory;
 };
 
 template <typename TDeviceConfiguration>
