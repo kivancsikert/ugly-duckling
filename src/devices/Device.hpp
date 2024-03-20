@@ -68,8 +68,7 @@ public:
 
             status += "\033[33m" + String(VERSION) + "\033[0m";
 
-            status += ", IP: \033[33m" + WiFi.localIP().toString() + "\033[0m";
-            status += "/" + wifiStatus();
+            status += ", WIFI: " + wifiStatus();
 
             status += ", uptime: \033[33m" + String(float(millis()) / 1000.0f, 1) + "\033[0m s";
 
@@ -132,13 +131,13 @@ private:
             case WL_NO_SHIELD:
                 return "\033[0;31mno shield\033[0m";
             case WL_IDLE_STATUS:
-                return "\033[0;33midle\033[0m";
+                return "\033[0;31midle\033[0m";
             case WL_NO_SSID_AVAIL:
                 return "\033[0;31mno SSID\033[0m";
             case WL_SCAN_COMPLETED:
                 return "\033[0;33mscan completed\033[0m";
             case WL_CONNECTED:
-                return "\033[0;32mOK\033[0m";
+                return "\033[0;33m" + WiFi.localIP().toString() + "\033[0m";
             case WL_CONNECT_FAILED:
                 return "\033[0;31mfailed\033[0m";
             case WL_CONNECTION_LOST:
