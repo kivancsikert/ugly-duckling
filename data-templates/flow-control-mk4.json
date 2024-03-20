@@ -7,7 +7,7 @@
       "params": {
         "valve": {},
         "flow-meter": {
-          "pin": 17
+          "pin": "FLOW"
         }
       }
     }
