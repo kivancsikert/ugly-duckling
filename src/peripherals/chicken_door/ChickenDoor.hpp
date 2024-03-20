@@ -106,17 +106,17 @@ public:
         motor.stop();
 
         mqttRoot->registerCommand("override", [this](const JsonObject& request, JsonObject& response) {
-            DoorState targetState = request["state"].as<DoorState>();
-            if (targetState == DoorState::NONE) {
+            DoorState overrideState = request["state"].as<DoorState>();
+            if (overrideState == DoorState::NONE) {
                 updateQueue.put(StateOverride { DoorState::NONE, time_point<system_clock>::min() });
             } else {
                 seconds duration = request.containsKey("duration")
                     ? request["duration"].as<seconds>()
                     : hours { 1 };
-                updateQueue.put(StateOverride { targetState, system_clock::now() + duration });
+                updateQueue.put(StateOverride { overrideState, system_clock::now() + duration });
                 response["duration"] = duration;
             }
-            response["state"] = state;
+            response["overrideState"] = overrideState;
         });
 
         Task::loop(name, 4096, [&](Task& task) {
@@ -179,8 +179,12 @@ public:
         telemetry["state"] = lastState;
         telemetry["targetState"] = lastTargetState;
         if (overrideState != DoorState::NONE) {
+            time_t rawtime = system_clock::to_time_t(overrideUntil);
+            auto timeinfo = gmtime(&rawtime);
+            char buffer[80];
+            strftime(buffer, 80, "%FT%TZ", timeinfo);
+            telemetry["overrideEnd"] = String(buffer);
             telemetry["overrideState"] = overrideState;
-            telemetry["overrideUntil"] = overrideUntil.time_since_epoch().count();
         }
     }
 
@@ -242,8 +246,6 @@ private:
 
     const Switch& openSwitch;
     const Switch& closedSwitch;
-
-    DoorState state = DoorState::NONE;
 
     struct StateUpdated {
     };
