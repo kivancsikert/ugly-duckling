@@ -23,6 +23,7 @@
 #include <kernel/Command.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/Task.hpp>
+#include <kernel/drivers/RtcDriver.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -71,14 +72,8 @@ public:
             status += "/" + wifiStatus();
 
             status += ", uptime: \033[33m" + String(float(millis()) / 1000.0f, 1) + "\033[0m s";
-            time_t now;
-            struct tm timeinfo;
-            time(&now);
-            localtime_r(&now, &timeinfo);
 
-            char buffer[64];    // Ensure buffer is large enough for the formatted string
-            strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
-            status += ", UTC: \033[33m" + String(buffer) + "\033[0m";
+            status += ", RTC: \033[33m" + String(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED") + "\033[0m";
 
             status += ", heap: \033[33m" + String(float(ESP.getFreeHeap()) / 1024.0f, 2) + "\033[0m kB";
 

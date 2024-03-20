@@ -43,11 +43,7 @@ public:
         // TODO We should not need two separate tasks here
         Task::run("rtc-check", 2560, [this](Task& task) {
             while (true) {
-                time_t now;
-                time(&now);
-                // The MCU boots with a timestamp of 0 seconds, so if the value is
-                // much higher, then it means the RTC is set.
-                if (seconds(now) > hours((2022 - 1970) * 365 * 24)) {
+                if (isTimeSet()) {
                     Log.infoln("RTC: time is set");
                     this->rtcInSync.set();
                     break;
@@ -73,6 +69,14 @@ public:
                 }
             }
         });
+    }
+
+    static bool isTimeSet() {
+        time_t now;
+        time(&now);
+        // The MCU boots with a timestamp of 0 seconds, so if the value is
+        // much higher, then it means the RTC is set.
+        return seconds(now) > hours((2022 - 1970) * 365 * 24);
     }
 
 private:
