@@ -9,7 +9,7 @@
           "motor": "a"
         },
         "flow-meter": {
-          "pin": 6
+          "pin": "A1"
         }
       }
     },
@@ -17,7 +17,7 @@
       "name": "soil-temperature",
       "type": "environment:ds18b20",
       "params": {
-        "pin": 21
+        "pin": "C3"
       }
     },
     {
@@ -25,10 +25,10 @@
       "type": "environment:soil-moisture",
       "params": {
         "air": 3017,
-        "pin": 14,
+        "pin": "C4",
         "water": 1105
       }
     }
   ],
-  "sleepWhenIdle": false
+  "sleepWhenIdle": true
 }

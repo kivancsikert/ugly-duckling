@@ -5,8 +5,8 @@
       "name": "external-environment",
       "type": "environment:htu2x",
       "params": {
-        "sda": 35,
-        "scl": 36
+        "sda": "SDA",
+        "scl": "SCL"
       }
     }
   ]

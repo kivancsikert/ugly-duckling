@@ -1,28 +1,16 @@
 {
-  "instance": "test-mk6-8",
+  "instance": "chicken-door-test",
   "peripherals": [
-    {
-      "name": "flow-control-a",
-      "type": "flow-control",
-      "params": {
-        "valve": {
-          "motor": "a"
-        },
-        "flow-meter": {
-          "pin": 6
-        }
-      }
-    },
     {
       "name": "chicken-door-a",
       "type": "chicken-door",
       "params": {
         "motor": "b",
-        "openPin": 45,
-        "closedPin": 5,
+        "openPin": "B2",
+        "closedPin": "B1",
         "lightSensor": {
-          "scl": 47,
-          "sda": 21
+          "scl": "C2",
+          "sda": "C3"
         }
       }
     }
