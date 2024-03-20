@@ -82,7 +82,8 @@ public:
         PwmMotorDriver& motor,
         TLightSensorComponent& lightSensor,
         gpio_num_t openPin,
-        gpio_num_t closedPin)
+        gpio_num_t closedPin,
+        std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
         , sleepManager(sleepManager)
         , motor(motor)
@@ -98,7 +99,8 @@ public:
               closedPin,
               SwitchMode::PullUp,
               [this](const Switch&) { updateState(); },
-              [this](const Switch&, milliseconds) { updateState(); })) {
+              [this](const Switch&, milliseconds) { updateState(); }))
+        , publishTelemetry(publishTelemetry) {
 
         Log.infoln("Initializing chicken door %s, open switch %d, close switch %d",
             name.c_str(), openSwitch.getPin(), closedSwitch.getPin());
@@ -106,71 +108,21 @@ public:
         motor.stop();
 
         mqttRoot->registerCommand("override", [this](const JsonObject& request, JsonObject& response) {
-            DoorState targetState = request["state"].as<DoorState>();
-            if (targetState == DoorState::NONE) {
+            DoorState overrideState = request["state"].as<DoorState>();
+            if (overrideState == DoorState::NONE) {
                 updateQueue.put(StateOverride { DoorState::NONE, time_point<system_clock>::min() });
             } else {
                 seconds duration = request.containsKey("duration")
                     ? request["duration"].as<seconds>()
                     : hours { 1 };
-                updateQueue.put(StateOverride { targetState, system_clock::now() + duration });
+                updateQueue.put(StateOverride { overrideState, system_clock::now() + duration });
                 response["duration"] = duration;
             }
-            response["state"] = state;
+            response["overrideState"] = overrideState;
         });
 
-        Task::loop(name, 4096, [&](Task& task) {
-            DoorState currentState = determineCurrentState();
-            DoorState targetState = determineTargetState(currentState);
-            if (currentState != targetState) {
-                if (currentState != lastState) {
-                    Log.verboseln("Going from state %d to %d (light level %F)",
-                        currentState, targetState, lightSensor.getCurrentLevel());
-                }
-                switch (targetState) {
-                    case DoorState::OPEN:
-                        motor.drive(MotorPhase::FORWARD, 1);
-                        break;
-                    case DoorState::CLOSED:
-                        motor.drive(MotorPhase::REVERSE, 1);
-                        break;
-                    default:
-                        motor.stop();
-                        break;
-                }
-            } else {
-                if (currentState != lastState) {
-                    Log.verboseln("Staying in state %d (light level %F)",
-                        currentState, lightSensor.getCurrentLevel());
-                    motor.stop();
-                }
-            }
-            {
-                Lock lock(stateMutex);
-                lastState = currentState;
-                lastTargetState = targetState;
-            }
-            auto now = system_clock::now();
-            auto overrideWaitTime = overrideUntil < now
-                ? ticks::max()
-                : duration_cast<ticks>(overrideUntil - now);
-            auto waitTime = std::min(overrideWaitTime, duration_cast<ticks>(lightSensor.getMeasurementFrequency()));
-            updateQueue.pollIn(waitTime, [this](auto& change) {
-                std::visit(
-                    [this](auto&& arg) {
-                        using T = std::decay_t<decltype(arg)>;
-                        if constexpr (std::is_same_v<T, StateUpdated>) {
-                            // State update received
-                        } else if constexpr (std::is_same_v<T, StateOverride>) {
-                            Log.infoln("Override received: %d duration: %d sec",
-                                arg.state, duration_cast<seconds>(arg.until - system_clock::now()).count());
-                            Lock lock(stateMutex);
-                            overrideState = arg.state;
-                            overrideUntil = arg.until;
-                        }
-                    },
-                    change);
-            });
+        Task::loop(name, 4096, [this](Task& task) {
+            runLoop(task);
         });
     }
 
@@ -179,8 +131,12 @@ public:
         telemetry["state"] = lastState;
         telemetry["targetState"] = lastTargetState;
         if (overrideState != DoorState::NONE) {
+            time_t rawtime = system_clock::to_time_t(overrideUntil);
+            auto timeinfo = gmtime(&rawtime);
+            char buffer[80];
+            strftime(buffer, 80, "%FT%TZ", timeinfo);
+            telemetry["overrideEnd"] = String(buffer);
             telemetry["overrideState"] = overrideState;
-            telemetry["overrideUntil"] = overrideUntil.time_since_epoch().count();
         }
     }
 
@@ -192,6 +148,75 @@ public:
     }
 
 private:
+    void runLoop(Task& task) {
+        DoorState currentState = determineCurrentState();
+        DoorState targetState = determineTargetState(currentState);
+        if (currentState != targetState) {
+            if (currentState != lastState) {
+                Log.verboseln("Going from state %d to %d (light level %F)",
+                    currentState, targetState, lightSensor.getCurrentLevel());
+            }
+            switch (targetState) {
+                case DoorState::OPEN:
+                    motor.drive(MotorPhase::FORWARD, 1);
+                    break;
+                case DoorState::CLOSED:
+                    motor.drive(MotorPhase::REVERSE, 1);
+                    break;
+                default:
+                    motor.stop();
+                    break;
+            }
+        } else {
+            if (currentState != lastState) {
+                Log.verboseln("Reached state %d (light level %F)",
+                    currentState, lightSensor.getCurrentLevel());
+                motor.stop();
+                mqttRoot->publish("events/state", [=](JsonObject& json) {
+                    json["state"] = currentState;
+                });
+            }
+        }
+
+        bool shouldPublishTelemetry = false;
+        {
+            Lock lock(stateMutex);
+            if (lastState != currentState || lastTargetState != targetState) {
+                lastState = currentState;
+                lastTargetState = targetState;
+                shouldPublishTelemetry = true;
+            }
+        }
+        if (shouldPublishTelemetry) {
+            publishTelemetry();
+        }
+
+        auto now = system_clock::now();
+        auto overrideWaitTime = overrideUntil < now
+            ? ticks::max()
+            : duration_cast<ticks>(overrideUntil - now);
+        auto waitTime = std::min(overrideWaitTime, duration_cast<ticks>(lightSensor.getMeasurementFrequency()));
+        updateQueue.pollIn(waitTime, [this](auto& change) {
+            std::visit(
+                [this](auto&& arg) {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, StateUpdated>) {
+                        // State update received
+                    } else if constexpr (std::is_same_v<T, StateOverride>) {
+                        Log.infoln("Override received: %d duration: %d sec",
+                            arg.state, duration_cast<seconds>(arg.until - system_clock::now()).count());
+                        {
+                            Lock lock(stateMutex);
+                            overrideState = arg.state;
+                            overrideUntil = arg.until;
+                        }
+                        this->publishTelemetry();
+                    }
+                },
+                change);
+        });
+    }
+
     void updateState() {
         updateQueue.offer(StateUpdated {});
     }
@@ -243,7 +268,7 @@ private:
     const Switch& openSwitch;
     const Switch& closedSwitch;
 
-    DoorState state = DoorState::NONE;
+    const std::function<void()> publishTelemetry;
 
     struct StateUpdated {
     };
@@ -291,7 +316,10 @@ public:
               motor,
               lightSensor,
               config.openPin.get(),
-              config.closedPin.get()) {
+              config.closedPin.get(),
+              [this]() {
+                  publishTelemetry();
+              }) {
     }
 
     void populateTelemetry(JsonObject& telemetryJson) override {

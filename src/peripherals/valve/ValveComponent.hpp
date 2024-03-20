@@ -242,7 +242,7 @@ public:
             auto timeinfo = gmtime(&rawtime);
             char buffer[80];
             strftime(buffer, 80, "%FT%TZ", timeinfo);
-            telemetry["overrideEnd"] = string(buffer);
+            telemetry["overrideEnd"] = String(buffer);
             telemetry["overrideState"] = this->overrideState.load();
         }
     }
