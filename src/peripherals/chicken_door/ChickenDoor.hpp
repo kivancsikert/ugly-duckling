@@ -145,7 +145,11 @@ public:
                     motor.stop();
                 }
             }
-            lastState = currentState;
+            {
+                Lock lock(stateMutex);
+                lastState = currentState;
+                lastTargetState = targetState;
+            }
             auto now = system_clock::now();
             auto overrideWaitTime = overrideUntil < now
                 ? ticks::max()
@@ -158,7 +162,9 @@ public:
                         if constexpr (std::is_same_v<T, StateUpdated>) {
                             // State update received
                         } else if constexpr (std::is_same_v<T, StateOverride>) {
-                            Log.infoln("Override received");
+                            Log.infoln("Override received: %d duration: %d sec",
+                                arg.state, duration_cast<seconds>(arg.until - system_clock::now()).count());
+                            Lock lock(stateMutex);
                             overrideState = arg.state;
                             overrideUntil = arg.until;
                         }
@@ -169,7 +175,9 @@ public:
     }
 
     void populateTelemetry(JsonObject& telemetry) override {
-        telemetry["state"] = determineCurrentState();
+        Lock lock(stateMutex);
+        telemetry["state"] = lastState;
+        telemetry["targetState"] = lastTargetState;
         if (overrideState != DoorState::NONE) {
             telemetry["overrideState"] = overrideState;
             telemetry["overrideUntil"] = overrideUntil.time_since_epoch().count();
@@ -209,6 +217,7 @@ private:
         } else {
             if (overrideState != DoorState::NONE) {
                 Log.infoln("Override expired, returning to scheduled state");
+                Lock lock(stateMutex);
                 overrideState = DoorState::NONE;
                 overrideUntil = time_point<system_clock>::min();
             }
@@ -246,7 +255,9 @@ private:
 
     Queue<std::variant<StateUpdated, StateOverride>> updateQueue { "chicken-door-status", 2 };
 
+    Mutex stateMutex;
     DoorState lastState = DoorState::NONE;
+    DoorState lastTargetState = DoorState::NONE;
     DoorState overrideState = DoorState::NONE;
     time_point<system_clock> overrideUntil = time_point<system_clock>::min();
 };
