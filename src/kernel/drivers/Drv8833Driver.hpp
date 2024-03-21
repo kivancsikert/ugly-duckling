@@ -29,8 +29,8 @@ public:
         gpio_num_t bin2Pin,
         gpio_num_t faultPin,
         gpio_num_t sleepPin)
-        : motorA(pwm, ain1Pin, ain2Pin)
-        , motorB(pwm, bin1Pin, bin2Pin)
+        : motorA(this, pwm, ain1Pin, ain2Pin, sleepPin != GPIO_NUM_NC)
+        , motorB(this, pwm, bin1Pin, bin2Pin, sleepPin != GPIO_NUM_NC)
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
 
@@ -40,21 +40,7 @@ public:
         pinMode(sleepPin, OUTPUT);
         pinMode(faultPin, INPUT);
 
-        sleep();
-    }
-
-    void sleep() {
-        digitalWrite(sleepPin, LOW);
-        sleeping = true;
-    }
-
-    void wakeUp() {
-        digitalWrite(sleepPin, HIGH);
-        sleeping = false;
-    }
-
-    bool isSleeping() const {
-        return sleeping;
+        updateSleepState();
     }
 
     PwmMotorDriver& getMotorA() {
@@ -68,25 +54,37 @@ public:
 private:
     class Drv8833MotorDriver : public PwmMotorDriver {
     private:
-        const uint32_t PWM_FREQ = 25000;     // 25kHz
-        const uint8_t PWM_RESOLUTION = 8;    // 8 bit
+        static constexpr uint32_t PWM_FREQ = 25000;      // 25kHz
+        static constexpr uint8_t PWM_RESOLUTION = 10;    // 10 bit
 
     public:
         Drv8833MotorDriver(
+            Drv8833Driver* driver,
             PwmManager& pwm,
             gpio_num_t in1Pin,
-            gpio_num_t in2Pin)
-            : in1Channel(pwm.registerChannel(in1Pin, PWM_FREQ, PWM_RESOLUTION))
-            , in2Channel(pwm.registerChannel(in2Pin, PWM_FREQ, PWM_RESOLUTION)) {
+            gpio_num_t in2Pin,
+            bool canSleep)
+            : driver(driver)
+            , in1Channel(pwm.registerChannel(in1Pin, PWM_FREQ, PWM_RESOLUTION))
+            , in2Channel(pwm.registerChannel(in2Pin, PWM_FREQ, PWM_RESOLUTION))
+            , canSleep(canSleep)
+            , sleeping(canSleep) {
         }
 
         void drive(MotorPhase phase, double duty = 1) override {
-            int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
-            Log.traceln("Driving motor %s on pins %d/%d at %d%%",
+            if (duty == 0 && canSleep) {
+                Log.traceln("Stopping motor");
+                sleep();
+                return;
+            }
+
+            int dutyValue = static_cast<int>((in1Channel.maxValue() + in1Channel.maxValue() * duty) / 2);
+            Log.traceln("Driving motor %s on pins %d/%d at %d%% (duty = %d)",
                 phase == MotorPhase::FORWARD ? "forward" : "reverse",
                 in1Channel.pin,
                 in2Channel.pin,
-                (int) (duty * 100));
+                (int) (duty * 100),
+                dutyValue);
 
             switch (phase) {
                 case MotorPhase::FORWARD:
@@ -98,12 +96,44 @@ private:
                     in2Channel.write(dutyValue);
                     break;
             }
+
+            if (canSleep) {
+                wakeUp();
+            }
+        }
+
+        void sleep() {
+            sleeping = true;
+            driver->updateSleepState();
+        }
+
+        void wakeUp() {
+            sleeping = false;
+            driver->updateSleepState();
+        }
+
+        bool isSleeping() const {
+            return sleeping;
         }
 
     private:
+        Drv8833Driver* const driver;
         const PwmChannel in1Channel;
         const PwmChannel in2Channel;
+        const bool canSleep;
+
+        bool sleeping;
     };
+
+    void updateSleepState() {
+        setSleepState(motorA.isSleeping() && motorB.isSleeping());
+    }
+
+    void setSleepState(bool sleep) {
+        if (sleepPin != GPIO_NUM_NC) {
+            digitalWrite(sleepPin, sleep ? LOW : HIGH);
+        }
+    }
 
     Drv8833MotorDriver motorA;
     Drv8833MotorDriver motorB;
