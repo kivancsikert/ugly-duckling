@@ -29,24 +29,40 @@ public:
         : handle(handle) {
     }
 
+    TaskHandle()
+        : TaskHandle(nullptr) {
+    }
+
     TaskHandle(const TaskHandle& other)
-        : handle(other.handle) {
+        : TaskHandle(other.handle) {
+    }
+
+    constexpr bool isValid() const {
+        return handle != nullptr;
     }
 
     void suspend() {
-        vTaskSuspend(handle);
+        if (isValid()) {
+            vTaskSuspend(handle);
+        }
     }
 
     void resume() {
-        vTaskResume(handle);
+        if (isValid()) {
+            vTaskResume(handle);
+        }
     }
 
     bool abortDelay() {
-        return xTaskAbortDelay(handle);
+        if (isValid()) {
+            return xTaskAbortDelay(handle);
+        }
     }
 
     void abort() {
-        vTaskDelete(handle);
+        if (isValid()) {
+            vTaskDelete(handle);
+        }
     }
 
 private:
@@ -66,7 +82,12 @@ public:
         Log.traceln("Creating task %s with priority %d and stack size %d",
             name.c_str(), priority, stackSize);
         TaskHandle_t handle = nullptr;
-        xTaskCreate(executeTask, name.c_str(), stackSize, taskFunction, priority, &handle);
+        auto result = xTaskCreate(executeTask, name.c_str(), stackSize, taskFunction, priority, &handle);
+        if (result != pdPASS) {
+            Log.errorln("Failed to create task %s: %d", name.c_str(), result);
+            delete taskFunction;
+            return TaskHandle();
+        }
         return TaskHandle(handle);
     }
 
