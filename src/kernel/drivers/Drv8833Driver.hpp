@@ -72,12 +72,6 @@ private:
         }
 
         void drive(MotorPhase phase, double duty = 1) override {
-            if (duty == 0 && canSleep) {
-                Log.traceln("Stopping motor");
-                sleep();
-                return;
-            }
-
             int dutyValue = static_cast<int>((in1Channel.maxValue() + in1Channel.maxValue() * duty) / 2);
             Log.traceln("Driving motor %s on pins %d/%d at %d%% (duty = %d)",
                 phase == MotorPhase::FORWARD ? "forward" : "reverse",
@@ -97,7 +91,9 @@ private:
                     break;
             }
 
-            if (canSleep) {
+            if (duty == 0) {
+                sleep();
+            } else {
                 wakeUp();
             }
         }

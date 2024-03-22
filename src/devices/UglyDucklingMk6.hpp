@@ -24,14 +24,6 @@ using namespace farmhub::peripherals::valve;
 
 namespace farmhub::devices {
 
-class Mk6Config
-    : public DeviceConfiguration {
-public:
-    Mk6Config()
-        : DeviceConfiguration("mk6") {
-    }
-};
-
 namespace pins {
 static gpio_num_t BOOT = Pin::registerPin("BOOT", GPIO_NUM_0);
 static gpio_num_t BATTERY = Pin::registerPin("BATTERY", GPIO_NUM_1);
@@ -76,6 +68,20 @@ static gpio_num_t RXD0 = Pin::registerPin("RXD0", GPIO_NUM_44);
 static gpio_num_t TXD0 = Pin::registerPin("TXD0", GPIO_NUM_43);
 }    // namespace pins
 
+class Mk6Config
+    : public DeviceConfiguration {
+public:
+    Mk6Config()
+        : DeviceConfiguration("mk6") {
+    }
+
+    /**
+     * @brief The built-in motor driver's nSLEEP pin can be manually set by a jumper,
+     * but can be connected to a GPIO pin, too. Defaults to C4.
+     */
+    Property<gpio_num_t> motorNSleepPin { this, "motorNSleepPin", pins::IOC4 };
+};
+
 class UglyDucklingMk6 : public BatteryPoweredDeviceDefinition<Mk6Config> {
 public:
     UglyDucklingMk6()
@@ -105,7 +111,7 @@ public:
         pins::BIN1,
         pins::BIN2,
         pins::NFault,
-        GPIO_NUM_NC     // NSleep -- connected to LOADEN manually
+        config.motorNSleepPin.get()
     };
 
     const ServiceRef<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
