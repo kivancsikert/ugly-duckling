@@ -23,6 +23,7 @@ public:
         abort();
         handle = Task::run(name, 2560, [this](Task& task) {
             task.delayUntil(timeout);
+            Lock lock(updateMutex);
             callback();
         });
         Log.traceln("Watchdog started with a timeout of %F seconds",
