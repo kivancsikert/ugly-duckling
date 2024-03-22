@@ -117,8 +117,8 @@ public:
               SwitchMode::PullUp,
               [this](const Switch&) { updateState(); },
               [this](const Switch&, milliseconds) { updateState(); }))
-        , watchdog(name + ":watchdog", movementTimeout, [this]() {
-            updateQueue.put(WatchdogTimeout {});
+        , watchdog(name + ":watchdog", movementTimeout, [this](WatchdogState state) {
+            handleWatchdogEvent(state);
         })
         , publishTelemetry(publishTelemetry)
     // TODO Make this configurable
@@ -197,7 +197,7 @@ private:
             if (currentState != lastState) {
                 Log.verboseln("Reached state %d (light level %F)",
                     currentState, lightSensor.getCurrentLevel());
-                watchdog.abort();
+                watchdog.cancel();
                 motor.stop();
                 mqttRoot->publish("events/state", [=](JsonObject& json) {
                     json["state"] = currentState;
@@ -247,6 +247,24 @@ private:
                 },
                 change);
         });
+    }
+
+    void handleWatchdogEvent(WatchdogState state) {
+        switch (state) {
+            case WatchdogState::Started:
+                Log.infoln("Watchdog started");
+                sleepManager.keepAwake();
+                break;
+            case WatchdogState::Cacnelled:
+                Log.infoln("Watchdog cancelled");
+                sleepManager.allowSleep();
+                break;
+            case WatchdogState::TimedOut:
+                Log.errorln("Watchdog timed out");
+                sleepManager.allowSleep();
+                updateQueue.offer(WatchdogTimeout {});
+                break;
+        }
     }
 
     void updateState() {

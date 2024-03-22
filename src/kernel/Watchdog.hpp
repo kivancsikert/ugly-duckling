@@ -8,7 +8,13 @@
 
 namespace farmhub::kernel {
 
-typedef std::function<void()> WatchdogCallback;
+enum class WatchdogState {
+    Started,
+    Cacnelled,
+    TimedOut
+};
+
+typedef std::function<void(WatchdogState)> WatchdogCallback;
 
 class Watchdog {
 public:
@@ -20,22 +26,24 @@ public:
 
     void restart() {
         Lock lock(updateMutex);
-        abort();
+        cancel();
         handle = Task::run(name, 2560, [this](Task& task) {
             task.delayUntil(timeout);
             Lock lock(updateMutex);
-            callback();
+            callback(WatchdogState::TimedOut);
         });
+        callback(WatchdogState::Started);
         Log.traceln("Watchdog started with a timeout of %F seconds",
             duration_cast<milliseconds>(timeout).count() / 1000);
     }
 
-    void abort() {
+    void cancel() {
         Lock lock(updateMutex);
         if (handle.isValid()) {
             handle.abort();
+            callback(WatchdogState::Cacnelled);
             handle = TaskHandle();
-            Log.traceln("Watchdog aborted");
+            Log.traceln("Watchdog cancelled");
         }
     }
 

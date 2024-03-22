@@ -58,24 +58,6 @@ public:
 
     const bool sleepWhenIdle;
 
-private:
-    void configurePowerManagement(bool enableLightSleep) {
-        Log.verboseln("Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
-            MAX_CPU_FREQ_MHZ, MIN_CPU_FREQ_MHZ, enableLightSleep ? "enabled" : "disabled");
-        // Configure dynamic frequency scaling:
-        // maximum and minimum frequencies are set in sdkconfig,
-        // automatic light sleep is enabled if tickless idle support is enabled.
-        esp_pm_config_t pm_config = {
-            .max_freq_mhz = MAX_CPU_FREQ_MHZ,
-            .min_freq_mhz = MIN_CPU_FREQ_MHZ,
-            .light_sleep_enable = enableLightSleep
-        };
-        ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
-    }
-
-    Mutex requestCountMutex;
-    int requestCount = 0;
-
     void keepAwake() {
         Lock lock(requestCountMutex);
         requestCount++;
@@ -95,7 +77,24 @@ private:
             configurePowerManagement(true);
         }
     }
-    friend class KeepAwake;
+
+private:
+    void configurePowerManagement(bool enableLightSleep) {
+        Log.verboseln("Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
+            MAX_CPU_FREQ_MHZ, MIN_CPU_FREQ_MHZ, enableLightSleep ? "enabled" : "disabled");
+        // Configure dynamic frequency scaling:
+        // maximum and minimum frequencies are set in sdkconfig,
+        // automatic light sleep is enabled if tickless idle support is enabled.
+        esp_pm_config_t pm_config = {
+            .max_freq_mhz = MAX_CPU_FREQ_MHZ,
+            .min_freq_mhz = MIN_CPU_FREQ_MHZ,
+            .light_sleep_enable = enableLightSleep
+        };
+        ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
+    }
+
+    Mutex requestCountMutex;
+    int requestCount = 0;
 };
 
 class KeepAwake {
