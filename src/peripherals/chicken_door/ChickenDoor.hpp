@@ -74,6 +74,7 @@ public:
     Property<String> motor { this, "motor" };
     Property<gpio_num_t> openPin { this, "openPin", GPIO_NUM_NC };
     Property<gpio_num_t> closedPin { this, "closedPin", GPIO_NUM_NC };
+    Property<seconds> movementTimeout { this, "movementTimeout", seconds(60) };
 
     NamedConfigurationEntry<ChickenDoorLightSensorConfig> lightSensor { this, "lightSensor" };
 };
@@ -98,6 +99,7 @@ public:
         TLightSensorComponent& lightSensor,
         gpio_num_t openPin,
         gpio_num_t closedPin,
+        ticks movementTimeout,
         std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
         , sleepManager(sleepManager)
@@ -115,11 +117,12 @@ public:
               SwitchMode::PullUp,
               [this](const Switch&) { updateState(); },
               [this](const Switch&, milliseconds) { updateState(); }))
-        , publishTelemetry(publishTelemetry)
-        // TODO Make this configurable
-        , watchdog(name + ":watchdog", 15s, [this]() {
+        , watchdog(name + ":watchdog", movementTimeout, [this]() {
             updateQueue.put(WatchdogTimeout {});
-        }) {
+        })
+        , publishTelemetry(publishTelemetry)
+    // TODO Make this configurable
+    {
 
         Log.infoln("Initializing chicken door %s, open switch %d, close switch %d",
             name.c_str(), openSwitch.getPin(), closedSwitch.getPin());
@@ -297,6 +300,8 @@ private:
     const Switch& openSwitch;
     const Switch& closedSwitch;
 
+    Watchdog watchdog;
+
     const std::function<void()> publishTelemetry;
 
     struct StateUpdated { };
@@ -310,7 +315,6 @@ private:
 
     Queue<std::variant<StateUpdated, StateOverride, WatchdogTimeout>> updateQueue { "chicken-door-status", 2 };
 
-    Watchdog watchdog;
     OperationState operationState = OperationState::RUNNING;
 
     Mutex stateMutex;
@@ -350,6 +354,7 @@ public:
               lightSensor,
               config.openPin.get(),
               config.closedPin.get(),
+              config.movementTimeout.get(),
               [this]() {
                   publishTelemetry();
               }) {
