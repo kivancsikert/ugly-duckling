@@ -143,7 +143,7 @@ public:
             response["overrideState"] = overrideState;
         });
 
-        Task::run(name, 4096, [this](Task& task) {
+        Task::run(name, 4096, 2, [this](Task& task) {
             while (operationState == OperationState::RUNNING) {
                 runLoop(task);
             }
