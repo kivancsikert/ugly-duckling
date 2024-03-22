@@ -34,3 +34,6 @@ CONFIG_ARDUINO_SELECTIVE_COMPILATION=y
 # Enable automatic light sleep
 CONFIG_PM_ENABLE=y
 CONFIG_FREERTOS_USE_TICKLESS_IDLE=y
+
+# Give peripheral-related tasks to have some length to their names
+CONFIG_FREERTOS_MAX_TASK_NAME_LEN=32
