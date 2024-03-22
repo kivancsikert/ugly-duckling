@@ -152,7 +152,22 @@ public:
     }
 };
 
-class Mutex {
+class MutexBase {
+public:
+    void lock() {
+        while (!lockIn(ticks::max())) { }
+    }
+
+    bool tryLock() {
+        return lockIn(ticks::zero());
+    }
+
+    virtual bool lockIn(ticks timeout) = 0;
+
+    virtual void unlock() = 0;
+};
+
+class Mutex : public MutexBase {
 public:
     Mutex()
         : mutex(xSemaphoreCreateMutex()) {
@@ -162,30 +177,43 @@ public:
         vSemaphoreDelete(mutex);
     }
 
-    void lock() {
-        while (!lockIn(ticks::max())) { }
-    }
-
-    bool tryLock() {
-        return lockIn(ticks::zero());
-    }
-
-    bool lockIn(ticks timeout) {
+    bool lockIn(ticks timeout) override {
         return xSemaphoreTake(mutex, timeout.count());
     }
 
-    void unlock() {
+    void unlock() override {
         xSemaphoreGive(mutex);
     }
 
 private:
-    const String name;
+    const SemaphoreHandle_t mutex;
+};
+
+class RecursiveMutex : public MutexBase {
+public:
+    RecursiveMutex()
+        : mutex(xSemaphoreCreateRecursiveMutex()) {
+    }
+
+    ~RecursiveMutex() {
+        vSemaphoreDelete(mutex);
+    }
+
+    bool lockIn(ticks timeout) override {
+        return xSemaphoreTakeRecursive(mutex, timeout.count());
+    }
+
+    void unlock() override {
+        xSemaphoreGiveRecursive(mutex);
+    }
+
+private:
     const SemaphoreHandle_t mutex;
 };
 
 class  Lock {
 public:
-    Lock(Mutex& mutex)
+    Lock(MutexBase& mutex)
         : mutex(mutex) {
         mutex.lock();
     }
@@ -199,7 +227,7 @@ public:
     Lock& operator=(const Lock&) = delete;
 
 private:
-    Mutex& mutex;
+    MutexBase& mutex;
 };
 
 }    // namespace farmhub::kernel

@@ -15,8 +15,10 @@
 #include <kernel/Concurrent.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
+#include <kernel/Watchdog.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 #include <kernel/drivers/SwitchManager.hpp>
+
 #include <peripherals/Motorized.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/light_sensor/Bh1750.hpp>
@@ -32,6 +34,7 @@ using namespace std::chrono_literals;
 namespace farmhub::peripherals::chicken_door {
 
 enum class DoorState {
+    INITIALIZED = -2,
     CLOSED = -1,
     NONE = 0,
     OPEN = 1
@@ -42,6 +45,18 @@ bool convertToJson(const DoorState& src, JsonVariant dst) {
 }
 void convertFromJson(JsonVariantConst src, DoorState& dst) {
     dst = static_cast<DoorState>(src.as<int>());
+}
+
+enum class OperationState {
+    RUNNING,
+    WATCHDOG_TIMEOUT
+};
+
+bool convertToJson(const OperationState& src, JsonVariant dst) {
+    return dst.set(static_cast<int>(src));
+}
+void convertFromJson(JsonVariantConst src, OperationState& dst) {
+    dst = static_cast<OperationState>(src.as<int>());
 }
 
 class ChickenDoorLightSensorConfig
@@ -59,6 +74,7 @@ public:
     Property<String> motor { this, "motor" };
     Property<gpio_num_t> openPin { this, "openPin", GPIO_NUM_NC };
     Property<gpio_num_t> closedPin { this, "closedPin", GPIO_NUM_NC };
+    Property<seconds> movementTimeout { this, "movementTimeout", seconds(60) };
 
     NamedConfigurationEntry<ChickenDoorLightSensorConfig> lightSensor { this, "lightSensor" };
 };
@@ -83,6 +99,7 @@ public:
         TLightSensorComponent& lightSensor,
         gpio_num_t openPin,
         gpio_num_t closedPin,
+        ticks movementTimeout,
         std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
         , sleepManager(sleepManager)
@@ -100,7 +117,12 @@ public:
               SwitchMode::PullUp,
               [this](const Switch&) { updateState(); },
               [this](const Switch&, milliseconds) { updateState(); }))
-        , publishTelemetry(publishTelemetry) {
+        , watchdog(name + ":watchdog", movementTimeout, [this]() {
+            updateQueue.put(WatchdogTimeout {});
+        })
+        , publishTelemetry(publishTelemetry)
+    // TODO Make this configurable
+    {
 
         Log.infoln("Initializing chicken door %s, open switch %d, close switch %d",
             name.c_str(), openSwitch.getPin(), closedSwitch.getPin());
@@ -121,8 +143,10 @@ public:
             response["overrideState"] = overrideState;
         });
 
-        Task::loop(name, 4096, [this](Task& task) {
-            runLoop(task);
+        Task::run(name, 4096, [this](Task& task) {
+            while (operationState == OperationState::RUNNING) {
+                runLoop(task);
+            }
         });
     }
 
@@ -130,6 +154,7 @@ public:
         Lock lock(stateMutex);
         telemetry["state"] = lastState;
         telemetry["targetState"] = lastTargetState;
+        telemetry["operationState"] = operationState;
         if (overrideState != DoorState::NONE) {
             time_t rawtime = system_clock::to_time_t(overrideUntil);
             auto timeinfo = gmtime(&rawtime);
@@ -155,6 +180,7 @@ private:
             if (currentState != lastState) {
                 Log.verboseln("Going from state %d to %d (light level %F)",
                     currentState, targetState, lightSensor.getCurrentLevel());
+                watchdog.restart();
             }
             switch (targetState) {
                 case DoorState::OPEN:
@@ -171,6 +197,7 @@ private:
             if (currentState != lastState) {
                 Log.verboseln("Reached state %d (light level %F)",
                     currentState, lightSensor.getCurrentLevel());
+                watchdog.abort();
                 motor.stop();
                 mqttRoot->publish("events/state", [=](JsonObject& json) {
                     json["state"] = currentState;
@@ -210,6 +237,11 @@ private:
                             overrideState = arg.state;
                             overrideUntil = arg.until;
                         }
+                        this->publishTelemetry();
+                    } else if constexpr (std::is_same_v<T, WatchdogTimeout>) {
+                        Log.errorln("Watchdog timeout, stopping operation");
+                        operationState = OperationState::WATCHDOG_TIMEOUT;
+                        motor.stop();
                         this->publishTelemetry();
                     }
                 },
@@ -268,21 +300,26 @@ private:
     const Switch& openSwitch;
     const Switch& closedSwitch;
 
+    Watchdog watchdog;
+
     const std::function<void()> publishTelemetry;
 
-    struct StateUpdated {
-    };
+    struct StateUpdated { };
 
     struct StateOverride {
         DoorState state;
         time_point<system_clock> until;
     };
 
-    Queue<std::variant<StateUpdated, StateOverride>> updateQueue { "chicken-door-status", 2 };
+    struct WatchdogTimeout { };
+
+    Queue<std::variant<StateUpdated, StateOverride, WatchdogTimeout>> updateQueue { "chicken-door-status", 2 };
+
+    OperationState operationState = OperationState::RUNNING;
 
     Mutex stateMutex;
-    DoorState lastState = DoorState::NONE;
-    DoorState lastTargetState = DoorState::NONE;
+    DoorState lastState = DoorState::INITIALIZED;
+    DoorState lastTargetState = DoorState::INITIALIZED;
     DoorState overrideState = DoorState::NONE;
     time_point<system_clock> overrideUntil = time_point<system_clock>::min();
 };
@@ -317,6 +354,7 @@ public:
               lightSensor,
               config.openPin.get(),
               config.closedPin.get(),
+              config.movementTimeout.get(),
               [this]() {
                   publishTelemetry();
               }) {
