@@ -50,7 +50,7 @@ public:
 
     Property<String> motor { this, "motor" };
     Property<ValveControlStrategyType> strategy;
-    Property<double> holdDuty { this, "holdDuty", 50 };    // This is a percentage
+    Property<double> holdDuty { this, "holdDuty", 100 };    // This is a percentage
     Property<milliseconds> switchDuration { this, "switchDuration", 500ms };
 };
 
