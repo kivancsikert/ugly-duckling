@@ -22,14 +22,14 @@ enum class ValveControlStrategyType {
     Latching
 };
 
-static ValveControlStrategy* createValveControlStrategy(ValveControlStrategyType strategy, milliseconds switchDuration, double duty) {
+static ValveControlStrategy* createValveControlStrategy(ValveControlStrategyType strategy, milliseconds switchDuration, double holdDuty) {
     switch (strategy) {
         case ValveControlStrategyType::NormallyOpen:
-            return new NormallyOpenValveControlStrategy(switchDuration, duty);
+            return new NormallyOpenValveControlStrategy(switchDuration, holdDuty);
         case ValveControlStrategyType::NormallyClosed:
-            return new NormallyClosedValveControlStrategy(switchDuration, duty);
+            return new NormallyClosedValveControlStrategy(switchDuration, holdDuty);
         case ValveControlStrategyType::Latching:
-            return new LatchingValveControlStrategy(switchDuration, duty);
+            return new LatchingValveControlStrategy(switchDuration, holdDuty);
         default:
             throw std::runtime_error("Unknown strategy");
     }
@@ -50,7 +50,7 @@ public:
 
     Property<String> motor { this, "motor" };
     Property<ValveControlStrategyType> strategy;
-    Property<double> duty { this, "duty", 100 };
+    Property<double> holdDuty { this, "holdDuty", 50 };    // This is a percentage
     Property<milliseconds> switchDuration { this, "switchDuration", 500ms };
 };
 
