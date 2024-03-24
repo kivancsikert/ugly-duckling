@@ -76,7 +76,7 @@ public:
             strategy = createValveControlStrategy(
                 deviceConfig.strategy.get(),
                 deviceConfig.switchDuration.get(),
-                deviceConfig.duty.get() / 100.0);
+                deviceConfig.holdDuty.get() / 100.0);
         } catch (const std::exception& e) {
             throw PeripheralCreationException("failed to create strategy: " + String(e.what()));
         }
