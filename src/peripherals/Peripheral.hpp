@@ -190,8 +190,11 @@ public:
             return;
         }
 
-        const String& name = deviceConfig.name.get();
-        const String& factory = deviceConfig.type.get();
+        String name = deviceConfig.name.get();
+        if (name.isEmpty()) {
+            name = "default";
+        }
+        String factory = deviceConfig.type.get();
         try {
             unique_ptr<PeripheralBase> peripheral = createPeripheral(name, factory, deviceConfig.params.get().get());
             peripherals.push_back(move(peripheral));
