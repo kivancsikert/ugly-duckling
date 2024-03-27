@@ -300,8 +300,13 @@ public:
 
         kernel.getKernelReadyState().set();
 
-        Log.infoln("Device ready in %F s, %s",
-            millis() / 1000.0, kernel.sleepManager.sleepWhenIdle ? "entering idle loop" : "staying awake");
+        Log.infoln("Device ready in %F s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%p')",
+            millis() / 1000.0,
+            kernel.version.c_str(),
+            deviceConfig.model.get().c_str(),
+            deviceConfig.instance.get().c_str(),
+            deviceConfig.getHostname(),
+            WiFi.localIP());
     }
 
 private:
