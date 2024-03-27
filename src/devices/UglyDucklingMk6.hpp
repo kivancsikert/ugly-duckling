@@ -77,9 +77,9 @@ public:
 
     /**
      * @brief The built-in motor driver's nSLEEP pin can be manually set by a jumper,
-     * but can be connected to a GPIO pin, too. Defaults to C4.
+     * but can be connected to a GPIO pin, too. Defaults to C2.
      */
-    Property<gpio_num_t> motorNSleepPin { this, "motorNSleepPin", pins::IOC4 };
+    Property<gpio_num_t> motorNSleepPin { this, "motorNSleepPin", pins::IOC2 };
 };
 
 class UglyDucklingMk6 : public BatteryPoweredDeviceDefinition<Mk6Config> {
