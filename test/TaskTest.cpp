@@ -10,15 +10,14 @@ class TaskTest : public ::testing::Test {
 };
 
 TEST_F(TaskTest, can_create_a_task) {
-    Task::run("test", [](Task& task) {
-        LOG_TRACE("Task running");
-        task.delayUntil(400ms);
-        LOG_TRACE("Task running");
-        task.delayUntil(400s);
+    int counter = 0;
+    Task::run("test", [&](Task& task) {
+        counter++;
     });
 
-    vTaskDelay(pdMS_TO_TICKS(900));
-    LOG_INFO("Task finished, hopefully\n");
+    LOG_INFO("Waiting for the task to finish");
+    vTaskDelay(pdMS_TO_TICKS(10));
+    LOG_INFO("Task finished, hopefully");
 }
 
 }    // namespace farmhub::kernel
