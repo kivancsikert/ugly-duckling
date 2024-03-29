@@ -3,13 +3,10 @@
 #include <chrono>
 #include <functional>
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
+#include <FreeRTOS.h>
+#include <task.h>
 
-#include <Arduino.h>
-
-#include <ArduinoLog.h>
-
+#include <kernel/Log.hpp>
 #include <kernel/Time.hpp>
 
 using namespace std::chrono;
@@ -79,12 +76,12 @@ public:
     }
     static TaskHandle run(const String& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
         TaskFunction* taskFunction = new TaskFunction(runFunction);
-        Log.traceln("Creating task %s with priority %d and stack size %d",
+        LOG_TRACE("Creating task %s with priority %d and stack size %d",
             name.c_str(), priority, stackSize);
         TaskHandle_t handle = nullptr;
         auto result = xTaskCreate(executeTask, name.c_str(), stackSize, taskFunction, priority, &handle);
         if (result != pdPASS) {
-            Log.errorln("Failed to create task %s: %d", name.c_str(), result);
+            LOG_ERROR("Failed to create task %s: %d", name.c_str(), result);
             delete taskFunction;
             return TaskHandle();
         }
@@ -114,7 +111,7 @@ public:
             return true;
         }
         auto newWakeTime = xTaskGetTickCount();
-        Serial.printf("Task '%s' missed deadline by %lld ms\n",
+        LOG_IMMEDIATE("Task '%s' missed deadline by %lld ms\n",
             pcTaskGetName(nullptr), duration_cast<milliseconds>(ticks(newWakeTime - lastWakeTime)).count());
         lastWakeTime = newWakeTime;
         return false;
@@ -136,7 +133,7 @@ public:
             return time - (currentTime - ticks(lastWakeTime));
         } else {
             // 'currentTime' has surpassed our target time, indicating the delay has expired.
-            Serial.printf("Task '%s' missed deadline by %lld ms\n",
+            LOG_IMMEDIATE("Task '%s' missed deadline by %lld ms\n",
                 pcTaskGetName(nullptr), duration_cast<milliseconds>(currentTime - ticks(lastWakeTime)).count());
             return ticks::zero();
         }
@@ -165,7 +162,7 @@ public:
 
 private:
     ~Task() {
-        Log.verboseln("Finished task %s\n",
+        LOG_DEBUG("Finished task %s\n",
             pcTaskGetName(nullptr));
 #ifdef FARMHUB_DEBUG
         String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX));
