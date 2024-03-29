@@ -162,7 +162,7 @@ public:
 
 private:
     ~Task() {
-        LOG_DEBUG("Finished task %s\n",
+        LOG_IMMEDIATE("Finished task '%s'",
             pcTaskGetName(nullptr));
 #ifdef FARMHUB_DEBUG
         String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX));
