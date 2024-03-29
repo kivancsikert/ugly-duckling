@@ -71,6 +71,7 @@
 #define INCLUDE_vTaskDelete 1
 #define INCLUDE_xTaskDelayUntil 1
 #define INCLUDE_vTaskDelay 1
+#define INCLUDE_xTaskAbortDelay 1
 #define INCLUDE_vTaskSuspend 1
 
 extern void vAssertCalled(const char* const pcFileName,

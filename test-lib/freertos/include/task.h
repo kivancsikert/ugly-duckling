@@ -1,6 +1,6 @@
 /*
- * FreeRTOS Kernel V11.0.1
- * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel <DEVELOPMENT BRANCH>
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  *
@@ -53,7 +53,7 @@
  * The tskKERNEL_VERSION_MAJOR, tskKERNEL_VERSION_MINOR, tskKERNEL_VERSION_BUILD
  * values will reflect the last released version number.
  */
-#define tskKERNEL_VERSION_NUMBER       "V11.0.1"
+#define tskKERNEL_VERSION_NUMBER       "V11.0.1+"
 #define tskKERNEL_VERSION_MAJOR        11
 #define tskKERNEL_VERSION_MINOR        0
 #define tskKERNEL_VERSION_BUILD        1
@@ -288,8 +288,8 @@ typedef enum
  * @code{c}
  * BaseType_t xTaskCreate(
  *                            TaskFunction_t pxTaskCode,
- *                            const char *pcName,
- *                            configSTACK_DEPTH_TYPE usStackDepth,
+ *                            const char * const pcName,
+ *                            const configSTACK_DEPTH_TYPE uxStackDepth,
  *                            void *pvParameters,
  *                            UBaseType_t uxPriority,
  *                            TaskHandle_t *pxCreatedTask
@@ -323,9 +323,9 @@ typedef enum
  * facilitate debugging.  Max length defined by configMAX_TASK_NAME_LEN - default
  * is 16.
  *
- * @param usStackDepth The size of the task stack specified as the number of
+ * @param uxStackDepth The size of the task stack specified as the number of
  * variables the stack can hold - not the number of bytes.  For example, if
- * the stack is 16 bits wide and usStackDepth is defined as 100, 200 bytes
+ * the stack is 16 bits wide and uxStackDepth is defined as 100, 200 bytes
  * will be allocated for stack storage.
  *
  * @param pvParameters Pointer that will be used as the parameter for the task
@@ -380,7 +380,7 @@ typedef enum
 #if ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
     BaseType_t xTaskCreate( TaskFunction_t pxTaskCode,
                             const char * const pcName,
-                            const configSTACK_DEPTH_TYPE usStackDepth,
+                            const configSTACK_DEPTH_TYPE uxStackDepth,
                             void * const pvParameters,
                             UBaseType_t uxPriority,
                             TaskHandle_t * const pxCreatedTask ) PRIVILEGED_FUNCTION;
@@ -389,7 +389,7 @@ typedef enum
 #if ( ( configSUPPORT_DYNAMIC_ALLOCATION == 1 ) && ( configNUMBER_OF_CORES > 1 ) && ( configUSE_CORE_AFFINITY == 1 ) )
     BaseType_t xTaskCreateAffinitySet( TaskFunction_t pxTaskCode,
                                        const char * const pcName,
-                                       const configSTACK_DEPTH_TYPE usStackDepth,
+                                       const configSTACK_DEPTH_TYPE uxStackDepth,
                                        void * const pvParameters,
                                        UBaseType_t uxPriority,
                                        UBaseType_t uxCoreAffinityMask,
@@ -400,8 +400,8 @@ typedef enum
  * task. h
  * @code{c}
  * TaskHandle_t xTaskCreateStatic( TaskFunction_t pxTaskCode,
- *                               const char *pcName,
- *                               uint32_t ulStackDepth,
+ *                               const char * const pcName,
+ *                               const configSTACK_DEPTH_TYPE uxStackDepth,
  *                               void *pvParameters,
  *                               UBaseType_t uxPriority,
  *                               StackType_t *puxStackBuffer,
@@ -427,9 +427,9 @@ typedef enum
  * facilitate debugging.  The maximum length of the string is defined by
  * configMAX_TASK_NAME_LEN in FreeRTOSConfig.h.
  *
- * @param ulStackDepth The size of the task stack specified as the number of
+ * @param uxStackDepth The size of the task stack specified as the number of
  * variables the stack can hold - not the number of bytes.  For example, if
- * the stack is 32-bits wide and ulStackDepth is defined as 100 then 400 bytes
+ * the stack is 32-bits wide and uxStackDepth is defined as 100 then 400 bytes
  * will be allocated for stack storage.
  *
  * @param pvParameters Pointer that will be used as the parameter for the task
@@ -438,7 +438,7 @@ typedef enum
  * @param uxPriority The priority at which the task will run.
  *
  * @param puxStackBuffer Must point to a StackType_t array that has at least
- * ulStackDepth indexes - the array will then be used as the task's stack,
+ * uxStackDepth indexes - the array will then be used as the task's stack,
  * removing the need for the stack to be allocated dynamically.
  *
  * @param pxTaskBuffer Must point to a variable of type StaticTask_t, which will
@@ -507,7 +507,7 @@ typedef enum
 #if ( configSUPPORT_STATIC_ALLOCATION == 1 )
     TaskHandle_t xTaskCreateStatic( TaskFunction_t pxTaskCode,
                                     const char * const pcName,
-                                    const uint32_t ulStackDepth,
+                                    const configSTACK_DEPTH_TYPE uxStackDepth,
                                     void * const pvParameters,
                                     UBaseType_t uxPriority,
                                     StackType_t * const puxStackBuffer,
@@ -517,7 +517,7 @@ typedef enum
 #if ( ( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configNUMBER_OF_CORES > 1 ) && ( configUSE_CORE_AFFINITY == 1 ) )
     TaskHandle_t xTaskCreateStaticAffinitySet( TaskFunction_t pxTaskCode,
                                                const char * const pcName,
-                                               const uint32_t ulStackDepth,
+                                               const configSTACK_DEPTH_TYPE uxStackDepth,
                                                void * const pvParameters,
                                                UBaseType_t uxPriority,
                                                StackType_t * const puxStackBuffer,
@@ -561,7 +561,7 @@ typedef enum
  * {
  *  vATask,     // pvTaskCode - the function that implements the task.
  *  "ATask",    // pcName - just a text name for the task to assist debugging.
- *  100,        // usStackDepth - the stack size DEFINED IN WORDS.
+ *  100,        // uxStackDepth - the stack size DEFINED IN WORDS.
  *  NULL,       // pvParameters - passed into the task function as the function parameters.
  *  ( 1UL | portPRIVILEGE_BIT ),// uxPriority - task priority, set the portPRIVILEGE_BIT if the task should run in a privileged state.
  *  cStackBuffer,// puxStackBuffer - the buffer to be used as the task stack.
@@ -655,7 +655,7 @@ typedef enum
  * {
  *  vATask,     // pvTaskCode - the function that implements the task.
  *  "ATask",    // pcName - just a text name for the task to assist debugging.
- *  100,        // usStackDepth - the stack size DEFINED IN WORDS.
+ *  100,        // uxStackDepth - the stack size DEFINED IN WORDS.
  *  NULL,       // pvParameters - passed into the task function as the function parameters.
  *  ( 1UL | portPRIVILEGE_BIT ),// uxPriority - task priority, set the portPRIVILEGE_BIT if the task should run in a privileged state.
  *  cStackBuffer,// puxStackBuffer - the buffer to be used as the task stack.
@@ -1987,7 +1987,7 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
 /**
  * task.h
  * @code{c}
- * void vApplicationGetIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer, StackType_t ** ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
+ * void vApplicationGetIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer, StackType_t ** ppxIdleTaskStackBuffer, configSTACK_DEPTH_TYPE * puxIdleTaskStackSize )
  * @endcode
  *
  * This function is used to provide a statically allocated block of memory to FreeRTOS to hold the Idle Task TCB.  This function is required when
@@ -1995,16 +1995,16 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  *
  * @param ppxIdleTaskTCBBuffer A handle to a statically allocated TCB buffer
  * @param ppxIdleTaskStackBuffer A handle to a statically allocated Stack buffer for the idle task
- * @param pulIdleTaskStackSize A pointer to the number of elements that will fit in the allocated stack buffer
+ * @param puxIdleTaskStackSize A pointer to the number of elements that will fit in the allocated stack buffer
  */
     void vApplicationGetIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer,
                                         StackType_t ** ppxIdleTaskStackBuffer,
-                                        uint32_t * pulIdleTaskStackSize );
+                                        configSTACK_DEPTH_TYPE * puxIdleTaskStackSize );
 
 /**
  * task.h
  * @code{c}
- * void vApplicationGetPassiveIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer, StackType_t ** ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize, BaseType_t xCoreID )
+ * void vApplicationGetPassiveIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer, StackType_t ** ppxIdleTaskStackBuffer, configSTACK_DEPTH_TYPE * puxIdleTaskStackSize, BaseType_t xCoreID )
  * @endcode
  *
  * This function is used to provide a statically allocated block of memory to FreeRTOS to hold the Idle Tasks TCB.  This function is required when
@@ -2022,13 +2022,13 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  *
  * @param ppxIdleTaskTCBBuffer A handle to a statically allocated TCB buffer
  * @param ppxIdleTaskStackBuffer A handle to a statically allocated Stack buffer for the idle task
- * @param pulIdleTaskStackSize A pointer to the number of elements that will fit in the allocated stack buffer
+ * @param puxIdleTaskStackSize A pointer to the number of elements that will fit in the allocated stack buffer
  * @param xPassiveIdleTaskIndex The passive idle task index of the idle task buffer
  */
     #if ( configNUMBER_OF_CORES > 1 )
         void vApplicationGetPassiveIdleTaskMemory( StaticTask_t ** ppxIdleTaskTCBBuffer,
                                                    StackType_t ** ppxIdleTaskStackBuffer,
-                                                   uint32_t * pulIdleTaskStackSize,
+                                                   configSTACK_DEPTH_TYPE * puxIdleTaskStackSize,
                                                    BaseType_t xPassiveIdleTaskIndex );
     #endif /* #if ( configNUMBER_OF_CORES > 1 ) */
 #endif /* if ( configSUPPORT_STATIC_ALLOCATION == 1 ) */
@@ -2289,7 +2289,7 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * \defgroup vTaskList vTaskList
  * \ingroup TaskUtils
  */
-#define vTaskList( pcWriteBuffer )    vTaskListTasks( pcWriteBuffer, configSTATS_BUFFER_MAX_LENGTH )
+#define vTaskList( pcWriteBuffer )    vTaskListTasks( ( pcWriteBuffer ), configSTATS_BUFFER_MAX_LENGTH )
 
 /**
  * task. h
@@ -2412,7 +2412,7 @@ char * pcTaskGetName( TaskHandle_t xTaskToQuery ) PRIVILEGED_FUNCTION;
  * \defgroup vTaskGetRunTimeStats vTaskGetRunTimeStats
  * \ingroup TaskUtils
  */
-#define vTaskGetRunTimeStats( pcWriteBuffer )    vTaskGetRunTimeStatistics( pcWriteBuffer, configSTATS_BUFFER_MAX_LENGTH )
+#define vTaskGetRunTimeStats( pcWriteBuffer )    vTaskGetRunTimeStatistics( ( pcWriteBuffer ), configSTATS_BUFFER_MAX_LENGTH )
 
 /**
  * task. h
@@ -3438,6 +3438,20 @@ BaseType_t xTaskCheckForTimeOut( TimeOut_t * const pxTimeOut,
  */
 BaseType_t xTaskCatchUpTicks( TickType_t xTicksToCatchUp ) PRIVILEGED_FUNCTION;
 
+/**
+ * task.h
+ * @code{c}
+ * void vTaskResetState( void );
+ * @endcode
+ *
+ * This function resets the internal state of the task. It must be called by the
+ * application before restarting the scheduler.
+ *
+ * \defgroup vTaskResetState vTaskResetState
+ * \ingroup SchedulerControl
+ */
+void vTaskResetState( void ) PRIVILEGED_FUNCTION;
+
 
 /*-----------------------------------------------------------
 * SCHEDULER INTERNALS AVAILABLE FOR PORTING PURPOSES
@@ -3574,9 +3588,7 @@ TaskHandle_t xTaskGetCurrentTaskHandle( void ) PRIVILEGED_FUNCTION;
 /*
  * Return the handle of the task running on specified core.
  */
-#if ( configNUMBER_OF_CORES > 1 )
-    TaskHandle_t xTaskGetCurrentTaskHandleForCore( BaseType_t xCoreID ) PRIVILEGED_FUNCTION;
-#endif
+TaskHandle_t xTaskGetCurrentTaskHandleForCore( BaseType_t xCoreID ) PRIVILEGED_FUNCTION;
 
 /*
  * Shortcut used by the queue implementation to prevent unnecessary call to

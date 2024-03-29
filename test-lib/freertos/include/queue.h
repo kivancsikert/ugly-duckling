@@ -1,6 +1,6 @@
 /*
- * FreeRTOS Kernel V11.0.1
- * Copyright (C) 2021 Amazon.com, Inc. or its affiliates.  All Rights Reserved.
+ * FreeRTOS Kernel <DEVELOPMENT BRANCH>
+ * Copyright (C) 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  *
@@ -1522,8 +1522,8 @@ BaseType_t xQueueSemaphoreTake( QueueHandle_t xQueue,
 #endif
 
 /*
- * For internal use only.  Use xSemaphoreTakeMutexRecursive() or
- * xSemaphoreGiveMutexRecursive() instead of calling these functions directly.
+ * For internal use only.  Use xSemaphoreTakeRecursive() or
+ * xSemaphoreGiveRecursive() instead of calling these functions directly.
  */
 BaseType_t xQueueTakeMutexRecursive( QueueHandle_t xMutex,
                                      TickType_t xTicksToWait ) PRIVILEGED_FUNCTION;
