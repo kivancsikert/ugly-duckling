@@ -43,7 +43,7 @@
 #define configUSE_16_BIT_TICKS 0
 #define configTICK_RATE_HZ (1000)
 #define configMINIMAL_STACK_SIZE (PTHREAD_STACK_MIN)
-#define configTOTAL_HEAP_SIZE ((size_t) (512 * 1024))
+#define configTOTAL_HEAP_SIZE ((size_t) (16 * 1024 * 1024))
 #define configMAX_TASK_NAME_LEN (32)
 #define configCHECK_FOR_STACK_OVERFLOW 1
 #define configIDLE_SHOULD_YIELD 1
