@@ -13,7 +13,7 @@ using namespace std::chrono;
 
 namespace farmhub::kernel {
 
-static const uint32_t DEFAULT_STACK_SIZE = 2048;
+static const uint32_t DEFAULT_STACK_SIZE = configMINIMAL_STACK_SIZE;
 static const unsigned int DEFAULT_PRIORITY = 1;
 
 class Task;
