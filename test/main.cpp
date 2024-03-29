@@ -32,49 +32,89 @@ void loop() {
 }
 
 #else
-void invokeRunTests(void* params) {
-    int* result = (int*)params;
-    printf("Running tests\n");
-    *result = runTests();
+// Taken from https://forums.freertos.org/t/unit-test-strategy/12529
+
+static pthread_t m_freertos_thread_id;
+static int m_result = 0;
+static bool m_test_is_done = false;
+
+/**
+ * FreeRTOS task which runs all my unit tests.
+ */
+static void gtest_task(void* param) {
+    (void) param;
+    // Run Google Test from here!
+    m_result = RUN_ALL_TESTS();
+    m_test_is_done = true;
+    // Note: A call to vTaskEndScheduler() never returns.
     vTaskEndScheduler();
 }
 
-int main(int argc, char** argv) {
-    TaskHandle_t runnerHandle = nullptr;
-    int result = -1;
-    auto created = xTaskCreate(
-        invokeRunTests,
-        "gtest:main",
-        16 * 1024,
-        &result,
+/**
+ * Creates the unit test FreeRTOS task.
+ */
+static void start_free_rtos() {
+    BaseType_t rtos_res = xTaskCreate(gtest_task,
+        "gtest",
+        configMINIMAL_STACK_SIZE * 10,
+        nullptr,
         1,
-        &runnerHandle);
-
-    if (created != pdPASS) {
-        printf("Failed to create the test runner task\n");
-        return -1;
+        nullptr);
+    if (rtos_res != pdPASS) {
+        abort();
     }
-
-    printf("Starting scheduler\n");
-
-    /* Start the tasks and timer running. */
-    vTaskStartScheduler();
-
-    return result;
 }
 
-// uint8_t ucHeap[configTOTAL_HEAP_SIZE];
+static void end_free_rtos()
+{
+    pthread_join(m_freertos_thread_id, nullptr);
+}
+
+/**
+ * FreeRTOS scheduler thread.
+ */
+static void* free_rtos_thread(void* data) {
+    (void) data;
+
+    // Make this thread cancellable
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+    // Start tests
+    start_free_rtos();
+    // Start FreeRTOS scheduler (it never returns)
+    vTaskStartScheduler();
+    return nullptr;
+}
+
+int main(int argc, char** argv) {
+    testing::InitGoogleTest(&argc, argv);
+
+    // Mask out all signals to main thread
+    {
+        sigset_t set;
+        sigfillset(&set);
+        pthread_sigmask(SIG_SETMASK, &set, NULL);
+    }
+
+    // Create the FreeRTOS scheduler thread and wait until it is done
+    pthread_t freeRtosThreadId;
+    pthread_create(&freeRtosThreadId, nullptr, &free_rtos_thread, nullptr);
+
+    while (!m_test_is_done) {
+        sleep(1);
+    }
+
+    end_free_rtos();
+
+    return m_result;
+}
 
 void vAssertCalled(const char* const pcFileName, unsigned long ulLine) {
     printf("Assert in %s:%lu\n", pcFileName, ulLine);
 }
 
-void vApplicationIdleHook(void) {
-}
 void vApplicationStackOverflowHook(TaskHandle_t pxTask, char* pcTaskName) {
     printf("Stack overflow in %s\n", pcTaskName);
-}
-void vApplicationTickHook(void) {
 }
 
 #endif
