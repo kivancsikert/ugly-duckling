@@ -25,19 +25,19 @@ std::string __replaceAllOccurrences(std::string str, const std::string& from, co
     return str;
 }
 
-void __log(FILE* stream, const std::string& prefix, const std::string& _fmt, ...) {
+void __log(const std::string& prefix, const std::string& _fmt, ...) {
     std::string fmt = prefix + __replaceAllOccurrences(_fmt, "%F", "%f") + std::string("\n");
     va_list args;
-    va_start(args, fmt);
-    vfprintf(stream, fmt.c_str(), args);
+    va_start(args, fmt.c_str());
+    vfprintf(stderr, fmt.c_str(), args);
     va_end(args);
 }
 
-#define LOG_DEBUG(...) __log(stdout, "[VERBOSE] ", __VA_ARGS__)
-#define LOG_TRACE(...) __log(stdout, "  [TRACE] ", __VA_ARGS__)
-#define LOG_INFO(...) __log(stdout, "   [INFO] ", __VA_ARGS__)
-#define LOG_WARN(...) __log(stdout, "[WARNING] ", __VA_ARGS__)
-#define LOG_ERROR(...) __log(stdout, "  [ERROR] ", __VA_ARGS__)
+#define LOG_DEBUG(...) __log("[VERBOSE] ", __VA_ARGS__)
+#define LOG_TRACE(...) __log("  [TRACE] ", __VA_ARGS__)
+#define LOG_INFO(...) __log("   [INFO] ", __VA_ARGS__)
+#define LOG_WARN(...) __log("[WARNING] ", __VA_ARGS__)
+#define LOG_ERROR(...) __log("  [ERROR] ", __VA_ARGS__)
 
-#define LOG_IMMEDIATE(...) __log(stderr, "", __VA_ARGS__)
+#define LOG_IMMEDIATE(...) __log("", __VA_ARGS__)
 #endif
