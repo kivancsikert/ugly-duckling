@@ -80,12 +80,8 @@ public:
         }
 
         bool registerCommand(const String& name, CommandHandler handler) {
-            return registerCommand(name, 1024, handler);
-        }
-
-        bool registerCommand(const String& name, size_t responseSize, CommandHandler handler) {
             String suffix = "commands/" + name;
-            return subscribe(suffix, QoS::ExactlyOnce, [this, name, suffix, responseSize, handler](const String&, const JsonObject& request) {
+            return subscribe(suffix, QoS::ExactlyOnce, [this, name, suffix, handler](const String&, const JsonObject& request) {
                 // TODO Do exponential backoff when clear cannot be finished
                 // Clear topic and wait for it to be cleared
                 auto clearStatus = mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, std::chrono::seconds { 5 });
@@ -103,7 +99,7 @@ public:
         }
 
         void registerCommand(Command& command) {
-            registerCommand(command.name, command.getResponseSize(), [&](const JsonObject& request, JsonObject& response) {
+            registerCommand(command.name, [&](const JsonObject& request, JsonObject& response) {
                 command.handle(request, response);
             });
         }
