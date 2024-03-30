@@ -91,6 +91,34 @@ public:
         return TaskHandle(handle);
     }
 
+    enum class RunResult {
+        OK,
+        TIMEOUT,
+    };
+
+    static RunResult inline runIn(const String& name, ticks timeout, const TaskFunction runFunction) {
+        return Task::runIn(name, timeout, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, runFunction);
+    }
+    static RunResult inline runIn(const String& name, ticks timeout, uint32_t stackSize, const TaskFunction runFunction) {
+        return Task::runIn(name, timeout, stackSize, DEFAULT_PRIORITY, runFunction);
+    }
+    static RunResult runIn(const String& name, ticks timeout, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
+        TaskHandle_t caller = xTaskGetCurrentTaskHandle();
+        TaskHandle callee = run(name, stackSize, priority, [runFunction, caller](Task& task) {
+            runFunction(task);
+            xTaskNotifyGive(caller);
+        });
+        auto result = xTaskNotifyWait(0, 0, nullptr, timeout.count());
+        if (result == pdTRUE) {
+            return RunResult::OK;
+        } else {
+            callee.abort();
+            Log.verboseln("Task '%s' timed out",
+                name.c_str());
+            return RunResult::TIMEOUT;
+        }
+    }
+
     static TaskHandle inline loop(const String& name, TaskFunction loopFunction) {
         return Task::loop(name, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, loopFunction);
     }
@@ -165,9 +193,9 @@ public:
 
 private:
     ~Task() {
+#ifdef FARMHUB_DEBUG
         Log.verboseln("Finished task %s\n",
             pcTaskGetName(nullptr));
-#ifdef FARMHUB_DEBUG
         String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX));
         if (buffer != nullptr) {
             delete buffer;
