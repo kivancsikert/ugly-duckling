@@ -405,7 +405,14 @@ private:
             if (subscription.topic == topic) {
                 JsonDocument json;
                 deserializeJson(json, payload);
-                subscription.handle(topic, json.as<JsonObject>());
+                // TODO Make timeout and stack size configurable
+                auto result = Task::runIn("mqtt:incoming-handler", 10s, 4096, [&](Task& task) {
+                    subscription.handle(topic, json.as<JsonObject>());
+                });
+                if (result != Task::RunResult::OK) {
+                    Log.errorln("MQTT: Incoming handler for topic '%s' timed out",
+                        topic.c_str());
+                }
                 return;
             }
         }
