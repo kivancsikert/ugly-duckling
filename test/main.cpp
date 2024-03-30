@@ -65,8 +65,7 @@ static void start_free_rtos() {
     }
 }
 
-static void end_free_rtos()
-{
+static void end_free_rtos() {
     pthread_join(m_freertos_thread_id, nullptr);
 }
 
@@ -97,8 +96,16 @@ int main(int argc, char** argv) {
     }
 
     // Create the FreeRTOS scheduler thread and wait until it is done
+    sigset_t set;
+    pthread_t tid;
+    pthread_attr_t attr;
+
+    sigfillset(&set);
+    pthread_attr_init(&attr);
+    pthread_attr_setsigmask_np(&attr, &set);
+
     pthread_t freeRtosThreadId;
-    pthread_create(&freeRtosThreadId, nullptr, &free_rtos_thread, nullptr);
+    pthread_create(&freeRtosThreadId, &attr, &free_rtos_thread, nullptr);
 
     while (!m_test_is_done) {
         sleep(1);
