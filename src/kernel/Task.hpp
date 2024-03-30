@@ -165,9 +165,9 @@ public:
 
 private:
     ~Task() {
+#ifdef FARMHUB_DEBUG
         Log.verboseln("Finished task %s\n",
             pcTaskGetName(nullptr));
-#ifdef FARMHUB_DEBUG
         String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX));
         if (buffer != nullptr) {
             delete buffer;
