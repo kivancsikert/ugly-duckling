@@ -60,27 +60,43 @@ public:
     ConsolePrinter() {
         static const String spinner = "|/-\\";
         static const int spinnerLength = spinner.length();
+        status.reserve(256);
         Task::loop("console", 3072, 1, [this](Task& task) {
-            String status;
+            status.clear();
 
             counter = (counter + 1) % spinnerLength;
-            status += "[" + spinner.substring(counter, counter + 1) + "] ";
+            status.concat("[");
+            status.concat(spinner.substring(counter, counter + 1));
+            status.concat("] ");
 
-            status += "\033[33m" + String(VERSION) + "\033[0m";
+            status.concat("\033[33m");
+            status.concat(VERSION);
+            status.concat("\033[0m");
 
-            status += ", WIFI: " + wifiStatus();
+            status.concat(", WIFI: ");
+            status.concat(wifiStatus());
 
-            status += ", uptime: \033[33m" + String(float(millis()) / 1000.0f, 1) + "\033[0m s";
+            status.concat(", uptime: \033[33m");
+            status.concat(String(float(millis()) / 1000.0f, 1));
+            status.concat("\033[0m s");
 
-            status += ", RTC: \033[33m" + String(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED") + "\033[0m";
+            status.concat(", RTC: \033[33m");
+            status.concat(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED");
+            status.concat("\033[0m");
 
-            status += ", heap: \033[33m" + String(float(ESP.getFreeHeap()) / 1024.0f, 2) + "\033[0m kB";
+            status.concat(", heap: \033[33m");
+            status.concat(String(float(ESP.getFreeHeap()) / 1024.0f, 2));
+            status.concat("\033[0m kB");
 
-            status += ", CPU: \033[33m" + String(esp_clk_cpu_freq() / 1000000) + "\033[0m MHz";
+            status.concat(", CPU: \033[33m");
+            status.concat(esp_clk_cpu_freq() / 1000000);
+            status.concat("\033[0m MHz");
 
             BatteryDriver* battery = this->battery.load();
             if (battery != nullptr) {
-                status += ", battery: \033[33m" + String(battery->getVoltage(), 2) + "\033[0m V";
+                status.concat(", battery: \033[33m");
+                status.concat(String(battery->getVoltage(), 2));
+                status.concat("\033[0m V");
             }
 
             Serial.print("\033[1G\033[0K");
@@ -151,6 +167,7 @@ private:
 
     int counter;
     char timeBuffer[12];
+    String status;
     std::atomic<BatteryDriver*> battery { nullptr };
 
     Queue<String> consoleQueue { "console", 128 };
