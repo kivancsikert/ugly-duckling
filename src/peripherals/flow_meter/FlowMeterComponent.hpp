@@ -4,14 +4,15 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
-#include <ArduinoLog.h>
 
 #include <kernel/BootClock.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
+
 #include <kernel/drivers/MqttDriver.hpp>
 
 using namespace farmhub::kernel::drivers;
@@ -32,7 +33,7 @@ public:
         : Component(name, mqttRoot)
         , qFactor(qFactor) {
 
-        Log.infoln("Initializing flow meter on pin %d with Q = %F", pin, qFactor);
+        Log.info("Initializing flow meter on pin %d with Q = %.2f", pin, qFactor);
 
         pcntUnit = pcnt.registerUnit(pin);
 
@@ -52,7 +53,7 @@ public:
                 if (pulses > 0) {
                     Lock lock(updateMutex);
                     double currentVolume = pulses / this->qFactor / 60.0f;
-                    Log.verboseln("Counted %d pulses, %F l/min, %F l",
+                    Log.trace("Counted %d pulses, %.2f l/min, %.2f l",
                         pulses, currentVolume / (elapsed.count() / 1000.0f / 60.0f), currentVolume);
                     volume += currentVolume;
                     lastSeenFlow = now;

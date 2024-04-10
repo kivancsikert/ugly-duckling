@@ -4,9 +4,8 @@
 #include <chrono>
 #include <list>
 
-#include <ArduinoLog.h>
-
 #include <kernel/Concurrent.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/Task.hpp>
 
 using namespace std::chrono;
@@ -21,7 +20,7 @@ public:
         : pin(pin)
         , patternQueue(name, 1)
         , pattern({ -milliseconds::max() }) {
-        Log.infoln("Initializing LED driver on pin %d",
+        Log.info("Initializing LED driver on pin %d",
             pin);
 
         pinMode(pin, OUTPUT);

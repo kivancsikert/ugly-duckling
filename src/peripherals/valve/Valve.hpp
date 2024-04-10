@@ -7,9 +7,7 @@
 #include <Arduino.h>
 
 #include <ArduinoJson.h>
-#include <ArduinoLog.h>
 
-#include <peripherals/Peripheral.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/Task.hpp>
@@ -17,6 +15,7 @@
 #include <kernel/drivers/MotorDriver.hpp>
 
 #include <peripherals/Motorized.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <peripherals/valve/ValveComponent.hpp>
 #include <peripherals/valve/ValveConfig.hpp>
 #include <peripherals/valve/ValveScheduler.hpp>

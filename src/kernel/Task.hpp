@@ -8,8 +8,7 @@
 
 #include <Arduino.h>
 
-#include <ArduinoLog.h>
-
+#include <kernel/Log.hpp>
 #include <kernel/Time.hpp>
 
 using namespace std::chrono;
@@ -79,12 +78,12 @@ public:
     }
     static TaskHandle run(const String& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
         TaskFunction* taskFunction = new TaskFunction(runFunction);
-        Log.traceln("Creating task %s with priority %d and stack size %d",
+        Log.debug("Creating task %s with priority %d and stack size %d",
             name.c_str(), priority, stackSize);
         TaskHandle_t handle = nullptr;
         auto result = xTaskCreate(executeTask, name.c_str(), stackSize, taskFunction, priority, &handle);
         if (result != pdPASS) {
-            Log.errorln("Failed to create task %s: %d", name.c_str(), result);
+            Log.error("Failed to create task %s: %d", name.c_str(), result);
             delete taskFunction;
             return TaskHandle();
         }
@@ -113,7 +112,7 @@ public:
             return RunResult::OK;
         } else {
             callee.abort();
-            Log.verboseln("Task '%s' timed out",
+            Log.trace("Task '%s' timed out",
                 name.c_str());
             return RunResult::TIMEOUT;
         }

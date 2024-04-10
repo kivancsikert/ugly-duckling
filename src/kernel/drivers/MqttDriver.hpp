@@ -86,7 +86,7 @@ public:
                 // Clear topic and wait for it to be cleared
                 auto clearStatus = mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, std::chrono::seconds { 5 });
                 if (clearStatus != PublishStatus::Success) {
-                    Log.errorln("MQTT: Failed to clear retained command topic '%s', status: %d", suffix.c_str(), clearStatus);
+                    Log.error("MQTT: Failed to clear retained command topic '%s', status: %d", suffix.c_str(), clearStatus);
                 }
 
                 JsonDocument responseDoc;
@@ -214,7 +214,7 @@ private:
 #ifdef DUMP_MQTT
         String serializedJson;
         serializeJsonPretty(json, serializedJson);
-        Log.infoln("MQTT: Queuing topic '%s'%s (qos = %d): %s",
+        Log.info("MQTT: Queuing topic '%s'%s (qos = %d): %s",
             topic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), qos, serializedJson.c_str());
 #endif
         String payload;
@@ -225,7 +225,7 @@ private:
     }
 
     PublishStatus clear(const String& topic, Retention retain, QoS qos, ticks timeout = ticks::zero()) {
-        Log.traceln("MQTT: Clearing topic '%s'",
+        Log.debug("MQTT: Clearing topic '%s'",
             topic.c_str());
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
             return publishQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, "", retain, qos, waitingTask);
@@ -286,7 +286,7 @@ private:
         networkReady.awaitSet();
 
         if (!mqttClient.isConnected()) {
-            Log.infoln("MQTT: Connecting to MQTT server");
+            Log.info("MQTT: Connecting to MQTT server");
             mqttReady.clear();
 
             String serverCert;
@@ -315,15 +315,15 @@ private:
             }
 
             if (serverCert.isEmpty()) {
-                Log.infoln("MQTT: server: %s:%d, client ID is '%s'",
+                Log.info("MQTT: server: %s:%d, client ID is '%s'",
                     hostname.c_str(), mqttServer.port, clientId.c_str());
                 wifiClient.connect(hostname.c_str(), mqttServer.port);
                 mqttClient.begin(wifiClient);
             } else {
-                Log.infoln("MQTT: server: %s:%d, client ID is '%s', using TLS",
+                Log.info("MQTT: server: %s:%d, client ID is '%s', using TLS",
                     hostname.c_str(), mqttServer.port, clientId.c_str());
-                Log.infoln("Server cert: %s", serverCert.c_str());
-                Log.infoln("Client cert: %s", clientCert.c_str());
+                Log.info("Server cert: %s", serverCert.c_str());
+                Log.info("Client cert: %s", clientCert.c_str());
                 wifiClientSecure.setCACert(serverCert.c_str());
                 wifiClientSecure.setCertificate(clientCert.c_str());
                 wifiClientSecure.setPrivateKey(clientKey.c_str());
@@ -332,7 +332,7 @@ private:
             }
 
             if (!mqttClient.connect(clientId.c_str())) {
-                Log.errorln("MQTT: Connection failed, error = %d",
+                Log.error("MQTT: Connection failed, error = %d",
                     mqttClient.getLastError());
                 trustMdnsCache = false;
                 // TODO Implement exponential backoff
@@ -346,7 +346,7 @@ private:
                 registerSubscriptionWithMqtt(subscription);
             }
 
-            Log.infoln("MQTT: Connected");
+            Log.info("MQTT: Connected");
             mqttReady.set();
         }
 
@@ -363,11 +363,11 @@ private:
         publishQueue.drain([&](const OutgoingMessage& message) {
             bool success = mqttClient.publish(message.topic, message.payload, message.retain == Retention::Retain, static_cast<int>(message.qos));
 #ifdef DUMP_MQTT
-            Log.infoln("MQTT: Published to '%s' (size: %d)",
+            Log.info("MQTT: Published to '%s' (size: %d)",
                 message.topic.c_str(), message.payload.length());
 #endif
             if (!success) {
-                Log.errorln("MQTT: Error publishing to '%s', error = %d",
+                Log.error("MQTT: Error publishing to '%s', error = %d",
                     message.topic.c_str(), mqttClient.getLastError());
             }
             if (message.waitingTask != nullptr) {
@@ -390,15 +390,15 @@ private:
         const String& payload = message.payload;
 
         if (payload.isEmpty()) {
-            Log.verboseln("MQTT: Ignoring empty payload");
+            Log.trace("MQTT: Ignoring empty payload");
             return;
         }
 
 #ifdef DUMP_MQTT
-        Log.infoln("MQTT: Received '%s' (size: %d): %s",
+        Log.info("MQTT: Received '%s' (size: %d): %s",
             topic.c_str(), payload.length(), payload.c_str());
 #else
-        Log.traceln("MQTT: Received '%s' (size: %d)",
+        Log.debug("MQTT: Received '%s' (size: %d)",
             topic.c_str(), payload.length());
 #endif
         for (auto subscription : subscriptions) {
@@ -410,25 +410,25 @@ private:
                     subscription.handle(topic, json.as<JsonObject>());
                 });
                 if (result != Task::RunResult::OK) {
-                    Log.errorln("MQTT: Incoming handler for topic '%s' timed out",
+                    Log.error("MQTT: Incoming handler for topic '%s' timed out",
                         topic.c_str());
                 }
                 return;
             }
         }
-        Log.warningln("MQTT: No handler for topic '%s'",
+        Log.warn("MQTT: No handler for topic '%s'",
             topic.c_str());
     }
 
     // Actually subscribe to the given topic
     bool registerSubscriptionWithMqtt(const Subscription& subscription) {
-        Log.traceln("MQTT: Subscribing to topic '%s' (qos = %d)",
+        Log.debug("MQTT: Subscribing to topic '%s' (qos = %d)",
             subscription.topic.c_str(), subscription.qos);
         bool success = mqttClient.subscribe(subscription.topic, static_cast<int>(subscription.qos), [](const String& payload, const size_t size) {
             // Global handler will take care of putting the received message on the incoming queue
         });
         if (!success) {
-            Log.errorln("MQTT: Error subscribing to topic '%s', error = %d\n",
+            Log.error("MQTT: Error subscribing to topic '%s', error = %d\n",
                 subscription.topic.c_str(), mqttClient.getLastError());
         }
         return success;

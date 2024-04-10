@@ -2,11 +2,13 @@
 
 #include <memory>
 
-#include <peripherals/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/I2CManager.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
+
 #include <peripherals/I2CConfig.hpp>
+#include <peripherals/Peripheral.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
@@ -50,7 +52,7 @@ public:
 
     unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const I2CDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         auto i2cConfig = deviceConfig.parse(defaultAddress, GPIO_NUM_NC, GPIO_NUM_NC);
-        Log.infoln("Creating %s sensor %s with %s",
+        Log.info("Creating %s sensor %s with %s",
             sensorType.c_str(), name.c_str(), i2cConfig.toString().c_str());
         return make_unique<Environment<TComponent>>(name, sensorType, mqttRoot, services.i2c, i2cConfig);
     }

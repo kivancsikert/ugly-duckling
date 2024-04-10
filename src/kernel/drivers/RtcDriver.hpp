@@ -4,9 +4,9 @@
 #include <chrono>
 #include <time.h>
 
-#include <ArduinoLog.h>
 #include <NTPClient.h>
 
+#include <kernel/Log.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 
@@ -44,7 +44,7 @@ public:
         Task::run("rtc-check", 2560, [this](Task& task) {
             while (true) {
                 if (isTimeSet()) {
-                    Log.infoln("RTC: time is set");
+                    Log.info("RTC: time is set");
                     this->rtcInSync.set();
                     break;
                 }
@@ -62,7 +62,7 @@ public:
                     task.delay(1h);
                 } else {
                     // Attempt a retry, but with mDNS cache disabled
-                    Log.traceln("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
+                    Log.debug("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
                     ntpClient = nullptr;
                     trustMdnsCache = false;
                     task.delay(10s);
@@ -88,19 +88,19 @@ private:
         }
 
         if (ntpConfig.host.get().length() > 0) {
-            Log.infoln("RTC: using NTP server %s from configuration",
+            Log.info("RTC: using NTP server %s from configuration",
                 ntpConfig.host.get().c_str());
             ntpClient = new NTPClient(udp, ntpConfig.host.get().c_str());
         } else {
             MdnsRecord ntpServer;
             if (mdns.lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
-                Log.infoln("RTC: using NTP server %s:%d (%p) from mDNS",
+                Log.info("RTC: using NTP server %s:%d (%p) from mDNS",
                     ntpServer.hostname.c_str(),
                     ntpServer.port,
                     ntpServer.ip);
                 ntpClient = new NTPClient(udp, ntpServer.ip);
             } else {
-                Log.infoln("RTC: no NTP server configured, using default");
+                Log.info("RTC: no NTP server configured, using default");
                 ntpClient = new NTPClient(udp);
             }
         }
@@ -126,16 +126,16 @@ private:
             // If the difference is larger than the threshold, set the time directly
             struct timeval tv = { .tv_sec = newEpochTime, .tv_usec = 0 };
             settimeofday(&tv, NULL);
-            Log.traceln("RTC: Set time to %ld (from: %ld)",
+            Log.debug("RTC: Set time to %ld (from: %ld)",
                 newEpochTime, now);
         } else if (difference != 0) {
             // If the difference is smaller, adjust the time gradually
             struct timeval adj = { .tv_sec = difference, .tv_usec = 0 };
             adjtime(&adj, NULL);
-            Log.traceln("RTC: Adjusted time by %ld",
+            Log.debug("RTC: Adjusted time by %ld",
                 difference);
         } else {
-            Log.traceln("RTC: Time is already correct");
+            Log.debug("RTC: Time is already correct");
         }
     }
 

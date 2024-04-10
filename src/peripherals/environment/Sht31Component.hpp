@@ -2,15 +2,15 @@
 
 #include <Arduino.h>
 
-#include <ArduinoLog.h>
 #include <SHT31.h>
 
 #include <kernel/Component.hpp>
 #include <kernel/I2CManager.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/Telemetry.hpp>
-#include <peripherals/Peripheral.hpp>
 
 #include <peripherals/I2CConfig.hpp>
+#include <peripherals/Peripheral.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
@@ -34,7 +34,7 @@ public:
         // TODO Add configuration for fast / slow measurement
         // TODO Add a separate task to do measurements to unblock telemetry collection?
 
-        Log.infoln("Initializing %s environment sensor with %s",
+        Log.info("Initializing %s environment sensor with %s",
             sensorType.c_str(), config.toString().c_str());
 
         if (!sensor.begin()) {
@@ -47,7 +47,7 @@ public:
 
     void populateTelemetry(JsonObject& json) override {
         if (!sensor.read()) {
-            Log.errorln("Failed to read SHT3x environment sensor: %d",
+            Log.error("Failed to read SHT3x environment sensor: %d",
                 sensor.getError());
             return;
         }

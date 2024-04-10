@@ -6,7 +6,7 @@
 
 #include <Arduino.h>
 
-#include <ArduinoLog.h>
+#include <kernel/Log.hpp>
 
 namespace farmhub::kernel {
 
@@ -78,7 +78,7 @@ public:
         pcnt_filter_enable(unit);
         pcnt_counter_clear(unit);
 
-        Log.traceln("Registered PCNT unit %d on pin %d",
+        Log.debug("Registered PCNT unit %d on pin %d",
             unit, pin);
         return PcntUnit(unit, pin);
     }

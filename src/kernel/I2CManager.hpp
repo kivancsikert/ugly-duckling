@@ -7,7 +7,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include <ArduinoLog.h>
+#include <kernel/Log.hpp>
 
 namespace farmhub::kernel {
 
@@ -35,10 +35,10 @@ public:
         GpioPair key = std::make_pair(sda, scl);
         auto it = wireMap.find(key);
         if (it != wireMap.end()) {
-            Log.verboseln("Reusing already registered I2C bus for SDA: %d, SCL: %d", sda, scl);
+            Log.trace("Reusing already registered I2C bus for SDA: %d, SCL: %d", sda, scl);
             return *(it->second);
         } else {
-            Log.verboseln("Creating new I2C bus for SDA: %d, SCL: %d", sda, scl);
+            Log.trace("Creating new I2C bus for SDA: %d, SCL: %d", sda, scl);
             TwoWire* wire = new TwoWire(nextBus++);
             if (!wire->begin(sda, scl)) {
                 throw std::runtime_error(

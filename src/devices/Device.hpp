@@ -10,10 +10,9 @@
 
 #include <Print.h>
 
-#include <ArduinoLog.h>
-
 #include <kernel/Command.hpp>
 #include <kernel/Kernel.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
 
@@ -195,13 +194,15 @@ public:
 #else
                 Serial.println(message);
 #endif
-        Log.infoln(F("  ______                   _    _       _"));
-        Log.infoln(F(" |  ____|                 | |  | |     | |"));
-        Log.infoln(F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
-        Log.infoln(F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
-        Log.infoln(F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
-        Log.infoln(F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
-        Log.infoln("");
+            });
+        });
+        Log.info(F("  ______                   _    _       _"));
+        Log.info(F(" |  ____|                 | |  | |     | |"));
+        Log.info(F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
+        Log.info(F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
+        Log.info(F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
+        Log.info(F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
+        Log.info("");
     }
 };
 
@@ -274,14 +275,14 @@ public:
         kernel.getRtcInSyncState().awaitSet();
 
         auto builtInPeripheralsCofig = deviceDefinition.getBuiltInPeripherals();
-        Log.traceln("Loading configuration for %d built-in peripherals",
+        Log.debug("Loading configuration for %d built-in peripherals",
             builtInPeripheralsCofig.size());
         for (auto& perpheralConfig : builtInPeripheralsCofig) {
             peripheralManager.createPeripheral(perpheralConfig);
         }
 
         auto& peripheralsConfig = deviceConfig.peripherals.get();
-        Log.infoln("Loading configuration for %d user-configured peripherals",
+        Log.info("Loading configuration for %d user-configured peripherals",
             peripheralsConfig.size());
         for (auto& perpheralConfig : peripheralsConfig) {
             peripheralManager.createPeripheral(perpheralConfig.get());
@@ -321,7 +322,7 @@ public:
 
         kernel.getKernelReadyState().set();
 
-        Log.infoln("Device ready in %F s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%p')",
+        Log.info("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%p')",
             millis() / 1000.0,
             kernel.version.c_str(),
             deviceConfig.model.get().c_str(),

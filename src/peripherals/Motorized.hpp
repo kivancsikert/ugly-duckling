@@ -3,11 +3,12 @@
 #include <list>
 
 #include <Arduino.h>
-#include <ArduinoLog.h>
+
+#include <kernel/Service.hpp>
+
+#include <kernel/drivers/MotorDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
-#include <kernel/Service.hpp>
-#include <kernel/drivers/MotorDriver.hpp>
 
 using namespace farmhub::kernel::drivers;
 

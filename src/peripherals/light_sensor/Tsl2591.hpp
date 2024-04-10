@@ -7,15 +7,15 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include <ArduinoLog.h>
-
 #include <Adafruit_Sensor.h>
 #include <Adafruit_TSL2591.h>
 
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/I2CManager.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/Telemetry.hpp>
+
 #include <peripherals/I2CConfig.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/light_sensor/LightSensor.hpp>
@@ -47,7 +47,7 @@ public:
         seconds latencyInterval)
         : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval) {
 
-        Log.infoln("Initializing TSL2591 light sensor with %s",
+        Log.info("Initializing TSL2591 light sensor with %s",
             config.toString().c_str());
 
         if (!sensor.begin(&i2c.getWireFor(config), config.address)) {
@@ -60,7 +60,7 @@ public:
 
         sensor_t sensorInfo;
         sensor.getSensor(&sensorInfo);
-        Log.traceln("Found sensor: %s, driver version: %d, unique ID: %d, max value: %F lux, min value: %F lux, resolution: %F mlux",
+        Log.debug("Found sensor: %s, driver version: %d, unique ID: %d, max value: %.2f lux, min value: %.2f lux, resolution: %.2f mlux",
             sensorInfo.name, sensorInfo.version, sensorInfo.sensor_id, sensorInfo.max_value, sensorInfo.min_value, sensorInfo.resolution * 1000);
 
         runLoop();

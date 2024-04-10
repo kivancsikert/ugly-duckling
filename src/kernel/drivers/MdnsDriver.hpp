@@ -3,9 +3,8 @@
 #include <ArduinoJson.h>
 #include <ESPmDNS.h>
 
-#include <ArduinoLog.h>
-
 #include <kernel/Concurrent.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/NvsStore.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
@@ -33,16 +32,16 @@ public:
         : mdnsReady(mdnsReady) {
         // TODO Add error handling
         Task::run("mdns", 4096, [&networkReady, &mdnsReady, instanceName, hostname, version](Task& task) {
-            Log.infoln("mDNS: initializing");
+            Log.info("mDNS: initializing");
             networkReady.awaitSet();
 
             MDNS.begin(hostname);
             MDNS.setInstanceName(instanceName);
-            Log.traceln("mDNS: Advertising service %s on %s.local, version: %s",
+            Log.debug("mDNS: Advertising service %s on %s.local, version: %s",
                 instanceName.c_str(), hostname.c_str(), version.c_str());
             MDNS.addService("farmhub", "tcp", 80);
             MDNS.addServiceTxt("farmhub", "tcp", "version", version);
-            Log.infoln("mDNS: configured");
+            Log.info("mDNS: configured");
 
             mdnsReady.set();
         });
@@ -62,17 +61,17 @@ private:
         if (loadFromCache) {
             if (nvs.get(cacheKey, record)) {
                 if (record.validate()) {
-                    Log.traceln("mDNS: found %s in NVS cache: %s",
+                    Log.debug("mDNS: found %s in NVS cache: %s",
                         cacheKey.c_str(), record.hostname.c_str());
                     return true;
                 } else {
-                    Log.traceln("mDNS: invalid record in NVS cache for %s, removing",
+                    Log.debug("mDNS: invalid record in NVS cache for %s, removing",
                         cacheKey.c_str());
                     nvs.remove(cacheKey);
                 }
             }
         } else {
-            Log.traceln("mDNS: removing untrusted record for %s from NVS cache",
+            Log.debug("mDNS: removing untrusted record for %s from NVS cache",
                 cacheKey.c_str());
             nvs.remove(cacheKey);
         }
@@ -82,10 +81,10 @@ private:
         if (count == 0) {
             return false;
         }
-        Log.infoln("mDNS: found %d services, choosing first:",
+        Log.info("mDNS: found %d services, choosing first:",
             count);
         for (int i = 0; i < count; i++) {
-            Log.infoln(" %s%d) %s:%d (%s)",
+            Log.info(" %s%d) %s:%d (%s)",
                 i == 0 ? "*" : " ",
                 i + 1,
                 MDNS.hostname(i).c_str(),

@@ -4,9 +4,8 @@
 
 #include <Arduino.h>
 
-#include <ArduinoLog.h>
-
 #include <kernel/Concurrent.hpp>
+#include <kernel/Log.hpp>
 
 // FIXME Why do we need to define these manually?
 #if CONFIG_IDF_TARGET_ESP32
@@ -38,20 +37,20 @@ public:
     static bool shouldSleepWhenIdle(bool requestedSleepWhenIdle) {
         if (requestedSleepWhenIdle) {
 #if FARMHUB_DEBUG
-            Log.warningln("Light sleep is disabled in debug mode");
+            Log.warn("Light sleep is disabled in debug mode");
             return false;
 #elif not(CONFIG_PM_ENABLE)
-            Log.infoln("Power management is disabled because CONFIG_PM_ENABLE is not set");
+            Log.info("Power management is disabled because CONFIG_PM_ENABLE is not set");
             return false;
 #elif not(CONFIG_FREERTOS_USE_TICKLESS_IDLE)
-            Log.infoln("Light sleep is disabled because CONFIG_FREERTOS_USE_TICKLESS_IDLE is not set");
+            Log.info("Light sleep is disabled because CONFIG_FREERTOS_USE_TICKLESS_IDLE is not set");
             return false;
 #else
-            Log.infoln("Light sleep is enabled");
+            Log.info("Light sleep is enabled");
             return true;
 #endif
         } else {
-            Log.infoln("Light sleep is disabled");
+            Log.info("Light sleep is disabled");
             return false;
         }
     }
@@ -61,7 +60,7 @@ public:
     void keepAwake() {
         Lock lock(requestCountMutex);
         requestCount++;
-        Log.traceln("Task %s requested the device to keep awake, counter at %d",
+        Log.debug("Task %s requested the device to keep awake, counter at %d",
             pcTaskGetName(nullptr), requestCount);
         if (requestCount == 1) {
             configurePowerManagement(false);
@@ -71,7 +70,7 @@ public:
     void allowSleep() {
         Lock lock(requestCountMutex);
         requestCount--;
-        Log.traceln("Task %s finished with insomniac activity, counter at %d",
+        Log.debug("Task %s finished with insomniac activity, counter at %d",
             pcTaskGetName(nullptr), requestCount);
         if (requestCount == 0) {
             configurePowerManagement(true);
@@ -80,7 +79,7 @@ public:
 
 private:
     void configurePowerManagement(bool enableLightSleep) {
-        Log.verboseln("Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
+        Log.trace("Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
             MAX_CPU_FREQ_MHZ, MIN_CPU_FREQ_MHZ, enableLightSleep ? "enabled" : "disabled");
         // Configure dynamic frequency scaling:
         // maximum and minimum frequencies are set in sdkconfig,

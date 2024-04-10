@@ -35,15 +35,15 @@ public:
         gpio_num_t pin)
         : Component(name, mqttRoot) {
 
-        Log.infoln("Initializing DS18B20 soil temperature sensor on pin %d",
+        Log.info("Initializing DS18B20 soil temperature sensor on pin %d",
             pin);
 
         oneWire.begin(pin);
 
         // locate devices on the bus
-        Log.verboseln("Locating devices...");
+        Log.trace("Locating devices...");
         sensors.begin();
-        Log.traceln("Found %d devices, parasitic power is %s",
+        Log.debug("Found %d devices, parasitic power is %s",
             sensors.getDeviceCount(),
             sensors.isParasitePowerMode() ? "ON" : "OFF");
 
@@ -53,18 +53,18 @@ public:
         }
 
         // show the addresses we found on the bus
-        Log.traceln("Device 0 Address: %s",
+        Log.debug("Device 0 Address: %s",
             toStringAddress(thermometer).c_str());
     }
 
     void populateTelemetry(JsonObject& json) override {
         if (!sensors.requestTemperaturesByIndex(0)) {
-            Log.errorln("Failed to get temperature from DS18B20 sensor");
+            Log.error("Failed to get temperature from DS18B20 sensor");
             return;
         }
         float temperature = sensors.getTempCByIndex(0);
         if (temperature == DEVICE_DISCONNECTED_C) {
-            Log.errorln("Failed to get temperature from DS18B20 sensor");
+            Log.error("Failed to get temperature from DS18B20 sensor");
             return;
         }
         json["temperature"] = temperature;
