@@ -113,10 +113,10 @@ public:
 
         Lock lock(mutex);
         if (size < bufferSize) {
-            logWithBuffer(buffer, size, level, format, args...);
+            logWithBuffer(buffer, size + 1, level, format, args...);
         } else {
             char* localBuffer = new char[size + 1];
-            logWithBuffer(localBuffer, size, level, format, args...);
+            logWithBuffer(localBuffer, size + 1, level, format, args...);
             delete localBuffer;
         }
     }
