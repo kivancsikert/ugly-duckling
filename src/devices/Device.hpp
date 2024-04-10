@@ -208,7 +208,6 @@ public:
         Log.info(F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
         Log.info(F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
         Log.info(F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
-        Log.info("");
     }
 
     void consumeLog(Level level, const char* message) override {
