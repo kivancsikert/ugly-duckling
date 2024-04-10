@@ -193,6 +193,7 @@ public:
                 consolePrinter.printLog(level, message);
 #else
                 Serial.println(message);
+                Serial0.println(message);
 #endif
             });
         });
