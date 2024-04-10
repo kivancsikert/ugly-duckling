@@ -17,6 +17,7 @@ namespace farmhub::kernel {
 #define FARMHUB_LOG_LEVEL_INFO 4
 #define FARMHUB_LOG_LEVEL_DEBUG 5
 #define FARMHUB_LOG_LEVEL_TRACE 6
+#define FARMHUB_LOG_LEVEL_ALL 100
 
 enum class Level {
     Silent = FARMHUB_LOG_LEVEL_SILENT,
@@ -25,7 +26,8 @@ enum class Level {
     Warning = FARMHUB_LOG_LEVEL_WARNING,
     Info = FARMHUB_LOG_LEVEL_INFO,
     Debug = FARMHUB_LOG_LEVEL_DEBUG,
-    Trace = FARMHUB_LOG_LEVEL_TRACE
+    Trace = FARMHUB_LOG_LEVEL_TRACE,
+    All = FARMHUB_LOG_LEVEL_ALL
 };
 
 #ifndef FARMHUB_LOG_LEVEL

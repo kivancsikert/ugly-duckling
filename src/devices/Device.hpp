@@ -205,7 +205,9 @@ public:
     }
 
     void consumeLog(Level level, const char* message) override {
-        logRecords.offer(LogRecord { level, message });
+        if (level <= recordedLevel.load()) {
+            logRecords.offer(LogRecord { level, message });
+        }
 #ifdef FARMHUB_DEBUG
         consolePrinter.printLog(level, message);
 #else
@@ -214,7 +216,12 @@ public:
 #endif
     }
 
+    void setRecordedLevel(Level level) {
+        recordedLevel = level;
+    }
+
 private:
+    std::atomic<Level> recordedLevel { Level::All };
     Queue<LogRecord>& logRecords;
 };
 
@@ -245,6 +252,7 @@ class ConfiguredKernel : ConsoleProvider {
 public:
     ConfiguredKernel(Queue<LogRecord>& logRecords)
         : ConsoleProvider(logRecords) {
+        setRecordedLevel(deviceDefinition.config.publishLogs.get());
     }
 
     TDeviceDefinition deviceDefinition;
@@ -293,10 +301,12 @@ public:
                     return;
                 }
 
-                mqttDeviceRoot->publish("log", [&](JsonObject& json) {
-                    json["level"] = record.level;
-                    json["message"] = record.message;
-                });
+                mqttDeviceRoot->publish(
+                    "log", [&](JsonObject& json) {
+                        json["level"] = record.level;
+                        json["message"] = record.message;
+                    },
+                    MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::max(), MqttDriver::LogPublish::Silent);
             });
         });
 
