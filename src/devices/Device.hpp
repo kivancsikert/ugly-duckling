@@ -194,8 +194,9 @@ struct LogRecord {
 
 class ConsoleProvider : public LogConsumer {
 public:
-    ConsoleProvider(Queue<LogRecord>& logRecords)
-        : logRecords(logRecords) {
+    ConsoleProvider(Queue<LogRecord>& logRecords, Level recordedLevel)
+        : logRecords(logRecords)
+        , recordedLevel(recordedLevel) {
         Serial.begin(115200);
 #if Serial != Serial0
         Serial0.begin(115200);
@@ -211,7 +212,7 @@ public:
     }
 
     void consumeLog(Level level, const char* message) override {
-        if (level <= recordedLevel.load()) {
+        if (level <= recordedLevel) {
             logRecords.offer(LogRecord { level, message });
         }
 #ifdef FARMHUB_DEBUG
@@ -224,13 +225,9 @@ public:
 #endif
     }
 
-    void setRecordedLevel(Level level) {
-        recordedLevel = level;
-    }
-
 private:
-    std::atomic<Level> recordedLevel { Level::All };
     Queue<LogRecord>& logRecords;
+    const Level recordedLevel;
 };
 
 class MemoryTelemetryProvider : public TelemetryProvider {
@@ -256,14 +253,14 @@ private:
     TelemetryCollector& telemetryCollector;
 };
 
-class ConfiguredKernel : ConsoleProvider {
+class ConfiguredKernel {
 public:
     ConfiguredKernel(Queue<LogRecord>& logRecords)
-        : ConsoleProvider(logRecords) {
-        setRecordedLevel(deviceDefinition.config.publishLogs.get());
+        : consoleProvider(logRecords, deviceDefinition.config.publishLogs.get()) {
     }
 
     TDeviceDefinition deviceDefinition;
+    ConsoleProvider consoleProvider;
     Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.mqttConfig, deviceDefinition.statusLed };
 };
 
@@ -392,7 +389,7 @@ private:
         }
     }
 
-    Queue<LogRecord> logRecords { "logs", 64 };
+    Queue<LogRecord> logRecords { "logs", 32 };
     ConfiguredKernel configuredKernel { logRecords };
     Kernel<TDeviceConfiguration>& kernel = configuredKernel.kernel;
     TDeviceDefinition& deviceDefinition = configuredKernel.deviceDefinition;
