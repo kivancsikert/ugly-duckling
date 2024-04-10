@@ -11,6 +11,7 @@
 #include <Print.h>
 
 #include <kernel/Command.hpp>
+#include <kernel/Concurrent.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/Log.hpp>
 #include <kernel/Task.hpp>
@@ -182,12 +183,20 @@ private:
 ConsolePrinter consolePrinter;
 #endif
 
+struct LogRecord {
+    Level level;
+    String message;
+};
+
 class ConsoleProvider {
 public:
-    ConsoleProvider() {
+    ConsoleProvider(Queue<LogRecord>& logRecords) {
         Serial.begin(115200);
         Serial0.begin(115200);
-        Log.updateConsumers([](std::list<LogConsumer>& consumers) {
+        Log.updateConsumers([&](std::list<LogConsumer>& consumers) {
+            consumers.push_back([&](Level level, const char* message) {
+                logRecords.offer(LogRecord { level, message });
+            });
             consumers.push_back([](Level level, const char* message) {
 #ifdef FARMHUB_DEBUG
                 consolePrinter.printLog(level, message);
@@ -232,6 +241,10 @@ private:
 
 class ConfiguredKernel : ConsoleProvider {
 public:
+    ConfiguredKernel(Queue<LogRecord>& logRecords)
+        : ConsoleProvider(logRecords) {
+    }
+
     TDeviceDefinition deviceDefinition;
     Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.mqttConfig, deviceDefinition.statusLed };
 };
@@ -271,6 +284,19 @@ public:
         mqttDeviceRoot->registerCommand(fileWriteCommand);
         mqttDeviceRoot->registerCommand(fileRemoveCommand);
         mqttDeviceRoot->registerCommand(httpUpdateCommand);
+
+        Task::loop("mqtt:log", 3072, [this](Task& task) {
+            logRecords.take([&](const LogRecord& record) {
+                if (record.level > deviceConfig.publishLogs.get()) {
+                    return;
+                }
+
+                mqttDeviceRoot->publish("log", [&](JsonObject& json) {
+                    json["level"] = record.level;
+                    json["message"] = record.message;
+                });
+            });
+        });
 
         // We want RTC to be in sync before we start setting up peripherals
         kernel.getRtcInSyncState().awaitSet();
@@ -346,7 +372,8 @@ private:
         }
     }
 
-    ConfiguredKernel configuredKernel;
+    Queue<LogRecord> logRecords { "logs", 128 };
+    ConfiguredKernel configuredKernel { logRecords };
     Kernel<TDeviceConfiguration>& kernel = configuredKernel.kernel;
     TDeviceDefinition& deviceDefinition = configuredKernel.deviceDefinition;
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;

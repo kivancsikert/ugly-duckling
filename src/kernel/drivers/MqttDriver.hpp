@@ -214,7 +214,7 @@ private:
 #ifdef DUMP_MQTT
         String serializedJson;
         serializeJsonPretty(json, serializedJson);
-        Log.info("MQTT: Queuing topic '%s'%s (qos = %d): %s",
+        Log.debug("MQTT: Queuing topic '%s'%s (qos = %d): %s",
             topic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), qos, serializedJson.c_str());
 #endif
         String payload;
@@ -286,7 +286,7 @@ private:
         networkReady.awaitSet();
 
         if (!mqttClient.isConnected()) {
-            Log.info("MQTT: Connecting to MQTT server");
+            Log.debug("MQTT: Connecting to MQTT server");
             mqttReady.clear();
 
             String serverCert;
@@ -315,15 +315,15 @@ private:
             }
 
             if (serverCert.isEmpty()) {
-                Log.info("MQTT: server: %s:%d, client ID is '%s'",
+                Log.debug("MQTT: server: %s:%d, client ID is '%s'",
                     hostname.c_str(), mqttServer.port, clientId.c_str());
                 wifiClient.connect(hostname.c_str(), mqttServer.port);
                 mqttClient.begin(wifiClient);
             } else {
-                Log.info("MQTT: server: %s:%d, client ID is '%s', using TLS",
+                Log.debug("MQTT: server: %s:%d, client ID is '%s', using TLS",
                     hostname.c_str(), mqttServer.port, clientId.c_str());
-                Log.info("Server cert: %s", serverCert.c_str());
-                Log.info("Client cert: %s", clientCert.c_str());
+                Log.debug("Server cert: %s", serverCert.c_str());
+                Log.debug("Client cert: %s", clientCert.c_str());
                 wifiClientSecure.setCACert(serverCert.c_str());
                 wifiClientSecure.setCertificate(clientCert.c_str());
                 wifiClientSecure.setPrivateKey(clientKey.c_str());
@@ -346,7 +346,7 @@ private:
                 registerSubscriptionWithMqtt(subscription);
             }
 
-            Log.info("MQTT: Connected");
+            Log.debug("MQTT: Connected");
             mqttReady.set();
         }
 
@@ -363,11 +363,11 @@ private:
         publishQueue.drain([&](const OutgoingMessage& message) {
             bool success = mqttClient.publish(message.topic, message.payload, message.retain == Retention::Retain, static_cast<int>(message.qos));
 #ifdef DUMP_MQTT
-            Log.info("MQTT: Published to '%s' (size: %d)",
+            Log.trace("MQTT: Published to '%s' (size: %d)",
                 message.topic.c_str(), message.payload.length());
 #endif
             if (!success) {
-                Log.error("MQTT: Error publishing to '%s', error = %d",
+                Log.trace("MQTT: Error publishing to '%s', error = %d",
                     message.topic.c_str(), mqttClient.getLastError());
             }
             if (message.waitingTask != nullptr) {
@@ -395,7 +395,7 @@ private:
         }
 
 #ifdef DUMP_MQTT
-        Log.info("MQTT: Received '%s' (size: %d): %s",
+        Log.debug("MQTT: Received '%s' (size: %d): %s",
             topic.c_str(), payload.length(), payload.c_str());
 #else
         Log.debug("MQTT: Received '%s' (size: %d)",

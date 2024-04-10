@@ -29,11 +29,6 @@ enum class Level {
     Trace = FARMHUB_LOG_LEVEL_TRACE
 };
 
-struct LogRecord {
-    Level level;
-    String message;
-};
-
 using LogConsumer = std::function<void(Level, const char*)>;
 
 #ifndef FARMHUB_LOG_LEVEL
