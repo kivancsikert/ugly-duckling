@@ -188,24 +188,13 @@ struct LogRecord {
     String message;
 };
 
-class ConsoleProvider {
+class ConsoleProvider : public LogConsumer {
 public:
-    ConsoleProvider(Queue<LogRecord>& logRecords) {
+    ConsoleProvider(Queue<LogRecord>& logRecords)
+        : logRecords(logRecords) {
         Serial.begin(115200);
         Serial0.begin(115200);
-        Log.updateConsumers([&](std::list<LogConsumer>& consumers) {
-            consumers.push_back([&](Level level, const char* message) {
-                logRecords.offer(LogRecord { level, message });
-            });
-            consumers.push_back([](Level level, const char* message) {
-#ifdef FARMHUB_DEBUG
-                consolePrinter.printLog(level, message);
-#else
-                Serial.println(message);
-                Serial0.println(message);
-#endif
-            });
-        });
+        Log.setConsumer(this);
         Log.info(F("  ______                   _    _       _"));
         Log.info(F(" |  ____|                 | |  | |     | |"));
         Log.info(F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
@@ -214,6 +203,19 @@ public:
         Log.info(F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
         Log.info("");
     }
+
+    void consumeLog(Level level, const char* message) override {
+        logRecords.offer(LogRecord { level, message });
+#ifdef FARMHUB_DEBUG
+        consolePrinter.printLog(level, message);
+#else
+        Serial.println(message);
+        Serial0.println(message);
+#endif
+    }
+
+private:
+    Queue<LogRecord>& logRecords;
 };
 
 class MemoryTelemetryProvider : public TelemetryProvider {
@@ -372,7 +374,7 @@ private:
         }
     }
 
-    Queue<LogRecord> logRecords { "logs", 128 };
+    Queue<LogRecord> logRecords { "logs", 32 };
     ConfiguredKernel configuredKernel { logRecords };
     Kernel<TDeviceConfiguration>& kernel = configuredKernel.kernel;
     TDeviceDefinition& deviceDefinition = configuredKernel.deviceDefinition;

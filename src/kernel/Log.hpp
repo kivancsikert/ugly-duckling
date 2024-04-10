@@ -1,8 +1,7 @@
 #pragma once
 
-#include <algorithm>
+#include <atomic>
 #include <functional>
-#include <list>
 #include <memory>
 
 #include <ArduinoJson.h>
@@ -29,8 +28,6 @@ enum class Level {
     Trace = FARMHUB_LOG_LEVEL_TRACE
 };
 
-using LogConsumer = std::function<void(Level, const char*)>;
-
 #ifndef FARMHUB_LOG_LEVEL
 #ifdef FARMHUB_DEBUG
 #define FARMHUB_LOG_LEVEL FARMHUB_LOG_LEVEL_TRACE
@@ -46,7 +43,12 @@ void convertFromJson(JsonVariantConst src, Level& dst) {
     dst = static_cast<Level>(src.as<int>());
 }
 
-class FarmhubLog {
+class LogConsumer {
+public:
+    virtual void consumeLog(Level level, const char* message) = 0;
+};
+
+class FarmhubLog : public LogConsumer {
 public:
     template <class T, typename... Args>
     inline void fatal(T format, Args... args) {
@@ -106,8 +108,8 @@ public:
             return;
         }
 
-        Lock lock(mutex);
         if (size < bufferSize) {
+            Lock lock(bufferMutex);
             logWithBuffer(buffer, size + 1, level, format, args...);
         } else {
             char* localBuffer = new char[size + 1];
@@ -116,24 +118,29 @@ public:
         }
     }
 
-    void updateConsumers(std::function<void(std::list<LogConsumer>&)> consumerUpdater) {
-        Lock lock(mutex);
-        consumerUpdater(consumers);
+    void setConsumer(LogConsumer* consumer) {
+        this->consumer = consumer;
+    }
+
+    /**
+     * @brief Default implementation of LogConsumer.
+     */
+    void consumeLog(Level level, const char* message) override {
+        Serial.println(message);
     }
 
 private:
     template <typename... Args>
     void logWithBuffer(char* buffer, size_t size, Level level, const char* format, Args... args) {
         snprintf(buffer, size, format, args...);
-        for (auto& consumer : consumers) {
-            consumer(level, buffer);
-        }
+        consumer.load()->consumeLog(level, buffer);
     }
 
-    Mutex mutex;
     constexpr static int bufferSize = 128;
+    // TODO Maybe use a thread_local here?
+    Mutex bufferMutex;
     char buffer[bufferSize];
-    std::list<LogConsumer> consumers;
+    std::atomic<LogConsumer*> consumer { this };
 };
 
 extern FarmhubLog Log;
