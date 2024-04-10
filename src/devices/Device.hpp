@@ -92,7 +92,7 @@ public:
 
             Serial.print("\033[1G\033[0K");
 
-            consoleQueue.drain([](String line) {
+            consoleQueue.drain([](const String& line) {
                 Serial.println(line);
                 Serial0.println(line);
             });
