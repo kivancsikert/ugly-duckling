@@ -95,7 +95,9 @@ public:
 
             consoleQueue.drain([](const String& line) {
                 Serial.println(line);
+#if Serial != Serial0
                 Serial0.println(line);
+#endif
             });
 
             Serial.print(status);
@@ -143,7 +145,9 @@ public:
         buffer->concat(message);
         if (!consoleQueue.offer(*buffer)) {
             Serial.println(*buffer);
+#if Serial != Serial0
             Serial0.println(*buffer);
+#endif
         }
         delete buffer;
     }
@@ -193,7 +197,9 @@ public:
     ConsoleProvider(Queue<LogRecord>& logRecords)
         : logRecords(logRecords) {
         Serial.begin(115200);
+#if Serial != Serial0
         Serial0.begin(115200);
+#endif
         Log.setConsumer(this);
         Log.info(F("  ______                   _    _       _"));
         Log.info(F(" |  ____|                 | |  | |     | |"));
@@ -212,7 +218,9 @@ public:
         consolePrinter.printLog(level, message);
 #else
         Serial.println(message);
+#if Serial != Serial0
         Serial0.println(message);
+#endif
 #endif
     }
 
@@ -384,7 +392,7 @@ private:
         }
     }
 
-    Queue<LogRecord> logRecords { "logs", 32 };
+    Queue<LogRecord> logRecords { "logs", 64 };
     ConfiguredKernel configuredKernel { logRecords };
     Kernel<TDeviceConfiguration>& kernel = configuredKernel.kernel;
     TDeviceDefinition& deviceDefinition = configuredKernel.deviceDefinition;
