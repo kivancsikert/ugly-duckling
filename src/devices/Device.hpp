@@ -8,14 +8,6 @@
 #include <esp32/clk.h>
 #include <esp_pm.h>
 
-#ifndef FARMHUB_LOG_LEVEL
-#ifdef FARMHUB_DEBUG
-#define FARMHUB_LOG_LEVEL LOG_LEVEL_VERBOSE
-#else
-#define FARMHUB_LOG_LEVEL LOG_LEVEL_INFO
-#endif
-#endif
-
 #include <Print.h>
 
 #include <ArduinoLog.h>
@@ -55,7 +47,7 @@ typedef farmhub::devices::Mk6Config TDeviceConfiguration;
 namespace farmhub::devices {
 
 #ifdef FARMHUB_DEBUG
-class ConsolePrinter : public Print {
+class ConsolePrinter {
 public:
     ConsolePrinter() {
         static const String spinner = "|/-\\";
@@ -115,30 +107,45 @@ public:
         this->battery = &battery;
     }
 
-    size_t write(uint8_t character) override {
-        Task::consoleBuffer()->concat((char) character);
-        return 1;
-    }
-
-    size_t write(const uint8_t* buffer, size_t size) override {
-        Task::consoleBuffer()->concat(buffer, size);
-        return size;
-    }
-
-    void printLine(int level) {
-        String* buffer = Task::consoleBuffer();
-        if (buffer->isEmpty()) {
-            return;
-        }
-        size_t pos = (buffer->startsWith("\r") || buffer->startsWith("\n")) ? 1 : 0;
-        size_t len = buffer->endsWith("\n") ? buffer->length() - 1 : buffer->length();
+    void printLog(Level level, const char* message) {
         sprintf(timeBuffer, "%8.3f", millis() / 1000.0);
-        String copy = "\033[0;90m" + String(timeBuffer) + "\033[0m [\033[0;31m" + String(pcTaskGetName(nullptr)) + "\033[0m/\033[0;32m" + String(xPortGetCoreID()) + "\033[0m] " + buffer->substring(pos, pos + len);
-        buffer->clear();
-        if (!consoleQueue.offer(copy)) {
-            Serial.println(copy);
-            Serial0.println(copy);
+        String* buffer = new String();
+        buffer->reserve(256);
+        buffer->concat("\033[0;90m");
+        buffer->concat(timeBuffer);
+        buffer->concat("\033[0m [\033[0;31m");
+        buffer->concat(pcTaskGetName(nullptr));
+        buffer->concat("\033[0m/\033[0;32m");
+        buffer->concat(xPortGetCoreID());
+        buffer->concat("\033[0m] ");
+        switch (level) {
+            case Level::Fatal:
+                buffer->concat("\033[0;31mFATAL\033[0m ");
+                break;
+            case Level::Error:
+                buffer->concat("\033[0;31mERROR\033[0m ");
+                break;
+            case Level::Warning:
+                buffer->concat("\033[0;33mWARNING\033[0m ");
+                break;
+            case Level::Info:
+                buffer->concat("\033[0;32mINFO\033[0m ");
+                break;
+            case Level::Debug:
+                buffer->concat("\033[0;34mDEBUG\033[0m ");
+                break;
+            case Level::Trace:
+                buffer->concat("\033[0;36mTRACE\033[0m ");
+                break;
+            default:
+                break;
         }
+        buffer->concat(message);
+        if (!consoleQueue.offer(*buffer)) {
+            Serial.println(*buffer);
+            Serial0.println(*buffer);
+        }
+        delete buffer;
     }
 
 private:
@@ -174,10 +181,6 @@ private:
 };
 
 ConsolePrinter consolePrinter;
-
-void printLogLine(Print* printer, int level) {
-    consolePrinter.printLine(level);
-}
 #endif
 
 class ConsoleProvider {
@@ -185,11 +188,12 @@ public:
     ConsoleProvider() {
         Serial.begin(115200);
         Serial0.begin(115200);
+        Log.updateConsumers([](std::list<LogConsumer>& consumers) {
+            consumers.push_back([](Level level, const char* message) {
 #ifdef FARMHUB_DEBUG
-        Log.begin(FARMHUB_LOG_LEVEL, &consolePrinter);
-        Log.setSuffix(printLogLine);
+                consolePrinter.printLog(level, message);
 #else
-        Log.begin(FARMHUB_LOG_LEVEL, &Serial);
+                Serial.println(message);
 #endif
         Log.infoln(F("  ______                   _    _       _"));
         Log.infoln(F(" |  ____|                 | |  | |     | |"));

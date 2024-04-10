@@ -178,29 +178,10 @@ public:
         taskYIELD();
     }
 
-#ifdef FARMHUB_DEBUG
-    static const BaseType_t CONSOLE_BUFFER_INDEX = 1;
-
-    static String* consoleBuffer() {
-        String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX));
-        if (buffer == nullptr) {
-            buffer = new String();
-            vTaskSetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX, static_cast<void*>(buffer));
-        }
-        return buffer;
-    }
-#endif
-
 private:
     ~Task() {
-#ifdef FARMHUB_DEBUG
-        Log.verboseln("Finished task %s\n",
+        Log.trace("Finished task %s\n",
             pcTaskGetName(nullptr));
-        String* buffer = static_cast<String*>(pvTaskGetThreadLocalStoragePointer(nullptr, CONSOLE_BUFFER_INDEX));
-        if (buffer != nullptr) {
-            delete buffer;
-        }
-#endif
         vTaskDelete(nullptr);
     }
 
