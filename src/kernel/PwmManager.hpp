@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include <ArduinoLog.h>
+#include <kernel/Log.hpp>
 
 namespace farmhub::kernel {
 
@@ -43,7 +43,7 @@ public:
         pinMode(pin, OUTPUT);
         ledcAttachPin(pin, channel);
         ledcSetup(channel, freq, resolutionBits);
-        Log.traceln("Registered PWM channel %d on pin %d with freq %d and resolution %d",
+        Log.debug("Registered PWM channel %d on pin %d with freq %d and resolution %d",
             channel, pin, freq, resolutionBits);
         return PwmChannel(channel, pin, freq, resolutionBits);
     }

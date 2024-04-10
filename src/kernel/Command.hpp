@@ -4,12 +4,12 @@
 #include <functional>
 
 #include <ArduinoJson.h>
-#include <ArduinoLog.h>
 #include <SPIFFS.h>
 
 #include <esp_sleep.h>
 
 #include <kernel/FileSystem.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/Named.hpp>
 #include <kernel/Task.hpp>
 
@@ -48,9 +48,9 @@ public:
         try {
             pingResponse();
         } catch (const std::exception& e) {
-            Log.errorln("Failed to send ping response: %s", e.what());
+            Log.error("Failed to send ping response: %s", e.what());
         } catch (...) {
-            Log.errorln("Failed to send ping response");
+            Log.error("Failed to send ping response");
         }
         response["pong"] = millis();
     }
@@ -79,7 +79,7 @@ public:
     void handle(const JsonObject& request, JsonObject& response) override {
         seconds duration = seconds(request["duration"].as<long>());
         esp_sleep_enable_timer_wakeup(((microseconds) duration).count());
-        Log.infoln("Sleeping for %ld seconds in light sleep mode",
+        Log.info("Sleeping for %ld seconds in light sleep mode",
             duration.count());
         esp_deep_sleep_start();
     }
@@ -132,7 +132,7 @@ public:
         if (!path.startsWith("/")) {
             path = "/" + path;
         }
-        Log.infoln("Reading %s",
+        Log.info("Reading %s",
             path.c_str());
         response["path"] = path;
         File file = fs.open(path, FILE_READ);
@@ -156,7 +156,7 @@ public:
         if (!path.startsWith("/")) {
             path = "/" + path;
         }
-        Log.infoln("Writing %s",
+        Log.info("Writing %s",
             path.c_str());
         String contents = request["contents"];
         response["path"] = path;
@@ -183,7 +183,7 @@ public:
         if (!path.startsWith("/")) {
             path = "/" + path;
         }
-        Log.infoln("Removing %s",
+        Log.info("Removing %s",
             path.c_str());
         response["path"] = path;
         if (fs.remove(path)) {
@@ -214,7 +214,7 @@ public:
         prepareUpdate(url);
         response["success"] = true;
         Task::run("update", [](Task& task) {
-            Log.infoln("Restarting in 5 seconds to apply update");
+            Log.info("Restarting in 5 seconds to apply update");
             delay(5000);
             ESP.restart();
         });

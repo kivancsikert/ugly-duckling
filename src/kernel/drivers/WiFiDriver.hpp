@@ -7,10 +7,10 @@
 
 #include <esp_wifi.h>
 
-#include <ArduinoLog.h>
 #include <WiFiManager.h>
 
 #include <kernel/Concurrent.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 
@@ -22,27 +22,27 @@ namespace farmhub::kernel::drivers {
 class WiFiDriver {
 public:
     WiFiDriver(StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode) {
-        Log.infoln("WiFi: initializing");
+        Log.info("WiFi: initializing");
 
         wifiManager.setHostname(hostname.c_str());
         wifiManager.setConfigPortalTimeout(180);
         wifiManager.setAPCallback([this, &configPortalRunning](WiFiManager* wifiManager) {
-            Log.traceln("WiFi: entered config portal");
+            Log.debug("WiFi: entered config portal");
             configPortalRunning.setFromISR();
         });
         wifiManager.setConfigPortalTimeoutCallback([this, &configPortalRunning]() {
-            Log.traceln("WiFi: config portal timed out");
+            Log.debug("WiFi: config portal timed out");
             configPortalRunning.clearFromISR();
         });
 
         WiFi.onEvent(
             [](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.infoln("WiFi: connected to %s", String(info.wifi_sta_connected.ssid, info.wifi_sta_connected.ssid_len).c_str());
+                Log.info("WiFi: connected to %s", String(info.wifi_sta_connected.ssid, info.wifi_sta_connected.ssid_len).c_str());
             },
             ARDUINO_EVENT_WIFI_STA_CONNECTED);
         WiFi.onEvent(
             [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.infoln("WiFi: got IP %p, netmask %p, gateway %p",
+                Log.info("WiFi: got IP %p, netmask %p, gateway %p",
                     IPAddress(info.got_ip.ip_info.ip.addr),
                     IPAddress(info.got_ip.ip_info.netmask.addr),
                     IPAddress(info.got_ip.ip_info.gw.addr));
@@ -52,7 +52,7 @@ public:
             ARDUINO_EVENT_WIFI_STA_GOT_IP);
         WiFi.onEvent(
             [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.infoln("WiFi: lost IP address");
+                Log.info("WiFi: lost IP address");
                 // TODO What should we do here?
                 networkReady.clear();
                 reconnectQueue.overwrite(true);
@@ -60,7 +60,7 @@ public:
             ARDUINO_EVENT_WIFI_STA_LOST_IP);
         WiFi.onEvent(
             [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.infoln("WiFi: disconnected from %s, reason: %s",
+                Log.info("WiFi: disconnected from %s, reason: %s",
                     String(info.wifi_sta_disconnected.ssid, info.wifi_sta_disconnected.ssid_len).c_str(),
                     WiFi.disconnectReasonName(static_cast<wifi_err_reason_t>(info.wifi_sta_disconnected.reason)));
                 networkReady.clear();
@@ -74,7 +74,7 @@ public:
                 if (connected) {
                     if (powerSaveMode) {
                         auto listenInterval = 50;
-                        Log.traceln("WiFi enabling power save mode, listen interval: %d",
+                        Log.debug("WiFi enabling power save mode, listen interval: %d",
                             listenInterval);
                         esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
                         wifi_config_t conf;
@@ -88,7 +88,7 @@ public:
                 }
                 // TODO Add exponential backoff
                 task.delay(5s);
-                Log.infoln("WiFi: Reconnecting...");
+                Log.info("WiFi: Reconnecting...");
             }
         });
     }

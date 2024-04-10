@@ -5,9 +5,9 @@
 #include <Preferences.h>
 
 #include <ArduinoJson.h>
-#include <ArduinoLog.h>
 
 #include <kernel/Concurrent.hpp>
+#include <kernel/Log.hpp>
 
 namespace farmhub::kernel {
 
@@ -42,7 +42,7 @@ public:
                 return false;
             }
             String jsonString = preferences.getString(key);
-            Log.verboseln("NVS: get(%s) = %s",
+            Log.trace("NVS: get(%s) = %s",
                 key, jsonString.c_str());
             JsonDocument jsonDocument;
             deserializeJson(jsonDocument, jsonString);
@@ -66,7 +66,7 @@ public:
             jsonDocument.set(value);
             String jsonString;
             serializeJson(jsonDocument, jsonString);
-            Log.verboseln("NVS: set(%s) = %s",
+            Log.trace("NVS: set(%s) = %s",
                 key, jsonString.c_str());
             return preferences.putString(key, jsonString.c_str());
         });
@@ -78,7 +78,7 @@ public:
 
     bool remove(const char* key) {
         return withPreferences(false, [&]() {
-            Log.verboseln("NVS: remove(%s)",
+            Log.trace("NVS: remove(%s)",
                 key);
             if (preferences.isKey(key)) {
                 return preferences.remove(key);

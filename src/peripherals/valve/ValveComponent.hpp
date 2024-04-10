@@ -9,17 +9,17 @@
 #include <Arduino.h>
 
 #include <ArduinoJson.h>
-#include <ArduinoLog.h>
 
-#include <peripherals/Peripheral.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/Time.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 
+#include <peripherals/Peripheral.hpp>
 #include <peripherals/valve/ValveScheduler.hpp>
 
 using namespace std::chrono;
@@ -172,7 +172,7 @@ public:
         , strategy(strategy)
         , publishTelemetry(publishTelemetry) {
 
-        Log.infoln("Creating valve '%s' with strategy %s",
+        Log.info("Creating valve '%s' with strategy %s",
             name.c_str(), strategy.describe().c_str());
 
         controller.stop();
@@ -196,18 +196,18 @@ public:
         Task::loop(name, 3072, [this, name](Task& task) {
             auto now = system_clock::now();
             if (overrideState != ValveState::NONE && now > overrideUntil.load()) {
-                Log.traceln("Valve '%s' override expired", name.c_str());
+                Log.debug("Valve '%s' override expired", name.c_str());
                 overrideUntil = time_point<system_clock>();
                 overrideState = ValveState::NONE;
             }
             ValveStateUpdate update;
             if (overrideState != ValveState::NONE) {
                 update = { overrideState, duration_cast<ticks>(overrideUntil.load() - now) };
-                Log.traceln("Valve '%s' override state is %d, will change after %F sec",
+                Log.debug("Valve '%s' override state is %d, will change after %.2f sec",
                     name.c_str(), static_cast<int>(update.state), update.validFor.count() / 1000.0);
             } else {
                 update = ValveScheduler::getStateUpdate(schedules, now, this->strategy.getDefaultState());
-                Log.traceln("Valve '%s' state is %d, will change after %F s",
+                Log.debug("Valve '%s' state is %d, will change after %.2f s",
                     name.c_str(), static_cast<int>(update.state), update.validFor.count() / 1000.0);
             }
             setState(update.state);
@@ -229,7 +229,7 @@ public:
     }
 
     void setSchedules(const std::list<ValveSchedule>& schedules) {
-        Log.traceln("Setting %d schedules for valve %s",
+        Log.debug("Setting %d schedules for valve %s",
             schedules.size(), name.c_str());
         updateQueue.put(ScheduleSpec { schedules });
     }
@@ -253,21 +253,21 @@ private:
     }
 
     void open() {
-        Log.traceln("Opening valve %s", name.c_str());
+        Log.debug("Opening valve %s", name.c_str());
         KeepAwake keepAwake(sleepManager);
         strategy.open(controller);
         this->state = ValveState::OPEN;
     }
 
     void close() {
-        Log.traceln("Closing valve");
+        Log.debug("Closing valve");
         KeepAwake keepAwake(sleepManager);
         strategy.close(controller);
         this->state = ValveState::CLOSED;
     }
 
     void reset() {
-        Log.traceln("Resetting valve");
+        Log.debug("Resetting valve");
         controller.stop();
     }
 

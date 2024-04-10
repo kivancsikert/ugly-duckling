@@ -3,10 +3,9 @@
 #include <map>
 #include <memory>
 
-#include <ArduinoLog.h>
-
 #include <kernel/Configuration.hpp>
 #include <kernel/I2CManager.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/Named.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/PwmManager.hpp>
@@ -49,7 +48,7 @@ public:
         populateTelemetry(telemetryJson);
         if (telemetryJson.begin() == telemetryJson.end()) {
             // No telemetry added
-            Log.verboseln("No telemetry to publish for peripheral: %s", name.c_str());
+            Log.trace("No telemetry to publish for peripheral: %s", name.c_str());
             return;
         }
         mqttRoot->publish("telemetry", telemetryDoc);
@@ -74,7 +73,7 @@ public:
     }
 
     virtual void configure(const TConfig& config) {
-        Log.verboseln("No configuration to apply for peripheral: %s", name.c_str());
+        Log.trace("No configuration to apply for peripheral: %s", name.c_str());
     }
 };
 
@@ -132,7 +131,7 @@ public:
         // Use short prefix because SPIFFS has a 32 character limit
         ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/p/" + name);
         mqttRoot->subscribe("config", [name, configFile](const String&, const JsonObject& configJson) {
-            Log.traceln("Received configuration update for peripheral: %s", name.c_str());
+            Log.debug("Received configuration update for peripheral: %s", name.c_str());
             configFile->update(configJson);
         });
 
@@ -173,19 +172,19 @@ public:
     }
 
     void registerFactory(PeripheralFactoryBase& factory) {
-        Log.traceln("Registering peripheral factory: %s",
+        Log.debug("Registering peripheral factory: %s",
             factory.factoryType.c_str());
         factories.insert(std::make_pair(factory.factoryType, std::reference_wrapper<PeripheralFactoryBase>(factory)));
     }
 
     void createPeripheral(const String& peripheralConfig) {
-        Log.infoln("Creating peripheral with config: %s",
+        Log.info("Creating peripheral with config: %s",
             peripheralConfig.c_str());
         PeripheralDeviceConfiguration deviceConfig;
         try {
             deviceConfig.loadFromString(peripheralConfig);
         } catch (const std::exception& e) {
-            Log.errorln("Failed to parse peripheral config because %s:\n%s",
+            Log.error("Failed to parse peripheral config because %s:\n%s",
                 e.what(), peripheralConfig.c_str());
             return;
         }
@@ -199,10 +198,10 @@ public:
             unique_ptr<PeripheralBase> peripheral = createPeripheral(name, factory, deviceConfig.params.get().get());
             peripherals.push_back(move(peripheral));
         } catch (const std::exception& e) {
-            Log.errorln("Failed to create peripheral '%s' with factory '%s' because %s",
+            Log.error("Failed to create peripheral '%s' with factory '%s' because %s",
                 name.c_str(), factory.c_str(), e.what());
         } catch (...) {
-            Log.errorln("Failed to create peripheral '%s' with factory '%s' because of an unknown exception",
+            Log.error("Failed to create peripheral '%s' with factory '%s' because of an unknown exception",
                 name.c_str(), factory.c_str());
         }
     }
@@ -222,7 +221,7 @@ private:
     };
 
     unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& factoryType, const String& configJson) {
-        Log.traceln("Creating peripheral '%s' with factory '%s'",
+        Log.debug("Creating peripheral '%s' with factory '%s'",
             name.c_str(), factoryType.c_str());
         auto it = factories.find(factoryType);
         if (it == factories.end()) {

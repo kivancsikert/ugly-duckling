@@ -8,20 +8,12 @@
 #include <esp32/clk.h>
 #include <esp_pm.h>
 
-#ifndef FARMHUB_LOG_LEVEL
-#ifdef FARMHUB_DEBUG
-#define FARMHUB_LOG_LEVEL LOG_LEVEL_VERBOSE
-#else
-#define FARMHUB_LOG_LEVEL LOG_LEVEL_INFO
-#endif
-#endif
-
 #include <Print.h>
 
-#include <ArduinoLog.h>
-
 #include <kernel/Command.hpp>
+#include <kernel/Concurrent.hpp>
 #include <kernel/Kernel.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
 
@@ -55,39 +47,57 @@ typedef farmhub::devices::Mk6Config TDeviceConfiguration;
 namespace farmhub::devices {
 
 #ifdef FARMHUB_DEBUG
-class ConsolePrinter : public Print {
+class ConsolePrinter {
 public:
     ConsolePrinter() {
         static const String spinner = "|/-\\";
         static const int spinnerLength = spinner.length();
+        status.reserve(256);
         Task::loop("console", 3072, 1, [this](Task& task) {
-            String status;
+            status.clear();
 
             counter = (counter + 1) % spinnerLength;
-            status += "[" + spinner.substring(counter, counter + 1) + "] ";
+            status.concat("[");
+            status.concat(spinner.substring(counter, counter + 1));
+            status.concat("] ");
 
-            status += "\033[33m" + String(VERSION) + "\033[0m";
+            status.concat("\033[33m");
+            status.concat(VERSION);
+            status.concat("\033[0m");
 
-            status += ", WIFI: " + wifiStatus();
+            status.concat(", WIFI: ");
+            status.concat(wifiStatus());
 
-            status += ", uptime: \033[33m" + String(float(millis()) / 1000.0f, 1) + "\033[0m s";
+            status.concat(", uptime: \033[33m");
+            status.concat(String(float(millis()) / 1000.0f, 1));
+            status.concat("\033[0m s");
 
-            status += ", RTC: \033[33m" + String(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED") + "\033[0m";
+            status.concat(", RTC: \033[33m");
+            status.concat(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED");
+            status.concat("\033[0m");
 
-            status += ", heap: \033[33m" + String(float(ESP.getFreeHeap()) / 1024.0f, 2) + "\033[0m kB";
+            status.concat(", heap: \033[33m");
+            status.concat(String(float(ESP.getFreeHeap()) / 1024.0f, 2));
+            status.concat("\033[0m kB");
 
-            status += ", CPU: \033[33m" + String(esp_clk_cpu_freq() / 1000000) + "\033[0m MHz";
+            status.concat(", CPU: \033[33m");
+            status.concat(esp_clk_cpu_freq() / 1000000);
+            status.concat("\033[0m MHz");
 
             BatteryDriver* battery = this->battery.load();
             if (battery != nullptr) {
-                status += ", battery: \033[33m" + String(battery->getVoltage(), 2) + "\033[0m V";
+                status.concat(", battery: \033[33m");
+                status.concat(String(battery->getVoltage(), 2));
+                status.concat("\033[0m V");
             }
 
             Serial.print("\033[1G\033[0K");
 
-            consoleQueue.drain([](String line) {
+            consoleQueue.drain([](const String& line) {
                 Serial.println(line);
+#if Serial != Serial0
                 Serial0.println(line);
+#endif
             });
 
             Serial.print(status);
@@ -99,30 +109,47 @@ public:
         this->battery = &battery;
     }
 
-    size_t write(uint8_t character) override {
-        Task::consoleBuffer()->concat((char) character);
-        return 1;
-    }
-
-    size_t write(const uint8_t* buffer, size_t size) override {
-        Task::consoleBuffer()->concat(buffer, size);
-        return size;
-    }
-
-    void printLine(int level) {
-        String* buffer = Task::consoleBuffer();
-        if (buffer->isEmpty()) {
-            return;
-        }
-        size_t pos = (buffer->startsWith("\r") || buffer->startsWith("\n")) ? 1 : 0;
-        size_t len = buffer->endsWith("\n") ? buffer->length() - 1 : buffer->length();
+    void printLog(Level level, const char* message) {
         sprintf(timeBuffer, "%8.3f", millis() / 1000.0);
-        String copy = "\033[0;90m" + String(timeBuffer) + "\033[0m [\033[0;31m" + String(pcTaskGetName(nullptr)) + "\033[0m/\033[0;32m" + String(xPortGetCoreID()) + "\033[0m] " + buffer->substring(pos, pos + len);
-        buffer->clear();
-        if (!consoleQueue.offer(copy)) {
-            Serial.println(copy);
-            Serial0.println(copy);
+        String* buffer = new String();
+        buffer->reserve(256);
+        buffer->concat("\033[0;90m");
+        buffer->concat(timeBuffer);
+        buffer->concat("\033[0m [\033[0;31m");
+        buffer->concat(pcTaskGetName(nullptr));
+        buffer->concat("\033[0m/\033[0;32m");
+        buffer->concat(xPortGetCoreID());
+        buffer->concat("\033[0m] ");
+        switch (level) {
+            case Level::Fatal:
+                buffer->concat("\033[0;31mFATAL\033[0m ");
+                break;
+            case Level::Error:
+                buffer->concat("\033[0;31mERROR\033[0m ");
+                break;
+            case Level::Warning:
+                buffer->concat("\033[0;33mWARNING\033[0m ");
+                break;
+            case Level::Info:
+                buffer->concat("\033[0;32mINFO\033[0m ");
+                break;
+            case Level::Debug:
+                buffer->concat("\033[0;34mDEBUG\033[0m ");
+                break;
+            case Level::Trace:
+                buffer->concat("\033[0;36mTRACE\033[0m ");
+                break;
+            default:
+                break;
         }
+        buffer->concat(message);
+        if (!consoleQueue.offer(*buffer)) {
+            Serial.println(*buffer);
+#if Serial != Serial0
+            Serial0.println(*buffer);
+#endif
+        }
+        delete buffer;
     }
 
 private:
@@ -151,37 +178,55 @@ private:
 
     int counter;
     char timeBuffer[12];
+    String status;
     std::atomic<BatteryDriver*> battery { nullptr };
 
     Queue<String> consoleQueue { "console", 128 };
 };
 
 ConsolePrinter consolePrinter;
-
-void printLogLine(Print* printer, int level) {
-    consolePrinter.printLine(level);
-}
 #endif
 
-class ConsoleProvider {
+struct LogRecord {
+    Level level;
+    String message;
+};
+
+class ConsoleProvider : public LogConsumer {
 public:
-    ConsoleProvider() {
+    ConsoleProvider(Queue<LogRecord>& logRecords, Level recordedLevel)
+        : logRecords(logRecords)
+        , recordedLevel(recordedLevel) {
         Serial.begin(115200);
+#if Serial != Serial0
         Serial0.begin(115200);
-#ifdef FARMHUB_DEBUG
-        Log.begin(FARMHUB_LOG_LEVEL, &consolePrinter);
-        Log.setSuffix(printLogLine);
-#else
-        Log.begin(FARMHUB_LOG_LEVEL, &Serial);
 #endif
-        Log.infoln(F("  ______                   _    _       _"));
-        Log.infoln(F(" |  ____|                 | |  | |     | |"));
-        Log.infoln(F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
-        Log.infoln(F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
-        Log.infoln(F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
-        Log.infoln(F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
-        Log.infoln("");
+        Log.setConsumer(this);
+        Log.info(F("  ______                   _    _       _"));
+        Log.info(F(" |  ____|                 | |  | |     | |"));
+        Log.info(F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
+        Log.info(F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
+        Log.info(F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
+        Log.info(F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
     }
+
+    void consumeLog(Level level, const char* message) override {
+        if (level <= recordedLevel) {
+            logRecords.offer(LogRecord { level, message });
+        }
+#ifdef FARMHUB_DEBUG
+        consolePrinter.printLog(level, message);
+#else
+        Serial.println(message);
+#if Serial != Serial0
+        Serial0.println(message);
+#endif
+#endif
+    }
+
+private:
+    Queue<LogRecord>& logRecords;
+    const Level recordedLevel;
 };
 
 class MemoryTelemetryProvider : public TelemetryProvider {
@@ -207,9 +252,14 @@ private:
     TelemetryCollector& telemetryCollector;
 };
 
-class ConfiguredKernel : ConsoleProvider {
+class ConfiguredKernel {
 public:
+    ConfiguredKernel(Queue<LogRecord>& logRecords)
+        : consoleProvider(logRecords, deviceDefinition.config.publishLogs.get()) {
+    }
+
     TDeviceDefinition deviceDefinition;
+    ConsoleProvider consoleProvider;
     Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.mqttConfig, deviceDefinition.statusLed };
 };
 
@@ -249,18 +299,33 @@ public:
         mqttDeviceRoot->registerCommand(fileRemoveCommand);
         mqttDeviceRoot->registerCommand(httpUpdateCommand);
 
+        Task::loop("mqtt:log", 3072, [this](Task& task) {
+            logRecords.take([&](const LogRecord& record) {
+                if (record.level > deviceConfig.publishLogs.get()) {
+                    return;
+                }
+
+                mqttDeviceRoot->publish(
+                    "log", [&](JsonObject& json) {
+                        json["level"] = record.level;
+                        json["message"] = record.message;
+                    },
+                    MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::max(), MqttDriver::LogPublish::Silent);
+            });
+        });
+
         // We want RTC to be in sync before we start setting up peripherals
         kernel.getRtcInSyncState().awaitSet();
 
         auto builtInPeripheralsCofig = deviceDefinition.getBuiltInPeripherals();
-        Log.traceln("Loading configuration for %d built-in peripherals",
+        Log.debug("Loading configuration for %d built-in peripherals",
             builtInPeripheralsCofig.size());
         for (auto& perpheralConfig : builtInPeripheralsCofig) {
             peripheralManager.createPeripheral(perpheralConfig);
         }
 
         auto& peripheralsConfig = deviceConfig.peripherals.get();
-        Log.infoln("Loading configuration for %d user-configured peripherals",
+        Log.info("Loading configuration for %d user-configured peripherals",
             peripheralsConfig.size());
         for (auto& perpheralConfig : peripheralsConfig) {
             peripheralManager.createPeripheral(perpheralConfig.get());
@@ -300,7 +365,7 @@ public:
 
         kernel.getKernelReadyState().set();
 
-        Log.infoln("Device ready in %F s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%p')",
+        Log.info("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%p')",
             millis() / 1000.0,
             kernel.version.c_str(),
             deviceConfig.model.get().c_str(),
@@ -323,7 +388,8 @@ private:
         }
     }
 
-    ConfiguredKernel configuredKernel;
+    Queue<LogRecord> logRecords { "logs", 32 };
+    ConfiguredKernel configuredKernel { logRecords };
     Kernel<TDeviceConfiguration>& kernel = configuredKernel.kernel;
     TDeviceDefinition& deviceDefinition = configuredKernel.deviceDefinition;
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;

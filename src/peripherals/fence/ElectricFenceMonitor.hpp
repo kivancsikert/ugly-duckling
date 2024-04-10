@@ -7,12 +7,12 @@
 
 #include <Arduino.h>
 
-#include <ArduinoLog.h>
-
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/Telemetry.hpp>
+
 #include <peripherals/Peripheral.hpp>
 
 using namespace std::chrono_literals;
@@ -60,7 +60,7 @@ public:
                 pinsDescription += ", ";
             pinsDescription += String(pinConfig.pin) + "=" + String(pinConfig.voltage) + "V";
         }
-        Log.infoln("Initializing electric fence with pins %s", pinsDescription.c_str());
+        Log.info("Initializing electric fence with pins %s", pinsDescription.c_str());
 
         for (auto& pinConfig : config.pins.get()) {
             auto unit = pcnt.registerUnit(pinConfig.pin);
@@ -76,7 +76,7 @@ public:
 
                 if (count > 0) {
                     lastVoltage = max(pin.voltage, lastVoltage);
-                    Log.verboseln("Counted %d pulses on pin %d (voltage: %dV)",
+                    Log.trace("Counted %d pulses on pin %d (voltage: %dV)",
                         count, pin.pcntUnit.getPin(), pin.voltage);
                 }
             }
@@ -84,7 +84,7 @@ public:
                 Lock lock(updateMutex);
                 this->lastVoltage = lastVoltage;
             }
-            Log.verboseln("Last voltage: %d",
+            Log.trace("Last voltage: %d",
                 lastVoltage);
             task.delayUntil(measurementFrequency);
         });

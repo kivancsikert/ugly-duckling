@@ -8,9 +8,8 @@
 
 #include <Arduino.h>
 
-#include <ArduinoLog.h>
-
 #include <kernel/Concurrent.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/Task.hpp>
 
 using namespace std::chrono;
@@ -38,7 +37,7 @@ public:
             SwitchStateChange stateChange = switchStateInterrupts.take();
             auto state = stateChange.switchState;
             auto engaged = stateChange.engaged;
-            Log.verboseln("Switch %s is %s",
+            Log.trace("Switch %s is %s",
                 state->name.c_str(), engaged ? "engaged" : "released");
             if (engaged) {
                 state->engagementStarted = system_clock::now();
@@ -64,7 +63,7 @@ public:
     }
 
     const Switch& registerHandler(const String& name, gpio_num_t pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
-        Log.infoln("Registering switch %s on pin %d, mode %s",
+        Log.info("Registering switch %s on pin %d, mode %s",
             name.c_str(), pin, mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
 
         // Configure PIN_INPUT as input

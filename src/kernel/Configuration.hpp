@@ -284,7 +284,7 @@ public:
     ConfigurationFile(const FileSystem& fs, const String& path)
         : path(path) {
         if (!fs.exists(path)) {
-            Log.traceln("The configuration file '%s' was not found, falling back to defaults",
+            Log.debug("The configuration file '%s' was not found, falling back to defaults",
                 path.c_str());
         } else {
             File file = fs.open(path, FILE_READ);
@@ -326,7 +326,7 @@ public:
         store(prettyRoot, true);
         String jsonString;
         serializeJsonPretty(prettyJson, jsonString);
-        Log.infoln("Effective configuration for '%s': %s",
+        Log.info("Effective configuration for '%s': %s",
             path.c_str(), jsonString.c_str());
 
         for (auto& callback : callbacks) {

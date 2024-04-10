@@ -9,13 +9,13 @@
 
 #include <Arduino.h>
 
-#include <ArduinoLog.h>
-
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/Watchdog.hpp>
+
 #include <kernel/drivers/MotorDriver.hpp>
 #include <kernel/drivers/SwitchManager.hpp>
 
@@ -124,7 +124,7 @@ public:
     // TODO Make this configurable
     {
 
-        Log.infoln("Initializing chicken door %s, open switch %d, close switch %d",
+        Log.info("Initializing chicken door %s, open switch %d, close switch %d",
             name.c_str(), openSwitch.getPin(), closedSwitch.getPin());
 
         motor.stop();
@@ -168,7 +168,7 @@ public:
     void configure(const ChickenDoorConfig& config) {
         openLevel = config.openLevel.get();
         closeLevel = config.closeLevel.get();
-        Log.infoln("Configured chicken door %s to close at %F lux, and open at %F lux",
+        Log.info("Configured chicken door %s to close at %.2f lux, and open at %.2f lux",
             name.c_str(), closeLevel, openLevel);
     }
 
@@ -178,7 +178,7 @@ private:
         DoorState targetState = determineTargetState(currentState);
         if (currentState != targetState) {
             if (currentState != lastState) {
-                Log.verboseln("Going from state %d to %d (light level %F)",
+                Log.trace("Going from state %d to %d (light level %.2f)",
                     currentState, targetState, lightSensor.getCurrentLevel());
                 watchdog.restart();
             }
@@ -195,7 +195,7 @@ private:
             }
         } else {
             if (currentState != lastState) {
-                Log.verboseln("Reached state %d (light level %F)",
+                Log.trace("Reached state %d (light level %.2f)",
                     currentState, lightSensor.getCurrentLevel());
                 watchdog.cancel();
                 motor.stop();
@@ -230,7 +230,7 @@ private:
                     if constexpr (std::is_same_v<T, StateUpdated>) {
                         // State update received
                     } else if constexpr (std::is_same_v<T, StateOverride>) {
-                        Log.infoln("Override received: %d duration: %d sec",
+                        Log.info("Override received: %d duration: %d sec",
                             arg.state, duration_cast<seconds>(arg.until - system_clock::now()).count());
                         {
                             Lock lock(stateMutex);
@@ -239,7 +239,7 @@ private:
                         }
                         this->publishTelemetry();
                     } else if constexpr (std::is_same_v<T, WatchdogTimeout>) {
-                        Log.errorln("Watchdog timeout, stopping operation");
+                        Log.error("Watchdog timeout, stopping operation");
                         operationState = OperationState::WATCHDOG_TIMEOUT;
                         motor.stop();
                         this->publishTelemetry();
@@ -252,15 +252,15 @@ private:
     void handleWatchdogEvent(WatchdogState state) {
         switch (state) {
             case WatchdogState::Started:
-                Log.infoln("Watchdog started");
+                Log.info("Watchdog started");
                 sleepManager.keepAwake();
                 break;
             case WatchdogState::Cacnelled:
-                Log.infoln("Watchdog cancelled");
+                Log.info("Watchdog cancelled");
                 sleepManager.allowSleep();
                 break;
             case WatchdogState::TimedOut:
-                Log.errorln("Watchdog timed out");
+                Log.error("Watchdog timed out");
                 sleepManager.allowSleep();
                 updateQueue.offer(WatchdogTimeout {});
                 break;
@@ -275,7 +275,7 @@ private:
         bool open = openSwitch.isEngaged();
         bool close = closedSwitch.isEngaged();
         if (open && close) {
-            Log.errorln("Both open and close switches are engaged");
+            Log.error("Both open and close switches are engaged");
             return DoorState::NONE;
         } else if (open) {
             return DoorState::OPEN;
@@ -291,7 +291,7 @@ private:
             return overrideState;
         } else {
             if (overrideState != DoorState::NONE) {
-                Log.infoln("Override expired, returning to scheduled state");
+                Log.info("Override expired, returning to scheduled state");
                 Lock lock(stateMutex);
                 overrideState = DoorState::NONE;
                 overrideUntil = time_point<system_clock>::min();

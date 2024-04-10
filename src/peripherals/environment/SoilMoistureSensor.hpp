@@ -5,11 +5,11 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include <ArduinoLog.h>
+#include <kernel/Component.hpp>
+#include <kernel/Log.hpp>
+#include <kernel/Telemetry.hpp>
 
 #include <peripherals/Peripheral.hpp>
-#include <kernel/Component.hpp>
-#include <kernel/Telemetry.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
@@ -38,7 +38,7 @@ public:
         , waterValue(config.water.get())
         , pin(config.pin.get()) {
 
-        Log.infoln("Initializing soil moisture sensor on pin %d; air value: %d; water value: %d",
+        Log.info("Initializing soil moisture sensor on pin %d; air value: %d; water value: %d",
             pin, airValue, waterValue);
 
         pinMode(pin, INPUT);
@@ -46,7 +46,7 @@ public:
 
     void populateTelemetry(JsonObject& json) override {
         uint16_t soilMoistureValue = analogRead(pin);
-        Log.verboseln("Soil moisture value: %d",
+        Log.trace("Soil moisture value: %d",
             soilMoistureValue);
 
         const double run = waterValue - airValue;

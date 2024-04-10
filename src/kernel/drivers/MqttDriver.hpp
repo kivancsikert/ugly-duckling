@@ -37,6 +37,11 @@ public:
         ExactlyOnce = 2
     };
 
+    enum class LogPublish {
+        Log,
+        Silent
+    };
+
     enum class PublishStatus {
         TimeOut = 0,
         Success = 1,
@@ -60,15 +65,15 @@ public:
             return make_shared<MqttRoot>(mqtt, rootTopic + "/" + suffix);
         }
 
-        PublishStatus publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero()) {
-            return mqtt.publish(fullTopic(suffix), json, retain, qos, timeout);
+        PublishStatus publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log) {
+            return mqtt.publish(fullTopic(suffix), json, retain, qos, timeout, log);
         }
 
-        PublishStatus publish(const String& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero()) {
+        PublishStatus publish(const String& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log) {
             JsonDocument doc;
             JsonObject root = doc.to<JsonObject>();
             populate(root);
-            return publish(suffix, doc, retain, qos, timeout);
+            return publish(suffix, doc, retain, qos, timeout, log);
         }
 
         PublishStatus clear(const String& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero()) {
@@ -86,7 +91,7 @@ public:
                 // Clear topic and wait for it to be cleared
                 auto clearStatus = mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, std::chrono::seconds { 5 });
                 if (clearStatus != PublishStatus::Success) {
-                    Log.errorln("MQTT: Failed to clear retained command topic '%s', status: %d", suffix.c_str(), clearStatus);
+                    Log.error("MQTT: Failed to clear retained command topic '%s', status: %d", suffix.c_str(), clearStatus);
                 }
 
                 JsonDocument responseDoc;
@@ -129,16 +134,18 @@ private:
         Retention retain;
         QoS qos;
         TaskHandle_t waitingTask;
+        LogPublish log;
 
         static const uint32_t PUBLISH_SUCCESS = 1;
         static const uint32_t PUBLISH_FAILED = 2;
 
-        OutgoingMessage(const String& topic, const String& payload, Retention retention, QoS qos, TaskHandle_t waitingTask)
+        OutgoingMessage(const String& topic, const String& payload, Retention retention, QoS qos, TaskHandle_t waitingTask, LogPublish log)
             : topic(topic)
             , payload(payload)
             , retain(retention)
             , qos(qos)
-            , waitingTask(waitingTask) {
+            , waitingTask(waitingTask)
+            , log(log) {
         }
     };
 
@@ -210,25 +217,27 @@ public:
     }
 
 private:
-    PublishStatus publish(const String& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = ticks::zero()) {
+    PublishStatus publish(const String& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log) {
 #ifdef DUMP_MQTT
-        String serializedJson;
-        serializeJsonPretty(json, serializedJson);
-        Log.infoln("MQTT: Queuing topic '%s'%s (qos = %d): %s",
-            topic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), qos, serializedJson.c_str());
+        if (log == LogPublish::Log) {
+            String serializedJson;
+            serializeJsonPretty(json, serializedJson);
+            Log.debug("MQTT: Queuing topic '%s'%s (qos = %d): %s",
+                topic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), qos, serializedJson.c_str());
+        }
 #endif
         String payload;
         serializeJson(json, payload);
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
-            return publishQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, payload, retain, qos, waitingTask);
+            return publishQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, payload, retain, qos, waitingTask, log);
         });
     }
 
     PublishStatus clear(const String& topic, Retention retain, QoS qos, ticks timeout = ticks::zero()) {
-        Log.traceln("MQTT: Clearing topic '%s'",
+        Log.debug("MQTT: Clearing topic '%s'",
             topic.c_str());
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
-            return publishQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, "", retain, qos, waitingTask);
+            return publishQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, "", retain, qos, waitingTask, LogPublish::Log);
         });
     }
 
@@ -286,7 +295,7 @@ private:
         networkReady.awaitSet();
 
         if (!mqttClient.isConnected()) {
-            Log.infoln("MQTT: Connecting to MQTT server");
+            Log.debug("MQTT: Connecting to MQTT server");
             mqttReady.clear();
 
             String serverCert;
@@ -315,15 +324,15 @@ private:
             }
 
             if (serverCert.isEmpty()) {
-                Log.infoln("MQTT: server: %s:%d, client ID is '%s'",
+                Log.debug("MQTT: server: %s:%d, client ID is '%s'",
                     hostname.c_str(), mqttServer.port, clientId.c_str());
                 wifiClient.connect(hostname.c_str(), mqttServer.port);
                 mqttClient.begin(wifiClient);
             } else {
-                Log.infoln("MQTT: server: %s:%d, client ID is '%s', using TLS",
+                Log.debug("MQTT: server: %s:%d, client ID is '%s', using TLS",
                     hostname.c_str(), mqttServer.port, clientId.c_str());
-                Log.infoln("Server cert: %s", serverCert.c_str());
-                Log.infoln("Client cert: %s", clientCert.c_str());
+                Log.debug("Server cert: %s", serverCert.c_str());
+                Log.debug("Client cert: %s", clientCert.c_str());
                 wifiClientSecure.setCACert(serverCert.c_str());
                 wifiClientSecure.setCertificate(clientCert.c_str());
                 wifiClientSecure.setPrivateKey(clientKey.c_str());
@@ -332,7 +341,7 @@ private:
             }
 
             if (!mqttClient.connect(clientId.c_str())) {
-                Log.errorln("MQTT: Connection failed, error = %d",
+                Log.error("MQTT: Connection failed, error = %d",
                     mqttClient.getLastError());
                 trustMdnsCache = false;
                 // TODO Implement exponential backoff
@@ -346,7 +355,7 @@ private:
                 registerSubscriptionWithMqtt(subscription);
             }
 
-            Log.infoln("MQTT: Connected");
+            Log.debug("MQTT: Connected");
             mqttReady.set();
         }
 
@@ -363,11 +372,13 @@ private:
         publishQueue.drain([&](const OutgoingMessage& message) {
             bool success = mqttClient.publish(message.topic, message.payload, message.retain == Retention::Retain, static_cast<int>(message.qos));
 #ifdef DUMP_MQTT
-            Log.infoln("MQTT: Published to '%s' (size: %d)",
-                message.topic.c_str(), message.payload.length());
+            if (message.log == LogPublish::Log) {
+                Log.trace("MQTT: Published to '%s' (size: %d)",
+                    message.topic.c_str(), message.payload.length());
+            }
 #endif
             if (!success) {
-                Log.errorln("MQTT: Error publishing to '%s', error = %d",
+                Log.trace("MQTT: Error publishing to '%s', error = %d",
                     message.topic.c_str(), mqttClient.getLastError());
             }
             if (message.waitingTask != nullptr) {
@@ -390,15 +401,15 @@ private:
         const String& payload = message.payload;
 
         if (payload.isEmpty()) {
-            Log.verboseln("MQTT: Ignoring empty payload");
+            Log.trace("MQTT: Ignoring empty payload");
             return;
         }
 
 #ifdef DUMP_MQTT
-        Log.infoln("MQTT: Received '%s' (size: %d): %s",
+        Log.debug("MQTT: Received '%s' (size: %d): %s",
             topic.c_str(), payload.length(), payload.c_str());
 #else
-        Log.traceln("MQTT: Received '%s' (size: %d)",
+        Log.debug("MQTT: Received '%s' (size: %d)",
             topic.c_str(), payload.length());
 #endif
         for (auto subscription : subscriptions) {
@@ -410,25 +421,25 @@ private:
                     subscription.handle(topic, json.as<JsonObject>());
                 });
                 if (result != Task::RunResult::OK) {
-                    Log.errorln("MQTT: Incoming handler for topic '%s' timed out",
+                    Log.error("MQTT: Incoming handler for topic '%s' timed out",
                         topic.c_str());
                 }
                 return;
             }
         }
-        Log.warningln("MQTT: No handler for topic '%s'",
+        Log.warn("MQTT: No handler for topic '%s'",
             topic.c_str());
     }
 
     // Actually subscribe to the given topic
     bool registerSubscriptionWithMqtt(const Subscription& subscription) {
-        Log.traceln("MQTT: Subscribing to topic '%s' (qos = %d)",
+        Log.debug("MQTT: Subscribing to topic '%s' (qos = %d)",
             subscription.topic.c_str(), subscription.qos);
         bool success = mqttClient.subscribe(subscription.topic, static_cast<int>(subscription.qos), [](const String& payload, const size_t size) {
             // Global handler will take care of putting the received message on the incoming queue
         });
         if (!success) {
-            Log.errorln("MQTT: Error subscribing to topic '%s', error = %d\n",
+            Log.error("MQTT: Error subscribing to topic '%s', error = %d\n",
                 subscription.topic.c_str(), mqttClient.getLastError());
         }
         return success;

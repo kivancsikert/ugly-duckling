@@ -8,15 +8,15 @@
 #include <SHT31.h>
 
 #include <ArduinoJson.h>
-#include <ArduinoLog.h>
 
 #include <kernel/Kernel.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/PwmManager.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
-#include <peripherals/Peripheral.hpp>
 
+#include <peripherals/Peripheral.hpp>
 #include <peripherals/environment/Ds18B20SoilSensor.hpp>
 #include <peripherals/environment/Environment.hpp>
 #include <peripherals/environment/Sht2xComponent.hpp>
@@ -50,6 +50,8 @@ public:
     ArrayProperty<JsonAsString> peripherals { this, "peripherals" };
 
     Property<bool> sleepWhenIdle { this, "sleepWhenIdle", false };
+
+    Property<Level> publishLogs { this, "publishLogs", Level::Info };
 
     virtual const String getHostname() {
         String hostname = instance.get();

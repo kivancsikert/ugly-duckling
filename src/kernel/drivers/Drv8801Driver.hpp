@@ -41,7 +41,7 @@ public:
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
 
-        Log.infoln("Initializing DRV8801 on pins enable = %d, phase = %d, fault = %d, sleep = %d, mode1 = %d, mode2 = %d, current = %d",
+        Log.info("Initializing DRV8801 on pins enable = %d, phase = %d, fault = %d, sleep = %d, mode1 = %d, mode2 = %d, current = %d",
             enablePin, phasePin, faultPin, sleepPin, mode1Pin, mode2Pin, currentPin);
 
         pinMode(enablePin, OUTPUT);
@@ -60,7 +60,7 @@ public:
 
     void drive(MotorPhase phase, double duty = 1) override {
         if (duty == 0) {
-            Log.traceln("Stopping");
+            Log.debug("Stopping");
             sleep();
             digitalWrite(enablePin, LOW);
             return;
@@ -70,7 +70,7 @@ public:
 
         int direction = (phase == MotorPhase::FORWARD ? 1 : -1);
         int dutyValue = phaseChannel.maxValue() / 2 + direction * (int) (phaseChannel.maxValue() / 2 * duty);
-        Log.traceln("Driving motor %s at %d%%",
+        Log.debug("Driving motor %s at %d%%",
             phase == MotorPhase::FORWARD ? "forward" : "reverse",
             (int) (duty * 100));
 

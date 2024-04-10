@@ -2,7 +2,7 @@
 
 #include <SPIFFS.h>
 
-#include <ArduinoLog.h>
+#include <kernel/Log.hpp>
 
 namespace farmhub::kernel {
 
@@ -71,17 +71,17 @@ public:
 
 static FileSystem* initializeFileSystem() {
     if (!SPIFFS.begin()) {
-        Log.infoln("File system not initialized");
+        Log.info("File system not initialized");
         return new UninitializedFileSystem();
     }
-    Log.infoln("File system contents:");
+    Log.info("File system contents:");
     File root = SPIFFS.open("/", FILE_READ);
     while (true) {
         File file = root.openNextFile();
         if (!file) {
             break;
         }
-        Log.infoln(" - %s (%d bytes)",
+        Log.info(" - %s (%d bytes)",
             file.path(), file.size());
         file.close();
     }

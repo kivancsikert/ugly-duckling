@@ -10,10 +10,9 @@
 
 #include <freertos/FreeRTOS.h>
 
-#include <ArduinoLog.h>
-
 #include <kernel/FileSystem.hpp>
 #include <kernel/I2CManager.hpp>
+#include <kernel/Log.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
@@ -68,7 +67,7 @@ public:
         , mqttConfig(mqttConfig)
         , statusLed(statusLed) {
 
-        Log.infoln("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s'",
+        Log.info("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s'",
             version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
@@ -168,7 +167,7 @@ private:
         }
 
         if (newState != state) {
-            Log.traceln("Kernel state changed from %d to %d",
+            Log.debug("Kernel state changed from %d to %d",
                 state, newState);
             state = newState;
             switch (newState) {
@@ -207,7 +206,7 @@ private:
             return "";
         }
 
-        Log.infoln("Starting update...");
+        Log.info("Starting update...");
         auto fUpdate = fs.open(UPDATE_FILE, FILE_READ);
         JsonDocument doc;
         auto error = deserializeJson(doc, fUpdate);
@@ -222,13 +221,13 @@ private:
             return "Command contains empty url";
         }
 
-        Log.traceln("Waiting for network...");
+        Log.debug("Waiting for network...");
         if (!networkReadyState.awaitSet(1min)) {
             return "Network not ready, aborting update";
         }
 
         httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-        Log.infoln("Updating from version %s via URL %s",
+        Log.info("Updating from version %s via URL %s",
             VERSION, url.c_str());
 
         HTTPUpdateResult result = HTTP_UPDATE_NO_UPDATES;

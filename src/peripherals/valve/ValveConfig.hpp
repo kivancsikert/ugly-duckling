@@ -3,9 +3,10 @@
 #include <chrono>
 
 #include <ArduinoJson.h>
-#include <ArduinoLog.h>
 
 #include <kernel/Configuration.hpp>
+#include <kernel/Log.hpp>
+
 #include <peripherals/valve/ValveComponent.hpp>
 #include <peripherals/valve/ValveScheduler.hpp>
 
@@ -65,7 +66,7 @@ bool convertToJson(const ValveControlStrategyType& src, JsonVariant dst) {
         case ValveControlStrategyType::Latching:
             return dst.set("latching");
         default:
-            Log.errorln("Unknown strategy: %d",
+            Log.error("Unknown strategy: %d",
                 static_cast<int>(src));
             return dst.set("NC");
     }
@@ -79,7 +80,7 @@ void convertFromJson(JsonVariantConst src, ValveControlStrategyType& dst) {
     } else if (strategy == "latching") {
         dst = ValveControlStrategyType::Latching;
     } else {
-        Log.errorln("Unknown strategy: %s",
+        Log.error("Unknown strategy: %s",
             strategy.c_str());
         dst = ValveControlStrategyType::NormallyClosed;
     }

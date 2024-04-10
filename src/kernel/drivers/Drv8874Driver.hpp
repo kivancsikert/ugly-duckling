@@ -39,7 +39,7 @@ public:
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
 
-        Log.infoln("Initializing DRV8874 on pins in1 = %d, in2 = %d, fault = %d, sleep = %d, current = %d",
+        Log.info("Initializing DRV8874 on pins in1 = %d, in2 = %d, fault = %d, sleep = %d, current = %d",
             in1Pin, in2Pin, faultPin, sleepPin, currentPin);
 
         pinMode(sleepPin, OUTPUT);
@@ -51,14 +51,14 @@ public:
 
     void drive(MotorPhase phase, double duty = 1) override {
         if (duty == 0) {
-            Log.traceln("Stopping motor");
+            Log.debug("Stopping motor");
             sleep();
             return;
         }
         wakeUp();
 
         int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
-        Log.traceln("Driving motor %s at %d%%",
+        Log.debug("Driving motor %s at %d%%",
             phase == MotorPhase::FORWARD ? "forward" : "reverse",
             (int) (duty * 100));
 
