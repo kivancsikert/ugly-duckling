@@ -8,7 +8,6 @@
 #include <SHT31.h>
 
 #include <ArduinoJson.h>
-#include <ArduinoLog.h>
 
 #include <kernel/Kernel.hpp>
 #include <kernel/PcntManager.hpp>
