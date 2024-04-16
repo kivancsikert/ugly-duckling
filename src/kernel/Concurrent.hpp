@@ -26,6 +26,10 @@ protected:
 public:
     virtual void clear() = 0;
 
+    UBaseType_t size() {
+        return uxQueueMessagesWaiting(queue);
+    }
+
 protected:
 
     const String name;
