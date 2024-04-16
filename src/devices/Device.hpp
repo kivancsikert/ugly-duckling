@@ -310,7 +310,7 @@ public:
                         json["level"] = record.level;
                         json["message"] = record.message;
                     },
-                    MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::max(), MqttDriver::LogPublish::Silent);
+                    MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::zero(), MqttDriver::LogPublish::Silent);
             });
         });
 
