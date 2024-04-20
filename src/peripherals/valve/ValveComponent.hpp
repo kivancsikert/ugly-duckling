@@ -253,21 +253,21 @@ private:
     }
 
     void open() {
-        Log.debug("Opening valve %s", name.c_str());
+        Log.info("Opening valve '%s'", name.c_str());
         KeepAwake keepAwake(sleepManager);
         strategy.open(controller);
         this->state = ValveState::OPEN;
     }
 
     void close() {
-        Log.debug("Closing valve");
+        Log.info("Closing valve '%s'", name.c_str());
         KeepAwake keepAwake(sleepManager);
         strategy.close(controller);
         this->state = ValveState::CLOSED;
     }
 
     void reset() {
-        Log.debug("Resetting valve");
+        Log.info("Resetting valve '%s'", name.c_str());
         controller.stop();
     }
 
