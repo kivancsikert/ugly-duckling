@@ -32,7 +32,6 @@ typedef farmhub::devices::Mk4Config TDeviceConfiguration;
 #include <devices/UglyDucklingMk5.hpp>
 typedef farmhub::devices::UglyDucklingMk5 TDeviceDefinition;
 typedef farmhub::devices::Mk5Config TDeviceConfiguration;
-#define HAS_BATTERY
 
 #elif defined(MK6)
 #include <devices/UglyDucklingMk6.hpp>

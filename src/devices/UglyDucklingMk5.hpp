@@ -75,13 +75,12 @@ static gpio_num_t RXD0 = Pin::registerPin("RXD0", GPIO_NUM_44);
 static gpio_num_t TXD0 = Pin::registerPin("TXD0", GPIO_NUM_43);
 }    // namespace pins
 
-class UglyDucklingMk5 : public BatteryPoweredDeviceDefinition<Mk5Config> {
+class UglyDucklingMk5 : public DeviceDefinition<Mk5Config> {
 public:
     UglyDucklingMk5()
-        : BatteryPoweredDeviceDefinition<Mk5Config>(
+        : DeviceDefinition<Mk5Config>(
             pins::STATUS,
-            pins::BOOT,
-            pins::BATTERY, 2.4848) {
+            pins::BOOT) {
     }
 
     void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
