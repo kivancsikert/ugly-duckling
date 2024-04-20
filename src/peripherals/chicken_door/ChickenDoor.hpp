@@ -236,8 +236,12 @@ private:
                     if constexpr (std::is_same_v<T, StateUpdated>) {
                         // State update received
                     } else if constexpr (std::is_same_v<T, StateOverride>) {
-                        Log.info("Override received: %d duration: %d sec",
-                            arg.state, duration_cast<seconds>(arg.until - system_clock::now()).count());
+                        if (arg.state == DoorState::NONE) {
+                            Log.info("Override cancelled");
+                        } else {
+                            Log.info("Override received: %d duration: %d sec",
+                                arg.state, duration_cast<seconds>(arg.until - system_clock::now()).count());
+                        }
                         {
                             Lock lock(stateMutex);
                             overrideState = arg.state;

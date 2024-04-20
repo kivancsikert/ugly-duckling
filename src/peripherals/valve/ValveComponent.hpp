@@ -249,29 +249,40 @@ public:
 
 private:
     void override(ValveState state, time_point<system_clock> until) {
+        if (state == ValveState::NONE) {
+            Log.info("Clearing override for valve '%s'", name.c_str());
+        } else {
+            Log.info("Overriding valve '%s' to state %d until %ld",
+                name.c_str(), static_cast<int>(state), until.time_since_epoch().count());
+        }
         updateQueue.put(OverrideSpec { state, until });
     }
 
     void open() {
-        Log.debug("Opening valve %s", name.c_str());
+        Log.info("Opening valve '%s'", name.c_str());
         KeepAwake keepAwake(sleepManager);
         strategy.open(controller);
         this->state = ValveState::OPEN;
     }
 
     void close() {
-        Log.debug("Closing valve");
+        Log.info("Closing valve '%s'", name.c_str());
         KeepAwake keepAwake(sleepManager);
         strategy.close(controller);
         this->state = ValveState::CLOSED;
     }
 
     void reset() {
-        Log.debug("Resetting valve");
+        Log.info("Resetting valve '%s'", name.c_str());
         controller.stop();
     }
 
     void setState(ValveState state) {
+        // Ignore if the state is already set
+        if (this->state == state) {
+            return;
+        }
+
         switch (state) {
             case ValveState::OPEN:
                 open();
