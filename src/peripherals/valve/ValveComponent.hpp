@@ -272,6 +272,11 @@ private:
     }
 
     void setState(ValveState state) {
+        // Ignore if the state is already set
+        if (this->state == state) {
+            return;
+        }
+
         switch (state) {
             case ValveState::OPEN:
                 open();
