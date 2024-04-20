@@ -176,6 +176,12 @@ private:
     void runLoop(Task& task) {
         DoorState currentState = determineCurrentState();
         DoorState targetState = determineTargetState(currentState);
+        if (currentState == DoorState::NONE && targetState == lastState) {
+            // We have previously reached the target state, but we have lost the signal from the switches.
+            // We assume the door is still in the target state to prevent it from moving when it shouldn't.
+            currentState = lastState;
+        }
+
         if (currentState != targetState) {
             if (currentState != lastState) {
                 Log.trace("Going from state %d to %d (light level %.2f)",
