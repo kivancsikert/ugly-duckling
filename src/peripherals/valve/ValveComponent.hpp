@@ -249,6 +249,12 @@ public:
 
 private:
     void override(ValveState state, time_point<system_clock> until) {
+        if (state == ValveState::NONE) {
+            Log.info("Clearing override for valve '%s'", name.c_str());
+        } else {
+            Log.info("Overriding valve '%s' to state %d until %ld",
+                name.c_str(), static_cast<int>(state), until.time_since_epoch().count());
+        }
         updateQueue.put(OverrideSpec { state, until });
     }
 
