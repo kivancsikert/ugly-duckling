@@ -116,7 +116,7 @@ public:
         } else {
             char* localBuffer = new char[size + 1];
             logWithBuffer(localBuffer, size + 1, level, format, args...);
-            delete localBuffer;
+            delete[] localBuffer;
         }
     }
 
