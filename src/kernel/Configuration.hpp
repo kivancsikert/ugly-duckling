@@ -39,6 +39,14 @@ public:
         : value(other.value) {
     }
 
+    // Assignment operator
+    JsonAsString& operator=(const JsonAsString& other) {
+        if (this != &other) { // Self-assignment check
+            value = other.value;
+        }
+        return *this;
+    }
+
     const String& get() const {
         return value;
     }

@@ -36,7 +36,7 @@ public:
         gpio_num_t faultPin,
         gpio_num_t sleepPin)
         : enablePin(enablePin)
-        , phaseChannel(pwm.registerChannel(phasePin, PWM_FREQ, PWM_RESOLUTION))
+        , phasePin(pwm.registerPin(phasePin, PWM_FREQ, PWM_RESOLUTION))
         , currentPin(currentPin)
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
@@ -69,12 +69,12 @@ public:
         digitalWrite(enablePin, HIGH);
 
         int direction = (phase == MotorPhase::FORWARD ? 1 : -1);
-        int dutyValue = phaseChannel.maxValue() / 2 + direction * (int) (phaseChannel.maxValue() / 2 * duty);
+        int dutyValue = phasePin.maxValue() / 2 + direction * (int) (phasePin.maxValue() / 2 * duty);
         Log.debug("Driving motor %s at %d%%",
             phase == MotorPhase::FORWARD ? "forward" : "reverse",
             (int) (duty * 100));
 
-        phaseChannel.write(dutyValue);
+        phasePin.write(dutyValue);
     }
 
     void sleep() {
@@ -93,7 +93,7 @@ public:
 
 private:
     const gpio_num_t enablePin;
-    const PwmChannel phaseChannel;
+    const PwmPin phasePin;
     const gpio_num_t currentPin;
     const gpio_num_t faultPin;
     const gpio_num_t sleepPin;

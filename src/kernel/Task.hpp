@@ -36,6 +36,13 @@ public:
         : TaskHandle(other.handle) {
     }
 
+    TaskHandle& operator=(const TaskHandle& other) {
+        if (this != &other) { // Self-assignment check
+            handle = other.handle;
+        }
+        return *this;
+    }
+
     constexpr bool isValid() const {
         return handle != nullptr;
     }

@@ -33,8 +33,8 @@ public:
         gpio_num_t currentPin,
         gpio_num_t faultPin,
         gpio_num_t sleepPin)
-        : in1Channel(pwm.registerChannel(in1Pin, PWM_FREQ, PWM_RESOLUTION))
-        , in2Channel(pwm.registerChannel(in2Pin, PWM_FREQ, PWM_RESOLUTION))
+        : in1Pin(pwm.registerPin(in1Pin, PWM_FREQ, PWM_RESOLUTION))
+        , in2Pin(pwm.registerPin(in2Pin, PWM_FREQ, PWM_RESOLUTION))
         , currentPin(currentPin)
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
@@ -57,19 +57,19 @@ public:
         }
         wakeUp();
 
-        int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
+        int dutyValue = in1Pin.maxValue() / 2 + (int) (in1Pin.maxValue() / 2 * duty);
         Log.debug("Driving motor %s at %d%%",
             phase == MotorPhase::FORWARD ? "forward" : "reverse",
             (int) (duty * 100));
 
         switch (phase) {
             case MotorPhase::FORWARD:
-                in1Channel.write(dutyValue);
-                in2Channel.write(0);
+                in1Pin.write(dutyValue);
+                in2Pin.write(0);
                 break;
             case MotorPhase::REVERSE:
-                in1Channel.write(0);
-                in2Channel.write(dutyValue);
+                in1Pin.write(0);
+                in2Pin.write(dutyValue);
                 break;
         }
     }
@@ -89,8 +89,8 @@ public:
     }
 
 private:
-    const PwmChannel in1Channel;
-    const PwmChannel in2Channel;
+    const PwmPin in1Pin;
+    const PwmPin in2Pin;
     const gpio_num_t currentPin;
     const gpio_num_t faultPin;
     const gpio_num_t sleepPin;

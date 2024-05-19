@@ -65,29 +65,29 @@ private:
             gpio_num_t in2Pin,
             bool canSleep)
             : driver(driver)
-            , in1Channel(pwm.registerChannel(in1Pin, PWM_FREQ, PWM_RESOLUTION))
-            , in2Channel(pwm.registerChannel(in2Pin, PWM_FREQ, PWM_RESOLUTION))
+            , in1Pin(pwm.registerPin(in1Pin, PWM_FREQ, PWM_RESOLUTION))
+            , in2Pin(pwm.registerPin(in2Pin, PWM_FREQ, PWM_RESOLUTION))
             , canSleep(canSleep)
             , sleeping(canSleep) {
         }
 
         void drive(MotorPhase phase, double duty = 1) override {
-            int dutyValue = static_cast<int>((in1Channel.maxValue() + in1Channel.maxValue() * duty) / 2);
+            int dutyValue = static_cast<int>((in1Pin.maxValue() + in1Pin.maxValue() * duty) / 2);
             Log.debug("Driving motor %s on pins %d/%d at %d%% (duty = %d)",
                 phase == MotorPhase::FORWARD ? "forward" : "reverse",
-                in1Channel.pin,
-                in2Channel.pin,
+                in1Pin.pin,
+                in2Pin.pin,
                 (int) (duty * 100),
                 dutyValue);
 
             switch (phase) {
                 case MotorPhase::FORWARD:
-                    in1Channel.write(dutyValue);
-                    in2Channel.write(0);
+                    in1Pin.write(dutyValue);
+                    in2Pin.write(0);
                     break;
                 case MotorPhase::REVERSE:
-                    in1Channel.write(0);
-                    in2Channel.write(dutyValue);
+                    in1Pin.write(0);
+                    in2Pin.write(dutyValue);
                     break;
             }
 
@@ -114,8 +114,8 @@ private:
 
     private:
         Drv8833Driver* const driver;
-        const PwmChannel in1Channel;
-        const PwmChannel in2Channel;
+        const PwmPin in1Pin;
+        const PwmPin in2Pin;
         const bool canSleep;
 
         bool sleeping;

@@ -13,3 +13,7 @@ include/version.h
 CMakeLists.txt
 sdkconfig.*
 !sdkconfig.defaults
+
+# Not sure what this is
+managed_components/
+build/
