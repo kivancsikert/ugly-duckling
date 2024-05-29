@@ -41,7 +41,7 @@ public:
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         I2CManager& i2c,
-        const I2CConfig& config,
+        I2CConfig config,
         seconds measurementFrequency,
         seconds latencyInterval)
         : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval) {
