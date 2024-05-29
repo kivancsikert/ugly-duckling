@@ -1,5 +1,6 @@
 {
-  "instance": "chicken-door-test",
+  "instance": "DEVICE_INSTANCE",
+  "id": "DEVICE_ID",
   "peripherals": [
     {
       "name": "chicken-door-a",
