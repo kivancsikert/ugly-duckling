@@ -42,6 +42,7 @@ public:
     }
 
     Property<String> model;
+    Property<String> id { this, "id", "UNIDENTIFIED" };
     Property<String> instance;
     Property<String> location { this, "location" };
 

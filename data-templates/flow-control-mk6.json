@@ -1,5 +1,6 @@
 {
-  "instance": "well",
+  "instance": "DEVICE_INSTANCE",
+  "id": "DEVICE_ID",
   "peripherals": [
     {
       "name": "flow-control-a",
@@ -13,5 +14,6 @@
         }
       }
     }
-  ]
+  ],
+  "sleepWhenIdle": true
 }

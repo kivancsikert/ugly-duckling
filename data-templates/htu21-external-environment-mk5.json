@@ -1,5 +1,6 @@
 {
-  "instance": "incubator",
+  "instance": "DEVICE_INSTANCE",
+  "id": "DEVICE_ID",
   "peripherals": [
     {
       "name": "external-environment",

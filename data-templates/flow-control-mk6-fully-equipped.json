@@ -1,5 +1,6 @@
 {
-  "instance": "test-mk6-2",
+  "instance": "DEVICE_INSTANCE",
+  "id": "DEVICE_ID",
   "peripherals": [
     {
       "name": "flow-control-a",
