@@ -336,6 +336,7 @@ public:
                 // TODO Remove redundant mentions of "ugly-duckling"
                 json["type"] = "ugly-duckling";
                 json["model"] = deviceConfig.model.get();
+                json["id"] = deviceConfig.id.get();
                 json["instance"] = deviceConfig.instance.get();
                 json["mac"] = getMacAddress();
                 auto device = json["deviceConfig"].to<JsonObject>();
