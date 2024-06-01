@@ -83,7 +83,7 @@ class PeripheralCreationException
     : public std::exception {
 public:
     PeripheralCreationException(const String& reason)
-        : message(String("PeripheralCreationException: " + reason)) {
+        : message(String(reason)) {
     }
 
     const char* what() const noexcept override {
@@ -193,16 +193,16 @@ public:
         if (name.isEmpty()) {
             name = "default";
         }
-        String factory = deviceConfig.type.get();
+        String type = deviceConfig.type.get();
         try {
-            unique_ptr<PeripheralBase> peripheral = createPeripheral(name, factory, deviceConfig.params.get().get());
+            unique_ptr<PeripheralBase> peripheral = createPeripheral(name, type, deviceConfig.params.get().get());
             peripherals.push_back(move(peripheral));
         } catch (const std::exception& e) {
-            Log.error("Failed to create peripheral '%s' with factory '%s' because %s",
-                name.c_str(), factory.c_str(), e.what());
+            Log.error("Failed to create '%s' peripheral '%s' because %s",
+                type.c_str(), name.c_str(), e.what());
         } catch (...) {
-            Log.error("Failed to create peripheral '%s' with factory '%s' because of an unknown exception",
-                name.c_str(), factory.c_str());
+            Log.error("Failed to create '%s' peripheral '%s' because of an unknown exception",
+                type.c_str(), name.c_str());
         }
     }
 
