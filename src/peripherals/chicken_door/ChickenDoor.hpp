@@ -402,6 +402,25 @@ private:
     ChickenDoorComponent<TLightSensorComponent> doorComponent;
 };
 
+class NoLightSensorComponent : public LightSensorComponent {
+public:
+    NoLightSensorComponent(
+        const String& name,
+        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        I2CManager& i2c,
+        I2CConfig config,
+        seconds measurementFrequency,
+        seconds latencyInterval)
+        : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval) {
+        runLoop();
+    }
+
+protected:
+    double readLightLevel() override {
+        return -999;
+    }
+};
+
 class ChickenDoorFactory
     : public PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig>,
       protected Motorized {
@@ -414,12 +433,19 @@ public:
     unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const String& name, const ChickenDoorDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         PwmMotorDriver& motor = findMotor(deviceConfig.motor.get());
         auto lightSensorType = deviceConfig.lightSensor.get().type.get();
-        if (lightSensorType == "bh1750") {
-            return std::make_unique<ChickenDoor<Bh1750Component>>(name, mqttRoot, services.i2c, 0x23, services.sleepManager, services.switches, motor, deviceConfig);
-        } else if (lightSensorType == "tsl2591") {
-            return std::make_unique<ChickenDoor<Tsl2591Component>>(name, mqttRoot, services.i2c, TSL2591_ADDR, services.sleepManager, services.switches, motor, deviceConfig);
-        } else {
-            throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
+        try {
+            if (lightSensorType == "bh1750") {
+                return std::make_unique<ChickenDoor<Bh1750Component>>(name, mqttRoot, services.i2c, 0x23, services.sleepManager, services.switches, motor, deviceConfig);
+            } else if (lightSensorType == "tsl2591") {
+                return std::make_unique<ChickenDoor<Tsl2591Component>>(name, mqttRoot, services.i2c, TSL2591_ADDR, services.sleepManager, services.switches, motor, deviceConfig);
+            } else {
+                throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
+            }
+        } catch (const PeripheralCreationException& e) {
+            Log.error("Could not initialize light sensor because %s", e.what());
+            Log.warn("Initializing without a light sensor");
+            // TODO Do not pass I2C parameters to NoLightSensorComponent
+            return std::make_unique<ChickenDoor<NoLightSensorComponent>>(name, mqttRoot, services.i2c, 0x00, services.sleepManager, services.switches, motor, deviceConfig);
         }
     }
 };
