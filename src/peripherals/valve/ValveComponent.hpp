@@ -13,6 +13,7 @@
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/Log.hpp>
+#include <kernel/NvsStore.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
@@ -169,6 +170,7 @@ public:
         : Component(name, mqttRoot)
         , sleepManager(sleepManager)
         , controller(controller)
+        , nvs(name)
         , strategy(strategy)
         , publishTelemetry(publishTelemetry) {
 
@@ -176,6 +178,38 @@ public:
             name.c_str(), strategy.describe().c_str());
 
         controller.stop();
+
+        // Rewrite this to a switch statement
+        if (strategy.getDefaultState() == ValveState::OPEN) {
+            state = ValveState::OPEN;
+        } else if (strategy.getDefaultState() == ValveState::CLOSED) {
+            state = ValveState::CLOSED;
+        }
+
+        switch (strategy.getDefaultState()) {
+            case ValveState::OPEN:
+                Log.info("Assuming valve '%s' is open by default",
+                    name.c_str());
+                state = ValveState::OPEN;
+                break;
+            case ValveState::CLOSED:
+                Log.info("Assuming valve '%s' is closed by default",
+                    name.c_str());
+                state = ValveState::CLOSED;
+                break;
+            default:
+                // Try to load from NVS
+                ValveState lastStoredState;
+                if (nvs.get("state", lastStoredState)) {
+                    state = lastStoredState;
+                    Log.info("Restored state for valve '%s' from NVS: %d",
+                        name.c_str(), static_cast<int>(state));
+                } else {
+                    Log.info("No stored state for valve '%s'",
+                        name.c_str());
+                }
+                break;
+        }
 
         // TODO Restore stored state?
 
@@ -210,8 +244,8 @@ public:
                 Log.debug("Valve '%s' state is %d, will change after %.2f s",
                     name.c_str(), static_cast<int>(update.state), update.validFor.count() / 1000.0);
             }
-            setState(update.state);
-            // TODO Account for time spent in setState()
+            transitionTo(update.state);
+            // TODO Account for time spent in transitionTo()
             updateQueue.pollIn(update.validFor, [this](const std::variant<OverrideSpec, ScheduleSpec>& change) {
                 std::visit(
                     [this](auto&& arg) {
@@ -262,22 +296,17 @@ private:
         Log.info("Opening valve '%s'", name.c_str());
         KeepAwake keepAwake(sleepManager);
         strategy.open(controller);
-        this->state = ValveState::OPEN;
+        setState(ValveState::OPEN);
     }
 
     void close() {
         Log.info("Closing valve '%s'", name.c_str());
         KeepAwake keepAwake(sleepManager);
         strategy.close(controller);
-        this->state = ValveState::CLOSED;
+        setState(ValveState::CLOSED);
     }
 
-    void reset() {
-        Log.info("Resetting valve '%s'", name.c_str());
-        controller.stop();
-    }
-
-    void setState(ValveState state) {
+    void transitionTo(ValveState state) {
         // Ignore if the state is already set
         if (this->state == state) {
             return;
@@ -300,8 +329,17 @@ private:
         publishTelemetry();
     }
 
+    void setState(ValveState state) {
+        this->state = state;
+        if (!nvs.set("state", state)) {
+            Log.error("Failed to store state for valve '%s': %d",
+                name.c_str(), static_cast<int>(state));
+        }
+    }
+
     SleepManager& sleepManager;
     PwmMotorDriver& controller;
+    NvsStore nvs;
     ValveControlStrategy& strategy;
     std::function<void()> publishTelemetry;
 
