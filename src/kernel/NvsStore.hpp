@@ -39,6 +39,8 @@ public:
     bool get(const char* key, T& value) {
         return withPreferences(true, [&]() {
             if (!preferences.isKey(key)) {
+                Log.trace("NVS: get(%s) = not found",
+                    key);
                 return false;
             }
             String jsonString = preferences.getString(key);
@@ -47,6 +49,8 @@ public:
             JsonDocument jsonDocument;
             deserializeJson(jsonDocument, jsonString);
             if (jsonDocument.isNull()) {
+                Log.error("NVS: get(%s) = invalid JSON",
+                    key);
                 return false;
             }
             value = jsonDocument.as<T>();
@@ -91,9 +95,17 @@ public:
 private:
     bool withPreferences(bool readOnly, std::function<bool()> action) {
         Lock lock(preferencesMutex);
-        preferences.begin(name.c_str(), readOnly);
+        Log.trace("NVS: %s '%s'",
+            readOnly ? "read" : "write", name.c_str());
+        if (!preferences.begin(name.c_str(), readOnly)) {
+            Log.error("NVS: failed to %s '%s'",
+                readOnly ? "read" : "write", name.c_str());
+            return false;
+        }
         bool result = action();
         preferences.end();
+        Log.trace("NVS: finished %s '%s', result: %s",
+            readOnly ? "read" : "write", name.c_str(), result ? "true" : "false");
         return result;
     }
 
