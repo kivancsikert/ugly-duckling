@@ -181,7 +181,7 @@ public:
         Property<String> host { this, "host", "" };
         Property<unsigned int> port { this, "port", 1883 };
         Property<String> clientId { this, "clientId", "" };
-        Property<size_t> queueSize { this, "queueSize", 16 };
+        Property<size_t> queueSize { this, "queueSize", 128 };
         ArrayProperty<String> serverCert { this, "serverCert" };
         ArrayProperty<String> clientCert { this, "clientCert" };
         ArrayProperty<String> clientKey { this, "clientKey" };
