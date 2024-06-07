@@ -353,7 +353,7 @@ public:
 
         Task::loop("telemetry", 8192, [this](Task& task) {
             publishTelemetry();
-            // TODO Configure telemetry these intervals
+            // TODO Configure these telemetry intervals
             // Publishing interval
             const auto interval = 1min;
             // We always wait at least this much between telemetry updates
