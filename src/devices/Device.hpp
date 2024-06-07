@@ -5,8 +5,8 @@
 
 #include <Arduino.h>
 
-#include <esp32/clk.h>
 #include <esp_pm.h>
+#include <esp_private/esp_clk.h>
 
 #include <Print.h>
 
