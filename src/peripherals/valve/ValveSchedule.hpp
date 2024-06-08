@@ -63,15 +63,15 @@ struct Converter<ValveSchedule> {
         strptime(src["start"].as<const char*>(), "%FT%TZ", &startTm);
         auto startTime = mktime(&startTm);
         auto startLocalTime = system_clock::from_time_t(startTime);
-        seconds period = seconds(src["period"].as<int>());
-        seconds duration = seconds(src["duration"].as<int>());
+        seconds period = seconds(src["period"].as<long long int>());
+        seconds duration = seconds(src["duration"].as<long long int>());
         return ValveSchedule(startLocalTime, period, duration);
     }
 
     static bool checkJson(JsonVariantConst src) {
         return src["start"].is<const char*>()
-            && src["period"].is<int>()
-            && src["duration"].is<int>();
+            && src["period"].is<long long int>()
+            && src["duration"].is<long long int>();
     }
 };
 
