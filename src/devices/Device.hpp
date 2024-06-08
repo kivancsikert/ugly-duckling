@@ -201,12 +201,12 @@ public:
         Serial0.begin(115200);
 #endif
         Log.setConsumer(this);
-        Log.info(F("  ______                   _    _       _"));
-        Log.info(F(" |  ____|                 | |  | |     | |"));
-        Log.info(F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
-        Log.info(F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
-        Log.info(F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
-        Log.info(F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
+        Log.log(Level::Info, F("  ______                   _    _       _"));
+        Log.log(Level::Info, F(" |  ____|                 | |  | |     | |"));
+        Log.log(Level::Info, F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
+        Log.log(Level::Info, F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
+        Log.log(Level::Info, F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
+        Log.log(Level::Info, F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
     }
 
     void consumeLog(Level level, const char* message) override {
@@ -365,13 +365,13 @@ public:
 
         kernel.getKernelReadyState().set();
 
-        Log.info("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%p')",
+        Log.info("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s')",
             millis() / 1000.0,
             kernel.version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
-            deviceConfig.getHostname(),
-            WiFi.localIP());
+            deviceConfig.getHostname().c_str(),
+            WiFi.localIP().toString().c_str());
     }
 
 private:

@@ -94,10 +94,10 @@ private:
         } else {
             MdnsRecord ntpServer;
             if (mdns.lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
-                Log.info("RTC: using NTP server %s:%d (%p) from mDNS",
+                Log.info("RTC: using NTP server %s:%d (%s) from mDNS",
                     ntpServer.hostname.c_str(),
                     ntpServer.port,
-                    ntpServer.ip);
+                    ntpServer.ip.toString().c_str());
                 ntpClient = new NTPClient(udp, ntpServer.ip);
             } else {
                 Log.info("RTC: no NTP server configured, using default");
