@@ -71,7 +71,7 @@ public:
             version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
-            deviceConfig.getHostname());
+            deviceConfig.getHostname().c_str());
 
         // TODO Allocate less memory when FARMHUB_DEBUG is disabled
         Task::loop("status-update", 2560, [this](Task&) { updateState(); });
@@ -168,7 +168,7 @@ private:
 
         if (newState != state) {
             Log.debug("Kernel state changed from %d to %d",
-                state, newState);
+                static_cast<int>(state), static_cast<int>(newState));
             state = newState;
             switch (newState) {
                 case KernelState::BOOTING:

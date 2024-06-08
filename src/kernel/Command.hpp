@@ -79,7 +79,7 @@ public:
     void handle(const JsonObject& request, JsonObject& response) override {
         seconds duration = seconds(request["duration"].as<long>());
         esp_sleep_enable_timer_wakeup(((microseconds) duration).count());
-        Log.info("Sleeping for %ld seconds in light sleep mode",
+        Log.info("Sleeping for %lld seconds in light sleep mode",
             duration.count());
         esp_deep_sleep_start();
     }

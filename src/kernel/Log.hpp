@@ -52,72 +52,76 @@ public:
 
 class FarmhubLog : public LogConsumer {
 public:
-    template <class T, typename... Args>
-    inline void fatal(T format, Args... args) {
+    inline void __attribute__((format(printf, 2, 3))) fatal(const char* format, ...) {
 #if FARMHUB_LOG_LEVEL >= FARMHUB_LOG_LEVEL_FATAL
-        log(Level::Fatal, format, args...);
+        va_list args;
+        va_start(args, format);
+        logImpl(Level::Fatal, format, args);
+        va_end(args);
 #endif
     }
 
-    template <class T, typename... Args>
-    inline void error(T format, Args... args) {
+    inline void __attribute__((format(printf, 2, 3))) error(const char* format, ...) {
 #if FARMHUB_LOG_LEVEL >= FARMHUB_LOG_LEVEL_ERROR
-        log(Level::Error, format, args...);
+        va_list args;
+        va_start(args, format);
+        logImpl(Level::Error, format, args);
+        va_end(args);
 #endif
     }
 
-    template <class T, typename... Args>
-    inline void warn(T format, Args... args) {
+    inline void __attribute__((format(printf, 2, 3))) warn(const char* format, ...) {
 #if FARMHUB_LOG_LEVEL >= FARMHUB_LOG_LEVEL_WARNING
-        log(Level::Warning, format, args...);
+        va_list args;
+        va_start(args, format);
+        logImpl(Level::Warning, format, args);
+        va_end(args);
 #endif
     }
 
-    template <class T, typename... Args>
-    inline void info(T format, Args... args) {
+    inline void __attribute__((format(printf, 2, 3))) info(const char* format, ...) {
 #if FARMHUB_LOG_LEVEL >= FARMHUB_LOG_LEVEL_INFO
-        log(Level::Info, format, args...);
+        va_list args;
+        va_start(args, format);
+        logImpl(Level::Info, format, args);
+        va_end(args);
 #endif
     }
 
-    template <class T, typename... Args>
-    inline void debug(T format, Args... args) {
+    inline void __attribute__((format(printf, 2, 3))) debug(const char* format, ...) {
 #if FARMHUB_LOG_LEVEL >= FARMHUB_LOG_LEVEL_DEBUG
-        log(Level::Debug, format, args...);
+        va_list args;
+        va_start(args, format);
+        logImpl(Level::Debug, format, args);
+        va_end(args);
 #endif
     }
 
-    template <class T, typename... Args>
-    inline void trace(T format, Args... args) {
+    inline void __attribute__((format(printf, 2, 3))) trace(const char* format, ...) {
 #if FARMHUB_LOG_LEVEL >= FARMHUB_LOG_LEVEL_TRACE
-        log(Level::Trace, format, args...);
+        va_list args;
+        va_start(args, format);
+        logImpl(Level::Trace, format, args);
+        va_end(args);
 #endif
     }
 
-    template <typename... Args>
-    void log(Level level, const __FlashStringHelper* format, Args... args) {
+    void __attribute__((format(printf, 3, 4))) log(Level level, const char* format, ...) {
+        va_list args;
+        va_start(args, format);
+        logImpl(level, format, args);
+        va_end(args);
+    }
+
+    void log(Level level, const __FlashStringHelper* format, ...) {
         int len = strnlen_P(reinterpret_cast<const char*>(format), bufferSize - 1);
         char formatInSram[len + 1];
         strncpy_P(formatInSram, reinterpret_cast<const char*>(format), len);
         formatInSram[len] = '\0';
-        log(level, formatInSram, args...);
-    }
-
-    template <typename... Args>
-    void log(Level level, const char* format, Args... args) {
-        int size = snprintf(nullptr, 0, format, args...);
-        if (size <= 0) {
-            return;
-        }
-
-        if (size < bufferSize) {
-            Lock lock(bufferMutex);
-            logWithBuffer(buffer, size + 1, level, format, args...);
-        } else {
-            char* localBuffer = new char[size + 1];
-            logWithBuffer(localBuffer, size + 1, level, format, args...);
-            delete localBuffer;
-        }
+        va_list args;
+        va_start(args, format);
+        logImpl(level, formatInSram, args);
+        va_end(args);
     }
 
     void setConsumer(LogConsumer* consumer) {
@@ -132,9 +136,28 @@ public:
     }
 
 private:
-    template <typename... Args>
-    void logWithBuffer(char* buffer, size_t size, Level level, const char* format, Args... args) {
-        snprintf(buffer, size, format, args...);
+    void logImpl(Level level, const char* format, va_list args) {
+        if (static_cast<int>(level) < FARMHUB_LOG_LEVEL) {
+            return;
+        }
+
+        int size = vsnprintf(nullptr, 0, format, args);
+        if (size <= 0) {
+            return;
+        }
+
+        if (size < bufferSize) {
+            Lock lock(bufferMutex);
+            logWithBuffer(buffer, size + 1, level, format, args);
+        } else {
+            char* localBuffer = new char[size + 1];
+            logWithBuffer(localBuffer, size + 1, level, format, args);
+            delete localBuffer;
+        }
+    }
+
+    void logWithBuffer(char* buffer, size_t size, Level level, const char* format, va_list args) {
+        vsnprintf(buffer, size, format, args);
         consumer.load()->consumeLog(level, buffer);
     }
 

@@ -42,10 +42,10 @@ public:
             ARDUINO_EVENT_WIFI_STA_CONNECTED);
         WiFi.onEvent(
             [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.info("WiFi: got IP %p, netmask %p, gateway %p",
-                    IPAddress(info.got_ip.ip_info.ip.addr),
-                    IPAddress(info.got_ip.ip_info.netmask.addr),
-                    IPAddress(info.got_ip.ip_info.gw.addr));
+                Log.info("WiFi: got IP %s, netmask %s, gateway %s",
+                    IPAddress(info.got_ip.ip_info.ip.addr).toString().c_str(),
+                    IPAddress(info.got_ip.ip_info.netmask.addr).toString().c_str(),
+                    IPAddress(info.got_ip.ip_info.gw.addr).toString().c_str());
                 reconnectQueue.clear();
                 networkReady.set();
             },

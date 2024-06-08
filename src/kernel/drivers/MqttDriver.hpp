@@ -91,7 +91,7 @@ public:
                 // Clear topic and wait for it to be cleared
                 auto clearStatus = mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, std::chrono::seconds { 5 });
                 if (clearStatus != PublishStatus::Success) {
-                    Log.error("MQTT: Failed to clear retained command topic '%s', status: %d", suffix.c_str(), clearStatus);
+                    Log.error("MQTT: Failed to clear retained command topic '%s', status: %d", suffix.c_str(), static_cast<int>(clearStatus));
                 }
 
                 JsonDocument responseDoc;
@@ -223,7 +223,7 @@ private:
             String serializedJson;
             serializeJsonPretty(json, serializedJson);
             Log.debug("MQTT: Queuing topic '%s'%s (qos = %d): %s",
-                topic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), qos, serializedJson.c_str());
+                topic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), static_cast<int>(qos), serializedJson.c_str());
         }
 #endif
         String payload;
@@ -434,7 +434,7 @@ private:
     // Actually subscribe to the given topic
     bool registerSubscriptionWithMqtt(const Subscription& subscription) {
         Log.debug("MQTT: Subscribing to topic '%s' (qos = %d)",
-            subscription.topic.c_str(), subscription.qos);
+            subscription.topic.c_str(), static_cast<int>(subscription.qos));
         bool success = mqttClient.subscribe(subscription.topic, static_cast<int>(subscription.qos), [](const String& payload, const size_t size) {
             // Global handler will take care of putting the received message on the incoming queue
         });

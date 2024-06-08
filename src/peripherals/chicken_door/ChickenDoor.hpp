@@ -185,7 +185,7 @@ private:
         if (currentState != targetState) {
             if (currentState != lastState) {
                 Log.trace("Going from state %d to %d (light level %.2f)",
-                    currentState, targetState, lightSensor.getCurrentLevel());
+                    static_cast<int>(currentState), static_cast<int>(targetState), lightSensor.getCurrentLevel());
                 watchdog.restart();
             }
             switch (targetState) {
@@ -202,7 +202,7 @@ private:
         } else {
             if (currentState != lastState) {
                 Log.trace("Reached state %d (light level %.2f)",
-                    currentState, lightSensor.getCurrentLevel());
+                    static_cast<int>(currentState), lightSensor.getCurrentLevel());
                 watchdog.cancel();
                 motor.stop();
                 mqttRoot->publish("events/state", [=](JsonObject& json) {
@@ -239,8 +239,8 @@ private:
                         if (arg.state == DoorState::NONE) {
                             Log.info("Override cancelled");
                         } else {
-                            Log.info("Override received: %d duration: %d sec",
-                                arg.state, duration_cast<seconds>(arg.until - system_clock::now()).count());
+                            Log.info("Override received: %d duration: %lld sec",
+                                static_cast<int>(arg.state), duration_cast<seconds>(arg.until - system_clock::now()).count());
                         }
                         {
                             Lock lock(stateMutex);
