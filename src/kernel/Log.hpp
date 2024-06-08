@@ -52,43 +52,43 @@ public:
 
 class FarmhubLog : public LogConsumer {
 public:
-    template <class T, typename... Args>
-    inline void fatal(T format, Args... args) {
+    template <typename... Args>
+    inline void fatal(const char* format, Args... args) {
 #if FARMHUB_LOG_LEVEL >= FARMHUB_LOG_LEVEL_FATAL
         log(Level::Fatal, format, args...);
 #endif
     }
 
-    template <class T, typename... Args>
-    inline void error(T format, Args... args) {
+    template <typename... Args>
+    inline void error(const char* format, Args... args) {
 #if FARMHUB_LOG_LEVEL >= FARMHUB_LOG_LEVEL_ERROR
         log(Level::Error, format, args...);
 #endif
     }
 
-    template <class T, typename... Args>
-    inline void warn(T format, Args... args) {
+    template <typename... Args>
+    inline void warn(const char* format, Args... args) {
 #if FARMHUB_LOG_LEVEL >= FARMHUB_LOG_LEVEL_WARNING
         log(Level::Warning, format, args...);
 #endif
     }
 
-    template <class T, typename... Args>
-    inline void info(T format, Args... args) {
+    template <typename... Args>
+    inline void info(const char* format, Args... args) {
 #if FARMHUB_LOG_LEVEL >= FARMHUB_LOG_LEVEL_INFO
         log(Level::Info, format, args...);
 #endif
     }
 
-    template <class T, typename... Args>
-    inline void debug(T format, Args... args) {
+    template <typename... Args>
+    inline void debug(const char* format, Args... args) {
 #if FARMHUB_LOG_LEVEL >= FARMHUB_LOG_LEVEL_DEBUG
         log(Level::Debug, format, args...);
 #endif
     }
 
-    template <class T, typename... Args>
-    inline void trace(T format, Args... args) {
+    template <typename... Args>
+    inline void trace(const char* format, Args... args) {
 #if FARMHUB_LOG_LEVEL >= FARMHUB_LOG_LEVEL_TRACE
         log(Level::Trace, format, args...);
 #endif
