@@ -61,6 +61,9 @@ struct Converter<ValveSchedule> {
     static ValveSchedule fromJson(JsonVariantConst src) {
         tm startTm;
         strptime(src["start"].as<const char*>(), "%FT%TZ", &startTm);
+        // Must manually set this, otherwise mktime cannot parse the time properly
+        // See notes at https://en.cppreference.com/w/cpp/chrono/c/mktime
+        startTm.tm_isdst = 0;
         auto startTime = mktime(&startTm);
         auto startLocalTime = system_clock::from_time_t(startTime);
         seconds period = seconds(src["period"].as<long long int>());
