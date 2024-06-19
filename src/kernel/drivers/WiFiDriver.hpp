@@ -21,7 +21,8 @@ namespace farmhub::kernel::drivers {
 
 class WiFiDriver {
 public:
-    WiFiDriver(StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode) {
+    WiFiDriver(StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode)
+        : hostname(hostname) {
         Log.info("WiFi: initializing");
 
         wifiManager.setHostname(hostname.c_str());
@@ -70,7 +71,7 @@ public:
 
         Task::run("wifi", 3072, [this, &networkReady, hostname, powerSaveMode](Task& task) {
             while (true) {
-                bool connected = WiFi.isConnected() || wifiManager.autoConnect(hostname.c_str());
+                bool connected = WiFi.isConnected() || reconnect();
                 if (connected) {
                     if (powerSaveMode) {
                         auto listenInterval = 50;
@@ -94,6 +95,23 @@ public:
     }
 
 private:
+    bool reconnect() {
+#if defined(WIFI_SSID)
+#define WIFI_SSID_STR TOSTRING(WIFI_SSID)
+#define WIFI_PASSWORD_STR TOSTRING(WIFI_PASSWORD)
+
+#ifdef WIFI_CHANNEL
+        WiFi.begin(WIFI_SSID_STR, WIFI_PASSWORD_STR, WIFI_CHANNEL);
+#else
+        WiFi.begin(WIFI_SSID_STR, WIFI_PASSWORD_STR);
+#endif
+        return false;
+#else
+        return wifiManager.autoConnect(hostname.c_str());
+#endif
+    }
+
+    const String hostname;
     WiFiManager wifiManager;
     Queue<bool> reconnectQueue { "wifi-reconnect", 1 };
 };
