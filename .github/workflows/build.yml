@@ -10,7 +10,7 @@ jobs:
         strategy:
             fail-fast: true
             matrix:
-                environment: [mk4, mk5, mk6, native]
+                environment: [mk4, mk4-wokwi, mk5, mk6, native]
         steps:
             - uses: actions/checkout@v4
               with:
@@ -59,6 +59,15 @@ jobs:
             - name: Run unit tests
               if: matrix.environment == 'native'
               run: pio test --environment native
+
+            - name: Test with Wokwi
+              if: matrix.environment == 'mk4-wokwi'
+              uses: wokwi/wokwi-ci-action@v1
+              with:
+                  token: ${{ secrets.WOKWI_CLI_TOKEN }}
+                  path: / # directory with wokwi.toml, relative to repo's root
+                  timeout: 10000
+                  expect_text: "Device ready"
 
     release:
         needs: build
