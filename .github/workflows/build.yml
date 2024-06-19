@@ -61,7 +61,7 @@ jobs:
               run: pio test --environment native
 
             - name: Test with Wokwi
-              if: matrix.environment == 'mk4-wokwi'
+              if: endsWith(matrix.environment, '-wokwi')
               uses: wokwi/wokwi-ci-action@v1
               with:
                   token: ${{ secrets.WOKWI_CLI_TOKEN }}
