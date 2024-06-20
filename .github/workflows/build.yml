@@ -60,6 +60,11 @@ jobs:
               if: matrix.environment == 'native'
               run: pio test --environment native
 
+            - name: Run Mosquitto for Wokwi test
+              if: endsWith(matrix.environment, '-wokwi')
+              run: |
+                docker run --detach --name mosquitto -p 1883:1883 eclipse-mosquitto mosquitto -c /mosquitto-no-auth.conf
+
             - name: Test with Wokwi
               if: endsWith(matrix.environment, '-wokwi')
               uses: wokwi/wokwi-ci-action@v1
