@@ -65,6 +65,9 @@ jobs:
               run: |
                 docker run --detach --name mosquitto -p 1883:1883 eclipse-mosquitto mosquitto -c /mosquitto-no-auth.conf
 
+            - name: Run a local Wokwi CI server
+              uses: wokwi/wokwi-ci-server-action@v1
+
             - name: Test with Wokwi
               if: endsWith(matrix.environment, '-wokwi')
               uses: wokwi/wokwi-ci-action@v1
