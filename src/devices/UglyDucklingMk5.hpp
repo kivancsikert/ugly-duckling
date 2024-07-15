@@ -110,7 +110,7 @@ public:
 
     const ServiceRef<CurrentSensingMotorDriver> motorA { "a", motorADriver };
     const ServiceRef<CurrentSensingMotorDriver> motorB { "b", motorBDriver };
-    const std::list<ServiceRef<CurrentSensingMotorDriver>> motors { motorA, motorB };
+    const ServiceContainer<CurrentSensingMotorDriver> motors { { motorA, motorB } };
 
     ValveFactory valveFactory { motors, ValveControlStrategyType::Latching };
     FlowMeterFactory flowMeterFactory;

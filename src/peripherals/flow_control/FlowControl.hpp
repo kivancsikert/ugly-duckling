@@ -72,21 +72,20 @@ public:
 };
 
 class FlowControlFactory
-    : public PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig, ValveControlStrategyType>,
-      protected ServiceContainer<CurrentSensingMotorDriver> {
+    : public PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig, ValveControlStrategyType> {
 public:
     FlowControlFactory(
-        const std::list<ServiceRef<CurrentSensingMotorDriver>>& motors,
+        const ServiceContainer<CurrentSensingMotorDriver>& motors,
         ValveControlStrategyType defaultStrategy)
         : PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig, ValveControlStrategyType>("flow-control", defaultStrategy)
-        , ServiceContainer<CurrentSensingMotorDriver>(motors) {
+        , motors(motors) {
     }
 
     unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         const ValveDeviceConfig& valveConfig = deviceConfig.valve.get();
         const FlowMeterDeviceConfig& flowMeterConfig = deviceConfig.flowMeter.get();
 
-        PwmMotorDriver& targetMotor = findService(valveConfig.motor.get());
+        PwmMotorDriver& targetMotor = motors.findService(valveConfig.motor.get());
         ValveControlStrategy* strategy;
         try {
             strategy = createValveControlStrategy(
@@ -109,6 +108,9 @@ public:
             flowMeterConfig.qFactor.get(),
             flowMeterConfig.measurementFrequency.get());
     }
+
+private:
+    const ServiceContainer<CurrentSensingMotorDriver>& motors;
 };
 
 }    // namespace farmhub::peripherals::flow_control
