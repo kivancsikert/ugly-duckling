@@ -113,9 +113,14 @@ public:
         pins::LOADEN,
     };
 
-    const ServiceRef<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
-    const ServiceRef<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };
-    const std::list<ServiceRef<PwmMotorDriver>> motors { motorA, motorB };
+    // TODO Implement proper current sensing for MK7
+    SimpleCurrentSenseDriver currentSense { pins::IOA1 };
+    ExternalCurrentSensingMotorDriver motorADriver { motorDriver.getMotorA(), currentSense };
+    ExternalCurrentSensingMotorDriver motorBDriver { motorDriver.getMotorB(), currentSense };
+
+    const ServiceRef<CurrentSensingMotorDriver> motorA { "a", motorADriver };
+    const ServiceRef<CurrentSensingMotorDriver> motorB { "b", motorBDriver };
+    const std::list<ServiceRef<CurrentSensingMotorDriver>> motors { motorA, motorB };
 
     ValveFactory valveFactory { motors, ValveControlStrategyType::Latching };
     FlowMeterFactory flowMeterFactory;
