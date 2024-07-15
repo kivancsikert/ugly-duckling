@@ -57,18 +57,17 @@ private:
 };
 
 class ValveFactory
-    : public PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType>,
-      protected ServiceContainer<CurrentSensingMotorDriver> {
+    : public PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType> {
 public:
     ValveFactory(
-        const std::list<ServiceRef<CurrentSensingMotorDriver>>& motors,
+        const ServiceContainer<CurrentSensingMotorDriver>& motors,
         ValveControlStrategyType defaultStrategy)
         : PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType>("valve", defaultStrategy)
-        , ServiceContainer<CurrentSensingMotorDriver>(motors) {
+        , motors(motors) {
     }
 
     unique_ptr<Peripheral<ValveConfig>> createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
-        CurrentSensingMotorDriver& targetMotor = findService(deviceConfig.motor.get());
+        CurrentSensingMotorDriver& targetMotor = motors.findService(deviceConfig.motor.get());
         ValveControlStrategy* strategy;
         try {
             strategy = createValveControlStrategy(
@@ -80,6 +79,9 @@ public:
         }
         return make_unique<Valve>(name, services.sleepManager, targetMotor, *strategy, mqttRoot);
     }
+
+private:
+    const ServiceContainer<CurrentSensingMotorDriver>& motors;
 };
 
 }    // namespace farmhub::peripherals::valve

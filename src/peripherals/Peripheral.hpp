@@ -250,8 +250,7 @@ public:
         : services(services) {
     }
 
-protected:
-    T& findService(const String& name) {
+    T& findService(const String& name) const {
         // If there's only one service and no name is specified, use it
         if (name.isEmpty() && services.size() == 1) {
             return services.front().get();
