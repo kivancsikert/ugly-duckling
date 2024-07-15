@@ -423,16 +423,16 @@ protected:
 };
 
 class ChickenDoorFactory
-    : public PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig>,
-      protected ServiceContainer<CurrentSensingMotorDriver> {
+    : public PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig> {
 public:
-    ChickenDoorFactory(const std::list<ServiceRef<CurrentSensingMotorDriver>>& motors)
+    ChickenDoorFactory(
+        const ServiceContainer<CurrentSensingMotorDriver>& motors)
         : PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig>("chicken-door")
-        , ServiceContainer<CurrentSensingMotorDriver>(motors) {
+        , motors(motors) {
     }
 
     unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const String& name, const ChickenDoorDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
-        CurrentSensingMotorDriver& motor = findService(deviceConfig.motor.get());
+        CurrentSensingMotorDriver& motor = motors.findService(deviceConfig.motor.get());
         auto lightSensorType = deviceConfig.lightSensor.get().type.get();
         try {
             if (lightSensorType == "bh1750") {
@@ -449,6 +449,9 @@ public:
             return std::make_unique<ChickenDoor<NoLightSensorComponent>>(name, mqttRoot, services.i2c, 0x00, services.sleepManager, services.switches, motor, deviceConfig);
         }
     }
+
+private:
+    const ServiceContainer<CurrentSensingMotorDriver>& motors;
 };
 
 }    // namespace farmhub::peripherals::chicken_door
