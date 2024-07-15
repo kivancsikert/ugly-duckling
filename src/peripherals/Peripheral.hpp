@@ -243,4 +243,29 @@ private:
     std::list<unique_ptr<PeripheralBase>> peripherals;
 };
 
+template <typename T>
+class ServiceContainer {
+public:
+    ServiceContainer(const std::list<ServiceRef<T>>& services)
+        : services(services) {
+    }
+
+protected:
+    T& findService(const String& name) {
+        // If there's only one service and no name is specified, use it
+        if (name.isEmpty() && services.size() == 1) {
+            return services.front().get();
+        }
+        for (auto& motor : services) {
+            if (motor.getName() == name) {
+                return motor.get();
+            }
+        }
+        throw PeripheralCreationException("failed to find service: " + name);
+    }
+
+private:
+    const std::list<ServiceRef<T>> services;
+};
+
 }    // namespace farmhub::peripherals

@@ -14,7 +14,6 @@
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 
-#include <peripherals/Motorized.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/valve/ValveComponent.hpp>
 #include <peripherals/valve/ValveConfig.hpp>
@@ -59,17 +58,17 @@ private:
 
 class ValveFactory
     : public PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType>,
-      protected Motorized {
+      protected ServiceContainer<CurrentSensingMotorDriver> {
 public:
     ValveFactory(
-        const std::list<ServiceRef<PwmMotorDriver>>& motors,
+        const std::list<ServiceRef<CurrentSensingMotorDriver>>& motors,
         ValveControlStrategyType defaultStrategy)
         : PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType>("valve", defaultStrategy)
-        , Motorized(motors) {
+        , ServiceContainer<CurrentSensingMotorDriver>(motors) {
     }
 
     unique_ptr<Peripheral<ValveConfig>> createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
-        PwmMotorDriver& targetMotor = findMotor(deviceConfig.motor.get());
+        CurrentSensingMotorDriver& targetMotor = findService(deviceConfig.motor.get());
         ValveControlStrategy* strategy;
         try {
             strategy = createValveControlStrategy(

@@ -96,8 +96,8 @@ public:
         pins::VALVE_SLEEP
     };
 
-    const ServiceRef<PwmMotorDriver> motor { "motor", motorDriver };
-    const std::list<ServiceRef<PwmMotorDriver>> motors { motor };
+    const ServiceRef<CurrentSensingMotorDriver> motor { "motor", motorDriver };
+    const std::list<ServiceRef<CurrentSensingMotorDriver>> motors { motor };
 
     ValveFactory valveFactory { motors, ValveControlStrategyType::NormallyClosed };
     FlowMeterFactory flowMeterFactory;
