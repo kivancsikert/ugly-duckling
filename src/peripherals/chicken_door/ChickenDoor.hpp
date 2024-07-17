@@ -68,12 +68,28 @@ public:
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
 };
 
+class LimitConfig : public ConfigurationSection {
+public:
+    LimitConfig(Property<gpio_num_t>& fallbackPin) : fallbackPin(fallbackPin) {
+    }
+
+    Property<double> current { this, "current", 0.0 };
+    Property<gpio_num_t> pin { this, "pin", fallbackPin };
+
+private:
+    Property<gpio_num_t>& fallbackPin;
+};
+
 class ChickenDoorDeviceConfig
     : public ConfigurationSection {
 public:
     Property<String> motor { this, "motor" };
     Property<gpio_num_t> openPin { this, "openPin", GPIO_NUM_NC };
     Property<gpio_num_t> closedPin { this, "closedPin", GPIO_NUM_NC };
+
+    NamedConfigurationEntry<LimitConfig> open { this, "open", openPin };
+    NamedConfigurationEntry<LimitConfig> close { this, "close", closedPin };
+
     Property<seconds> movementTimeout { this, "movementTimeout", seconds(60) };
 
     NamedConfigurationEntry<ChickenDoorLightSensorConfig> lightSensor { this, "lightSensor" };
