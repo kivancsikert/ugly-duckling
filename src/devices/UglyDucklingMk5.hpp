@@ -108,9 +108,9 @@ public:
         pins::NSLEEP
     };
 
-    const ServiceRef<PwmMotorDriver> motorA { "a", motorADriver };
-    const ServiceRef<PwmMotorDriver> motorB { "b", motorBDriver };
-    const std::list<ServiceRef<PwmMotorDriver>> motors { motorA, motorB };
+    const ServiceRef<CurrentSensingMotorDriver> motorA { "a", motorADriver };
+    const ServiceRef<CurrentSensingMotorDriver> motorB { "b", motorBDriver };
+    const ServiceContainer<CurrentSensingMotorDriver> motors { { motorA, motorB } };
 
     ValveFactory valveFactory { motors, ValveControlStrategyType::Latching };
     FlowMeterFactory flowMeterFactory;

@@ -4,6 +4,7 @@
 #include <kernel/Kernel.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
+#include <kernel/drivers/CurrentSenseDriver.hpp>
 #include <kernel/drivers/Drv8833Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
@@ -86,9 +87,9 @@ class UglyDucklingMk6 : public BatteryPoweredDeviceDefinition<Mk6Config> {
 public:
     UglyDucklingMk6()
         : BatteryPoweredDeviceDefinition<Mk6Config>(
-            pins::STATUS,
-            pins::BOOT,
-            pins::BATTERY, 1.2424) {
+              pins::STATUS,
+              pins::BOOT,
+              pins::BATTERY, 1.2424) {
         // Switch off strapping pin
         // TODO: Add a LED driver instead
         pinMode(GPIO_NUM_46, OUTPUT);
@@ -114,9 +115,13 @@ public:
         config.motorNSleepPin.get()
     };
 
-    const ServiceRef<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
-    const ServiceRef<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };
-    const std::list<ServiceRef<PwmMotorDriver>> motors { motorA, motorB };
+    SimpleCurrentSenseDriver currentSense { pins::DIPROPI };
+    ExternalCurrentSensingMotorDriver motorADriver { motorDriver.getMotorA(), currentSense };
+    ExternalCurrentSensingMotorDriver motorBDriver { motorDriver.getMotorB(), currentSense };
+
+    const ServiceRef<CurrentSensingMotorDriver> motorA { "a", motorADriver };
+    const ServiceRef<CurrentSensingMotorDriver> motorB { "b", motorBDriver };
+    const ServiceContainer<CurrentSensingMotorDriver> motors { { motorA, motorB } };
 
     ValveFactory valveFactory { motors, ValveControlStrategyType::Latching };
     FlowMeterFactory flowMeterFactory;
