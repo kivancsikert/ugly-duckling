@@ -126,6 +126,13 @@ public:
     BatteryPoweredDeviceDefinition(gpio_num_t statusPin, gpio_num_t bootPin, gpio_num_t batteryPin, float batteryVoltageDividerRatio)
         : DeviceDefinition<TDeviceConfiguration>(statusPin, bootPin)
         , batteryDriver(batteryPin, batteryVoltageDividerRatio) {
+        // If the battery voltage is below 3.0V, we should not boot yet.
+        // This is to prevent the device from booting and immediately shutting down
+        // due to the high current draw of the boot process.
+        auto voltage = batteryDriver.getVoltage();
+        if (voltage != 0.0 && voltage < 3.0) {
+            ESP.deepSleep(duration_cast<microseconds>(10s).count());
+        }
     }
 
 public:
