@@ -44,7 +44,7 @@ public:
         Task::run("rtc-check", 2560, [this](Task& task) {
             while (true) {
                 if (isTimeSet()) {
-                    Log.info("RTC: time is set");
+                    Log.info("RTC: time is set to %lld", seconds(time(nullptr)).count());
                     this->rtcInSync.set();
                     break;
                 }
