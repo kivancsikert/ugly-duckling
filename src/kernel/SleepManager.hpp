@@ -7,15 +7,12 @@
 #include <kernel/Concurrent.hpp>
 #include <kernel/Log.hpp>
 
-// FIXME Why do we need to define these manually?
 #if CONFIG_IDF_TARGET_ESP32
 #error "ESP32 is not supported"
 #elif CONFIG_IDF_TARGET_ESP32S2
-typedef esp_pm_config_esp32s2_t esp_pm_config_t;
 #define MAX_CPU_FREQ_MHZ CONFIG_ESP32S2_DEFAULT_CPU_FREQ_MHZ
 #define MIN_CPU_FREQ_MHZ 80
 #elif CONFIG_IDF_TARGET_ESP32S3
-typedef esp_pm_config_esp32s3_t esp_pm_config_t;
 #define MAX_CPU_FREQ_MHZ CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ
 #define MIN_CPU_FREQ_MHZ 40
 #endif

@@ -5,8 +5,6 @@
 #include <list>
 #include <variant>
 
-#include <driver/pcnt.h>
-
 #include <Arduino.h>
 
 #include <kernel/Component.hpp>
