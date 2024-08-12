@@ -229,7 +229,7 @@ public:
 
         Task::loop(name, 3072, [this, name](Task& task) {
             auto now = system_clock::now();
-            if (overrideState != ValveState::NONE && now > overrideUntil.load()) {
+            if (overrideState != ValveState::NONE && now >= overrideUntil.load()) {
                 Log.debug("Valve '%s' override expired", name.c_str());
                 overrideUntil = time_point<system_clock>();
                 overrideState = ValveState::NONE;
