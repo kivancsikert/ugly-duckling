@@ -18,7 +18,7 @@ CONFIG_CXX_EXCEPTIONS=y
 CONFIG_BOOTLOADER_LOG_LEVEL_ERROR=y
 CONFIG_LOG_DEFAULT_LEVEL_WARN=y
 
-# Seems like a good idea to have some stack checs
+# Seems like a good idea to have some stack checks
 CONFIG_COMPILER_STACK_CHECK_MODE_NORM=y
 
 # This is ERROR by default
