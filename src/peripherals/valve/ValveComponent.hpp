@@ -237,12 +237,12 @@ public:
             ValveStateUpdate update;
             if (overrideState != ValveState::NONE) {
                 update = { overrideState, duration_cast<ticks>(overrideUntil.load() - now) };
-                Log.debug("Valve '%s' override state is %d, will change after %.2f sec",
-                    name.c_str(), static_cast<int>(update.state), update.validFor.count() / 1000.0);
+                Log.info("Valve '%s' override state is %d, will change after %.2f sec",
+                    name.c_str(), static_cast<int>(update.state), duration_cast<milliseconds>(update.validFor).count() / 1000.0);
             } else {
                 update = ValveScheduler::getStateUpdate(schedules, now, this->strategy.getDefaultState());
-                Log.debug("Valve '%s' state is %d, will change after %.2f s",
-                    name.c_str(), static_cast<int>(update.state), update.validFor.count() / 1000.0);
+                Log.info("Valve '%s' state is %d, will change after %.2f s",
+                    name.c_str(), static_cast<int>(update.state), duration_cast<milliseconds>(update.validFor).count() / 1000.0);
             }
             transitionTo(update.state);
             // TODO Account for time spent in transitionTo()
