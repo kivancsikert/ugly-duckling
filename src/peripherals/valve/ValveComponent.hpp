@@ -287,7 +287,7 @@ private:
             Log.info("Clearing override for valve '%s'", name.c_str());
         } else {
             Log.info("Overriding valve '%s' to state %d until %lld",
-                name.c_str(), static_cast<int>(state), until.time_since_epoch().count());
+                name.c_str(), static_cast<int>(state), duration_cast<seconds>(until.time_since_epoch()).count());
         }
         updateQueue.put(OverrideSpec { state, until });
     }
