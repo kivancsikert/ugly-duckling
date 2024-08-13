@@ -365,13 +365,14 @@ public:
 
         kernel.getKernelReadyState().set();
 
-        Log.info("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s')",
+        Log.info("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', current time is %ld)",
             millis() / 1000.0,
             kernel.version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
             deviceConfig.getHostname().c_str(),
-            WiFi.localIP().toString().c_str());
+            WiFi.localIP().toString().c_str(),
+            time(nullptr));
     }
 
 private:

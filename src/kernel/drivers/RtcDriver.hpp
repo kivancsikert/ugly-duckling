@@ -62,7 +62,7 @@ public:
                     task.delay(1h);
                 } else {
                     // Attempt a retry, but with mDNS cache disabled
-                    Log.debug("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
+                    Log.error("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
                     ntpClient = nullptr;
                     trustMdnsCache = false;
                     task.delay(10s);
@@ -126,16 +126,16 @@ private:
             // If the difference is larger than the threshold, set the time directly
             struct timeval tv = { .tv_sec = newEpochTime, .tv_usec = 0 };
             settimeofday(&tv, NULL);
-            Log.debug("RTC: Set time to %ld (from: %ld)",
+            Log.info("RTC: Set time to %ld (from: %ld)",
                 newEpochTime, now);
         } else if (difference != 0) {
             // If the difference is smaller, adjust the time gradually
             struct timeval adj = { .tv_sec = difference, .tv_usec = 0 };
             adjtime(&adj, NULL);
-            Log.debug("RTC: Adjusted time by %ld",
+            Log.info("RTC: Adjusted time by %ld",
                 difference);
         } else {
-            Log.debug("RTC: Time is already correct");
+            Log.info("RTC: Time is already correct");
         }
     }
 
