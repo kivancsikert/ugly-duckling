@@ -241,7 +241,7 @@ public:
                     name.c_str(), static_cast<int>(update.state), duration_cast<milliseconds>(update.validFor).count() / 1000.0);
             } else {
                 update = ValveScheduler::getStateUpdate(schedules, now, this->strategy.getDefaultState());
-                Log.info("Valve '%s' state is %d, will change after %.2f s",
+                Log.info("Valve '%s' state is %d, will change after %.2f sec",
                     name.c_str(), static_cast<int>(update.state), duration_cast<milliseconds>(update.validFor).count() / 1000.0);
             }
             transitionTo(update.state);
