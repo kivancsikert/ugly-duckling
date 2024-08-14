@@ -60,6 +60,12 @@ public:
             auto period = schedule.getPeriod();
             auto duration = schedule.getDuration();
 
+            Log.info("Considering schedule starting at %lld (current time: %lld), period %lld, duration %lld",
+                duration_cast<seconds>(start.time_since_epoch()).count(),
+                duration_cast<seconds>(now.time_since_epoch()).count(),
+                duration_cast<seconds>(period).count(),
+                duration_cast<seconds>(duration).count());
+
             if (start > now) {
                 // Schedule has not started yet; valve should be closed according to this schedule
                 // Calculate when this schedule will start for the first time
@@ -70,7 +76,14 @@ public:
             } else {
                 // This schedule has started; determine if the valve should be open or closed according to this schedule
                 auto diff = now - start;
-                auto periodPosition = diff % period;
+
+                // Damn you, C++ chrono, for not having a working modulo operator
+                auto periodPosition = nanoseconds(duration_cast<nanoseconds>(diff).count() % duration_cast<nanoseconds>(period).count());
+                Log.info("Diff: %lld sec, at: %lld sec, should be open until %lld / %lld sec",
+                    duration_cast<seconds>(diff).count(),
+                    duration_cast<seconds>(periodPosition).count(),
+                    duration_cast<seconds>(duration).count(),
+                    duration_cast<seconds>(period).count());
 
                 if (periodPosition < duration) {
                     // The valve should be open according to this schedule
