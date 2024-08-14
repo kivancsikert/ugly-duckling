@@ -137,7 +137,7 @@ public:
 
 private:
     void logImpl(Level level, const char* format, va_list args) {
-        if (static_cast<int>(level) < FARMHUB_LOG_LEVEL) {
+        if (static_cast<int>(level) > FARMHUB_LOG_LEVEL) {
             return;
         }
 
