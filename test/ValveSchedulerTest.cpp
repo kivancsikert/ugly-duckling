@@ -41,7 +41,8 @@ std::ostream& operator<<(std::ostream& os, const ValveState& val) {
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const ticks& val) {
+template<typename _Rep, typename _Period>
+std::ostream& operator<<(std::ostream& os, const std::chrono::duration<_Rep, _Period>& val) {
     os << duration_cast<milliseconds>(val).count() << " ms";
     return os;
 }
@@ -108,7 +109,7 @@ TEST_F(ValveSchedulerTest, can_create_schedule) {
 TEST_F(ValveSchedulerTest, not_scheduled_when_empty) {
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
         ValveStateUpdate update = scheduler.getStateUpdate({}, base, defaultState);
-        EXPECT_EQ(update, (ValveStateUpdate { defaultState, ticks::max() }));
+        EXPECT_EQ(update, (ValveStateUpdate { defaultState, nanoseconds::max() }));
     }
 }
 

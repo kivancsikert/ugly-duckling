@@ -234,9 +234,10 @@ public:
                 overrideUntil = time_point<system_clock>();
                 overrideState = ValveState::NONE;
             }
+
             ValveStateUpdate update;
             if (overrideState != ValveState::NONE) {
-                update = { overrideState, duration_cast<ticks>(overrideUntil.load() - now) };
+                update = { overrideState, overrideUntil.load() - now };
                 Log.info("Valve '%s' override state is %d, will change after %.2f sec",
                     name.c_str(), static_cast<int>(update.state), duration_cast<milliseconds>(update.validFor).count() / 1000.0);
             } else {
@@ -245,8 +246,13 @@ public:
                     name.c_str(), static_cast<int>(update.state), duration_cast<milliseconds>(update.validFor).count() / 1000.0);
             }
             transitionTo(update.state);
+
+            // Avoid overflow
+            auto validFor = update.validFor < ticks::max()
+                ? duration_cast<ticks>(update.validFor)
+                : ticks::max();
             // TODO Account for time spent in transitionTo()
-            updateQueue.pollIn(update.validFor, [this](const std::variant<OverrideSpec, ScheduleSpec>& change) {
+            updateQueue.pollIn(validFor, [this](const std::variant<OverrideSpec, ScheduleSpec>& change) {
                 std::visit(
                     [this](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <list>
+#include <optional>
 
 #include <kernel/Time.hpp>
 #include <peripherals/valve/ValveSchedule.hpp>
@@ -29,7 +30,7 @@ void convertFromJson(JsonVariantConst src, ValveState& dst) {
 
 struct ValveStateUpdate {
     ValveState state;
-    ticks validFor;
+    nanoseconds validFor;
 
     bool operator==(const ValveStateUpdate& other) const {
         return state == other.state && validFor == other.validFor;
@@ -52,7 +53,7 @@ public:
      */
     static ValveStateUpdate getStateUpdate(const std::list<ValveSchedule>& schedules, time_point<system_clock> now, ValveState defaultState) {
         auto targetState = ValveState::NONE;
-        auto validFor = ticks::max();
+        auto validFor = nanoseconds::max();
 
         for (const auto& schedule : schedules) {
             auto start = schedule.getStart();
@@ -64,17 +65,17 @@ public:
                 // Calculate when this schedule will start for the first time
                 if (targetState != ValveState::OPEN) {
                     targetState = ValveState::CLOSED;
-                    validFor = min(validFor, duration_cast<ticks>(start - now));
+                    validFor = min(validFor, start - now);
                 }
             } else {
                 // This schedule has started; determine if the valve should be open or closed according to this schedule
-                auto diff = duration_cast<ticks>(now - start);
+                auto diff = now - start;
                 auto periodPosition = diff % period;
 
                 if (periodPosition < duration) {
                     // The valve should be open according to this schedule
                     // Calculate when this opening period will end
-                    ticks closeAfter = duration - periodPosition;
+                    nanoseconds closeAfter = duration - periodPosition;
                     if (targetState == ValveState::OPEN) {
                         // We already found a schedule to keep this valve open, extend the period if possible
                         validFor = max(validFor, closeAfter);
@@ -89,7 +90,7 @@ public:
                         // There are no other schedules to keep the valve open yet,
                         // calculate when the next opening period will start
                         targetState = ValveState::CLOSED;
-                        ticks openAfter = period - periodPosition;
+                        nanoseconds openAfter = period - periodPosition;
                         validFor = min(validFor, openAfter);
                     }
                 }
