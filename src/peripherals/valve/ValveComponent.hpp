@@ -238,13 +238,14 @@ public:
             ValveStateUpdate update;
             if (overrideState != ValveState::NONE) {
                 update = { overrideState, overrideUntil.load() - now };
-                Log.info("Valve '%s' override state is %d, will change after %.2f sec",
-                    name.c_str(), static_cast<int>(update.state), duration_cast<milliseconds>(update.validFor).count() / 1000.0);
             } else {
                 update = ValveScheduler::getStateUpdate(schedules, now, this->strategy.getDefaultState());
-                Log.info("Valve '%s' state is %d, will change after %.2f sec",
-                    name.c_str(), static_cast<int>(update.state), duration_cast<milliseconds>(update.validFor).count() / 1000.0);
             }
+            Log.info("Valve '%s' state is %d, will change after %.2f sec at %lld",
+                name.c_str(),
+                static_cast<int>(update.state),
+                duration_cast<milliseconds>(update.validFor).count() / 1000.0,
+                duration_cast<seconds>((now + update.validFor).time_since_epoch()).count());
             transitionTo(update.state);
 
             // Avoid overflow
