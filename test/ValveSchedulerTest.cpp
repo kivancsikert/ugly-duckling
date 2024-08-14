@@ -41,7 +41,8 @@ std::ostream& operator<<(std::ostream& os, const ValveState& val) {
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const ticks& val) {
+template<typename _Rep, typename _Period>
+std::ostream& operator<<(std::ostream& os, const std::chrono::duration<_Rep, _Period>& val) {
     os << duration_cast<milliseconds>(val).count() << " ms";
     return os;
 }
@@ -55,7 +56,48 @@ class ValveSchedulerTest : public testing::Test {
 public:
     time_point<system_clock> base = parseTime("2024-01-01 00:00:00");
     ValveScheduler scheduler;
+
+    ValveSchedule fromJson(const char* json) {
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, json);
+        if (error) {
+            std::ostringstream oss;
+            oss << "Cannot parse schedule: " << error.c_str();
+            throw std::runtime_error(oss.str());
+        }
+        return doc.as<ValveSchedule>();
+    }
+
+    std::string toJson(const ValveSchedule& schedule) {
+        JsonDocument doc;
+        doc.set(schedule);
+        std::ostringstream oss;
+        serializeJson(doc, oss);
+        return oss.str();
+    }
 };
+
+TEST_F(ValveSchedulerTest, can_parse_schedule) {
+    char json[] = R"({
+        "start": "2024-01-01T00:00:00Z",
+        "period": 3600,
+        "duration": 900
+    })";
+    ValveSchedule schedule = fromJson(json);
+    EXPECT_EQ(schedule.getStart().time_since_epoch().count(), system_clock::from_time_t(1704067200).time_since_epoch().count());
+    EXPECT_EQ(schedule.getPeriod(), 1h);
+    EXPECT_EQ(schedule.getDuration(), 15min);
+}
+
+TEST_F(ValveSchedulerTest, can_serialize_schedule) {
+    ValveSchedule schedule {
+        system_clock::from_time_t(1704067200),
+        1h,
+        15min
+    };
+    std::string json = toJson(schedule);
+    EXPECT_EQ(json, R"({"start":"2024-01-01T00:00:00Z","period":3600,"duration":900})");
+}
 
 TEST_F(ValveSchedulerTest, can_create_schedule) {
     ValveSchedule schedule(base, 1h, 1min);
@@ -67,7 +109,7 @@ TEST_F(ValveSchedulerTest, can_create_schedule) {
 TEST_F(ValveSchedulerTest, not_scheduled_when_empty) {
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
         ValveStateUpdate update = scheduler.getStateUpdate({}, base, defaultState);
-        EXPECT_EQ(update, (ValveStateUpdate { defaultState, ticks::max() }));
+        EXPECT_EQ(update, (ValveStateUpdate { defaultState, nanoseconds::max() }));
     }
 }
 

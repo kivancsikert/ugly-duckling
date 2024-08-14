@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <list>
+#include <optional>
 
 #include <kernel/Time.hpp>
 #include <peripherals/valve/ValveSchedule.hpp>
@@ -29,7 +30,7 @@ void convertFromJson(JsonVariantConst src, ValveState& dst) {
 
 struct ValveStateUpdate {
     ValveState state;
-    ticks validFor;
+    nanoseconds validFor;
 
     bool operator==(const ValveStateUpdate& other) const {
         return state == other.state && validFor == other.validFor;
@@ -52,29 +53,46 @@ public:
      */
     static ValveStateUpdate getStateUpdate(const std::list<ValveSchedule>& schedules, time_point<system_clock> now, ValveState defaultState) {
         auto targetState = ValveState::NONE;
-        auto validFor = ticks::max();
+        auto validFor = nanoseconds::max();
 
         for (const auto& schedule : schedules) {
             auto start = schedule.getStart();
             auto period = schedule.getPeriod();
             auto duration = schedule.getDuration();
 
+#ifndef GTEST
+            Log.info("Considering schedule starting at %lld (current time: %lld), period %lld, duration %lld",
+                duration_cast<seconds>(start.time_since_epoch()).count(),
+                duration_cast<seconds>(now.time_since_epoch()).count(),
+                duration_cast<seconds>(period).count(),
+                duration_cast<seconds>(duration).count());
+#endif
+
             if (start > now) {
                 // Schedule has not started yet; valve should be closed according to this schedule
                 // Calculate when this schedule will start for the first time
                 if (targetState != ValveState::OPEN) {
                     targetState = ValveState::CLOSED;
-                    validFor = min(validFor, duration_cast<ticks>(start - now));
+                    validFor = min(validFor, start - now);
                 }
             } else {
                 // This schedule has started; determine if the valve should be open or closed according to this schedule
-                auto diff = duration_cast<ticks>(now - start);
-                auto periodPosition = diff % period;
+                auto diff = now - start;
+
+                // Damn you, C++ chrono, for not having a working modulo operator
+                auto periodPosition = nanoseconds(duration_cast<nanoseconds>(diff).count() % duration_cast<nanoseconds>(period).count());
+#ifndef GTEST
+                Log.info("Diff: %lld sec, at: %lld sec, should be open until %lld / %lld sec",
+                    duration_cast<seconds>(diff).count(),
+                    duration_cast<seconds>(periodPosition).count(),
+                    duration_cast<seconds>(duration).count(),
+                    duration_cast<seconds>(period).count());
+#endif
 
                 if (periodPosition < duration) {
                     // The valve should be open according to this schedule
                     // Calculate when this opening period will end
-                    ticks closeAfter = duration - periodPosition;
+                    nanoseconds closeAfter = duration - periodPosition;
                     if (targetState == ValveState::OPEN) {
                         // We already found a schedule to keep this valve open, extend the period if possible
                         validFor = max(validFor, closeAfter);
@@ -89,7 +107,7 @@ public:
                         // There are no other schedules to keep the valve open yet,
                         // calculate when the next opening period will start
                         targetState = ValveState::CLOSED;
-                        ticks openAfter = period - periodPosition;
+                        nanoseconds openAfter = period - periodPosition;
                         validFor = min(validFor, openAfter);
                     }
                 }

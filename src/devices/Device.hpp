@@ -346,7 +346,7 @@ public:
                 json["version"] = kernel.version;
                 json["wakeup"] = esp_sleep_get_wakeup_cause();
                 json["bootCount"] = bootCount++;
-                json["time"] = time(nullptr);
+                json["time"] = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
                 json["sleepWhenIdle"] = kernel.sleepManager.sleepWhenIdle;
             },
             MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::max());
@@ -365,13 +365,14 @@ public:
 
         kernel.getKernelReadyState().set();
 
-        Log.info("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s')",
+        Log.info("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', current time is %lld)",
             millis() / 1000.0,
             kernel.version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
             deviceConfig.getHostname().c_str(),
-            WiFi.localIP().toString().c_str());
+            WiFi.localIP().toString().c_str(),
+            duration_cast<seconds>(system_clock::now().time_since_epoch()).count());
     }
 
 private:
