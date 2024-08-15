@@ -303,6 +303,14 @@ private:
             String clientKey;
 
             MdnsRecord mqttServer;
+#if defined(MQTT_HOST)
+#define MQTT_HOST_STR TOSTRING(MQTT_HOST)
+#ifndef MQTT_PORT
+#define MQTT_PORT 1883
+#endif
+            mqttServer.hostname = MQTT_HOST_STR;
+            mqttServer.port = MQTT_PORT;
+#else
             if (config.host.get().length() > 0) {
                 mqttServer.hostname = config.host.get();
                 mqttServer.port = config.port.get();
@@ -315,6 +323,7 @@ private:
                 // TODO Handle lookup failure
                 mdns.lookupService("mqtt", "tcp", mqttServer, trustMdnsCache);
             }
+#endif
 
             String hostname;
             if (mqttServer.ip == IPAddress()) {
