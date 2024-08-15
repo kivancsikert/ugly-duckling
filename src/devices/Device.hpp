@@ -37,13 +37,11 @@ typedef farmhub::devices::Mk5Config TDeviceConfiguration;
 #include <devices/UglyDucklingMk6.hpp>
 typedef farmhub::devices::UglyDucklingMk6 TDeviceDefinition;
 typedef farmhub::devices::Mk6Config TDeviceConfiguration;
-#define HAS_BATTERY
 
 #elif defined(MK7)
 #include <devices/UglyDucklingMk7.hpp>
 typedef farmhub::devices::UglyDucklingMk7 TDeviceDefinition;
 typedef farmhub::devices::Mk7Config TDeviceConfiguration;
-#define HAS_BATTERY
 
 #else
 #error "No device defined"
@@ -89,11 +87,13 @@ public:
             status.concat(esp_clk_cpu_freq() / 1000000);
             status.concat("\033[0m MHz");
 
-            BatteryDriver* battery = this->battery.load();
-            if (battery != nullptr) {
-                status.concat(", battery: \033[33m");
-                status.concat(String(battery->getVoltage(), 2));
-                status.concat("\033[0m V");
+            {
+                Lock lock(batteryMutex);
+                if (battery != nullptr) {
+                    status.concat(", battery: \033[33m");
+                    status.concat(String(battery->getVoltage(), 2));
+                    status.concat("\033[0m V");
+                }
             }
 
             Serial.print("\033[1G\033[0K");
@@ -110,8 +110,9 @@ public:
         });
     }
 
-    void registerBattery(BatteryDriver& battery) {
-        this->battery = &battery;
+    void registerBattery(std::shared_ptr<BatteryDriver> battery) {
+        Lock lock(batteryMutex);
+        this->battery = battery;
     }
 
     void printLog(Level level, const char* message) {
@@ -184,7 +185,8 @@ private:
     int counter;
     char timeBuffer[12];
     String status;
-    std::atomic<BatteryDriver*> battery { nullptr };
+    Mutex batteryMutex;
+    std::shared_ptr<BatteryDriver> battery;
 
     Queue<String> consoleQueue { "console", 128 };
 };
@@ -261,11 +263,18 @@ class ConfiguredKernel {
 public:
     ConfiguredKernel(Queue<LogRecord>& logRecords)
         : consoleProvider(logRecords, deviceDefinition.config.publishLogs.get()) {
+        auto battery = deviceDefinition.createBatteryDriver(kernel.i2c);
+        if (battery != nullptr) {
+#ifdef FARMHUB_DEBUG
+            consolePrinter.registerBattery(battery);
+#endif
+        }
     }
 
     TDeviceDefinition deviceDefinition;
     ConsoleProvider consoleProvider;
     Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.mqttConfig, deviceDefinition.statusLed };
+    shared_ptr<BatteryDriver> battery;
 };
 
 class Device {
@@ -277,12 +286,12 @@ public:
             }
         });
 
-#ifdef HAS_BATTERY
+        if (configuredKernel.battery != nullptr) {
 #ifdef FARMHUB_DEBUG
-        consolePrinter.registerBattery(deviceDefinition.battery);
+            consolePrinter.registerBattery(configuredKernel.battery);
 #endif
-        deviceTelemetryCollector.registerProvider("battery", deviceDefinition.battery);
-#endif
+            deviceTelemetryCollector.registerProvider("battery", *configuredKernel.battery);
+        }
 
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
         deviceTelemetryCollector.registerProvider("memory", memoryTelemetryProvider);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <list>
+#include <memory>
 
 #include <Arduino.h>
 
@@ -92,6 +93,10 @@ public:
         return {};
     }
 
+    virtual std::shared_ptr<BatteryDriver> createBatteryDriver(I2CManager& i2c) {
+        return nullptr;
+    }
+
 public:
     LedDriver statusLed;
     PcntManager pcnt;
@@ -118,24 +123,6 @@ private:
 
     farmhub::peripherals::light_sensor::Bh1750Factory bh1750Factory;
     farmhub::peripherals::light_sensor::Tsl2591Factory tsl2591Factory;
-};
-
-template <typename TDeviceConfiguration>
-class BatteryPoweredDeviceDefinition : public DeviceDefinition<TDeviceConfiguration> {
-public:
-    BatteryPoweredDeviceDefinition(gpio_num_t statusPin, gpio_num_t bootPin, BatteryDriver* battery)
-        : DeviceDefinition<TDeviceConfiguration>(statusPin, bootPin)
-        , battery(*battery) {
-        // If the battery voltage is below 3.0V, we should not boot yet.
-        // This is to prevent the device from booting and immediately shutting down
-        // due to the high current draw of the boot process.
-        auto voltage = battery->getVoltage();
-        if (voltage != 0.0 && voltage < 3.0) {
-            ESP.deepSleep(duration_cast<microseconds>(10s).count());
-        }
-    }
-
-    BatteryDriver& battery;
 };
 
 }    // namespace farmhub::devices

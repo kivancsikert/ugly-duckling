@@ -3,8 +3,8 @@
 #include <kernel/FileSystem.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/Service.hpp>
+#include <kernel/drivers/Bq27220Driver.hpp>
 #include <kernel/drivers/Drv8833Driver.hpp>
-#include <kernel/drivers/Ina219Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
@@ -48,8 +48,8 @@ static gpio_num_t FSPIWP = Pin::registerPin("FSPIWP", GPIO_NUM_14);
 static gpio_num_t STATUS = Pin::registerPin("STATUS", GPIO_NUM_15);
 static gpio_num_t LOADEN = Pin::registerPin("LOADEN", GPIO_NUM_16);
 
-static gpio_num_t SDA = Pin::registerPin("SDA", GPIO_NUM_17);
-static gpio_num_t SCL = Pin::registerPin("SCL", GPIO_NUM_18);
+static gpio_num_t SCL = Pin::registerPin("SCL", GPIO_NUM_17);
+static gpio_num_t SDA = Pin::registerPin("SDA", GPIO_NUM_18);
 
 static gpio_num_t DMINUS = Pin::registerPin("D-", GPIO_NUM_19);
 static gpio_num_t DPLUS = Pin::registerPin("D+", GPIO_NUM_20);
@@ -82,13 +82,16 @@ public:
     }
 };
 
-class UglyDucklingMk7 : public BatteryPoweredDeviceDefinition<Mk7Config> {
+class UglyDucklingMk7 : public DeviceDefinition<Mk7Config> {
 public:
     UglyDucklingMk7()
-        : BatteryPoweredDeviceDefinition<Mk7Config>(
+        : DeviceDefinition<Mk7Config>(
               pins::STATUS,
-              pins::BOOT,
-              new Ina219Driver(pins::SDA, pins::SCL)) {
+              pins::BOOT) {
+    }
+
+    virtual std::shared_ptr<BatteryDriver> createBatteryDriver(I2CManager& i2c) override {
+        return std::make_shared<Bq27220Driver>(i2c, pins::SDA, pins::SCL);
     }
 
     void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
