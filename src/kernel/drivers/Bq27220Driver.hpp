@@ -27,16 +27,20 @@ public:
     }
 
     float getVoltage() override {
-        // Read the control status register at 0x0000
-        wire.beginTransmission(address);
-        wire.write(0x08);
-        wire.endTransmission();
-        wire.requestFrom(address, (uint8_t) 2);
-        uint16_t result = wire.read() | (wire.read() << 8);
-        return result / 1000.0;
+        // Log.trace("Capacityt: %d/%d", readUint16(0x10), readUint16(0x12));
+        return readUint16(0x08) / 1000.0;
     }
 
 private:
+    uint16_t readUint16(uint16_t reg) {
+        wire.beginTransmission(address);
+        wire.write(reg);
+        wire.endTransmission();
+        wire.requestFrom(address, (uint8_t) 2);
+        uint16_t result = wire.read() | (wire.read() << 8);
+        return result;
+    }
+
     TwoWire& wire;
     const uint8_t address;
 };
