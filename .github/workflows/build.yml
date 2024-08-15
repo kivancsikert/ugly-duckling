@@ -10,7 +10,7 @@ jobs:
         strategy:
             fail-fast: true
             matrix:
-                environment: [mk4, mk5, mk6, native]
+                environment: [mk4, mk5, mk6, mk7, native]
         steps:
             - uses: actions/checkout@v4
               with:
