@@ -12,7 +12,7 @@ public:
     virtual float getVoltage() = 0;
 
 protected:
-    void populateTelemetry(JsonObject& json) override {
+    virtual void populateTelemetry(JsonObject& json) override {
         json["voltage"] = getVoltage();
     }
 };
