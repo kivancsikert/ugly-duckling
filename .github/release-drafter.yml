@@ -5,6 +5,9 @@ categories:
   - title: 🚀 New features and improvements
     labels:
       - enhancement
+  - title: 🔧 Hardware changes
+    labels:
+      - hardware
   - title: 🐛 Bug Fixes
     labels:
       - bug

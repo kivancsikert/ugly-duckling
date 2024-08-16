@@ -7,13 +7,23 @@
 
 namespace farmhub::kernel::drivers {
 
-class BatteryDriver
-    : public TelemetryProvider {
+class BatteryDriver : public TelemetryProvider {
 public:
-    BatteryDriver(gpio_num_t pin, float voltageDividerRatio)
+    virtual float getVoltage() = 0;
+
+protected:
+    virtual void populateTelemetry(JsonObject& json) override {
+        json["voltage"] = getVoltage();
+    }
+};
+
+class AnalogBatteryDriver
+    : public BatteryDriver {
+public:
+    AnalogBatteryDriver(gpio_num_t pin, float voltageDividerRatio)
         : pin(pin)
         , voltageDividerRatio(voltageDividerRatio) {
-        Log.info("Initializing battery driver on pin %d",
+        Log.info("Initializing analog battery driver on pin %d",
             pin);
 
         pinMode(pin, INPUT);
@@ -22,11 +32,6 @@ public:
     float getVoltage() {
         auto batteryLevel = analogRead(pin);
         return batteryLevel * 3.3 / 4096 * voltageDividerRatio;
-    }
-
-protected:
-    void populateTelemetry(JsonObject& json) override {
-        json["voltage"] = getVoltage();
     }
 
 private:
