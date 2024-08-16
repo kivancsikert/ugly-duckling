@@ -262,19 +262,23 @@ private:
 class ConfiguredKernel {
 public:
     ConfiguredKernel(Queue<LogRecord>& logRecords)
-        : consoleProvider(logRecords, deviceDefinition.config.publishLogs.get()) {
-        auto battery = deviceDefinition.createBatteryDriver(kernel.i2c);
+        : consoleProvider(logRecords, deviceDefinition.config.publishLogs.get())
+        , battery(deviceDefinition.createBatteryDriver(kernel.i2c)) {
         if (battery != nullptr) {
-#ifdef FARMHUB_DEBUG
-            consolePrinter.registerBattery(battery);
-#endif
+            // If the battery voltage is below 3.0V, we should not boot yet.
+            // This is to prevent the device from booting and immediately shutting down
+            // due to the high current draw of the boot process.
+            auto voltage = battery->getVoltage();
+            if (voltage != 0.0 && voltage < 3.0) {
+                ESP.deepSleep(duration_cast<microseconds>(10s).count());
+            }
         }
     }
 
     TDeviceDefinition deviceDefinition;
     ConsoleProvider consoleProvider;
     Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.mqttConfig, deviceDefinition.statusLed };
-    shared_ptr<BatteryDriver> battery;
+    const shared_ptr<BatteryDriver> battery;
 };
 
 class Device {
@@ -290,11 +294,14 @@ public:
 #ifdef FARMHUB_DEBUG
             consolePrinter.registerBattery(configuredKernel.battery);
 #endif
-            deviceTelemetryCollector.registerProvider("battery", *configuredKernel.battery);
+            deviceTelemetryCollector.registerProvider("battery", configuredKernel.battery);
+            Log.info("Battery configured");
+        } else {
+            Log.info("No battery configured");
         }
 
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
-        deviceTelemetryCollector.registerProvider("memory", memoryTelemetryProvider);
+        deviceTelemetryCollector.registerProvider("memory", std::make_shared<MemoryTelemetryProvider>());
 #endif
 
         deviceDefinition.registerPeripheralFactories(peripheralManager);
@@ -416,10 +423,6 @@ private:
     PingCommand pingCommand { [this]() {
         telemetryPublishQueue.offer(true);
     } };
-
-#if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
-    MemoryTelemetryProvider memoryTelemetryProvider;
-#endif
 
     FileSystem& fs { kernel.fs };
     EchoCommand echoCommand;

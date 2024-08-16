@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 
 #include <ArduinoJson.h>
 
@@ -21,17 +22,18 @@ public:
             auto& name = entry.first;
             auto& provider = entry.second;
             JsonObject telemetryRoot = root[name].to<JsonObject>();
-            provider.get().populateTelemetry(telemetryRoot);
+            provider->populateTelemetry(telemetryRoot);
         }
     }
 
-    void registerProvider(const String& name, TelemetryProvider& provider) {
+    void registerProvider(const String& name, std::shared_ptr<TelemetryProvider> provider) {
+        Log.trace("Registering telemetry provider %s", name.c_str());
         // TODO Check for duplicates
-        providers.emplace(name, std::reference_wrapper<TelemetryProvider>(provider));
+        providers.emplace(name, provider);
     }
 
 private:
-    std::map<String, std::reference_wrapper<TelemetryProvider>> providers;
+    std::map<String, std::shared_ptr<TelemetryProvider>> providers;
 };
 
 class TelemetryPublisher {
