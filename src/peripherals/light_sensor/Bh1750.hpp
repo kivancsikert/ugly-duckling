@@ -44,7 +44,8 @@ public:
         I2CConfig config,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval) {
+        : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval)
+        , sensor(config.address) {
 
         Log.info("Initializing BH1750 light sensor with %s",
             config.toString().c_str());
