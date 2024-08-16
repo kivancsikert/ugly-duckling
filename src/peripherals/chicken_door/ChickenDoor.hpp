@@ -183,6 +183,11 @@ private:
             currentState = lastState;
         }
 
+        if (currentState != DoorState::NONE) {
+            Log.trace("Motor current: %.2f",
+                motor.readCurrent());
+        }
+
         if (currentState != targetState) {
             if (currentState != lastState) {
                 Log.trace("Going from state %d to %d (light level %.2f)",
