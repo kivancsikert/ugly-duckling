@@ -61,9 +61,10 @@ static const String& getMacAddress() {
 template <typename TDeviceConfiguration>
 class Kernel {
 public:
-    Kernel(TDeviceConfiguration& deviceConfig, MqttDriver::Config& mqttConfig, LedDriver& statusLed)
+    Kernel(I2CManager i2c, TDeviceConfiguration& deviceConfig, MqttDriver::Config& mqttConfig, LedDriver& statusLed)
         : version(VERSION)
         , deviceConfig(deviceConfig)
+        , i2c(i2c)
         , mqttConfig(mqttConfig)
         , statusLed(statusLed) {
 
@@ -258,6 +259,7 @@ private:
     TDeviceConfiguration& deviceConfig;
 
 public:
+    I2CManager i2c;
     SleepManager sleepManager { deviceConfig.sleepWhenIdle.get() };
 
 private:
@@ -286,7 +288,6 @@ private:
 public:
     MqttDriver mqtt { networkReadyState, mdns, mqttConfig, deviceConfig.instance.get(), mqttReadyState };
     SwitchManager switches;
-    I2CManager i2c;
 };
 
 }    // namespace farmhub::kernel

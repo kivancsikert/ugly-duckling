@@ -92,7 +92,7 @@ public:
         return sleeping;
     }
 
-    double readCurrent() const override {
+    double readCurrent() override {
         return analogRead(currentPin) / 4096.0;
     }
 

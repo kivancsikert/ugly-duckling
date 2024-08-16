@@ -87,7 +87,7 @@ public:
 
 class UglyDucklingMk6 : public DeviceDefinition<Mk6Config> {
 public:
-    UglyDucklingMk6()
+    UglyDucklingMk6(I2CManager& i2c)
         : DeviceDefinition<Mk6Config>(
               pins::STATUS,
               pins::BOOT) {

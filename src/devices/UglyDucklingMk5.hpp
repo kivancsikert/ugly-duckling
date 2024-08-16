@@ -77,7 +77,7 @@ static gpio_num_t TXD0 = Pin::registerPin("TXD0", GPIO_NUM_43);
 
 class UglyDucklingMk5 : public DeviceDefinition<Mk5Config> {
 public:
-    UglyDucklingMk5()
+    UglyDucklingMk5(I2CManager& i2c)
         : DeviceDefinition<Mk5Config>(
             pins::STATUS,
             pins::BOOT) {

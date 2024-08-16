@@ -6,7 +6,7 @@ namespace farmhub::kernel::drivers {
 class CurrentSenseDriver {
 
 public:
-    virtual double readCurrent() const = 0;
+    virtual double readCurrent() = 0;
 };
 
 class SimpleCurrentSenseDriver
@@ -18,7 +18,7 @@ public:
         pinMode(pin, INPUT);
     }
 
-    double readCurrent() const override {
+    double readCurrent() override {
         return analogRead(pin) / scale;
     }
 

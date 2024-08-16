@@ -41,7 +41,7 @@ public:
         motor.drive(phase, duty);
     }
 
-    double readCurrent() const override {
+    double readCurrent() override {
         return currentSense.readCurrent();
     }
 

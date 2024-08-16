@@ -5,6 +5,7 @@
 #include <kernel/Service.hpp>
 #include <kernel/drivers/Bq27220Driver.hpp>
 #include <kernel/drivers/Drv8833Driver.hpp>
+#include <kernel/drivers/Ina219Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
@@ -84,10 +85,11 @@ public:
 
 class UglyDucklingMk7 : public DeviceDefinition<Mk7Config> {
 public:
-    UglyDucklingMk7()
+    UglyDucklingMk7(I2CManager& i2c)
         : DeviceDefinition<Mk7Config>(
               pins::STATUS,
-              pins::BOOT) {
+              pins::BOOT)
+        , currentSense(i2c, pins::SDA, pins::SCL) {
     }
 
     virtual std::shared_ptr<BatteryDriver> createBatteryDriver(I2CManager& i2c) override {
@@ -113,8 +115,7 @@ public:
         pins::LOADEN,
     };
 
-    // TODO Implement proper current sensing for MK7
-    SimpleCurrentSenseDriver currentSense { pins::IOA1 };
+    Ina219Driver currentSense;
     ExternalCurrentSensingMotorDriver motorADriver { motorDriver.getMotorA(), currentSense };
     ExternalCurrentSensingMotorDriver motorBDriver { motorDriver.getMotorB(), currentSense };
 

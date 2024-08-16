@@ -275,9 +275,10 @@ public:
         }
     }
 
-    TDeviceDefinition deviceDefinition;
+    I2CManager i2c;
+    TDeviceDefinition deviceDefinition { i2c };
     ConsoleProvider consoleProvider;
-    Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.mqttConfig, deviceDefinition.statusLed };
+    Kernel<TDeviceConfiguration> kernel { i2c, deviceDefinition.config, deviceDefinition.mqttConfig, deviceDefinition.statusLed };
     const shared_ptr<BatteryDriver> battery;
 };
 
