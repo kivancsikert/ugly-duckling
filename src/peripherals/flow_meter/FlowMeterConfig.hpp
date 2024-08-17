@@ -15,7 +15,7 @@ class FlowMeterDeviceConfig
 public:
     Property<gpio_num_t> pin { this, "pin", GPIO_NUM_NC };
     Property<double> qFactor { this, "qFactor", 5.0 };
-    Property<milliseconds> measurementFrequency { this, "measurementFrequency", 1s };
+    Property<String> type { this, "type" };
 };
 
 }

@@ -1,6 +1,10 @@
 #pragma once
 
 #include <chrono>
+#include <vector>
+#include <stdexcept>
+#include <algorithm>
+#include <memory>
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -93,6 +97,84 @@ private:
     double volume = 0.0;
 
     Mutex updateMutex;
+};
+
+struct DataPoint {
+    int pulses;
+    double qFactor;
+
+    bool operator<(const DataPoint& other) const {
+        return pulses < other.pulses;
+    }
+};
+
+class FlowCalculator {
+public:
+    virtual ~FlowCalculator() = default;
+    virtual double getFlowRate(int pulses) const = 0;
+    virtual String describe() const = 0;
+
+    class Builder {
+    private:
+        std::vector<DataPoint> dataPoints;
+    public:
+        Builder& addDataPoint(int pulses, double flowRate) {
+            dataPoints.push_back(DataPoint{pulses, flowRate});
+            return *this;
+        }
+
+        std::unique_ptr<FlowCalculator> build() {
+            std::sort(dataPoints.begin(), dataPoints.end());
+
+            switch (dataPoints.size()) {
+                case 0:
+                    throw std::runtime_error("No data points available for calculation.");
+                case 1:
+                    return std::make_unique<FixedFlowCalculator>(dataPoints.front().qFactor);
+                default:
+                    return std::make_unique<InterpolatingFlowCalculator>(dataPoints);
+            }
+        }
+    };
+};
+
+class FixedFlowCalculator : public FlowCalculator {
+private:
+    double qFactor;
+
+public:
+    explicit FixedFlowCalculator(double rate) : qFactor(rate) {}
+
+    double getFlowRate(int) const override {
+        return qFactor;
+    }
+};
+
+class InterpolatingFlowCalculator : public FlowCalculator {
+private:
+    std::vector<DataPoint> dataPoints;
+
+public:
+    explicit InterpolatingFlowCalculator(const std::vector<DataPoint>& points)
+        : dataPoints(points) {}
+
+    double getFlowRate(int pulses) const override {
+        // Handle cases where the pulse count is outside the provided range
+        if (pulses <= dataPoints.front().pulses) {
+            return dataPoints.front().flowRate;
+        }
+        if (pulses >= dataPoints.back().pulses) {
+            return dataPoints.back().flowRate;
+        }
+
+        // Find the interval [prev, next] that contains the pulses value
+        auto next = std::lower_bound(dataPoints.begin(), dataPoints.end(), DataPoint{pulses, 0.0});
+        auto prev = next - 1;
+
+        // Linear interpolation
+        double slope = (next->flowRate - prev->flowRate) / (next->pulses - prev->pulses);
+        return prev->flowRate + slope * (pulses - prev->pulses);
+    }
 };
 
 }    // namespace farmhub::peripherals::flow_meter
