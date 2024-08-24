@@ -133,15 +133,19 @@ public:
     }
 
     void delay(ticks time) {
+        Log.trace("Task '%s' delaying for %lld ms",
+            pcTaskGetName(nullptr), duration_cast<milliseconds>(time).count());
         vTaskDelay(time.count());
     }
 
     bool delayUntil(ticks time) {
+        Log.trace("Task '%s' delaying until %lld ms",
+            pcTaskGetName(nullptr), duration_cast<milliseconds>(time).count());
         if (xTaskDelayUntil(&lastWakeTime, time.count())) {
             return true;
         }
         auto newWakeTime = xTaskGetTickCount();
-        Serial.printf("Task '%s' missed deadline by %lld ms\n",
+        Log.printfToSerial("Task '%s' missed deadline by %lld ms\n",
             pcTaskGetName(nullptr), duration_cast<milliseconds>(ticks(newWakeTime - lastWakeTime)).count());
         lastWakeTime = newWakeTime;
         return false;
@@ -163,7 +167,7 @@ public:
             return time - (currentTime - ticks(lastWakeTime));
         } else {
             // 'currentTime' has surpassed our target time, indicating the delay has expired.
-            Serial.printf("Task '%s' missed deadline by %lld ms\n",
+            Log.printfToSerial("Task '%s' missed deadline by %lld ms\n",
                 pcTaskGetName(nullptr), duration_cast<milliseconds>(currentTime - ticks(lastWakeTime)).count());
             return ticks::zero();
         }

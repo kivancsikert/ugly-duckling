@@ -34,7 +34,7 @@ public:
         , mqttRoot(mqttRoot)
         , telemetrySize(telemetrySize) {
         mqttRoot->registerCommand("ping", [this](const JsonObject& request, JsonObject& response) {
-            Serial.println("Received ping request");
+            Log.trace("Received ping request");
             publishTelemetry();
             response["pong"] = millis();
         });

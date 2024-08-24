@@ -132,15 +132,50 @@ public:
      * @brief Default implementation of LogConsumer.
      */
     void consumeLog(Level level, const char* message) override {
+        printlnToSerial(message);
+    }
+
+    void flushSerial() {
+        Serial.flush();
+        Serial1.flush();
+#if Serial != Serial0
+        Serial0.flush();
+#endif
+    }
+
+    void printlnToSerial(const char* message = "") {
         Serial.println(message);
+        Serial1.println(message);
+#if Serial != Serial0
+        Serial0.println(line);
+#endif
+    }
+
+    void printToSerial(const char* message) {
+        Serial.print(message);
+        Serial1.print(message);
+#if Serial != Serial0
+        Serial0.print(line);
+#endif
+    }
+
+    inline void __attribute__((format(printf, 2, 3))) printfToSerial(const char* format, ...) {
+        va_list args;
+        va_start(args, format);
+        withFormattedString(format, args, [this](const char* buffer) {
+            printToSerial(buffer);
+        });
+        va_end(args);
     }
 
 private:
     void logImpl(Level level, const char* format, va_list args) {
-        if (static_cast<int>(level) > FARMHUB_LOG_LEVEL) {
-            return;
-        }
+        withFormattedString(format, args, [this, level](const char* message) {
+            consumer.load()->consumeLog(level, message);
+        });
+    }
 
+    void withFormattedString(const char* format, va_list args, std::function<void(const char*)> consumer) {
         int size = vsnprintf(nullptr, 0, format, args);
         if (size <= 0) {
             return;
@@ -148,17 +183,14 @@ private:
 
         if (size < bufferSize) {
             Lock lock(bufferMutex);
-            logWithBuffer(buffer, size + 1, level, format, args);
+            vsnprintf(buffer, size + 1, format, args);
+            consumer(buffer);
         } else {
             char* localBuffer = new char[size + 1];
-            logWithBuffer(localBuffer, size + 1, level, format, args);
+            vsnprintf(localBuffer, size + 1, format, args);
+            consumer(localBuffer);
             delete localBuffer;
         }
-    }
-
-    void logWithBuffer(char* buffer, size_t size, Level level, const char* format, va_list args) {
-        vsnprintf(buffer, size, format, args);
-        consumer.load()->consumeLog(level, buffer);
     }
 
     constexpr static int bufferSize = 128;

@@ -96,16 +96,13 @@ public:
                 }
             }
 
-            Serial.print("\033[1G\033[0K");
+            Log.printToSerial("\033[1G\033[0K");
 
             consoleQueue.drain([](const String& line) {
-                Serial.println(line);
-#if Serial != Serial0
-                Serial0.println(line);
-#endif
+                Log.printlnToSerial(line);
             });
 
-            Serial.print(status);
+            Log.printToSerial(status);
             task.delayUntil(100ms);
         });
     }
@@ -150,10 +147,7 @@ public:
         }
         buffer->concat(message);
         if (!consoleQueue.offer(*buffer)) {
-            Serial.println(*buffer);
-#if Serial != Serial0
-            Serial0.println(*buffer);
-#endif
+            Log.println(*buffer);
         }
         delete buffer;
     }
@@ -205,6 +199,7 @@ public:
         : logRecords(logRecords)
         , recordedLevel(recordedLevel) {
         Serial.begin(115200);
+        Serial1.begin(115200, SERIAL_8N1, pins::RXD0, pins::TXD0);
 #if Serial != Serial0
         Serial0.begin(115200);
 #endif
@@ -224,10 +219,7 @@ public:
 #ifdef FARMHUB_DEBUG
         consolePrinter.printLog(level, message);
 #else
-        Serial.println(message);
-#if Serial != Serial0
-        Serial0.println(message);
-#endif
+        Log.printlnToSerial(message);
 #endif
     }
 
