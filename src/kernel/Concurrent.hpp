@@ -58,7 +58,7 @@ public:
         TMessage* copy = new TMessage(std::forward<Args>(args)...);
         bool sentWithoutDropping = xQueueSend(this->queue, &copy, timeout.count()) == pdTRUE;
         if (!sentWithoutDropping) {
-            Serial.printf("Overflow in queue '%s', dropping message\n",
+            ESP_LOGW("farmhub", "Overflow in queue '%s', dropping message\n",
                 this->name.c_str());
             delete copy;
         }

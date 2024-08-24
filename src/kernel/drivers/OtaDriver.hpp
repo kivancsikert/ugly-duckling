@@ -30,7 +30,7 @@ public:
                 Log.info("OTA update finished");
             });
             ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-                Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+                Log.printfToSerial("Progress: %u%%\r", (progress / (total / 100)));
             });
             ArduinoOTA.onError([&](ota_error_t error) {
                 Log.error("Web socket error[%u]", error);

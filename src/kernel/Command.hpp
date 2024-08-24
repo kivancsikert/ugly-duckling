@@ -65,7 +65,7 @@ public:
         : Command("restart") {
     }
     void handle(const JsonObject& request, JsonObject& response) override {
-        Serial.println("Restarting...");
+        Log.printlnToSerial("Restarting...");
         Serial.flush();
         ESP.restart();
     }
