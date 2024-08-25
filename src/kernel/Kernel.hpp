@@ -17,7 +17,6 @@
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
-#include <kernel/drivers/OtaDriver.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
 #include <kernel/drivers/SwitchManager.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
@@ -274,10 +273,6 @@ private:
     StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
     WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
-#ifdef OTA_UPDATE
-    // Only include OTA when needed for debugging
-    OtaDriver ota { networkReadyState, deviceConfig.getHostname() };
-#endif
     MdnsDriver mdns { networkReadyState, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
     RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp.get(), rtcInSyncState };
 

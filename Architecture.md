@@ -5,9 +5,6 @@ graph BT
     subgraph Kernel["Kernel"]
         direction BT
 
-        OTA["OTA\n(debug)"]
-            style OTA stroke-dasharray: 4
-
         WiFi
         NetworkConnected(["Network connected"])
             style NetworkConnected stroke-width:4
@@ -20,7 +17,6 @@ graph BT
         TelemetryManager["Telemetry\nManager"]
 
         NetworkConnected --> WiFi
-        OTA -->|awaits| NetworkConnected
         MQTT -->|awaits| NetworkConnected
         MQTTConnected --> MQTT
         NTP -->|awaits| NetworkConnected
