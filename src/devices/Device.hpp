@@ -99,10 +99,10 @@ public:
             Log.printToSerial("\033[1G\033[0K");
 
             consoleQueue.drain([](const String& line) {
-                Log.printlnToSerial(line);
+                Log.printlnToSerial(line.c_str());
             });
 
-            Log.printToSerial(status);
+            Log.printToSerial(status.c_str());
             task.delayUntil(100ms);
         });
     }
@@ -147,7 +147,7 @@ public:
         }
         buffer->concat(message);
         if (!consoleQueue.offer(*buffer)) {
-            Log.println(*buffer);
+            Log.printlnToSerial(buffer->c_str());
         }
         delete buffer;
     }
