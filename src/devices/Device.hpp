@@ -375,6 +375,17 @@ public:
             telemetryPublishQueue.pollIn(task.ticksUntil(interval - debounceInterval));
         });
 
+        Task::loop("pm-dump", 8192, 1, [this](Task& task) {
+            esp_pm_dump_locks(stdout);
+
+            char buffer[4096];
+            vTaskGetRunTimeStats(buffer);
+            Log.printlnToSerial("Task Name\tTime\tPercentage");
+            Log.printlnToSerial(buffer);
+
+            task.delayUntil(5s);
+        });
+
         kernel.getKernelReadyState().set();
 
         Log.info("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', current time is %lld)",

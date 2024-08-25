@@ -27,9 +27,30 @@ CONFIG_ARDUHAL_LOG_DEFAULT_LEVEL_WARN=y
 # Why compile more than necessary?
 CONFIG_ARDUINO_SELECTIVE_COMPILATION=y
 
+# Give peripheral-related tasks to have some length to their names
+CONFIG_FREERTOS_MAX_TASK_NAME_LEN=32
+
+#
+# Power management
+#
+
 # Enable automatic light sleep
 CONFIG_PM_ENABLE=y
 CONFIG_FREERTOS_USE_TICKLESS_IDLE=y
+# Use IRAM to let device sleep 310+20us more
+CONFIG_PM_SLP_IRAM_OPT=y
+CONFIG_PM_RTOS_IDLE_OPT=y
 
-# Give peripheral-related tasks to have some length to their names
-CONFIG_FREERTOS_MAX_TASK_NAME_LEN=32
+# Power down stuff
+CONFIG_PM_SLP_DISABLE_GPIO=y
+CONFIG_PM_POWER_DOWN_CPU_IN_LIGHT_SLEEP=y
+CONFIG_PM_POWER_DOWN_TAGMEM_IN_LIGHT_SLEEP=y
+# TODO Experiment with this
+# CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP=y
+
+# Recalibrate the RTC_FAST/SLOW clock less often
+CONFIG_PM_LIGHTSLEEP_RTC_OSC_CAL_INTERVAL=16
+
+# Debug runtime stats
+CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
+CONFIG_PM_PROFILING=y

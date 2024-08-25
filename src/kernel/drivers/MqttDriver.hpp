@@ -473,9 +473,9 @@ private:
     std::list<Subscription> subscriptions;
 
     // TODO Review these values
-    static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
-    static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = 1s;
-    static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
+    static constexpr milliseconds MQTT_LOOP_INTERVAL = 10s;
+    static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = 2s;
+    static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 2s;
 };
 
 }    // namespace farmhub::kernel::drivers
