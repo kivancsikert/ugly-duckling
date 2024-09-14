@@ -139,7 +139,8 @@ private:
         RTC_SYNCING,
         MQTT_CONNECTING,
         INIT_FINISHING,
-        READY
+        TRNASMITTING,
+        IDLE
     };
 
     void updateState() {
@@ -161,8 +162,10 @@ private:
         } else if (!kernelReadyState.isSet()) {
             // We are waiting for init to finish
             newState = KernelState::INIT_FINISHING;
+        } else if (networkRequestedState.isSet()) {
+            newState = KernelState::TRNASMITTING;
         } else {
-            newState = KernelState::READY;
+            newState = KernelState::IDLE;
         }
 
         if (newState != state) {
@@ -188,12 +191,11 @@ private:
                 case KernelState::INIT_FINISHING:
                     statusLed.blink(1500ms);
                     break;
-                case KernelState::READY:
-                    if (deviceConfig.sleepWhenIdle.get()) {
-                        statusLed.turnOff();
-                    } else {
-                        statusLed.turnOn();
-                    }
+                case KernelState::TRNASMITTING:
+                    statusLed.turnOn();
+                    break;
+                case KernelState::IDLE:
+                    statusLed.turnOff();
                     break;
             };
         }
