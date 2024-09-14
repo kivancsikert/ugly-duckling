@@ -25,6 +25,7 @@ public:
         : networkReady(networkReady) {
         Log.debug("WiFi: initializing");
 
+        WiFi.begin();
         if (powerSaveMode) {
             auto listenInterval = 50;
             Log.debug("WiFi enabling power save mode, listen interval: %d",
