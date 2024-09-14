@@ -200,9 +200,8 @@ public:
         , mqttReady(mqttReady) {
         Task::run("mqtt:init", 4096, [this](Task& task) {
             setup();
-            Task::loop("mqtt", 4096, [this](Task& task) {
-                auto delay = loopAndDelay();
-                task.delay(delay);
+            Task::run("mqtt", 4096, [this](Task& task) {
+                runEventLoop(task);
             });
             Task::loop("mqtt:incoming", 4096, [this](Task& task) {
                 incomingQueue.take([&](const IncomingMessage& message) {
@@ -291,7 +290,21 @@ private:
         return result;
     }
 
-    ticks loopAndDelay() {
+    void runEventLoop(Task& task) {
+        while (true) {
+            while (!ensureConnected()) {
+                // Do exponential backoff
+                task.delayUntil(MQTT_DISCONNECTED_CHECK_INTERVAL);
+            }
+
+            processPublishQueue();
+            processSubscriptionQueue();
+
+            task.delayUntil(MQTT_LOOP_INTERVAL);
+        }
+    }
+
+    bool ensureConnected() {
         networkReady.awaitSet();
 
         if (!mqttClient.isConnected()) {
@@ -344,8 +357,7 @@ private:
                 Log.error("MQTT: Connection failed, error = %d",
                     mqttClient.getLastError());
                 trustMdnsCache = false;
-                // TODO Implement exponential backoff
-                return MQTT_DISCONNECTED_CHECK_INTERVAL;
+                return false;
             } else {
                 trustMdnsCache = true;
             }
@@ -358,11 +370,7 @@ private:
             Log.debug("MQTT: Connected");
             mqttReady.set();
         }
-
-        processPublishQueue();
-        processSubscriptionQueue();
-
-        return MQTT_LOOP_INTERVAL;
+        return true;
     }
 
     void processPublishQueue() {
