@@ -90,9 +90,10 @@ public:
             return subscribe(suffix, QoS::ExactlyOnce, [this, name, suffix, handler](const String&, const JsonObject& request) {
                 // TODO Do exponential backoff when clear cannot be finished
                 // Clear topic and wait for it to be cleared
-                auto clearStatus = mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, std::chrono::seconds { 5 });
+                auto clearStatus = mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, std::chrono::seconds { 5 }, MQTT_ALERT_AFTER_INCOMING);
                 if (clearStatus != PublishStatus::Success) {
-                    Log.error("MQTT: Failed to clear retained command topic '%s', status: %d", suffix.c_str(), static_cast<int>(clearStatus));
+                    Log.error("MQTT: Failed to clear retained command topic '%s', status: %d",
+                        suffix.c_str(), static_cast<int>(clearStatus));
                 }
 
                 JsonDocument responseDoc;
@@ -136,17 +137,19 @@ private:
         QoS qos;
         TaskHandle_t waitingTask;
         LogPublish log;
+        milliseconds extendAlert;
 
         static const uint32_t PUBLISH_SUCCESS = 1;
         static const uint32_t PUBLISH_FAILED = 2;
 
-        OutgoingMessage(const String& topic, const String& payload, Retention retention, QoS qos, TaskHandle_t waitingTask, LogPublish log)
+        OutgoingMessage(const String& topic, const String& payload, Retention retention, QoS qos, TaskHandle_t waitingTask, LogPublish log, milliseconds extendAlert)
             : topic(topic)
             , payload(payload)
             , retain(retention)
             , qos(qos)
             , waitingTask(waitingTask)
-            , log(log) {
+            , log(log)
+            , extendAlert(extendAlert) {
         }
     };
 
@@ -217,7 +220,7 @@ public:
     }
 
 private:
-    PublishStatus publish(const String& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log) {
+    PublishStatus publish(const String& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log, milliseconds extendAlert = MQTT_ALERT_AFTER_OUTGOING) {
 #ifdef DUMP_MQTT
         if (log == LogPublish::Log) {
             String serializedJson;
@@ -229,15 +232,15 @@ private:
         String payload;
         serializeJson(json, payload);
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
-            return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, payload, retain, qos, waitingTask, log });
+            return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, payload, retain, qos, waitingTask, log, extendAlert });
         });
     }
 
-    PublishStatus clear(const String& topic, Retention retain, QoS qos, ticks timeout = ticks::zero()) {
+    PublishStatus clear(const String& topic, Retention retain, QoS qos, ticks timeout = ticks::zero(), milliseconds extendAlert = MQTT_ALERT_AFTER_OUTGOING) {
         Log.debug("MQTT: Clearing topic '%s'",
             topic.c_str());
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
-            return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, "", retain, qos, waitingTask, LogPublish::Log });
+            return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, "", retain, qos, waitingTask, LogPublish::Log, extendAlert });
         });
     }
 
@@ -302,8 +305,6 @@ private:
                 ensureConnected(task);
                 // Process incoming network traffic
                 mqttClient.update();
-
-                // TODO Extend alert period if there was incoming activity
                 timeout = std::min(timeout, MQTT_LOOP_INTERVAL);
             } else {
                 Log.trace("MQTT: Not alert anymore, disconnecting");
@@ -321,21 +322,20 @@ private:
                 ensureConnected(task);
 
                 std::visit(
-                    [this](auto&& arg) {
+                    [&](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
                         if constexpr (std::is_same_v<T, OutgoingMessage>) {
                             Log.trace("MQTT: Processing outgoing message: %s",
                                 arg.topic.c_str());
                             processOutgoingMessage(arg);
+                            // Extend alert period if necessary
+                            alertUntil = std::max(alertUntil, system_clock::now() + arg.extendAlert);
                         } else if constexpr (std::is_same_v<T, Subscription>) {
                             Log.trace("MQTT: Processing subscription");
                             processSubscription(arg);
                         }
                     },
                     event);
-
-                // TODO Extract constant
-                alertUntil = std::max(alertUntil, system_clock::now() + 5s);
             });
         }
     }
@@ -522,8 +522,10 @@ private:
 
     // TODO Review these values
     static constexpr nanoseconds MQTT_LOOP_INTERVAL = 1s;
-    static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = 1s;
+    static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = 5s;
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
+    static constexpr milliseconds MQTT_ALERT_AFTER_OUTGOING = 1s;
+    static constexpr milliseconds MQTT_ALERT_AFTER_INCOMING = 30s;
 
     static constexpr milliseconds MQTT_MAX_TIMEOUT = 1h;
 };

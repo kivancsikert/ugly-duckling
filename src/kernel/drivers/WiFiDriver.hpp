@@ -21,8 +21,10 @@ namespace farmhub::kernel::drivers {
 
 class WiFiDriver {
 public:
-    WiFiDriver(StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode)
-        : networkReady(networkReady) {
+    WiFiDriver(StateSource& networkRequested, StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode)
+        : networkRequested(networkRequested)
+        , networkReady(networkReady)
+        , hostname(hostname) {
         Log.debug("WiFi: initializing");
 
         WiFi.begin();
@@ -50,7 +52,8 @@ public:
 
         WiFi.onEvent(
             [](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: connected to %s", String(info.wifi_sta_connected.ssid, info.wifi_sta_connected.ssid_len).c_str());
+                Log.debug("WiFi: connected to %s",
+                    String(info.wifi_sta_connected.ssid, info.wifi_sta_connected.ssid_len).c_str());
             },
             ARDUINO_EVENT_WIFI_STA_CONNECTED);
         WiFi.onEvent(
@@ -59,13 +62,13 @@ public:
                     IPAddress(info.got_ip.ip_info.ip.addr).toString().c_str(),
                     IPAddress(info.got_ip.ip_info.netmask.addr).toString().c_str(),
                     IPAddress(info.got_ip.ip_info.gw.addr).toString().c_str());
+                networkReady.set();
                 eventQueue.offer(WiFiEvent::CONNECTED);
             },
             ARDUINO_EVENT_WIFI_STA_GOT_IP);
         WiFi.onEvent(
             [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
                 Log.debug("WiFi: lost IP address");
-                // TODO What should we do here?
                 networkReady.clear();
                 eventQueue.offer(WiFiEvent::DISCONNECTED);
             },
@@ -75,52 +78,57 @@ public:
                 Log.debug("WiFi: disconnected from %s, reason: %s",
                     String(info.wifi_sta_disconnected.ssid, info.wifi_sta_disconnected.ssid_len).c_str(),
                     WiFi.disconnectReasonName(static_cast<wifi_err_reason_t>(info.wifi_sta_disconnected.reason)));
+                networkReady.clear();
                 eventQueue.offer(WiFiEvent::DISCONNECTED);
             },
             ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
-        Task::run("wifi", 3072, [this, &networkReady, hostname](Task& task) {
-            WiFiState status = WiFiState::DISCONNECTED;
-            int clients = 0;
-            while (true) {
-                eventQueue.take([this, &status, &networkReady, hostname, &task, &clients](WiFiEvent event) {
-                    switch (event) {
-                        case WiFiEvent::CONNECTED:
-                            status = WiFiState::CONNECTED;
-                            networkReady.set();
-                            break;
-                        case WiFiEvent::DISCONNECTED:
-                            status = WiFiState::DISCONNECTED;
-                            networkReady.clear();
-                            break;
-                        case WiFiEvent::WANTS_CONNECT:
-                            Log.trace("WiFi: Wants to connect with %d existing clients",
-                                clients);
-                            if (clients++ == 0) {
-                                Log.info("WiFi: Connecting for first client...");
-                                if (!wifiManager.autoConnect(hostname.c_str())) {
-                                    Log.debug("WiFi: failed to connect");
-                                    // TODO Implement exponential backoff
-                                    task.delay(5s);
-                                }
-                            }
-                            break;
-                        case WiFiEvent::WANTS_DISCONNECT:
-                            Log.trace("WiFi: Wants to disconnect with %d existing clients",
-                                clients);
-                            if (--clients == 0) {
-                                Log.debug("WiFi: Disconnecting because there are no more clients...");
-                                WiFi.disconnect();
-                                networkReady.clear();
-                            }
-                            break;
-                    }
-                });
-            }
+        Task::run("wifi", 3072, [this](Task&) {
+            runLoop();
         });
     }
 
 private:
+    inline void runLoop() {
+        int clients = 0;
+        while (true) {
+            eventQueue.pollIn(WIFI_CHECK_INTERVAL, [&clients](const WiFiEvent event) {
+                switch (event) {
+                    case WiFiEvent::CONNECTED:
+                        break;
+                    case WiFiEvent::DISCONNECTED:
+                        break;
+                    case WiFiEvent::WANTS_CONNECT:
+                        clients++;
+                        break;
+                    case WiFiEvent::WANTS_DISCONNECT:
+                        clients--;
+                        break;
+                }
+            });
+
+            bool shouldBeConnected = clients > 0;
+            bool connected = WiFi.isConnected();
+            if (shouldBeConnected) {
+                this->networkRequested.set();
+                if (!connected) {
+                    Log.trace("WiFi: Connecting for first client...");
+                    if (!wifiManager.autoConnect(hostname.c_str())) {
+                        Log.debug("WiFi: failed to connect");
+                        // TODO Implement exponential backoff
+                    }
+                }
+            } else {
+                this->networkRequested.clear();
+                if (connected) {
+                    Log.trace("WiFi: Disconnecting because there are no more clients...");
+                    this->networkReady.clear();
+                    WiFi.disconnect();
+                }
+            }
+        }
+    }
+
     StateSource& acquire() {
         eventQueue.offerIn(WIFI_QUEUE_TIMEOUT, WiFiEvent::WANTS_CONNECT);
         return networkReady;
@@ -131,7 +139,9 @@ private:
         return networkReady;
     }
 
+    StateSource& networkRequested;
     StateSource& networkReady;
+    const String hostname;
 
     enum class WiFiEvent {
         CONNECTED,
@@ -140,16 +150,11 @@ private:
         WANTS_DISCONNECT
     };
 
-    enum class WiFiState {
-        DISCONNECTED,
-        CONNECTING,
-        CONNECTED
-    };
-
     WiFiManager wifiManager;
     Queue<WiFiEvent> eventQueue { "wifi-events", 16 };
 
     static constexpr milliseconds WIFI_QUEUE_TIMEOUT = 1s;
+    static constexpr milliseconds WIFI_CHECK_INTERVAL = 5s;
 
     friend class WiFiToken;
 };
