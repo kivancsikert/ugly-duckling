@@ -50,7 +50,8 @@ public:
 
         WiFi.onEvent(
             [](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: connected to %s", String(info.wifi_sta_connected.ssid, info.wifi_sta_connected.ssid_len).c_str());
+                Log.debug("WiFi: connected to %s",
+                    String(info.wifi_sta_connected.ssid, info.wifi_sta_connected.ssid_len).c_str());
             },
             ARDUINO_EVENT_WIFI_STA_CONNECTED);
         WiFi.onEvent(
@@ -59,13 +60,13 @@ public:
                     IPAddress(info.got_ip.ip_info.ip.addr).toString().c_str(),
                     IPAddress(info.got_ip.ip_info.netmask.addr).toString().c_str(),
                     IPAddress(info.got_ip.ip_info.gw.addr).toString().c_str());
+                networkReady.set();
                 eventQueue.offer(WiFiEvent::CONNECTED);
             },
             ARDUINO_EVENT_WIFI_STA_GOT_IP);
         WiFi.onEvent(
             [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
                 Log.debug("WiFi: lost IP address");
-                // TODO What should we do here?
                 networkReady.clear();
                 eventQueue.offer(WiFiEvent::DISCONNECTED);
             },
@@ -75,47 +76,42 @@ public:
                 Log.debug("WiFi: disconnected from %s, reason: %s",
                     String(info.wifi_sta_disconnected.ssid, info.wifi_sta_disconnected.ssid_len).c_str(),
                     WiFi.disconnectReasonName(static_cast<wifi_err_reason_t>(info.wifi_sta_disconnected.reason)));
+                networkReady.clear();
                 eventQueue.offer(WiFiEvent::DISCONNECTED);
             },
             ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
         Task::run("wifi", 3072, [this, &networkReady, hostname](Task& task) {
-            WiFiState status = WiFiState::DISCONNECTED;
             int clients = 0;
             while (true) {
-                eventQueue.take([this, &status, &networkReady, hostname, &task, &clients](WiFiEvent event) {
+                eventQueue.pollIn(WIFI_CHECK_INTERVAL, [&](const WiFiEvent event) {
                     switch (event) {
                         case WiFiEvent::CONNECTED:
-                            status = WiFiState::CONNECTED;
-                            networkReady.set();
                             break;
                         case WiFiEvent::DISCONNECTED:
-                            status = WiFiState::DISCONNECTED;
-                            networkReady.clear();
                             break;
                         case WiFiEvent::WANTS_CONNECT:
-                            Log.trace("WiFi: Wants to connect with %d existing clients",
-                                clients);
-                            if (clients++ == 0) {
-                                Log.info("WiFi: Connecting for first client...");
-                                if (!wifiManager.autoConnect(hostname.c_str())) {
-                                    Log.debug("WiFi: failed to connect");
-                                    // TODO Implement exponential backoff
-                                    task.delay(5s);
-                                }
-                            }
+                            clients++;
                             break;
                         case WiFiEvent::WANTS_DISCONNECT:
-                            Log.trace("WiFi: Wants to disconnect with %d existing clients",
-                                clients);
-                            if (--clients == 0) {
-                                Log.debug("WiFi: Disconnecting because there are no more clients...");
-                                WiFi.disconnect();
-                                networkReady.clear();
-                            }
+                            clients--;
                             break;
                     }
                 });
+
+                bool shouldBeConnected = clients > 0;
+                bool connected = WiFi.isConnected();
+                if (shouldBeConnected && !connected) {
+                    Log.trace("WiFi: Connecting for first client...");
+                    if (!wifiManager.autoConnect(hostname.c_str())) {
+                        Log.debug("WiFi: failed to connect");
+                        // TODO Implement exponential backoff
+                    }
+                } else if (!shouldBeConnected && connected) {
+                    Log.trace("WiFi: Disconnecting because there are no more clients...");
+                    networkReady.clear();
+                    WiFi.disconnect();
+                }
             }
         });
     }
@@ -140,16 +136,11 @@ private:
         WANTS_DISCONNECT
     };
 
-    enum class WiFiState {
-        DISCONNECTED,
-        CONNECTING,
-        CONNECTED
-    };
-
     WiFiManager wifiManager;
     Queue<WiFiEvent> eventQueue { "wifi-events", 16 };
 
     static constexpr milliseconds WIFI_QUEUE_TIMEOUT = 1s;
+    static constexpr milliseconds WIFI_CHECK_INTERVAL = 5s;
 
     friend class WiFiToken;
 };
