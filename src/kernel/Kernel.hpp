@@ -144,7 +144,7 @@ private:
 
     void updateState() {
         KernelState newState;
-        if (!networkReadyState.isSet()) {
+        if (networkRequestedState.isSet() && !networkReadyState.isSet()) {
             // We don't have network
             if (configPortalRunningState.isSet()) {
                 // We are waiting for the user to configure the network
@@ -155,7 +155,7 @@ private:
             }
         } else if (!rtcInSyncState.isSet()) {
             newState = KernelState::RTC_SYNCING;
-        } else if (!mqttReadyState.isSet()) {
+        } else if (networkRequestedState.isSet() && !mqttReadyState.isSet()) {
             // We are waiting for MQTT connection
             newState = KernelState::MQTT_CONNECTING;
         } else if (!kernelReadyState.isSet()) {
@@ -264,6 +264,7 @@ private:
     LedDriver& statusLed;
     KernelState state = KernelState::BOOTING;
     StateManager stateManager;
+    StateSource networkRequestedState = stateManager.createStateSource("network-requested");
     StateSource networkReadyState = stateManager.createStateSource("network-ready");
     StateSource configPortalRunningState = stateManager.createStateSource("config-portal-running");
     StateSource rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
@@ -271,7 +272,7 @@ private:
     StateSource mqttReadyState = stateManager.createStateSource("mqtt-ready");
     StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
-    WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
+    WiFiDriver wifi { networkRequestedState, networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
     MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
     RtcDriver rtc { wifi, mdns, deviceConfig.ntp.get(), rtcInSyncState };
 
