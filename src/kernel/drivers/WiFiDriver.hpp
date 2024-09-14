@@ -24,6 +24,17 @@ public:
     WiFiDriver(StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode) {
         Log.info("WiFi: initializing");
 
+        if (powerSaveMode) {
+            auto listenInterval = 50;
+            Log.debug("WiFi enabling power save mode, listen interval: %d",
+                listenInterval);
+            esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+            wifi_config_t conf;
+            ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &conf));
+            conf.sta.listen_interval = listenInterval;
+            ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &conf));
+        }
+
         wifiManager.setHostname(hostname.c_str());
         wifiManager.setConfigPortalTimeout(180);
         wifiManager.setAPCallback([this, &configPortalRunning](WiFiManager* wifiManager) {
@@ -72,16 +83,6 @@ public:
             while (true) {
                 bool connected = WiFi.isConnected() || wifiManager.autoConnect(hostname.c_str());
                 if (connected) {
-                    if (powerSaveMode) {
-                        auto listenInterval = 50;
-                        Log.debug("WiFi enabling power save mode, listen interval: %d",
-                            listenInterval);
-                        esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
-                        wifi_config_t conf;
-                        ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &conf));
-                        conf.sta.listen_interval = listenInterval;
-                        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &conf));
-                    }
                     reconnectQueue.take();
                 } else {
                     reconnectQueue.clear();
