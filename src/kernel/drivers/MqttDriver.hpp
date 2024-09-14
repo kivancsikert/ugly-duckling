@@ -189,14 +189,12 @@ public:
     };
 
     MqttDriver(
-        State& networkReady,
         WiFiDriver& wifi,
         MdnsDriver& mdns,
         const Config& config,
         const String& instanceName,
         StateSource& mqttReady)
-        : networkReady(networkReady)
-        , wifi(wifi)
+        : wifi(wifi)
         , mdns(mdns)
         , config(config)
         , clientId(getClientId(config.clientId.get(), instanceName))
@@ -502,7 +500,6 @@ private:
         return "ugly-duckling-" + instanceName;
     }
 
-    State& networkReady;
     WiFiDriver& wifi;
     WiFiToken* wifiConnection = nullptr;
     WiFiClient wifiClient;

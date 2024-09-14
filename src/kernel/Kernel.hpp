@@ -272,13 +272,13 @@ private:
     StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
     WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
-    MdnsDriver mdns { networkReadyState, wifi, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
-    RtcDriver rtc { networkReadyState, wifi, mdns, deviceConfig.ntp.get(), rtcInSyncState };
+    MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
+    RtcDriver rtc { wifi, mdns, deviceConfig.ntp.get(), rtcInSyncState };
 
     String httpUpdateResult;
 
 public:
-    MqttDriver mqtt { networkReadyState, wifi, mdns, mqttConfig, deviceConfig.instance.get(), mqttReadyState };
+    MqttDriver mqtt { wifi, mdns, mqttConfig, deviceConfig.instance.get(), mqttReadyState };
     SwitchManager switches;
     I2CManager i2c;
 };

@@ -25,7 +25,6 @@ struct MdnsRecord {
 class MdnsDriver {
 public:
     MdnsDriver(
-        State& networkReady,
         WiFiDriver& wifi,
         const String& hostname,
         const String& instanceName,

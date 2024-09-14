@@ -35,9 +35,8 @@ public:
         Property<String> host { this, "host", "" };
     };
 
-    RtcDriver(State& networkReady, WiFiDriver& wifi, MdnsDriver& mdns, const Config& ntpConfig, StateSource& rtcInSync)
-        : networkReady(networkReady)
-        , wifi(wifi)
+    RtcDriver(WiFiDriver& wifi, MdnsDriver& mdns, const Config& ntpConfig, StateSource& rtcInSync)
+        : wifi(wifi)
         , mdns(mdns)
         , ntpConfig(ntpConfig)
         , rtcInSync(rtcInSync) {
@@ -142,7 +141,6 @@ private:
         }
     }
 
-    State& networkReady;
     WiFiDriver& wifi;
     MdnsDriver& mdns;
     const Config& ntpConfig;
