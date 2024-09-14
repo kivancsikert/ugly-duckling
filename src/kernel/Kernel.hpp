@@ -220,10 +220,9 @@ private:
             return "Command contains empty url";
         }
 
+        // TODO Handle network being unavailable
         Log.debug("Waiting for network...");
-        if (!networkReadyState.awaitSet(1min)) {
-            return "Network not ready, aborting update";
-        }
+        WiFiToken connection(wifi);
 
         httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
         Log.info("Updating from version %s via URL %s",
@@ -273,13 +272,13 @@ private:
     StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
     WiFiDriver wifi { networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
-    MdnsDriver mdns { networkReadyState, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
-    RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp.get(), rtcInSyncState };
+    MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
+    RtcDriver rtc { wifi, mdns, deviceConfig.ntp.get(), rtcInSyncState };
 
     String httpUpdateResult;
 
 public:
-    MqttDriver mqtt { networkReadyState, mdns, mqttConfig, deviceConfig.instance.get(), mqttReadyState };
+    MqttDriver mqtt { wifi, mdns, mqttConfig, deviceConfig.instance.get(), mqttReadyState };
     SwitchManager switches;
     I2CManager i2c;
 };
