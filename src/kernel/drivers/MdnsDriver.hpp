@@ -8,6 +8,7 @@
 #include <kernel/NvsStore.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
+#include <kernel/drivers/WiFiDriver.hpp>
 
 namespace farmhub::kernel::drivers {
 
@@ -25,15 +26,17 @@ class MdnsDriver {
 public:
     MdnsDriver(
         State& networkReady,
+        WiFiDriver& wifi,
         const String& hostname,
         const String& instanceName,
         const String& version,
         StateSource& mdnsReady)
-        : mdnsReady(mdnsReady) {
+        : wifi(wifi)
+        , mdnsReady(mdnsReady) {
         // TODO Add error handling
-        Task::run("mdns", 4096, [&networkReady, &mdnsReady, instanceName, hostname, version](Task& task) {
+        Task::run("mdns", 4096, [&wifi, &mdnsReady, instanceName, hostname, version](Task& task) {
             Log.info("mDNS: initializing");
-            networkReady.awaitSet();
+            WiFiToken connection(wifi);
 
             MDNS.begin(hostname);
             MDNS.setInstanceName(instanceName);
@@ -76,6 +79,7 @@ private:
             nvs.remove(cacheKey);
         }
 
+        WiFiToken connection(wifi);
         mdnsReady.awaitSet();
         auto count = MDNS.queryService(serviceName.c_str(), port.c_str());
         if (count == 0) {
@@ -99,6 +103,8 @@ private:
 
         return true;
     }
+
+    WiFiDriver& wifi;
 
     State& mdnsReady;
 

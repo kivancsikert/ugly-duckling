@@ -190,11 +190,13 @@ public:
 
     MqttDriver(
         State& networkReady,
+        WiFiDriver& wifi,
         MdnsDriver& mdns,
         const Config& config,
         const String& instanceName,
         StateSource& mqttReady)
         : networkReady(networkReady)
+        , wifi(wifi)
         , mdns(mdns)
         , config(config)
         , clientId(getClientId(config.clientId.get(), instanceName))
@@ -297,21 +299,35 @@ private:
 
         while (true) {
             auto timeout = alertUntil - system_clock::now();
-            if (timeout <= 0ns) {
-                timeout = MQTT_MAX_TIMEOUT;
-            } else {
+            if (timeout > 0ns) {
+                Log.trace("MQTT: Alert, checking for incoming messages");
+                ensureConnected(task);
+                // Process incoming network traffic
+                mqttClient.update();
+
+                // TODO Extend alert period if there was incoming activity
                 timeout = std::min(timeout, MQTT_LOOP_INTERVAL);
+            } else {
+                Log.trace("MQTT: Not alert anymore, disconnecting");
+                mqttClient.disconnect();
+                if (wifiConnection != nullptr) {
+                    delete wifiConnection;
+                    wifiConnection = nullptr;
+                }
+                timeout = MQTT_MAX_TIMEOUT;
             }
-            Log.trace("MQTT: Waiting for event for %lld ms", duration_cast<milliseconds>(timeout).count());
+
+            Log.trace("MQTT: Waiting outgoing event for %lld ms", duration_cast<milliseconds>(timeout).count());
             outgoingQueue.pollIn(duration_cast<ticks>(timeout), [&](const auto& event) {
-                Log.trace("MQTT: Processing event");
+                Log.trace("MQTT: Processing outgoing event");
                 ensureConnected(task);
 
                 std::visit(
                     [this](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
                         if constexpr (std::is_same_v<T, OutgoingMessage>) {
-                            Log.trace("MQTT: Processing outgoing message");
+                            Log.trace("MQTT: Processing outgoing message: %s",
+                                arg.topic.c_str());
                             processOutgoingMessage(arg);
                         } else if constexpr (std::is_same_v<T, Subscription>) {
                             Log.trace("MQTT: Processing subscription");
@@ -323,15 +339,6 @@ private:
                 // TODO Extract constant
                 alertUntil = std::max(alertUntil, system_clock::now() + 5s);
             });
-
-            if (alertUntil > system_clock::now()) {
-                ensureConnected(task);
-                // Process incoming network traffic
-                mqttClient.update();
-            } else {
-                Log.debug("MQTT: Not alert anymore, disconnecting");
-                mqttClient.disconnect();
-            }
         }
     }
 
@@ -343,7 +350,11 @@ private:
     }
 
     bool connectIfNecessary() {
-        networkReady.awaitSet();
+        if (wifiConnection == nullptr) {
+            Log.trace("MQTT: Connecting to WiFi...");
+            wifiConnection = new WiFiToken(wifi);
+            Log.trace("MQTT: Connected to WiFi");
+        }
 
         if (!mqttClient.isConnected()) {
             Log.debug("MQTT: Connecting to MQTT server");
@@ -492,6 +503,8 @@ private:
     }
 
     State& networkReady;
+    WiFiDriver& wifi;
+    WiFiToken* wifiConnection = nullptr;
     WiFiClient wifiClient;
     WiFiClientSecure wifiClientSecure;
     MdnsDriver& mdns;

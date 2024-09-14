@@ -35,8 +35,9 @@ public:
         Property<String> host { this, "host", "" };
     };
 
-    RtcDriver(State& networkReady, MdnsDriver& mdns, const Config& ntpConfig, StateSource& rtcInSync)
+    RtcDriver(State& networkReady, WiFiDriver& wifi, MdnsDriver& mdns, const Config& ntpConfig, StateSource& rtcInSync)
         : networkReady(networkReady)
+        , wifi(wifi)
         , mdns(mdns)
         , ntpConfig(ntpConfig)
         , rtcInSync(rtcInSync) {
@@ -51,22 +52,25 @@ public:
                 task.delayUntil(1s);
             }
         });
-        Task::run("ntp-sync", 4096, [this](Task& task) {
+        Task::run("ntp-sync", 4096, [this, &wifi](Task& task) {
             while (true) {
-                ensureConnected();
-                if (ntpClient->forceUpdate()) {
+                {
+                    WiFiToken connection(wifi);
+                    ensureConfigured();
+                    if (!ntpClient->forceUpdate()) {
+                        // Attempt a retry, but with mDNS cache disabled
+                        Log.error("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
+                        ntpClient = nullptr;
+                        trustMdnsCache = false;
+                        task.delay(10s);
+                        continue;
+                    }
                     trustMdnsCache = true;
                     setOrAdjustTime(system_clock::from_time_t(ntpClient->getEpochTime()));
-
-                    // We are good for a while now
-                    task.delay(1h);
-                } else {
-                    // Attempt a retry, but with mDNS cache disabled
-                    Log.error("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
-                    ntpClient = nullptr;
-                    trustMdnsCache = false;
-                    task.delay(10s);
                 }
+
+                // We are good for a while now
+                task.delay(1h);
             }
         });
     }
@@ -81,9 +85,7 @@ public:
     }
 
 private:
-    void ensureConnected() {
-        networkReady.awaitSet();
-
+    void ensureConfigured() {
         if (ntpClient != nullptr) {
             return;
         }
@@ -141,6 +143,7 @@ private:
     }
 
     State& networkReady;
+    WiFiDriver& wifi;
     MdnsDriver& mdns;
     const Config& ntpConfig;
     StateSource& rtcInSync;
