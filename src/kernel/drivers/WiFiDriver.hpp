@@ -24,7 +24,8 @@ public:
     WiFiDriver(StateSource& networkRequested, StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode)
         : networkRequested(networkRequested)
         , networkReady(networkReady)
-        , hostname(hostname) {
+        , hostname(hostname)
+        , powerSaveMode(powerSaveMode) {
         Log.debug("WiFi: initializing");
 
         WiFi.begin();
@@ -120,7 +121,7 @@ private:
                 }
             } else {
                 this->networkRequested.clear();
-                if (connected) {
+                if (connected && powerSaveMode) {
                     Log.trace("WiFi: Disconnecting because there are no more clients...");
                     this->networkReady.clear();
                     WiFi.disconnect();
@@ -142,6 +143,7 @@ private:
     StateSource& networkRequested;
     StateSource& networkReady;
     const String hostname;
+    const bool powerSaveMode;
 
     enum class WiFiEvent {
         CONNECTED,

@@ -196,11 +196,13 @@ public:
         MdnsDriver& mdns,
         const Config& config,
         const String& instanceName,
+        bool powerSaveMode,
         StateSource& mqttReady)
         : wifi(wifi)
         , mdns(mdns)
         , config(config)
         , clientId(getClientId(config.clientId.get(), instanceName))
+        , powerSaveMode(powerSaveMode)
         , mqttReady(mqttReady) {
         Task::run("mqtt:init", 4096, [this](Task& task) {
             setup();
@@ -307,13 +309,17 @@ private:
                 mqttClient.update();
                 timeout = std::min(timeout, MQTT_LOOP_INTERVAL);
             } else {
-                Log.trace("MQTT: Not alert anymore, disconnecting");
-                mqttClient.disconnect();
-                if (wifiConnection != nullptr) {
-                    delete wifiConnection;
-                    wifiConnection = nullptr;
+                if (powerSaveMode) {
+                    Log.trace("MQTT: Not alert anymore, disconnecting");
+                    mqttClient.disconnect();
+                    if (wifiConnection != nullptr) {
+                        delete wifiConnection;
+                        wifiConnection = nullptr;
+                    }
+                    timeout = MQTT_MAX_TIMEOUT_POWER_SAVE;
+                } else {
+                    timeout = MQTT_LOOP_INTERVAL;
                 }
-                timeout = MQTT_MAX_TIMEOUT;
             }
 
             Log.trace("MQTT: Waiting outgoing event for %lld ms", duration_cast<milliseconds>(timeout).count());
@@ -507,9 +513,8 @@ private:
     MdnsDriver& mdns;
     bool trustMdnsCache = true;
     const Config& config;
-
     const String clientId;
-
+    const bool powerSaveMode;
     StateSource& mqttReady;
 
     static constexpr int MQTT_BUFFER_SIZE = 2048;
@@ -527,7 +532,7 @@ private:
     static constexpr milliseconds MQTT_ALERT_AFTER_OUTGOING = 1s;
     static constexpr milliseconds MQTT_ALERT_AFTER_INCOMING = 30s;
 
-    static constexpr milliseconds MQTT_MAX_TIMEOUT = 1h;
+    static constexpr milliseconds MQTT_MAX_TIMEOUT_POWER_SAVE = 1h;
 };
 
 }    // namespace farmhub::kernel::drivers

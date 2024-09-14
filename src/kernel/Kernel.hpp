@@ -281,7 +281,7 @@ private:
     String httpUpdateResult;
 
 public:
-    MqttDriver mqtt { wifi, mdns, mqttConfig, deviceConfig.instance.get(), mqttReadyState };
+    MqttDriver mqtt { wifi, mdns, mqttConfig, deviceConfig.instance.get(), deviceConfig.sleepWhenIdle.get(), mqttReadyState };
     SwitchManager switches;
     I2CManager i2c;
 };
