@@ -3,6 +3,7 @@
 #include <chrono>
 #include <list>
 #include <memory>
+#include <variant>
 
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
@@ -228,7 +229,7 @@ private:
         String payload;
         serializeJson(json, payload);
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
-            return publishQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, payload, retain, qos, waitingTask, log);
+            return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, payload, retain, qos, waitingTask, log });
         });
     }
 
@@ -236,7 +237,7 @@ private:
         Log.debug("MQTT: Clearing topic '%s'",
             topic.c_str());
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
-            return publishQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, "", retain, qos, waitingTask, LogPublish::Log);
+            return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, "", retain, qos, waitingTask, LogPublish::Log });
         });
     }
 
@@ -268,7 +269,7 @@ private:
      */
     bool subscribe(const String& topic, QoS qos, SubscriptionHandler handler) {
         // Allow some time for the queue to empty
-        return subscribeQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, qos, handler);
+        return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, Subscription { topic, qos, handler });
     }
 
     void setup() {
@@ -297,8 +298,21 @@ private:
                 task.delayUntil(MQTT_DISCONNECTED_CHECK_INTERVAL);
             }
 
-            processPublishQueue();
-            processSubscriptionQueue();
+            // Process incoming network traffic
+            mqttClient.update();
+
+            outgoingQueue.drain([&](const auto& event) {
+                std::visit(
+                    [this](auto&& arg) {
+                        using T = std::decay_t<decltype(arg)>;
+                        if constexpr (std::is_same_v<T, OutgoingMessage>) {
+                            processOutgoingMessage(arg);
+                        } else if constexpr (std::is_same_v<T, Subscription>) {
+                            processSubscription(arg);
+                        }
+                    },
+                    event);
+            });
 
             task.delayUntil(MQTT_LOOP_INTERVAL);
         }
@@ -373,35 +387,28 @@ private:
         return true;
     }
 
-    void processPublishQueue() {
-        // Process incoming network traffic
-        mqttClient.update();
-
-        publishQueue.drain([&](const OutgoingMessage& message) {
-            bool success = mqttClient.publish(message.topic, message.payload, message.retain == Retention::Retain, static_cast<int>(message.qos));
+    void processOutgoingMessage(const OutgoingMessage message) {
+        bool success = mqttClient.publish(message.topic, message.payload, message.retain == Retention::Retain, static_cast<int>(message.qos));
 #ifdef DUMP_MQTT
-            if (message.log == LogPublish::Log) {
-                Log.trace("MQTT: Published to '%s' (size: %d)",
-                    message.topic.c_str(), message.payload.length());
-            }
+        if (message.log == LogPublish::Log) {
+            Log.trace("MQTT: Published to '%s' (size: %d)",
+                message.topic.c_str(), message.payload.length());
+        }
 #endif
-            if (!success) {
-                Log.trace("MQTT: Error publishing to '%s', error = %d",
-                    message.topic.c_str(), mqttClient.getLastError());
-            }
-            if (message.waitingTask != nullptr) {
-                uint32_t status = success ? OutgoingMessage::PUBLISH_SUCCESS : OutgoingMessage::PUBLISH_FAILED;
-                xTaskNotify(message.waitingTask, status, eSetValueWithOverwrite);
-            }
-        });
+        if (!success) {
+            Log.trace("MQTT: Error publishing to '%s', error = %d",
+                message.topic.c_str(), mqttClient.getLastError());
+        }
+        if (message.waitingTask != nullptr) {
+            uint32_t status = success ? OutgoingMessage::PUBLISH_SUCCESS : OutgoingMessage::PUBLISH_FAILED;
+            xTaskNotify(message.waitingTask, status, eSetValueWithOverwrite);
+        }
     }
 
-    void processSubscriptionQueue() {
-        subscribeQueue.drain([&](const Subscription& subscription) {
-            if (registerSubscriptionWithMqtt(subscription)) {
-                subscriptions.push_back(subscription);
-            }
-        });
+    void processSubscription(const Subscription& subscription) {
+        if (registerSubscriptionWithMqtt(subscription)) {
+            subscriptions.push_back(subscription);
+        }
     }
 
     void processIncomingMessage(const IncomingMessage& message) {
@@ -474,8 +481,7 @@ private:
     static constexpr int MQTT_BUFFER_SIZE = 2048;
     MQTTPubSub::PubSubClient<MQTT_BUFFER_SIZE> mqttClient;
 
-    Queue<OutgoingMessage> publishQueue { "mqtt-publish", config.queueSize.get() };
-    Queue<Subscription> subscribeQueue { "mqtt-subscribe", config.queueSize.get() };
+    Queue<std::variant<OutgoingMessage, Subscription>> outgoingQueue { "mqtt-outgoing", config.queueSize.get() };
     Queue<IncomingMessage> incomingQueue { "mqtt-incoming", config.queueSize.get() };
     // TODO Use a map instead
     std::list<Subscription> subscriptions;
