@@ -292,33 +292,57 @@ private:
     }
 
     void runEventLoop(Task& task) {
+        // TODO Extract constant
+        time_point<system_clock> alertUntil = system_clock::now() + 5s;
+
         while (true) {
-            while (!ensureConnected()) {
-                // Do exponential backoff
-                task.delayUntil(MQTT_DISCONNECTED_CHECK_INTERVAL);
+            auto timeout = alertUntil - system_clock::now();
+            if (timeout <= 0ns) {
+                timeout = MQTT_MAX_TIMEOUT;
+            } else {
+                timeout = std::min(timeout, MQTT_LOOP_INTERVAL);
             }
+            Log.trace("MQTT: Waiting for event for %lld ms", duration_cast<milliseconds>(timeout).count());
+            outgoingQueue.pollIn(duration_cast<ticks>(timeout), [&](const auto& event) {
+                Log.trace("MQTT: Processing event");
+                ensureConnected(task);
 
-            // Process incoming network traffic
-            mqttClient.update();
-
-            outgoingQueue.drain([&](const auto& event) {
                 std::visit(
                     [this](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
                         if constexpr (std::is_same_v<T, OutgoingMessage>) {
+                            Log.trace("MQTT: Processing outgoing message");
                             processOutgoingMessage(arg);
                         } else if constexpr (std::is_same_v<T, Subscription>) {
+                            Log.trace("MQTT: Processing subscription");
                             processSubscription(arg);
                         }
                     },
                     event);
+
+                // TODO Extract constant
+                alertUntil = std::max(alertUntil, system_clock::now() + 5s);
             });
 
-            task.delayUntil(MQTT_LOOP_INTERVAL);
+            if (alertUntil > system_clock::now()) {
+                ensureConnected(task);
+                // Process incoming network traffic
+                mqttClient.update();
+            } else {
+                Log.debug("MQTT: Not alert anymore, disconnecting");
+                mqttClient.disconnect();
+            }
         }
     }
 
-    bool ensureConnected() {
+    void ensureConnected(Task& task) {
+        while (!connectIfNecessary()) {
+            // Do exponential backoff
+            task.delayUntil(MQTT_DISCONNECTED_CHECK_INTERVAL);
+        }
+    }
+
+    bool connectIfNecessary() {
         networkReady.awaitSet();
 
         if (!mqttClient.isConnected()) {
@@ -487,9 +511,11 @@ private:
     std::list<Subscription> subscriptions;
 
     // TODO Review these values
-    static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
+    static constexpr nanoseconds MQTT_LOOP_INTERVAL = 1s;
     static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = 1s;
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
+
+    static constexpr milliseconds MQTT_MAX_TIMEOUT = 1h;
 };
 
 }    // namespace farmhub::kernel::drivers
