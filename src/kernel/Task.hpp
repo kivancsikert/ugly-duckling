@@ -133,14 +133,14 @@ public:
     }
 
     void delay(ticks time) {
-        Log.trace("Task '%s' delaying for %lld ms",
-            pcTaskGetName(nullptr), duration_cast<milliseconds>(time).count());
+        // Log.trace("Task '%s' delaying for %lld ms",
+        //     pcTaskGetName(nullptr), duration_cast<milliseconds>(time).count());
         vTaskDelay(time.count());
     }
 
     bool delayUntil(ticks time) {
-        Log.trace("Task '%s' delaying until %lld ms",
-            pcTaskGetName(nullptr), duration_cast<milliseconds>(time).count());
+        // Log.trace("Task '%s' delaying until %lld ms",
+        //     pcTaskGetName(nullptr), duration_cast<milliseconds>(time).count());
         if (xTaskDelayUntil(&lastWakeTime, time.count())) {
             return true;
         }
