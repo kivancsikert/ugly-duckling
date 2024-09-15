@@ -335,11 +335,11 @@ private:
                             Log.trace("MQTT: Processing outgoing message: %s",
                                 arg.topic.c_str());
                             processOutgoingMessage(arg);
-                            // Extend alert period if necessary
                             alertUntil = std::max(alertUntil, system_clock::now() + arg.extendAlert);
                         } else if constexpr (std::is_same_v<T, Subscription>) {
                             Log.trace("MQTT: Processing subscription");
                             processSubscription(arg);
+                            alertUntil = std::max(alertUntil, system_clock::now() + MQTT_ALERT_AFTER_OUTGOING);
                         }
                     },
                     event);
