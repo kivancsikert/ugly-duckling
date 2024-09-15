@@ -303,7 +303,8 @@ private:
         while (true) {
             auto timeout = alertUntil - system_clock::now();
             if (timeout > 0ns) {
-                Log.trace("MQTT: Alert, checking for incoming messages");
+                Log.trace("MQTT: Alert for another %lld seconds, checking for incoming messages",
+                    duration_cast<seconds>(timeout).count());
                 ensureConnected(task);
                 // Process incoming network traffic
                 mqttClient.update();
@@ -322,7 +323,7 @@ private:
                 }
             }
 
-            Log.trace("MQTT: Waiting outgoing event for %lld ms", duration_cast<milliseconds>(timeout).count());
+            Log.trace("MQTT: Waiting for outgoing event for %lld ms", duration_cast<milliseconds>(timeout).count());
             outgoingQueue.pollIn(duration_cast<ticks>(timeout), [&](const auto& event) {
                 Log.trace("MQTT: Processing outgoing event");
                 ensureConnected(task);
@@ -334,11 +335,11 @@ private:
                             Log.trace("MQTT: Processing outgoing message: %s",
                                 arg.topic.c_str());
                             processOutgoingMessage(arg);
-                            // Extend alert period if necessary
                             alertUntil = std::max(alertUntil, system_clock::now() + arg.extendAlert);
                         } else if constexpr (std::is_same_v<T, Subscription>) {
                             Log.trace("MQTT: Processing subscription");
                             processSubscription(arg);
+                            alertUntil = std::max(alertUntil, system_clock::now() + MQTT_ALERT_AFTER_OUTGOING);
                         }
                     },
                     event);

@@ -156,7 +156,7 @@ private:
     static String wifiStatus() {
         switch (WiFi.status()) {
             case WL_NO_SHIELD:
-                return "\033[0;31mno shield\033[0m";
+                return "\033[0;31moff\033[0m";
             case WL_IDLE_STATUS:
                 return "\033[0;31midle\033[0m";
             case WL_NO_SSID_AVAIL:
@@ -278,6 +278,7 @@ public:
     Device() {
         kernel.switches.onReleased("factory-reset", deviceDefinition.bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 5s) {
+                Log.info("Factory reset triggered after %lld ms", duration.count());
                 kernel.performFactoryReset();
             }
         });
@@ -369,7 +370,7 @@ public:
             // Publishing interval
             const auto interval = 1min;
             // We always wait at least this much between telemetry updates
-            const auto debounceInterval = 1s;
+            const auto debounceInterval = 500ms;
             task.delayUntil(debounceInterval);
             // Allow other tasks to trigger telemetry updates
             telemetryPublishQueue.pollIn(task.ticksUntil(interval - debounceInterval));

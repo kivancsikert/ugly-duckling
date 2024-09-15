@@ -108,26 +108,34 @@ private:
                 }
             });
 
-            bool shouldBeConnected = clients > 0;
             bool connected = WiFi.isConnected();
-            if (shouldBeConnected) {
-                this->networkRequested.set();
+            if (clients > 0) {
+                networkRequested.set();
                 if (!connected) {
-                    Log.trace("WiFi: Connecting for first client...");
-                    if (!wifiManager.autoConnect(hostname.c_str())) {
-                        Log.debug("WiFi: failed to connect");
-                        // TODO Implement exponential backoff
-                    }
+                    Log.trace("WiFi: Connecting for first client");
+                    connect();
                 }
             } else {
-                this->networkRequested.clear();
+                networkRequested.clear();
                 if (connected && powerSaveMode) {
-                    Log.trace("WiFi: Disconnecting because there are no more clients...");
-                    this->networkReady.clear();
-                    WiFi.disconnect();
+                    Log.trace("WiFi: No more clients, disconnecting");
+                    disconnect();
                 }
             }
         }
+    }
+
+    void connect() {
+        if (!wifiManager.autoConnect(hostname.c_str())) {
+            Log.debug("WiFi: failed to connect, disconnecting");
+            // TODO Implement exponential backoff
+            disconnect();
+        }
+    }
+
+    void disconnect() {
+        networkReady.clear();
+        WiFi.disconnect(true);
     }
 
     StateSource& acquire() {
