@@ -156,7 +156,7 @@ private:
     static String wifiStatus() {
         switch (WiFi.status()) {
             case WL_NO_SHIELD:
-                return "\033[0;31mno shield\033[0m";
+                return "\033[0;31moff\033[0m";
             case WL_IDLE_STATUS:
                 return "\033[0;31midle\033[0m";
             case WL_NO_SSID_AVAIL:
