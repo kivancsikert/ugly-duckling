@@ -303,7 +303,8 @@ private:
         while (true) {
             auto timeout = alertUntil - system_clock::now();
             if (timeout > 0ns) {
-                Log.trace("MQTT: Alert, checking for incoming messages");
+                Log.trace("MQTT: Alert for another %lld seconds, checking for incoming messages",
+                    duration_cast<seconds>(timeout).count());
                 ensureConnected(task);
                 // Process incoming network traffic
                 mqttClient.update();

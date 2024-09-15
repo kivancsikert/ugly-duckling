@@ -369,7 +369,7 @@ public:
             // Publishing interval
             const auto interval = 1min;
             // We always wait at least this much between telemetry updates
-            const auto debounceInterval = 1s;
+            const auto debounceInterval = 500ms;
             task.delayUntil(debounceInterval);
             // Allow other tasks to trigger telemetry updates
             telemetryPublishQueue.pollIn(task.ticksUntil(interval - debounceInterval));
