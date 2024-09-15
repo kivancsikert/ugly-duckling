@@ -278,6 +278,7 @@ public:
     Device() {
         kernel.switches.onReleased("factory-reset", deviceDefinition.bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 5s) {
+                Log.info("Factory reset triggered after %lld ms", duration.count());
                 kernel.performFactoryReset();
             }
         });
