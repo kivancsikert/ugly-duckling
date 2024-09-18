@@ -76,6 +76,8 @@ public:
         Task::loop("status-update", 2560, [this](Task&) { updateState(); });
 
         httpUpdateResult = handleHttpUpdate();
+        Log.error("HTTP update failed because: %s",
+            httpUpdateResult.c_str());
     }
 
     const State& getNetworkReadyState() const {
@@ -222,9 +224,11 @@ private:
             return "Command contains empty url";
         }
 
-        // TODO Handle network being unavailable
         Log.debug("Waiting for network...");
-        WiFiToken connection(wifi);
+        WiFiConnection connection(wifi, WiFiConnection::Mode::NoAwait);
+        if (!connection.await(15s)) {
+            return "Network not ready, aborting update";
+        }
 
         httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
         Log.info("Updating from version %s via URL %s",
