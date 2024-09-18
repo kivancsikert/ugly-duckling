@@ -166,23 +166,50 @@ private:
     static constexpr milliseconds WIFI_QUEUE_TIMEOUT = 1s;
     static constexpr milliseconds WIFI_CHECK_INTERVAL = 5s;
 
-    friend class WiFiToken;
+    friend class WiFiConnection;
 };
 
-class WiFiToken {
+class WiFiConnection {
 public:
-    WiFiToken(WiFiDriver& driver)
+    enum class Mode {
+        Await = true,
+        NoAwait = false
+    };
+
+    WiFiConnection(WiFiDriver& driver, Mode mode = Mode::Await)
         : driver(driver) {
-        driver.acquire().awaitSet();
+        auto networkReady = driver.acquire();
+        if (mode == Mode::NoAwait) {
+            return;
+        }
+
+        try {
+            networkReady.awaitSet();
+        } catch (...) {
+            driver.release();
+            throw;
+        }
     }
 
-    ~WiFiToken() {
+    void await() {
+        driver.networkReady.awaitSet();
+    }
+
+    bool await(const ticks timeout) const {
+        return driver.networkReady.awaitSet(timeout);
+    }
+
+    explicit operator bool() const {
+        return driver.networkReady.isSet();
+    }
+
+    ~WiFiConnection() {
         driver.release();
     }
 
     // Delete copy constructor and assignment operator to prevent copying
-    WiFiToken(const WiFiToken&) = delete;
-    WiFiToken& operator=(const WiFiToken&) = delete;
+    WiFiConnection(const WiFiConnection&) = delete;
+    WiFiConnection& operator=(const WiFiConnection&) = delete;
 
 private:
     WiFiDriver& driver;

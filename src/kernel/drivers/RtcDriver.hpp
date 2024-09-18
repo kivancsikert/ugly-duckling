@@ -54,7 +54,7 @@ public:
         Task::run("ntp-sync", 4096, [this, &wifi](Task& task) {
             while (true) {
                 {
-                    WiFiToken connection(wifi);
+                    WiFiConnection connection(wifi);
                     ensureConfigured();
                     if (!ntpClient->forceUpdate()) {
                         // Attempt a retry, but with mDNS cache disabled

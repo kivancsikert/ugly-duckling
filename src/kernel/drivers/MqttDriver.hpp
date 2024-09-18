@@ -357,7 +357,7 @@ private:
     bool connectIfNecessary() {
         if (wifiConnection == nullptr) {
             Log.trace("MQTT: Connecting to WiFi...");
-            wifiConnection = new WiFiToken(wifi);
+            wifiConnection = new WiFiConnection(wifi);
             Log.trace("MQTT: Connected to WiFi");
         }
 
@@ -508,7 +508,7 @@ private:
     }
 
     WiFiDriver& wifi;
-    WiFiToken* wifiConnection = nullptr;
+    WiFiConnection* wifiConnection = nullptr;
     WiFiClient wifiClient;
     WiFiClientSecure wifiClientSecure;
     MdnsDriver& mdns;

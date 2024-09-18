@@ -35,7 +35,7 @@ public:
         // TODO Add error handling
         Task::run("mdns", 4096, [&wifi, &mdnsReady, instanceName, hostname, version](Task& task) {
             Log.info("mDNS: initializing");
-            WiFiToken connection(wifi);
+            WiFiConnection connection(wifi);
 
             MDNS.begin(hostname);
             MDNS.setInstanceName(instanceName);
@@ -78,7 +78,7 @@ private:
             nvs.remove(cacheKey);
         }
 
-        WiFiToken connection(wifi);
+        WiFiConnection connection(wifi);
         mdnsReady.awaitSet();
         auto count = MDNS.queryService(serviceName.c_str(), port.c_str());
         if (count == 0) {
