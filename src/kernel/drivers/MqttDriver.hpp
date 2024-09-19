@@ -3,6 +3,7 @@
 #include <chrono>
 #include <list>
 #include <memory>
+#include <optional>
 #include <variant>
 
 #include <WiFi.h>
@@ -312,11 +313,7 @@ private:
             } else {
                 if (powerSaveMode) {
                     Log.trace("MQTT: Not alert anymore, disconnecting");
-                    mqttClient.disconnect();
-                    if (wifiConnection != nullptr) {
-                        delete wifiConnection;
-                        wifiConnection = nullptr;
-                    }
+                    disconnect();
                     timeout = MQTT_MAX_TIMEOUT_POWER_SAVE;
                 } else {
                     timeout = MQTT_LOOP_INTERVAL;
@@ -354,10 +351,15 @@ private:
         }
     }
 
+    void disconnect() {
+        mqttClient.disconnect();
+        wifiConnection.reset();
+    }
+
     bool connectIfNecessary() {
-        if (wifiConnection == nullptr) {
+        if (!wifiConnection.has_value()) {
             Log.trace("MQTT: Connecting to WiFi...");
-            wifiConnection = new WiFiConnection(wifi);
+            wifiConnection.emplace(wifi);
             Log.trace("MQTT: Connected to WiFi");
         }
 
@@ -508,7 +510,7 @@ private:
     }
 
     WiFiDriver& wifi;
-    WiFiConnection* wifiConnection = nullptr;
+    std::optional<WiFiConnection> wifiConnection;
     WiFiClient wifiClient;
     WiFiClientSecure wifiClientSecure;
     MdnsDriver& mdns;
