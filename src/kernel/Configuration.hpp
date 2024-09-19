@@ -299,6 +299,8 @@ public:
                 throw ConfigurationException("Cannot open config file " + path + " (" + String(error.c_str()) + ")");
             }
             update(json.as<JsonObject>());
+            Log.info("Effective configuration for '%s': %s",
+                path.c_str(), toString().c_str());
         }
         onUpdate([&fs, path](const JsonObject& json) {
             File file = fs.open(path, FILE_WRITE);
@@ -318,17 +320,6 @@ public:
     void update(const JsonObject& json) {
         config.load(json);
 
-        // TODO Check hash to see if there really was a change
-
-        // Print effective configuration
-        JsonDocument prettyJson;
-        auto prettyRoot = prettyJson.to<JsonObject>();
-        store(prettyRoot, true);
-        String jsonString;
-        serializeJsonPretty(prettyJson, jsonString);
-        Log.info("Effective configuration for '%s': %s",
-            path.c_str(), jsonString.c_str());
-
         for (auto& callback : callbacks) {
             callback(json);
         }
@@ -340,6 +331,15 @@ public:
 
     void store(JsonObject& json, bool inlineDefaults) const {
         config.store(json, inlineDefaults);
+    }
+
+    String toString(bool includeDefaults = true) {
+        JsonDocument json;
+        auto root = json.to<JsonObject>();
+        store(root, includeDefaults);
+        String jsonString;
+        serializeJson(json, jsonString);
+        return jsonString;
     }
 
     TConfiguration config;
