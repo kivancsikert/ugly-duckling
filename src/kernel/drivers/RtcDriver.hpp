@@ -2,6 +2,7 @@
 
 #include <WiFiUdp.h>
 #include <chrono>
+#include <optional>
 #include <time.h>
 
 #include <NTPClient.h>
@@ -59,7 +60,7 @@ public:
                     if (!ntpClient->forceUpdate()) {
                         // Attempt a retry, but with mDNS cache disabled
                         Log.error("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
-                        ntpClient = nullptr;
+                        ntpClient.reset();
                         trustMdnsCache = false;
                         task.delay(10s);
                         continue;
@@ -85,14 +86,14 @@ public:
 
 private:
     void ensureConfigured() {
-        if (ntpClient != nullptr) {
+        if (ntpClient.has_value()) {
             return;
         }
 
         if (ntpConfig.host.get().length() > 0) {
             Log.info("RTC: using NTP server %s from configuration",
                 ntpConfig.host.get().c_str());
-            ntpClient = new NTPClient(udp, ntpConfig.host.get().c_str());
+            ntpClient.emplace(udp, ntpConfig.host.get().c_str());
         } else {
             MdnsRecord ntpServer;
             if (mdns.lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
@@ -100,10 +101,10 @@ private:
                     ntpServer.hostname.c_str(),
                     ntpServer.port,
                     ntpServer.ip.toString().c_str());
-                ntpClient = new NTPClient(udp, ntpServer.ip);
+                ntpClient.emplace(udp, ntpServer.ip);
             } else {
                 Log.info("RTC: no NTP server configured, using default");
-                ntpClient = new NTPClient(udp);
+                ntpClient.emplace(udp);
             }
         }
 
@@ -147,7 +148,7 @@ private:
     StateSource& rtcInSync;
 
     WiFiUDP udp;
-    NTPClient* ntpClient = nullptr;
+    std::optional<NTPClient> ntpClient;
     bool trustMdnsCache = true;
 };
 
