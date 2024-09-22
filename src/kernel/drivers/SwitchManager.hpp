@@ -42,7 +42,7 @@ public:
             if (engaged) {
                 state->engagementStarted = system_clock::now();
                 state->engagementHandler(*state);
-            } else {
+            } else if (state->engagementStarted.time_since_epoch().count() > 0) {
                 auto duration = duration_cast<milliseconds>(system_clock::now() - state->engagementStarted);
                 state->releaseHandler(*state, duration);
             }

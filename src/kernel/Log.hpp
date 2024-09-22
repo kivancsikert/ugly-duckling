@@ -135,14 +135,6 @@ public:
         printlnToSerial(message);
     }
 
-    void flushSerial() {
-        Serial.flush();
-        Serial1.flush();
-#if Serial != Serial0
-        Serial0.flush();
-#endif
-    }
-
     void printlnToSerial(const char* message = "") {
         Serial.println(message);
         Serial1.println(message);
