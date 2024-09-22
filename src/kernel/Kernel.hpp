@@ -106,7 +106,6 @@ public:
 
     void performFactoryReset() {
         Log.printlnToSerial("Performing factory reset");
-        Log.flushSerial();
 
         statusLed.turnOn();
         delay(1000);
@@ -115,16 +114,13 @@ public:
         statusLed.turnOn();
 
         Log.printlnToSerial(" - Deleting the file system...");
-        Log.flushSerial();
         fs.reset();
 
         Log.printlnToSerial(" - Clearing NVS...");
-        Log.flushSerial();
 
         nvs_flash_erase();
 
         Log.printlnToSerial(" - Restarting...");
-        Log.flushSerial();
 
         ESP.restart();
     }
