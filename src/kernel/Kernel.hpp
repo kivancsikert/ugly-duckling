@@ -66,11 +66,12 @@ public:
         , mqttConfig(mqttConfig)
         , statusLed(statusLed) {
 
-        Log.info("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s'",
+        Log.info("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
             version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
-            deviceConfig.getHostname().c_str());
+            deviceConfig.getHostname().c_str(),
+            getMacAddress().c_str());
 
         // TODO Allocate less memory when FARMHUB_DEBUG is disabled
         Task::loop("status-update", 2560, [this](Task&) { updateState(); });
