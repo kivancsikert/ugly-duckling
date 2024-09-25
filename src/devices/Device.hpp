@@ -28,20 +28,60 @@ using namespace farmhub::kernel::drivers;
 typedef farmhub::devices::UglyDucklingMk4 TDeviceDefinition;
 typedef farmhub::devices::Mk4Config TDeviceConfiguration;
 
+/**
+ * @brief Do not boot if battery is below this threshold.
+ */
+static constexpr double BATTERY_BOOT_THRESHOLD = 0;
+
+/**
+ * @brief Shutdown if battery drops below this threshold.
+ */
+static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 0;
+
 #elif defined(MK5)
 #include <devices/UglyDucklingMk5.hpp>
 typedef farmhub::devices::UglyDucklingMk5 TDeviceDefinition;
 typedef farmhub::devices::Mk5Config TDeviceConfiguration;
+
+/**
+ * @brief Do not boot if battery is below this threshold.
+ */
+static constexpr double BATTERY_BOOT_THRESHOLD = 0;
+
+/**
+ * @brief Shutdown if battery drops below this threshold.
+ */
+static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 0;
 
 #elif defined(MK6)
 #include <devices/UglyDucklingMk6.hpp>
 typedef farmhub::devices::UglyDucklingMk6 TDeviceDefinition;
 typedef farmhub::devices::Mk6Config TDeviceConfiguration;
 
+/**
+ * @brief Do not boot if battery is below this threshold.
+ */
+static constexpr double BATTERY_BOOT_THRESHOLD = 3.7;
+
+/**
+ * @brief Shutdown if battery drops below this threshold.
+ */
+static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 3.6;
+
 #elif defined(MK7)
 #include <devices/UglyDucklingMk7.hpp>
 typedef farmhub::devices::UglyDucklingMk7 TDeviceDefinition;
 typedef farmhub::devices::Mk7Config TDeviceConfiguration;
+
+/**
+ * @brief Do not boot if battery is below this threshold.
+ */
+static constexpr double BATTERY_BOOT_THRESHOLD = 3.2;
+
+/**
+ * @brief Shutdown if battery drops below this threshold.
+ */
+static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 3.0;
 
 #else
 #error "No device defined"
@@ -262,10 +302,13 @@ public:
             // due to the high current draw of the boot process.
             auto voltage = battery->getVoltage();
             if (voltage != 0.0 && voltage < BATTERY_BOOT_THRESHOLD) {
+                Log.printfToSerial("Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
+                    voltage, BATTERY_BOOT_THRESHOLD);
                 enterLowPowerDeepSleep();
             }
 
             Task::loop("battery", 3072, [this](Task& task) {
+                task.delayUntil(LOW_POWER_CHECK_INTERVAL);
                 auto voltage = battery->getVoltage();
                 if (voltage != 0.0 && voltage < BATTERY_SHUTDOWN_THRESHOLD) {
                     Log.info("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
@@ -276,11 +319,11 @@ public:
                         for (auto& listener : shutdownListeners) {
                             listener();
                         }
+                        Log.printlnToSerial("Shutdown process finished");
                     });
                     task.delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
                     enterLowPowerDeepSleep();
                 }
-                task.delayUntil(LOW_POWER_CHECK_INTERVAL);
             });
         }
     }
@@ -305,16 +348,6 @@ private:
     std::list<function<void()>> shutdownListeners;
 
     /**
-     * @brief Do not boot if battery is below this threshold.
-     */
-    static constexpr auto BATTERY_BOOT_THRESHOLD = 3.2;
-
-    /**
-     * @brief Shutdown if battery drops below this threshold.
-     */
-    static constexpr auto BATTERY_SHUTDOWN_THRESHOLD = 3.0;
-
-    /**
      * @brief Time to wait between battery checks.
      */
     static constexpr auto LOW_POWER_SLEEP_CHECK_INTERVAL = 10s;
@@ -327,7 +360,7 @@ private:
     /**
      * @brief Time to wait for shutdown process to finish before going to deep sleep.
      */
-    static constexpr seconds LOW_BATTERY_SHUTDOWN_TIMEOUT = 10s;
+    static constexpr auto LOW_BATTERY_SHUTDOWN_TIMEOUT = 10s;
 };
 
 class Device {
