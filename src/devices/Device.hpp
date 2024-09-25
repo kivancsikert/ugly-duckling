@@ -309,7 +309,12 @@ public:
 
             Task::loop("battery", 3072, [this](Task& task) {
                 task.delayUntil(LOW_POWER_CHECK_INTERVAL);
-                auto voltage = battery->getVoltage();
+                auto currentVoltage = battery->getVoltage();
+                batteryVoltage.record(currentVoltage);
+                auto voltage = batteryVoltage.getAverage();
+                Log.printfToSerial("Battery voltage moving average: %.2f V (current voltage: %.2f)\n",
+                    voltage, currentVoltage);
+
                 if (voltage != 0.0 && voltage < BATTERY_SHUTDOWN_THRESHOLD) {
                     Log.info("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
                         voltage, BATTERY_SHUTDOWN_THRESHOLD, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
@@ -345,6 +350,7 @@ private:
         abort();
     }
 
+    MovingAverage<double> batteryVoltage { 3 };
     std::list<function<void()>> shutdownListeners;
 
     /**
@@ -354,8 +360,10 @@ private:
 
     /**
      * @brief How often we check the battery voltage while in operation.
+     *
+     * We use a prime number to avoid synchronizing with other tasks.
      */
-    static constexpr auto LOW_POWER_CHECK_INTERVAL = 15s;
+    static constexpr auto LOW_POWER_CHECK_INTERVAL = 10313ms;
 
     /**
      * @brief Time to wait for shutdown process to finish before going to deep sleep.
