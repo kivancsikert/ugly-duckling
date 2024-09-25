@@ -320,6 +320,10 @@ public:
                 if (voltage != 0.0 && voltage < BATTERY_SHUTDOWN_THRESHOLD) {
                     Log.info("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
                         voltage, BATTERY_SHUTDOWN_THRESHOLD, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
+
+                    // TODO Publihs all MQTT messages, then shut down WiFi, and _then_ start shutting down peripherals
+                    //      Doing so would result in less of a power spike, which can be important if the battery is already low
+
                     // Run in separate task to allocate enough stack
                     Task::run("shutdown", 8192, [&](Task& task) {
                         // Notify all shutdown listeners
