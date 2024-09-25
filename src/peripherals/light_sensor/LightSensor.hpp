@@ -13,6 +13,7 @@
 #include <kernel/Configuration.hpp>
 #include <kernel/I2CManager.hpp>
 #include <kernel/Log.hpp>
+#include <kernel/MovingAverage.hpp>
 #include <kernel/Telemetry.hpp>
 
 #include <peripherals/I2CConfig.hpp>
@@ -37,12 +38,12 @@ public:
         seconds latencyInterval)
         : Component(name, mqttRoot)
         , measurementFrequency(measurementFrequency)
-        , latencyInterval(latencyInterval) {
+        , level(latencyInterval.count() / measurementFrequency.count()) {
     }
 
     double getCurrentLevel() {
         Lock lock(updateAverageMutex);
-        return averageLevel;
+        return level.getAverage();
     }
 
     seconds getMeasurementFrequency() {
@@ -51,43 +52,27 @@ public:
 
     void populateTelemetry(JsonObject& json) override {
         Lock lock(updateAverageMutex);
-        json["light"] = averageLevel;
+        json["light"] = level.getAverage();
     }
 
 protected:
     virtual double readLightLevel() = 0;
 
     void runLoop() {
-
         Task::loop(name, 3072, [this](Task& task) {
             auto currentLevel = readLightLevel();
-
-            size_t maxMaxmeasurements = latencyInterval.count() / measurementFrequency.count();
-            while (measurements.size() >= maxMaxmeasurements) {
-                sum -= measurements.front();
-                measurements.pop_front();
-            }
-            measurements.emplace_back(currentLevel);
-            sum += currentLevel;
-
             {
                 Lock lock(updateAverageMutex);
-                averageLevel = sum / measurements.size();
+                level.record(currentLevel);
             }
-
             task.delayUntil(measurementFrequency);
         });
     }
 
 private:
     const seconds measurementFrequency;
-    const seconds latencyInterval;
-
-    std::deque<double> measurements;
-    double sum;
-
     Mutex updateAverageMutex;
-    double averageLevel = 0;
+    MovingAverage<double> level;
 };
 
 }    // namespace farmhub::peripherals::light_sensor
