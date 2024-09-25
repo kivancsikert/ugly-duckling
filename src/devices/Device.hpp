@@ -257,20 +257,77 @@ public:
         : consoleProvider(logRecords, deviceDefinition.config.publishLogs.get())
         , battery(deviceDefinition.createBatteryDriver(kernel.i2c)) {
         if (battery != nullptr) {
-            // If the battery voltage is below 3.0V, we should not boot yet.
+            // If the battery voltage is below threshold, we should not boot yet.
             // This is to prevent the device from booting and immediately shutting down
             // due to the high current draw of the boot process.
             auto voltage = battery->getVoltage();
-            if (voltage != 0.0 && voltage < 3.0) {
-                ESP.deepSleep(duration_cast<microseconds>(10s).count());
+            if (voltage != 0.0 && voltage < BATTERY_BOOT_THRESHOLD) {
+                enterLowPowerDeepSleep();
             }
+
+            Task::loop("battery", 3072, [this](Task& task) {
+                auto voltage = battery->getVoltage();
+                if (voltage != 0.0 && voltage < BATTERY_SHUTDOWN_THRESHOLD) {
+                    Log.info("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
+                        voltage, BATTERY_SHUTDOWN_THRESHOLD, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
+                    // Run in separate task to allocate enough stack
+                    Task::run("shutdown", 8192, [&](Task& task) {
+                        // Notify all shutdown listeners
+                        for (auto& listener : shutdownListeners) {
+                            listener();
+                        }
+                    });
+                    task.delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
+                    enterLowPowerDeepSleep();
+                }
+                task.delayUntil(LOW_POWER_CHECK_INTERVAL);
+            });
         }
+    }
+
+    void registerShutdownListener(std::function<void()> listener) {
+        shutdownListeners.push_back(listener);
     }
 
     TDeviceDefinition deviceDefinition;
     ConsoleProvider consoleProvider;
     Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.mqttConfig, deviceDefinition.statusLed };
     const shared_ptr<BatteryDriver> battery;
+
+private:
+    [[noreturn]] inline void enterLowPowerDeepSleep() {
+        Log.printlnToSerial("Entering low power deep sleep");
+        ESP.deepSleep(duration_cast<microseconds>(LOW_POWER_SLEEP_CHECK_INTERVAL).count());
+        // Signal to the compiler that we are not returning for real
+        abort();
+    }
+
+    std::list<function<void()>> shutdownListeners;
+
+    /**
+     * @brief Do not boot if battery is below this threshold.
+     */
+    static constexpr auto BATTERY_BOOT_THRESHOLD = 3.2;
+
+    /**
+     * @brief Shutdown if battery drops below this threshold.
+     */
+    static constexpr auto BATTERY_SHUTDOWN_THRESHOLD = 3.0;
+
+    /**
+     * @brief Time to wait between battery checks.
+     */
+    static constexpr auto LOW_POWER_SLEEP_CHECK_INTERVAL = 10s;
+
+    /**
+     * @brief How often we check the battery voltage while in operation.
+     */
+    static constexpr auto LOW_POWER_CHECK_INTERVAL = 15s;
+
+    /**
+     * @brief Time to wait for shutdown process to finish before going to deep sleep.
+     */
+    static constexpr seconds LOW_BATTERY_SHUTDOWN_TIMEOUT = 10s;
 };
 
 class Device {
@@ -288,6 +345,9 @@ public:
             consolePrinter.registerBattery(configuredKernel.battery);
 #endif
             deviceTelemetryCollector.registerProvider("battery", configuredKernel.battery);
+            configuredKernel.registerShutdownListener([this]() {
+                peripheralManager.shutdown();
+            });
             Log.info("Battery configured");
         } else {
             Log.info("No battery configured");
