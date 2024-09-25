@@ -57,6 +57,13 @@ public:
     virtual void populateTelemetry(JsonObject& telemetryJson) override {
     }
 
+    struct ShutdownParameters {
+        // Placeholder for future parameters
+    };
+
+    virtual void shutdown(const ShutdownParameters parameters) {
+    }
+
 protected:
     shared_ptr<MqttDriver::MqttRoot> mqttRoot;
 
@@ -195,6 +202,12 @@ public:
         }
         String type = deviceConfig.type.get();
         try {
+            Lock lock(stateMutex);
+            if (state == State::Stopped) {
+                Log.error("Not creating peripheral '%s' because the peripheral manager is stopped",
+                    name.c_str());
+                return;
+            }
             unique_ptr<PeripheralBase> peripheral = createPeripheral(name, type, deviceConfig.params.get().get());
             peripherals.push_back(move(peripheral));
         } catch (const std::exception& e) {
@@ -207,8 +220,29 @@ public:
     }
 
     void publishTelemetry() override {
+        Lock lock(stateMutex);
+        if (state == State::Stopped) {
+            Log.debug("Not publishing telemetry because the peripheral manager is stopped");
+            return;
+        }
         for (auto& peripheral : peripherals) {
             peripheral->publishTelemetry();
+        }
+    }
+
+    void shutdown() {
+        Lock lock(stateMutex);
+        if (state == State::Stopped) {
+            Log.debug("Peripheral manager is already stopped");
+            return;
+        }
+        Log.info("Shutting down peripheral manager");
+        state = State::Stopped;
+        PeripheralBase::ShutdownParameters parameters;
+        for (auto& peripheral : peripherals) {
+            Log.printfToSerial("Shutting down peripheral '%s'\n",
+                peripheral->name.c_str());
+            peripheral->shutdown(parameters);
         }
     }
 
@@ -233,6 +267,11 @@ private:
         return factory.createPeripheral(name, configJson, mqttRoot, services);
     }
 
+    enum class State {
+        Running,
+        Stopped
+    };
+
     // TODO Make this immutable somehow
     PeripheralServices services;
 
@@ -240,6 +279,8 @@ private:
 
     // TODO Use an unordered_map?
     std::map<String, std::reference_wrapper<PeripheralFactoryBase>> factories;
+    Mutex stateMutex;
+    State state = State::Running;
     std::list<unique_ptr<PeripheralBase>> peripherals;
 };
 

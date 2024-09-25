@@ -53,6 +53,10 @@ public:
         valve.populateTelemetry(telemetry);
     }
 
+    void shutdown(const ShutdownParameters parameters) override {
+        valve.closeBeforeShutdown();
+    }
+
 private:
     ValveComponent valve;
 };

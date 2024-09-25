@@ -288,6 +288,13 @@ public:
         }
     }
 
+    void closeBeforeShutdown() {
+        // TODO Lock the valve to prevent concurrent access
+        Log.info("Shutting down valve '%s', closing it",
+            name.c_str());
+        close();
+    }
+
 private:
     void override(ValveState state, time_point<system_clock> until) {
         if (state == ValveState::NONE) {

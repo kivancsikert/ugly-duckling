@@ -55,6 +55,10 @@ public:
         flowMeter.populateTelemetry(telemetryJson);
     }
 
+    void shutdown(const ShutdownParameters parameters) override {
+        valve.closeBeforeShutdown();
+    }
+
 private:
     ValveComponent valve;
     FlowMeterComponent flowMeter;
