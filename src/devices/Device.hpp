@@ -307,13 +307,15 @@ public:
                 enterLowPowerDeepSleep();
             }
 
+#ifdef FARMHUB_DEBUG
+            consolePrinter.registerBattery(battery);
+#endif
+
             Task::loop("battery", 3072, [this](Task& task) {
                 task.delayUntil(LOW_POWER_CHECK_INTERVAL);
                 auto currentVoltage = battery->getVoltage();
                 batteryVoltage.record(currentVoltage);
                 auto voltage = batteryVoltage.getAverage();
-                Log.printfToSerial("Battery voltage moving average: %.2f V (current voltage: %.2f)\n",
-                    voltage, currentVoltage);
 
                 if (voltage != 0.0 && voltage < BATTERY_SHUTDOWN_THRESHOLD) {
                     Log.info("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
@@ -337,6 +339,10 @@ public:
         shutdownListeners.push_back(listener);
     }
 
+    double getBatteryVoltage() {
+        return batteryVoltage.getAverage();
+    }
+
     TDeviceDefinition deviceDefinition;
     ConsoleProvider consoleProvider;
     Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.mqttConfig, deviceDefinition.statusLed };
@@ -350,7 +356,7 @@ private:
         abort();
     }
 
-    MovingAverage<double> batteryVoltage { 3 };
+    MovingAverage<double> batteryVoltage { 5 };
     std::list<function<void()>> shutdownListeners;
 
     /**
@@ -371,6 +377,19 @@ private:
     static constexpr auto LOW_BATTERY_SHUTDOWN_TIMEOUT = 10s;
 };
 
+class BatteryTelemetryProvider : public TelemetryProvider {
+public:
+    BatteryTelemetryProvider(ConfiguredKernel& kernel)
+        : kernel(kernel) {
+    }
+
+    void populateTelemetry(JsonObject& json) override {
+        json["voltage"] = kernel.getBatteryVoltage();
+    }
+private:
+    ConfiguredKernel& kernel;
+};
+
 class Device {
 public:
     Device() {
@@ -382,10 +401,7 @@ public:
         });
 
         if (configuredKernel.battery != nullptr) {
-#ifdef FARMHUB_DEBUG
-            consolePrinter.registerBattery(configuredKernel.battery);
-#endif
-            deviceTelemetryCollector.registerProvider("battery", configuredKernel.battery);
+            deviceTelemetryCollector.registerProvider("battery", std::make_shared<BatteryTelemetryProvider>(configuredKernel));
             configuredKernel.registerShutdownListener([this]() {
                 peripheralManager.shutdown();
             });
