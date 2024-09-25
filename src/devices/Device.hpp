@@ -244,12 +244,6 @@ public:
         Serial0.begin(115200);
 #endif
         Log.setConsumer(this);
-        Log.log(Level::Info, F("  ______                   _    _       _"));
-        Log.log(Level::Info, F(" |  ____|                 | |  | |     | |"));
-        Log.log(Level::Info, F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
-        Log.log(Level::Info, F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
-        Log.log(Level::Info, F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
-        Log.log(Level::Info, F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
     }
 
     void consumeLog(Level level, const char* message) override {
@@ -337,6 +331,13 @@ public:
                 }
             });
         }
+
+        Log.log(Level::Info, F("  ______                   _    _       _"));
+        Log.log(Level::Info, F(" |  ____|                 | |  | |     | |"));
+        Log.log(Level::Info, F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
+        Log.log(Level::Info, F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
+        Log.log(Level::Info, F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
+        Log.log(Level::Info, F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
     }
 
     void registerShutdownListener(std::function<void()> listener) {

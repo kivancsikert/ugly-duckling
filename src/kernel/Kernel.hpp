@@ -77,8 +77,10 @@ public:
         Task::loop("status-update", 2560, [this](Task&) { updateState(); });
 
         httpUpdateResult = handleHttpUpdate();
-        Log.error("HTTP update failed because: %s",
-            httpUpdateResult.c_str());
+        if (!httpUpdateResult.isEmpty()) {
+            Log.error("HTTP update failed because: %s",
+                httpUpdateResult.c_str());
+        }
     }
 
     const State& getNetworkReadyState() const {
