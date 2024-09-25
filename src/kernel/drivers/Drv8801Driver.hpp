@@ -6,6 +6,7 @@
 #include <Arduino.h>
 
 #include <kernel/PwmManager.hpp>
+#include <kernel/drivers/CurrentSenseDriver.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 
 using namespace std::chrono;
@@ -18,7 +19,7 @@ namespace farmhub::kernel::drivers {
  * https://www.ti.com/lit/gpn/DRV8801
  */
 class Drv8801Driver
-    : public PwmMotorDriver {
+    : public CurrentSensingMotorDriver {
 
 private:
     const uint32_t PWM_FREQ = 25000;     // 25kHz
@@ -89,6 +90,10 @@ public:
 
     bool isSleeping() const {
         return sleeping;
+    }
+
+    double readCurrent() const override {
+        return analogRead(currentPin) / 4096.0;
     }
 
 private:

@@ -180,6 +180,14 @@ template <typename T>
 class Property : public ConfigurationEntry {
 public:
     Property(ConfigurationSection* parent, const String& name, const T& defaultValue = T(), const bool secret = false)
+        : Property(parent, name, [defaultValue]() { return defaultValue; }, secret) {
+    }
+
+    Property(ConfigurationSection* parent, const String& name, const Property<T>& defaultValue, const bool secret = false)
+        : Property(parent, name, [defaultValue]() { return defaultValue.get(); }, secret) {
+    }
+
+    Property(ConfigurationSection* parent, const String& name, const std::function<const T&(void)> defaultValue, const bool secret = false)
         : name(name)
         , secret(secret)
         , defaultValue(defaultValue) {
@@ -192,7 +200,7 @@ public:
     }
 
     const T& get() const {
-        return configured ? value : defaultValue;
+        return configured ? value : defaultValue();
     }
 
     void load(const JsonObject& json) override {
@@ -228,7 +236,7 @@ private:
     const bool secret;
     bool configured = false;
     T value;
-    const T defaultValue;
+    const std::function<const T&(void)> defaultValue;
 };
 
 template <typename T>

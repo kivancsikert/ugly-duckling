@@ -6,7 +6,6 @@
 #include <kernel/PcntManager.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
-#include <peripherals/Motorized.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>
 #include <peripherals/flow_meter/FlowMeterConfig.hpp>
@@ -77,21 +76,20 @@ public:
 };
 
 class FlowControlFactory
-    : public PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig, ValveControlStrategyType>,
-      protected Motorized {
+    : public PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig, ValveControlStrategyType> {
 public:
     FlowControlFactory(
-        const std::list<ServiceRef<PwmMotorDriver>>& motors,
+        const ServiceContainer<CurrentSensingMotorDriver>& motors,
         ValveControlStrategyType defaultStrategy)
         : PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig, ValveControlStrategyType>("flow-control", defaultStrategy)
-        , Motorized(motors) {
+        , motors(motors) {
     }
 
     unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
         const ValveDeviceConfig& valveConfig = deviceConfig.valve.get();
         const FlowMeterDeviceConfig& flowMeterConfig = deviceConfig.flowMeter.get();
 
-        PwmMotorDriver& targetMotor = findMotor(valveConfig.motor.get());
+        PwmMotorDriver& targetMotor = motors.findService(valveConfig.motor.get());
         ValveControlStrategy* strategy;
         try {
             strategy = createValveControlStrategy(
@@ -116,7 +114,7 @@ public:
     }
 
 private:
-    const std::list<ServiceRef<PwmMotorDriver>> motors;
+    const ServiceContainer<CurrentSensingMotorDriver>& motors;
 };
 
 }    // namespace farmhub::peripherals::flow_control

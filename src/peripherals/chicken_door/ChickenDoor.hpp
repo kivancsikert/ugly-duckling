@@ -16,10 +16,10 @@
 #include <kernel/Telemetry.hpp>
 #include <kernel/Watchdog.hpp>
 
+#include <kernel/drivers/CurrentSenseDriver.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 #include <kernel/drivers/SwitchManager.hpp>
 
-#include <peripherals/Motorized.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/light_sensor/Bh1750.hpp>
 #include <peripherals/light_sensor/LightSensor.hpp>
@@ -68,12 +68,28 @@ public:
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
 };
 
+class LimitConfig : public ConfigurationSection {
+public:
+    LimitConfig(Property<gpio_num_t>& fallbackPin) : fallbackPin(fallbackPin) {
+    }
+
+    Property<double> current { this, "current", 0.0 };
+    Property<gpio_num_t> pin { this, "pin", fallbackPin };
+
+private:
+    Property<gpio_num_t>& fallbackPin;
+};
+
 class ChickenDoorDeviceConfig
     : public ConfigurationSection {
 public:
     Property<String> motor { this, "motor" };
     Property<gpio_num_t> openPin { this, "openPin", GPIO_NUM_NC };
     Property<gpio_num_t> closedPin { this, "closedPin", GPIO_NUM_NC };
+
+    NamedConfigurationEntry<LimitConfig> open { this, "open", openPin };
+    NamedConfigurationEntry<LimitConfig> close { this, "close", closedPin };
+
     Property<seconds> movementTimeout { this, "movementTimeout", seconds(60) };
 
     NamedConfigurationEntry<ChickenDoorLightSensorConfig> lightSensor { this, "lightSensor" };
@@ -95,7 +111,7 @@ public:
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         SleepManager& sleepManager,
         SwitchManager& switches,
-        PwmMotorDriver& motor,
+        CurrentSensingMotorDriver& motor,
         TLightSensorComponent& lightSensor,
         gpio_num_t openPin,
         gpio_num_t closedPin,
@@ -155,6 +171,7 @@ public:
         telemetry["state"] = lastState;
         telemetry["targetState"] = lastTargetState;
         telemetry["operationState"] = operationState;
+        telemetry["current"] = motor.readCurrent();
         if (overrideState != DoorState::NONE) {
             time_t rawtime = system_clock::to_time_t(overrideUntil);
             auto timeinfo = gmtime(&rawtime);
@@ -319,7 +336,7 @@ private:
     }
 
     SleepManager& sleepManager;
-    PwmMotorDriver& motor;
+    CurrentSensingMotorDriver& motor;
     TLightSensorComponent& lightSensor;
 
     double openLevel = std::numeric_limits<double>::max();
@@ -363,7 +380,7 @@ public:
         uint8_t lightSensorAddress,
         SleepManager& sleepManager,
         SwitchManager& switches,
-        PwmMotorDriver& motor,
+        CurrentSensingMotorDriver& motor,
         const ChickenDoorDeviceConfig& config)
         : Peripheral<ChickenDoorConfig>(name, mqttRoot)
         , lightSensor(
@@ -422,16 +439,16 @@ protected:
 };
 
 class ChickenDoorFactory
-    : public PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig>,
-      protected Motorized {
+    : public PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig> {
 public:
-    ChickenDoorFactory(const std::list<ServiceRef<PwmMotorDriver>>& motors)
+    ChickenDoorFactory(
+        const ServiceContainer<CurrentSensingMotorDriver>& motors)
         : PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig>("chicken-door")
-        , Motorized(motors) {
+        , motors(motors) {
     }
 
     unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const String& name, const ChickenDoorDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
-        PwmMotorDriver& motor = findMotor(deviceConfig.motor.get());
+        CurrentSensingMotorDriver& motor = motors.findService(deviceConfig.motor.get());
         auto lightSensorType = deviceConfig.lightSensor.get().type.get();
         try {
             if (lightSensorType == "bh1750") {
@@ -448,6 +465,9 @@ public:
             return std::make_unique<ChickenDoor<NoLightSensorComponent>>(name, mqttRoot, services.i2c, 0x00, services.sleepManager, services.switches, motor, deviceConfig);
         }
     }
+
+private:
+    const ServiceContainer<CurrentSensingMotorDriver>& motors;
 };
 
 }    // namespace farmhub::peripherals::chicken_door
