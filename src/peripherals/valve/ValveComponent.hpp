@@ -240,6 +240,10 @@ public:
                 update = { overrideState, overrideUntil.load() - now };
             } else {
                 update = ValveScheduler::getStateUpdate(schedules, now, this->strategy.getDefaultState());
+                // If there are no schedules nor default state for the valve, close it
+                if (update.state == ValveState::NONE) {
+                    update.state = ValveState::CLOSED;
+                }
             }
             Log.info("Valve '%s' state is %d, will change after %.2f sec at %lld",
                 name.c_str(),
