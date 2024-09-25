@@ -28,20 +28,60 @@ using namespace farmhub::kernel::drivers;
 typedef farmhub::devices::UglyDucklingMk4 TDeviceDefinition;
 typedef farmhub::devices::Mk4Config TDeviceConfiguration;
 
+/**
+ * @brief Do not boot if battery is below this threshold.
+ */
+static constexpr double BATTERY_BOOT_THRESHOLD = 0;
+
+/**
+ * @brief Shutdown if battery drops below this threshold.
+ */
+static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 0;
+
 #elif defined(MK5)
 #include <devices/UglyDucklingMk5.hpp>
 typedef farmhub::devices::UglyDucklingMk5 TDeviceDefinition;
 typedef farmhub::devices::Mk5Config TDeviceConfiguration;
+
+/**
+ * @brief Do not boot if battery is below this threshold.
+ */
+static constexpr double BATTERY_BOOT_THRESHOLD = 0;
+
+/**
+ * @brief Shutdown if battery drops below this threshold.
+ */
+static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 0;
 
 #elif defined(MK6)
 #include <devices/UglyDucklingMk6.hpp>
 typedef farmhub::devices::UglyDucklingMk6 TDeviceDefinition;
 typedef farmhub::devices::Mk6Config TDeviceConfiguration;
 
+/**
+ * @brief Do not boot if battery is below this threshold.
+ */
+static constexpr double BATTERY_BOOT_THRESHOLD = 3.7;
+
+/**
+ * @brief Shutdown if battery drops below this threshold.
+ */
+static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 3.6;
+
 #elif defined(MK7)
 #include <devices/UglyDucklingMk7.hpp>
 typedef farmhub::devices::UglyDucklingMk7 TDeviceDefinition;
 typedef farmhub::devices::Mk7Config TDeviceConfiguration;
+
+/**
+ * @brief Do not boot if battery is below this threshold.
+ */
+static constexpr double BATTERY_BOOT_THRESHOLD = 3.2;
+
+/**
+ * @brief Shutdown if battery drops below this threshold.
+ */
+static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 3.0;
 
 #else
 #error "No device defined"
@@ -204,12 +244,6 @@ public:
         Serial0.begin(115200);
 #endif
         Log.setConsumer(this);
-        Log.log(Level::Info, F("  ______                   _    _       _"));
-        Log.log(Level::Info, F(" |  ____|                 | |  | |     | |"));
-        Log.log(Level::Info, F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
-        Log.log(Level::Info, F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
-        Log.log(Level::Info, F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
-        Log.log(Level::Info, F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
     }
 
     void consumeLog(Level level, const char* message) override {
@@ -262,31 +296,56 @@ public:
             // due to the high current draw of the boot process.
             auto voltage = battery->getVoltage();
             if (voltage != 0.0 && voltage < BATTERY_BOOT_THRESHOLD) {
+                Log.printfToSerial("Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
+                    voltage, BATTERY_BOOT_THRESHOLD);
                 enterLowPowerDeepSleep();
             }
 
+#ifdef FARMHUB_DEBUG
+            consolePrinter.registerBattery(battery);
+#endif
+
             Task::loop("battery", 3072, [this](Task& task) {
-                auto voltage = battery->getVoltage();
+                task.delayUntil(LOW_POWER_CHECK_INTERVAL);
+                auto currentVoltage = battery->getVoltage();
+                batteryVoltage.record(currentVoltage);
+                auto voltage = batteryVoltage.getAverage();
+
                 if (voltage != 0.0 && voltage < BATTERY_SHUTDOWN_THRESHOLD) {
                     Log.info("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
                         voltage, BATTERY_SHUTDOWN_THRESHOLD, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
+
+                    // TODO Publihs all MQTT messages, then shut down WiFi, and _then_ start shutting down peripherals
+                    //      Doing so would result in less of a power spike, which can be important if the battery is already low
+
                     // Run in separate task to allocate enough stack
                     Task::run("shutdown", 8192, [&](Task& task) {
                         // Notify all shutdown listeners
                         for (auto& listener : shutdownListeners) {
                             listener();
                         }
+                        Log.printlnToSerial("Shutdown process finished");
                     });
                     task.delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
                     enterLowPowerDeepSleep();
                 }
-                task.delayUntil(LOW_POWER_CHECK_INTERVAL);
             });
         }
+
+        Log.log(Level::Info, F("  ______                   _    _       _"));
+        Log.log(Level::Info, F(" |  ____|                 | |  | |     | |"));
+        Log.log(Level::Info, F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
+        Log.log(Level::Info, F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
+        Log.log(Level::Info, F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
+        Log.log(Level::Info, F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
     }
 
     void registerShutdownListener(std::function<void()> listener) {
         shutdownListeners.push_back(listener);
+    }
+
+    double getBatteryVoltage() {
+        return batteryVoltage.getAverage();
     }
 
     TDeviceDefinition deviceDefinition;
@@ -302,17 +361,8 @@ private:
         abort();
     }
 
+    MovingAverage<double> batteryVoltage { 5 };
     std::list<function<void()>> shutdownListeners;
-
-    /**
-     * @brief Do not boot if battery is below this threshold.
-     */
-    static constexpr auto BATTERY_BOOT_THRESHOLD = 3.2;
-
-    /**
-     * @brief Shutdown if battery drops below this threshold.
-     */
-    static constexpr auto BATTERY_SHUTDOWN_THRESHOLD = 3.0;
 
     /**
      * @brief Time to wait between battery checks.
@@ -321,13 +371,28 @@ private:
 
     /**
      * @brief How often we check the battery voltage while in operation.
+     *
+     * We use a prime number to avoid synchronizing with other tasks.
      */
-    static constexpr auto LOW_POWER_CHECK_INTERVAL = 15s;
+    static constexpr auto LOW_POWER_CHECK_INTERVAL = 10313ms;
 
     /**
      * @brief Time to wait for shutdown process to finish before going to deep sleep.
      */
-    static constexpr seconds LOW_BATTERY_SHUTDOWN_TIMEOUT = 10s;
+    static constexpr auto LOW_BATTERY_SHUTDOWN_TIMEOUT = 10s;
+};
+
+class BatteryTelemetryProvider : public TelemetryProvider {
+public:
+    BatteryTelemetryProvider(ConfiguredKernel& kernel)
+        : kernel(kernel) {
+    }
+
+    void populateTelemetry(JsonObject& json) override {
+        json["voltage"] = kernel.getBatteryVoltage();
+    }
+private:
+    ConfiguredKernel& kernel;
 };
 
 class Device {
@@ -341,10 +406,7 @@ public:
         });
 
         if (configuredKernel.battery != nullptr) {
-#ifdef FARMHUB_DEBUG
-            consolePrinter.registerBattery(configuredKernel.battery);
-#endif
-            deviceTelemetryCollector.registerProvider("battery", configuredKernel.battery);
+            deviceTelemetryCollector.registerProvider("battery", std::make_shared<BatteryTelemetryProvider>(configuredKernel));
             configuredKernel.registerShutdownListener([this]() {
                 peripheralManager.shutdown();
             });
