@@ -9,7 +9,7 @@ FILE(GLOB_RECURSE app_sources ${CMAKE_SOURCE_DIR}/main/*.*)
 # Specify include directories (no need to recurse into files)
 idf_component_register(
     SRCS ${app_sources}
-    INCLUDE_DIRS "." "${CMAKE_SOURCE_DIR}/include"
+    INCLUDE_DIRS "."
     EMBED_TXTFILES "${CMAKE_SOURCE_DIR}/partitions.csv"
 )
 target_compile_options(${COMPONENT_LIB} PRIVATE -std=gnu++17)

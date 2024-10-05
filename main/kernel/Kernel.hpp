@@ -21,8 +21,6 @@
 #include <kernel/drivers/SwitchManager.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
 
-#include <version.h>
-
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace farmhub::kernel::drivers;
@@ -61,7 +59,7 @@ template <typename TDeviceConfiguration>
 class Kernel {
 public:
     Kernel(TDeviceConfiguration& deviceConfig, MqttDriver::Config& mqttConfig, LedDriver& statusLed)
-        : version(VERSION)
+        : version(FARMHUB_VERSION)
         , deviceConfig(deviceConfig)
         , mqttConfig(mqttConfig)
         , statusLed(statusLed) {
@@ -231,7 +229,7 @@ private:
 
         httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
         Log.info("Updating from version %s via URL %s",
-            VERSION, url.c_str());
+            FARMHUB_VERSION, url.c_str());
 
         HTTPUpdateResult result = HTTP_UPDATE_NO_UPDATES;
         // Run in separate task to allocate enough stack
@@ -241,7 +239,7 @@ private:
             std::unique_ptr<WiFiClientSecure> client = std::make_unique<WiFiClientSecure>();
             // Allow insecure connections for testing
             client->setInsecure();
-            result = httpUpdate.update(*client, url, VERSION);
+            result = httpUpdate.update(*client, url, FARMHUB_VERSION);
             xSemaphoreGive(completionSemaphore);
         });
         xSemaphoreTake(completionSemaphore, portMAX_DELAY);

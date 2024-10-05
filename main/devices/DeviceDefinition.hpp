@@ -27,8 +27,6 @@
 #include <peripherals/light_sensor/Bh1750.hpp>
 #include <peripherals/light_sensor/Tsl2591.hpp>
 
-#include <version.h>
-
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 using namespace farmhub::peripherals::environment;
