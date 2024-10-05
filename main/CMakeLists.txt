@@ -16,6 +16,8 @@ set(UD_DEBUG "$ENV{UD_DEBUG}")
 if(UD_DEBUG STREQUAL "1")
     add_compile_definitions(FARMHUB_DEBUG)
     add_compile_definitions(DUMP_MQTT)
+else()
+    add_compile_options(-O2)
 endif()
 
 # Set Git version
