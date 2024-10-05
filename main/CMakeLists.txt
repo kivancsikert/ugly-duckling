@@ -1,8 +1,3 @@
-# add_compile_definitions(MK4)
-# add_compile_definitions(MK5)
-# add_compile_definitions(MK6)
-# add_compile_definitions(MK7)
-
 # Get all source files from the main directory
 FILE(GLOB_RECURSE app_sources ${CMAKE_SOURCE_DIR}/main/*.*)
 
