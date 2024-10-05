@@ -16,7 +16,9 @@ target_compile_options(${COMPONENT_LIB} PRIVATE -std=gnu++17)
 
 add_compile_definitions(MK7)
 add_compile_definitions(FARMHUB_DEBUG)
+add_compile_definitions(FARMHUB_REPORT_MEMORY)
 
+# Set Git version
 execute_process(
     COMMAND git describe --tags --dirty
     OUTPUT_VARIABLE FARMHUB_VERSION
