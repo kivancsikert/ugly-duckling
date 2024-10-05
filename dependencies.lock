@@ -1,0 +1,21 @@
+dependencies:
+  bblanchon/arduinojson:
+    component_hash: 64f91bdf5d064a60318fac01b2057a34fd17871fdd60a428ca6e26137dbc5645
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 7.2.0
+  espressif/arduino-esp32:
+    component_hash: 9a9b83b699bc216d4f83516f149c0e68a12518ad58cc929855456fb02dcac0bd
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 2.0.14
+  idf:
+    component_hash: null
+    source:
+      type: idf
+    version: 4.4.8
+manifest_hash: 0ce21482743975e5a2c1cd77afa93ef8f7085364b53952f3ece2aba60eb7e0da
+target: esp32s3
+version: 1.0.0

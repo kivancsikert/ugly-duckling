@@ -10,6 +10,7 @@ data-unused/
 include/version.h
 
 # ESP-IDF generated files
-CMakeLists.txt
-sdkconfig.*
+/build/
+/managed_components/
+sdkconfig*
 !sdkconfig.defaults

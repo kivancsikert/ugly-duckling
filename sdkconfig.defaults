@@ -30,6 +30,12 @@ CONFIG_ARDUINO_SELECTIVE_COMPILATION=y
 # Give peripheral-related tasks to have some length to their names
 CONFIG_FREERTOS_MAX_TASK_NAME_LEN=32
 
+# Partition table config
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+
 #
 # Power management
 #
