@@ -36,3 +36,5 @@ idf_component_register(
 
     REQUIRES "arduino-esp32"
 )
+
+add_compile_definitions(WM_NODEBUG=1)
