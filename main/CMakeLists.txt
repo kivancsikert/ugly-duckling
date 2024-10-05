@@ -10,9 +10,13 @@ idf_component_register(
 target_compile_options(${COMPONENT_LIB} PRIVATE -std=gnu++17)
 
 add_compile_definitions("${UD_GEN}")
-add_compile_definitions(FARMHUB_DEBUG)
-add_compile_definitions(DUMP_MQTT)
 add_compile_definitions(FARMHUB_REPORT_MEMORY)
+
+set(UD_DEBUG "$ENV{UD_DEBUG}")
+if(UD_DEBUG STREQUAL "1")
+    add_compile_definitions(FARMHUB_DEBUG)
+    add_compile_definitions(DUMP_MQTT)
+endif()
 
 # Set Git version
 execute_process(
