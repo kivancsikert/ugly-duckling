@@ -13,3 +13,13 @@ idf_component_register(
     EMBED_TXTFILES "${CMAKE_SOURCE_DIR}/partitions.csv"
 )
 target_compile_options(${COMPONENT_LIB} PRIVATE -std=gnu++17)
+
+add_compile_definitions(MK7)
+add_compile_definitions(FARMHUB_DEBUG)
+
+execute_process(
+    COMMAND git describe --tags --dirty
+    OUTPUT_VARIABLE FARMHUB_VERSION
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+add_compile_definitions(FARMHUB_VERSION="${FARMHUB_VERSION}")
