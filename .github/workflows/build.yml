@@ -43,7 +43,7 @@ jobs:
 
       - name: Rename firmware artifact
         if: matrix.environment != 'native'
-        run: cp ${{ github.workspace }}/build/${{ matrix.ud_gen }}/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
+        run: cp ${{ github.workspace }}/build/${{ matrix.environment }}/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
 
       - name: Upload firmware artifact
         if: matrix.environment != 'native'
