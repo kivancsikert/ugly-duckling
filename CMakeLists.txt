@@ -8,4 +8,14 @@ list(APPEND EXTRA_COMPONENT_DIRS components)
 add_compile_definitions(ARDUINO_USB_CDC_ON_BOOT=1)
 add_compile_definitions(ARDUINO_USB_MODE=1)
 
+set(UD_GEN "$ENV{UD_GEN}")
+if(UD_GEN STREQUAL "")
+    message(FATAL_ERROR "Error: UD_GEN must be set.")
+endif()
+message("Building for Ugly Duckling '${UD_GEN}'")
+
+if(UD_GEN STREQUAL MK4)
+    add_compile_definitions(Serial=Serial0)
+endif()
+
 project(ugly-duckling)
