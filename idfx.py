@@ -44,8 +44,7 @@ ud_args = [
     f"-DSDKCONFIG=sdkconfig.{ud_gen.lower()}",
     f"-DUD_GEN={ud_gen}",
     f"-DUD_DEBUG={ud_debug}",
-    # This will be available in ESP-IDF 5.1+
-    # f"-DDEPENDENCIES_LOCK=dependencies.{ud_gen.lower()}.lock",
+    f"-DDEPENDENCIES_LOCK=dependencies.{ud_gen.lower()}.lock",
 ]
 
 idf_args = ud_args + idf_args

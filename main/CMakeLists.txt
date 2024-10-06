@@ -7,7 +7,6 @@ idf_component_register(
     INCLUDE_DIRS "."
     EMBED_TXTFILES "${CMAKE_SOURCE_DIR}/partitions.csv"
 )
-target_compile_options(${COMPONENT_LIB} PRIVATE -std=gnu++17)
 
 add_compile_definitions("${UD_GEN}")
 add_compile_definitions(FARMHUB_REPORT_MEMORY)
