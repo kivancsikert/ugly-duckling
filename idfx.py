@@ -19,7 +19,7 @@ ud_gen = os.getenv("UD_GEN")
 if not ud_gen:
     print("Error: UD_GEN environment variable is not set.", file=sys.stderr)
     sys.exit(1)
-ud_debug = os.getenv("UD_DEBUG") == "1"
+ud_debug = os.getenv("UD_DEBUG", "0")
 
 idf_path = os.getenv("IDF_PATH")
 if not idf_path:
@@ -32,7 +32,8 @@ arduino_component_hash = r"managed_components/espressif__arduino-esp32/.componen
 if os.path.exists(arduino_component_hash):
     os.remove(arduino_component_hash)
 
-build_dir = f"build/{ud_gen.lower()}-{'debug' if ud_debug else 'release'}"
+build_dir_suffix = 'debug' if ud_debug == "1" else 'release'
+build_dir = f"build/{ud_gen.lower()}-{build_dir_suffix}"
 
 idf_py = f"{idf_path}/tools/idf.py"
 idf_args = sys.argv[1:]
@@ -41,6 +42,8 @@ ud_args = [
     build_dir,
     f"-DSDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.{ud_gen.lower()}.defaults",
     f"-DSDKCONFIG=sdkconfig.{ud_gen.lower()}",
+    f"-DUD_GEN={ud_gen}",
+    f"-DUD_DEBUG={ud_debug}",
     # This will be available in ESP-IDF 5.1+
     # f"-DDEPENDENCIES_LOCK=dependencies.{ud_gen.lower()}.lock",
 ]
@@ -50,8 +53,6 @@ idf_args = ud_args + idf_args
 env = {
     **os.environ,
     "IDF_TARGET": determine_idf_target(ud_gen),
-    "UD_GEN": ud_gen,
-    "UD_DEBUG": "1" if ud_debug else "0",
 }
 
 print(f"Running: {idf_py}")
