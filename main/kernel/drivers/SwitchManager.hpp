@@ -67,10 +67,9 @@ public:
             name.c_str(), pin, mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
 
         // Configure PIN_INPUT as input
-        // TODO Can we simply remove this?
-        // gpio_pad_select_gpio(pin);
-        gpio_set_direction(pin, GPIO_MODE_INPUT);
-        gpio_set_pull_mode(pin, mode == SwitchMode::PullUp ? GPIO_PULLUP_ONLY : GPIO_PULLDOWN_ONLY);
+        pinMode(pin, mode == SwitchMode::PullUp ? INPUT_PULLUP : INPUT_PULLDOWN);
+        // gpio_set_direction(pin, GPIO_MODE_INPUT);
+        // gpio_set_pull_mode(pin, mode == SwitchMode::PullUp ? GPIO_PULLUP_ONLY : GPIO_PULLDOWN_ONLY);
 
         SwitchState* switchState = new SwitchState();
         switchState->name = name;
