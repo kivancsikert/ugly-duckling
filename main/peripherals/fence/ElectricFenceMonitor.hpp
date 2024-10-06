@@ -69,7 +69,7 @@ public:
 
         // TODO Use PCNT event callbacks instead?
         auto measurementFrequency = config.measurementFrequency.get();
-        Task::loop(name, 2560, [this, measurementFrequency](Task& task) {
+        Task::loop(name, 3172, [this, measurementFrequency](Task& task) {
             uint16_t lastVoltage = 0;
             for (auto& pin : pins) {
                 int16_t count = pin.pcntUnit.getAndClearCount();

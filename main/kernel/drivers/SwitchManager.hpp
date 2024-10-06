@@ -33,7 +33,7 @@ static void handleSwitchInterrupt(void* arg);
 class SwitchManager {
 public:
     SwitchManager() {
-        Task::loop("switch-manager", 2560, [this](Task& task) {
+        Task::loop("switch-manager", 3172, [this](Task& task) {
             SwitchStateChange stateChange = switchStateInterrupts.take();
             auto state = stateChange.switchState;
             auto engaged = stateChange.engaged;

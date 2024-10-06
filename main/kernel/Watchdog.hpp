@@ -27,7 +27,7 @@ public:
     void restart() {
         Lock lock(updateMutex);
         cancel();
-        handle = Task::run(name, 2560, [this](Task& task) {
+        handle = Task::run(name, 3172, [this](Task& task) {
             task.delayUntil(timeout);
             Lock lock(updateMutex);
             callback(WatchdogState::TimedOut);
