@@ -143,3 +143,44 @@ The following commands are available to manipulate files on the device via SPIFF
 - `commands/files/remove` removes the file at the given `path`
 
 See `FileCommands` for more information.
+
+## Development
+
+### Prerequisites
+
+- ESP-IDF v4.4.8
+
+### Building
+
+There are two ways to build the firmware:
+
+1. Using the ESP-IDF build system. In this case you have to set the right target and pass `UD_GEN` to the build system manually.
+2. Use the `idfx.py` wrapper, in which case you have to set `UD_GEN` as an environment variable, and the wrapper will set the right target for you.
+
+You can also set `UD_DEBUG` as an environment variable or add `-DUD_DEBUG=1` to the build command to enable debug output.
+
+```bash
+python idfx.py build
+```
+
+### Flashing
+
+```bash
+python idfx.py flash
+```
+
+If you also want to upload the SPIFFS image, add `-DFSUPLOAD=1` to the command:
+
+```bash
+python idfx.py -DFSUPLOAD=1 flash
+```
+
+### Monitoring
+
+```bash
+python idfx.py monitor
+```
+
+### Testing
+
+TBD
