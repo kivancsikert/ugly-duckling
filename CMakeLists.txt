@@ -16,11 +16,13 @@ if(UD_GEN STREQUAL "")
     set(UD_GEN MK7)
 endif()
 message("Building for Ugly Duckling '${UD_GEN}'")
+string(TOLOWER "${UD_GEN}" UD_GEN_LOWER)
 
 if(UD_GEN STREQUAL MK4)
     add_compile_definitions(HWCDCSerial=Serial0)
 endif()
 
+idf_build_set_property(DEPENDENCIES_LOCK "dependencies.${UD_GEN_LOWER}.lock")
 project(ugly-duckling)
 
 # Use `idf.py -DFSUPLOAD=1 flash` to upload the data partition
