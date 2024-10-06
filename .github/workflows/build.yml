@@ -1,78 +1,76 @@
 name: PlatformIO CI
 on:
-    push:
-    release:
-        types: [published]
+  push:
+  release:
+    types: [published]
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
-        strategy:
-            fail-fast: true
-            matrix:
-                environment: [mk4, mk5, mk6, mk7, mk7-debug, native]
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - environment: mk4-release
+            ud_gen: MK4
+            ud_debug: 0
+          - environment: mk5-release
+            ud_gen: MK5
+            ud_debug: 0
+          - environment: mk6-release
+            ud_gen: MK6
+            ud_debug: 0
+          - environment: mk7-release
+            ud_gen: MK7
+            ud_debug: 0
+          - environment: mk7-debug
+            ud_gen: MK7
+            ud_debug: 1
+          # TODO Re-add native
+          # - environment: native
 
-            - name: Cache PlatformIO
-              uses: actions/cache@v4
-              with:
-                  path: |
-                      ~/.cache/pip
-                      ~/.platformio/.cache
-                  key: ${{ runner.os }}-pio
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: "recursive"
 
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: "3.9"
+      - name: esp-idf build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v4.4.8
+          command: UD_GEN=${{ matrix.ud_gen }} UD_DEBUG=${{ matrix.ud_debug }} ./idfx.py build
 
-            - name: Install PlatformIO
-              run: |
-                  pip install --upgrade platformio
+      - name: Rename firmware artifact
+        if: matrix.environment != 'native'
+        run: cp ${{ github.workspace }}/build/${{ matrix.environment }}/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
 
-            - name: Cache project build cache for ${{ matrix.environment }}
-              uses: actions/cache@v4
-              with:
-                  path: |
-                      .pio/build-cache
-                  key: ${{ runner.os }}-${{ matrix.environment }}-build-cache
+      - name: Upload firmware artifact
+        if: matrix.environment != 'native'
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.environment }}
+          path: ugly-duckling-${{ matrix.environment }}.bin
+          if-no-files-found: error
 
-            - name: Build application (${{ matrix.environment }})
-              if: matrix.environment != 'native'
-              run: pio run --environment ${{ matrix.environment }}
+      # TODO Re-add unit tests
+      # - name: Run unit tests
+      #   if: matrix.environment == 'native'
+      #   run: pio test --environment native
 
-            - name: Rename firmware artifact
-              if: matrix.environment != 'native'
-              run: cp ${{ github.workspace }}/.pio/build/${{ matrix.environment }}/firmware.bin ugly-duckling-${{ matrix.environment }}.bin
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
 
-            - name: Upload firmware artifact
-              if: matrix.environment != 'native'
-              uses: actions/upload-artifact@v4
-              with:
-                  name: firmware-${{ matrix.environment }}
-                  path: ugly-duckling-${{ matrix.environment }}.bin
-                  if-no-files-found: error
+      - name: Display structure of downloaded files
+        run: ls -R
 
-            - name: Run unit tests
-              if: matrix.environment == 'native'
-              run: pio test --environment native
-
-    release:
-        needs: build
-        if: startsWith(github.ref, 'refs/tags/')
-        runs-on: ubuntu-latest
-        steps:
-            - name: Download artifacts
-              uses: actions/download-artifact@v4
-
-            - name: Display structure of downloaded files
-              run: ls -R
-
-            - name: Release
-              uses: AButler/upload-release-assets@v3.0
-              with:
-                  files: firmware-*/*
-                  repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Release
+        uses: AButler/upload-release-assets@v3.0
+        with:
+          files: firmware-*/*
+          repo-token: ${{ secrets.GITHUB_TOKEN }}

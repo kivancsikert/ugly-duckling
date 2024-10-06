@@ -105,7 +105,7 @@ public:
             status.concat("] ");
 
             status.concat("\033[33m");
-            status.concat(VERSION);
+            status.concat(FARMHUB_VERSION);
             status.concat("\033[0m");
 
             status.concat(", WIFI: ");
@@ -337,7 +337,7 @@ public:
         Log.log(Level::Info, F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
         Log.log(Level::Info, F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
         Log.log(Level::Info, F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
-        Log.log(Level::Info, F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), VERSION);
+        Log.log(Level::Info, F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), FARMHUB_VERSION);
     }
 
     void registerShutdownListener(std::function<void()> listener) {
