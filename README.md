@@ -101,7 +101,7 @@ Once the device receives such configuration, it stores it under `/p/$PERIPHERAL_
 ## Remote commands
 
 FarmHub devices and their peripherals both support receiving commands via MQTT.
-Commands are triggered via retained MQTT messages sent to `$DEVICE_ROOT/commands/$COMMAND` for devices, and `$DEVICE_.
+Commands are triggered via retained MQTT messages sent to `$DEVICE_ROOT/commands/$COMMAND` for devices, and `$DEVICE_`.
 They typically respond under `$DEVICE_ROOT/responses/$COMMAND`.
 
 Once the device receives a command it deletes the retained message.
