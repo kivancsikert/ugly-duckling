@@ -4,6 +4,8 @@
 #include <functional>
 #include <optional>
 
+#include <esp_mac.h>
+
 #include <HTTPUpdate.h>
 
 #include <nvs_flash.h>
@@ -14,6 +16,7 @@
 #include <kernel/I2CManager.hpp>
 #include <kernel/Log.hpp>
 #include <kernel/SleepManager.hpp>
+#include <kernel/StateManager.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
@@ -42,7 +45,7 @@ static const String& getMacAddress() {
         for (int i = 0; i < 6; i++) {
             rawMac[i] = 0;
         }
-        if (esp_efuse_mac_get_default(rawMac) != ESP_OK) {
+        if (esp_read_mac(rawMac, ESP_MAC_WIFI_STA) != ESP_OK) {
             macAddress = "??:??:??:??:??:??:??:??";
         } else {
             char mac[24];
@@ -72,7 +75,7 @@ public:
             getMacAddress().c_str());
 
         // TODO Allocate less memory when FARMHUB_DEBUG is disabled
-        Task::loop("status-update", 2560, [this](Task&) { updateState(); });
+        Task::loop("status-update", 3172, [this](Task&) { updateState(); });
 
         httpUpdateResult = handleHttpUpdate();
         if (!httpUpdateResult.isEmpty()) {

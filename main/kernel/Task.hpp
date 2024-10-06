@@ -36,6 +36,13 @@ public:
         : TaskHandle(other.handle) {
     }
 
+    TaskHandle& operator=(const TaskHandle& other) {
+        if (this != &other) { // Self-assignment check
+            handle = other.handle;
+        }
+        return *this;
+    }
+
     constexpr bool isValid() const {
         return handle != nullptr;
     }
@@ -78,7 +85,7 @@ public:
     }
     static TaskHandle run(const String& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
         TaskFunction* taskFunction = new TaskFunction(runFunction);
-        Log.debug("Creating task %s with priority %d and stack size %d",
+        Log.debug("Creating task %s with priority %d and stack size %ld",
             name.c_str(), priority, stackSize);
         TaskHandle_t handle = nullptr;
         auto result = xTaskCreate(executeTask, name.c_str(), stackSize, taskFunction, priority, &handle);

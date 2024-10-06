@@ -60,7 +60,7 @@ public:
 
         sensor_t sensorInfo;
         sensor.getSensor(&sensorInfo);
-        Log.debug("Found sensor: %s, driver version: %d, unique ID: %d, max value: %.2f lux, min value: %.2f lux, resolution: %.2f mlux",
+        Log.debug("Found sensor: %s, driver version: %ld, unique ID: %ld, max value: %.2f lux, min value: %.2f lux, resolution: %.2f mlux",
             sensorInfo.name, sensorInfo.version, sensorInfo.sensor_id, sensorInfo.max_value, sensorInfo.min_value, sensorInfo.resolution * 1000);
 
         runLoop();

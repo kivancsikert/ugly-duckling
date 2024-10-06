@@ -32,7 +32,7 @@ enum class Level {
 
 #ifndef FARMHUB_LOG_LEVEL
 #ifdef FARMHUB_DEBUG
-#define FARMHUB_LOG_LEVEL FARMHUB_LOG_LEVEL_TRACE
+#define FARMHUB_LOG_LEVEL FARMHUB_LOG_LEVEL_DEBUG
 #else
 #define FARMHUB_LOG_LEVEL FARMHUB_LOG_LEVEL_INFO
 #endif
@@ -181,7 +181,7 @@ private:
             char* localBuffer = new char[size + 1];
             vsnprintf(localBuffer, size + 1, format, args);
             consumer(localBuffer);
-            delete localBuffer;
+            delete[] localBuffer;
         }
     }
 

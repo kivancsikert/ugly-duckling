@@ -320,7 +320,7 @@ private:
                 }
             }
 
-            Log.trace("MQTT: Waiting for outgoing event for %lld ms", duration_cast<milliseconds>(timeout).count());
+            // Log.trace("MQTT: Waiting for outgoing event for %lld ms", duration_cast<milliseconds>(timeout).count());
             outgoingQueue.pollIn(duration_cast<ticks>(timeout), [&](const auto& event) {
                 Log.trace("MQTT: Processing outgoing event");
                 ensureConnected(task);

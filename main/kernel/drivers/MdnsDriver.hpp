@@ -92,10 +92,10 @@ private:
                 i + 1,
                 MDNS.hostname(i).c_str(),
                 MDNS.port(i),
-                MDNS.IP(i).toString().c_str());
+                MDNS.address(i).toString().c_str());
         }
         record.hostname = MDNS.hostname(0);
-        record.ip = MDNS.IP(0);
+        record.ip = MDNS.address(0);
         record.port = MDNS.port(0);
 
         nvs.set(cacheKey, record);

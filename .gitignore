@@ -10,5 +10,4 @@ data-unused/
 /managed_components/
 sdkconfig*
 !sdkconfig*.defaults
-# TODO Re-add this after upgrade to ESP-IDF 5.1+
-dependencies.lock
+dependencies*.lock
