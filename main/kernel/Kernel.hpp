@@ -4,6 +4,8 @@
 #include <functional>
 #include <optional>
 
+#include <esp_mac.h>
+
 #include <HTTPUpdate.h>
 
 #include <nvs_flash.h>
@@ -42,7 +44,7 @@ static const String& getMacAddress() {
         for (int i = 0; i < 6; i++) {
             rawMac[i] = 0;
         }
-        if (esp_efuse_mac_get_default(rawMac) != ESP_OK) {
+        if (esp_read_mac(rawMac, ESP_MAC_WIFI_STA) != ESP_OK) {
             macAddress = "??:??:??:??:??:??:??:??";
         } else {
             char mac[24];
