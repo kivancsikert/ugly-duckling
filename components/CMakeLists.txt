@@ -38,3 +38,6 @@ idf_component_register(
 )
 
 add_compile_definitions(WM_NODEBUG=1)
+
+# Necessary because of WiFiManager's debug logging
+target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-error=format)
