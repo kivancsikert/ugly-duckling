@@ -34,6 +34,10 @@ idf_component_register(
     SRCS "WiFiManager/WiFiManager.cpp"
     INCLUDE_DIRS "WiFiManager"
 
+    SRCS "../managed_components/espressif__arduino-esp32/libraries/HTTPUpdate/src/HTTPUpdate.cpp"
+    INCLUDE_DIRS "../managed_components/espressif__arduino-esp32/libraries/HTTPUpdate/src"
+    REQUIRES app_update
+
     REQUIRES "arduino-esp32"
 )
 
