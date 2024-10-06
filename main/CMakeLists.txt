@@ -1,7 +1,5 @@
-# Get all source files from the main directory
-FILE(GLOB_RECURSE app_sources ${CMAKE_SOURCE_DIR}/main/*.*)
+FILE(GLOB_RECURSE app_sources main.cpp **/*.cpp)
 
-# Specify include directories (no need to recurse into files)
 idf_component_register(
     SRCS ${app_sources}
     INCLUDE_DIRS "."
@@ -28,3 +26,4 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 add_compile_definitions(FARMHUB_VERSION="${FARMHUB_VERSION}")
+target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-error=deprecated-declarations -Wno-error=deprecated-copy)

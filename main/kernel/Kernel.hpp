@@ -16,6 +16,7 @@
 #include <kernel/I2CManager.hpp>
 #include <kernel/Log.hpp>
 #include <kernel/SleepManager.hpp>
+#include <kernel/StateManager.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
