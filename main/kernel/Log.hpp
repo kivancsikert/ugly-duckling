@@ -181,7 +181,7 @@ private:
             char* localBuffer = new char[size + 1];
             vsnprintf(localBuffer, size + 1, format, args);
             consumer(localBuffer);
-            delete localBuffer;
+            delete[] localBuffer;
         }
     }
 
