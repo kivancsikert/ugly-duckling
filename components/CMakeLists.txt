@@ -31,9 +31,6 @@ idf_component_register(
     SRCS "SHT2x/SHT2x.cpp"
     INCLUDE_DIRS "SHT2x"
 
-    SRCS "WiFiManager/WiFiManager.cpp"
-    INCLUDE_DIRS "WiFiManager"
-
     SRCS "../managed_components/espressif__arduino-esp32/libraries/HTTPUpdate/src/HTTPUpdate.cpp"
     INCLUDE_DIRS "../managed_components/espressif__arduino-esp32/libraries/HTTPUpdate/src"
     REQUIRES app_update
@@ -42,6 +39,3 @@ idf_component_register(
 )
 
 add_compile_definitions(WM_NODEBUG=1)
-
-# Necessary because of WiFiManager's debug logging
-target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-error=format)

@@ -1,6 +1,3 @@
-[submodule "components/WiFiManager"]
-	path = components/WiFiManager
-	url = https://github.com/tzapu/WiFiManager
 [submodule "components/MQTTPubSubClient"]
 	path = components/MQTTPubSubClient
 	url = https://github.com/hideakitai/MQTTPubSubClient

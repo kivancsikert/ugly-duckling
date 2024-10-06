@@ -4,14 +4,14 @@
 #include <list>
 
 #include <WiFi.h>
+#include <WiFiProv.h>
 
 #include <esp_wifi.h>
-
-#include <WiFiManager.h>
 
 #include <kernel/Concurrent.hpp>
 #include <kernel/Log.hpp>
 #include <kernel/State.hpp>
+#include <kernel/Strings.hpp>
 #include <kernel/Task.hpp>
 
 using namespace std::chrono_literals;
@@ -24,6 +24,7 @@ public:
     WiFiDriver(StateSource& networkRequested, StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode)
         : networkRequested(networkRequested)
         , networkReady(networkReady)
+        , configPortalRunning(configPortalRunning)
         , hostname(hostname)
         , powerSaveMode(powerSaveMode) {
         Log.debug("WiFi: initializing");
@@ -39,17 +40,6 @@ public:
             conf.sta.listen_interval = listenInterval;
             ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &conf));
         }
-
-        wifiManager.setHostname(hostname.c_str());
-        wifiManager.setConfigPortalTimeout(180);
-        wifiManager.setAPCallback([this, &configPortalRunning](WiFiManager* wifiManager) {
-            Log.debug("WiFi: entered config portal");
-            configPortalRunning.setFromISR();
-        });
-        wifiManager.setConfigPortalTimeoutCallback([this, &configPortalRunning]() {
-            Log.debug("WiFi: config portal timed out");
-            configPortalRunning.clearFromISR();
-        });
 
         WiFi.onEvent(
             [](WiFiEvent_t event, WiFiEventInfo_t info) {
@@ -83,6 +73,35 @@ public:
                 eventQueue.offer(WiFiEvent::DISCONNECTED);
             },
             ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+        WiFi.onEvent(
+            [&configPortalRunning](WiFiEvent_t event, WiFiEventInfo_t info) {
+                Log.debug("WiFi: provisioning started");
+                configPortalRunning.set();
+            },
+            ARDUINO_EVENT_PROV_START);
+        WiFi.onEvent(
+            [](WiFiEvent_t event, WiFiEventInfo_t info) {
+                Log.debug("Received Wi-Fi credentials for SSID '%s'",
+                    (const char*) info.prov_cred_recv.ssid);
+            },
+            ARDUINO_EVENT_PROV_CRED_RECV);
+        WiFi.onEvent(
+            [](WiFiEvent_t event, WiFiEventInfo_t info) {
+                Log.debug("WiFi: provisioning failed because %s",
+                    info.prov_fail_reason == NETWORK_PROV_WIFI_STA_AUTH_ERROR ? "authentication failed" : "AP not found");
+            },
+            ARDUINO_EVENT_PROV_CRED_FAIL);
+        WiFi.onEvent(
+            [](WiFiEvent_t event, WiFiEventInfo_t info) {
+                Log.debug("WiFi: provisioning successful");
+            },
+            ARDUINO_EVENT_PROV_CRED_SUCCESS);
+        WiFi.onEvent(
+            [&configPortalRunning](WiFiEvent_t event, WiFiEventInfo_t info) {
+                Log.debug("WiFi: provisioning finished");
+                configPortalRunning.clear();
+            },
+            ARDUINO_EVENT_PROV_END);
 
         Task::run("wifi", 3072, [this](Task&) {
             runLoop();
@@ -111,7 +130,7 @@ private:
             bool connected = WiFi.isConnected();
             if (clients > 0) {
                 networkRequested.set();
-                if (!connected) {
+                if (!connected && !configPortalRunning.isSet()) {
                     Log.trace("WiFi: Connecting for first client");
                     connect();
                 }
@@ -126,12 +145,31 @@ private:
     }
 
     void connect() {
-        if (!wifiManager.autoConnect(hostname.c_str())) {
-            Log.debug("WiFi: failed to connect, disconnecting");
-            // TODO Implement exponential backoff
-            disconnect();
-        }
+        // Print wifi status
+        Log.debug("WiFi status: %d",
+            WiFi.status());
+        StringPrint qr;
+// BLE Provisioning using the ESP SoftAP Prov works fine for any BLE SoC, including ESP32, ESP32S3 and ESP32C3.
+#if CONFIG_BLUEDROID_ENABLED && !defined(USE_SOFT_AP)
+        Log.debug("Begin Provisioning using BLE");
+        // Sample uuid that user can pass during provisioning using BLE
+        uint8_t uuid[16] = { 0xb4, 0xdf, 0x5a, 0x1c, 0x3f, 0x6b, 0xf4, 0xbf, 0xea, 0x4a, 0x82, 0x03, 0x04, 0x90, 0x1a, 0x02 };
+        WiFiProv.beginProvision(
+            NETWORK_PROV_SCHEME_BLE, NETWORK_PROV_SCHEME_HANDLER_FREE_BLE, NETWORK_PROV_SECURITY_1, pop, hostname.c_str(), serviceKey, uuid, resetProvisioned);
+        WiFiProv.printQR(hostname.c_str(), pop, "ble", qr);
+#else
+        Log.debug("Begin Provisioning using Soft AP");
+        WiFiProv.beginProvision(
+            NETWORK_PROV_SCHEME_SOFTAP, NETWORK_PROV_SCHEME_HANDLER_NONE, NETWORK_PROV_SECURITY_1, pop, hostname.c_str(), serviceKey, nullptr, resetProvisioned);
+        WiFiProv.printQR(hostname.c_str(), pop, "softap", qr);
+#endif
+        Log.debug("%s",
+            qr.buffer.c_str());
     }
+
+    static constexpr const char* pop = "abcd1234";
+    static constexpr const char* serviceKey = nullptr;
+    static constexpr const bool resetProvisioned = false;
 
     void disconnect() {
         networkReady.clear();
@@ -150,6 +188,7 @@ private:
 
     StateSource& networkRequested;
     StateSource& networkReady;
+    StateSource& configPortalRunning;
     const String hostname;
     const bool powerSaveMode;
 
@@ -160,7 +199,6 @@ private:
         WANTS_DISCONNECT
     };
 
-    WiFiManager wifiManager;
     Queue<WiFiEvent> eventQueue { "wifi-events", 16 };
 
     static constexpr milliseconds WIFI_QUEUE_TIMEOUT = 1s;
