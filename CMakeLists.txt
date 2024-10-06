@@ -18,7 +18,7 @@ endif()
 message("Building for Ugly Duckling '${UD_GEN}'")
 
 if(UD_GEN STREQUAL MK4)
-    add_compile_definitions(Serial=Serial0)
+    add_compile_definitions(HWCDCSerial=Serial0)
 endif()
 
 project(ugly-duckling)
