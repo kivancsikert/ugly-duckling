@@ -42,7 +42,7 @@ public:
         lastSeenFlow = now;
         lastPublished = now;
 
-        Task::loop(name, 2560, [this, measurementFrequency](Task& task) {
+        Task::loop(name, 3172, [this, measurementFrequency](Task& task) {
             auto now = boot_clock::now();
             milliseconds elapsed = duration_cast<milliseconds>(now - lastMeasurement);
             if (elapsed.count() > 0) {

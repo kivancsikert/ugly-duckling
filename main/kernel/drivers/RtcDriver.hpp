@@ -42,7 +42,7 @@ public:
         , ntpConfig(ntpConfig)
         , rtcInSync(rtcInSync) {
         // TODO We should not need two separate tasks here
-        Task::run("rtc-check", 2560, [this](Task& task) {
+        Task::run("rtc-check", 3172, [this](Task& task) {
             while (true) {
                 if (isTimeSet()) {
                     Log.info("RTC: time is set");
