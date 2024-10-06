@@ -1,13 +1,12 @@
 .pio/
 .vscode/*
-!.vscode/extensions.json
 
 # File system image
 data/
 data-unused/
 
 # ESP-IDF generated files
-/build*/
+/build/
 /managed_components/
 sdkconfig*
 !sdkconfig*.defaults
