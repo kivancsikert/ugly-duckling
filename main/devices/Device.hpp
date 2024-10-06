@@ -5,8 +5,8 @@
 
 #include <Arduino.h>
 
-#include <esp32/clk.h>
 #include <esp_pm.h>
+#include <esp_private/esp_clk.h>
 
 #include <Print.h>
 
@@ -391,6 +391,7 @@ public:
     void populateTelemetry(JsonObject& json) override {
         json["voltage"] = kernel.getBatteryVoltage();
     }
+
 private:
     ConfiguredKernel& kernel;
 };
