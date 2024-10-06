@@ -65,8 +65,8 @@ private:
             gpio_num_t in2Pin,
             bool canSleep)
             : driver(driver)
-            , in1Channel(pwm.registerChannel(in1Pin, PWM_FREQ, PWM_RESOLUTION))
-            , in2Channel(pwm.registerChannel(in2Pin, PWM_FREQ, PWM_RESOLUTION))
+            , in1Channel(pwm.registerPin(in1Pin, PWM_FREQ, PWM_RESOLUTION))
+            , in2Channel(pwm.registerPin(in2Pin, PWM_FREQ, PWM_RESOLUTION))
             , canSleep(canSleep)
             , sleeping(canSleep) {
         }
@@ -114,8 +114,8 @@ private:
 
     private:
         Drv8833Driver* const driver;
-        const PwmChannel in1Channel;
-        const PwmChannel in2Channel;
+        const PwmPin in1Channel;
+        const PwmPin in2Channel;
         const bool canSleep;
 
         bool sleeping;

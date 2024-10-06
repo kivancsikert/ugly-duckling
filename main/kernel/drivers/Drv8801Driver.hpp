@@ -36,7 +36,7 @@ public:
         gpio_num_t faultPin,
         gpio_num_t sleepPin)
         : enablePin(enablePin)
-        , phaseChannel(pwm.registerChannel(phasePin, PWM_FREQ, PWM_RESOLUTION))
+        , phaseChannel(pwm.registerPin(phasePin, PWM_FREQ, PWM_RESOLUTION))
         , currentPin(currentPin)
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
@@ -93,7 +93,7 @@ public:
 
 private:
     const gpio_num_t enablePin;
-    const PwmChannel phaseChannel;
+    const PwmPin phaseChannel;
     const gpio_num_t currentPin;
     const gpio_num_t faultPin;
     const gpio_num_t sleepPin;

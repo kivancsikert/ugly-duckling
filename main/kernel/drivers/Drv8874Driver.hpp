@@ -33,8 +33,8 @@ public:
         gpio_num_t currentPin,
         gpio_num_t faultPin,
         gpio_num_t sleepPin)
-        : in1Channel(pwm.registerChannel(in1Pin, PWM_FREQ, PWM_RESOLUTION))
-        , in2Channel(pwm.registerChannel(in2Pin, PWM_FREQ, PWM_RESOLUTION))
+        : in1Channel(pwm.registerPin(in1Pin, PWM_FREQ, PWM_RESOLUTION))
+        , in2Channel(pwm.registerPin(in2Pin, PWM_FREQ, PWM_RESOLUTION))
         , currentPin(currentPin)
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
@@ -89,8 +89,8 @@ public:
     }
 
 private:
-    const PwmChannel in1Channel;
-    const PwmChannel in2Channel;
+    const PwmPin in1Channel;
+    const PwmPin in2Channel;
     const gpio_num_t currentPin;
     const gpio_num_t faultPin;
     const gpio_num_t sleepPin;
