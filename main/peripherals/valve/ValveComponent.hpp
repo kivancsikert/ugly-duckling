@@ -218,7 +218,7 @@ public:
             if (targetState == ValveState::NONE) {
                 override(ValveState::NONE, time_point<system_clock>());
             } else {
-                seconds duration = request.containsKey("duration")
+                seconds duration = request["duration"].is<JsonVariant>()
                     ? request["duration"].as<seconds>()
                     : hours { 1 };
                 override(targetState, system_clock::now() + duration);
