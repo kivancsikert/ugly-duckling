@@ -39,6 +39,8 @@ public:
         : value(other.value) {
     }
 
+    JsonAsString& operator=(const JsonAsString& other) = default;
+
     const String& get() const {
         return value;
     }

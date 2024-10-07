@@ -28,6 +28,8 @@ struct PcntUnit {
         : PcntUnit(other.unit, other.pin) {
     }
 
+    PcntUnit& operator=(const PcntUnit& other) = default;
+
     int16_t getCount() const {
         int16_t count;
         pcnt_get_counter_value(unit, &count);
