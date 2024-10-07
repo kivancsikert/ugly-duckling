@@ -2,7 +2,7 @@
 
 #include <limits>
 
-#include <driver/pcnt.h>
+#include <driver/pulse_cnt.h>
 
 #include <Arduino.h>
 
@@ -15,13 +15,13 @@ namespace farmhub::kernel {
 
 // TODO Limit number of channels available
 struct PcntUnit {
-    PcntUnit(pcnt_unit_t unit, gpio_num_t pin)
+    PcntUnit(pcnt_unit_handle_t unit, gpio_num_t pin)
         : unit(unit)
         , pin(pin) {
     }
 
     PcntUnit()
-        : PcntUnit(PCNT_UNIT_MAX, GPIO_NUM_MAX) {
+        : PcntUnit(nullptr, GPIO_NUM_MAX) {
     }
 
     PcntUnit(const PcntUnit& other)
@@ -30,14 +30,14 @@ struct PcntUnit {
 
     PcntUnit& operator=(const PcntUnit& other) = default;
 
-    int16_t getCount() const {
-        int16_t count;
-        pcnt_get_counter_value(unit, &count);
+    int getCount() const {
+        int count;
+        pcnt_unit_get_count(unit, &count);
         return count;
     }
 
     void clear() {
-        pcnt_counter_clear(unit);
+        pcnt_unit_clear_count(unit);
     }
 
     int16_t getAndClearCount() {
@@ -53,40 +53,44 @@ struct PcntUnit {
     }
 
 private:
-    pcnt_unit_t unit;
+    pcnt_unit_handle_t unit;
     gpio_num_t pin;
 };
 
 class PcntManager {
 public:
     PcntUnit registerUnit(gpio_num_t pin) {
-        pcnt_unit_t unit = static_cast<pcnt_unit_t>(nextUnit++);
+        pcnt_unit_config_t unitConfig = {
+            .low_limit = std::numeric_limits<int16_t>::min(),
+            .high_limit = std::numeric_limits<int16_t>::max(),
+            .intr_priority = 0,
+            .flags = {},
+        };
+        pcnt_unit_handle_t unit = nullptr;
+        ESP_ERROR_CHECK(pcnt_new_unit(&unitConfig, &unit));
 
-        pcnt_config_t pcntConfig;
-        pcntConfig.pulse_gpio_num = pin;
-        pcntConfig.ctrl_gpio_num = PCNT_PIN_NOT_USED;
-        pcntConfig.lctrl_mode = PCNT_MODE_KEEP;
-        pcntConfig.hctrl_mode = PCNT_MODE_KEEP;
-        pcntConfig.pos_mode = PCNT_COUNT_INC;
-        pcntConfig.neg_mode = PCNT_COUNT_DIS;
-        pcntConfig.counter_h_lim = std::numeric_limits<int16_t>::max();
-        pcntConfig.counter_l_lim = std::numeric_limits<int16_t>::min();
-        pcntConfig.unit = unit;
-        pcntConfig.channel = PCNT_CHANNEL_0;
+        pcnt_glitch_filter_config_t filterConfig = {
+            .max_glitch_ns = 1000,
+        };
+        ESP_ERROR_CHECK(pcnt_unit_set_glitch_filter(unit, &filterConfig));
 
-        pcnt_unit_config(&pcntConfig);
-        pcnt_intr_disable(unit);
-        pcnt_set_filter_value(unit, 1023);
-        pcnt_filter_enable(unit);
-        pcnt_counter_clear(unit);
+        pcnt_chan_config_t channelConfig = {
+            .edge_gpio_num = pin,
+            .level_gpio_num = -1,
+            .flags = {},
+        };
+        pcnt_channel_handle_t channel = nullptr;
+        ESP_ERROR_CHECK(pcnt_new_channel(unit, &channelConfig, &channel));
+        ESP_ERROR_CHECK(pcnt_channel_set_edge_action(channel, PCNT_CHANNEL_EDGE_ACTION_INCREASE, PCNT_CHANNEL_EDGE_ACTION_HOLD));
 
-        Log.debug("Registered PCNT unit %d on pin %d",
-            unit, pin);
+        ESP_ERROR_CHECK(pcnt_unit_enable(unit));
+        ESP_ERROR_CHECK(pcnt_unit_clear_count(unit));
+        ESP_ERROR_CHECK(pcnt_unit_start(unit));
+
+        Log.debug("Registered PCNT unit on pin %d",
+            pin);
         return PcntUnit(unit, pin);
     }
-
-private:
-    uint8_t nextUnit = 0;
 };
 
 }    // namespace farmhub::kernel
