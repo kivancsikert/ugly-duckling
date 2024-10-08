@@ -237,7 +237,7 @@ private:
         HTTPUpdateResult result = HTTP_UPDATE_NO_UPDATES;
         // Run in separate task to allocate enough stack
         SemaphoreHandle_t completionSemaphore = xSemaphoreCreateBinary();
-        Task::run("update", 8192, [&](Task& task) {
+        Task::run("http-update", 16 * 1024, [&](Task& task) {
             // Allocate on heap to avoid wasting stack
             std::unique_ptr<WiFiClientSecure> client = std::make_unique<WiFiClientSecure>();
             // Allow insecure connections for testing

@@ -213,7 +213,7 @@ public:
         }
         prepareUpdate(url);
         response["success"] = true;
-        Task::run("update", [](Task& task) {
+        Task::run("update", 3072, [](Task& task) {
             Log.info("Restarting in 5 seconds to apply update");
             delay(5000);
             ESP.restart();

@@ -15,7 +15,6 @@ using namespace std::chrono;
 
 namespace farmhub::kernel {
 
-static const uint32_t DEFAULT_STACK_SIZE = 2048;
 static const unsigned int DEFAULT_PRIORITY = 1;
 
 class Task;
@@ -77,9 +76,6 @@ private:
 
 class Task {
 public:
-    static TaskHandle inline run(const String& name, const TaskFunction runFunction) {
-        return Task::run(name, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, runFunction);
-    }
     static TaskHandle inline run(const String& name, uint32_t stackSize, const TaskFunction runFunction) {
         return Task::run(name, stackSize, DEFAULT_PRIORITY, runFunction);
     }
@@ -102,9 +98,6 @@ public:
         TIMEOUT,
     };
 
-    static RunResult inline runIn(const String& name, ticks timeout, const TaskFunction runFunction) {
-        return Task::runIn(name, timeout, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, runFunction);
-    }
     static RunResult inline runIn(const String& name, ticks timeout, uint32_t stackSize, const TaskFunction runFunction) {
         return Task::runIn(name, timeout, stackSize, DEFAULT_PRIORITY, runFunction);
     }
@@ -125,9 +118,6 @@ public:
         }
     }
 
-    static TaskHandle inline loop(const String& name, TaskFunction loopFunction) {
-        return Task::loop(name, DEFAULT_STACK_SIZE, DEFAULT_PRIORITY, loopFunction);
-    }
     static TaskHandle inline loop(const String& name, uint32_t stackSize, TaskFunction loopFunction) {
         return Task::loop(name, stackSize, DEFAULT_PRIORITY, loopFunction);
     }
