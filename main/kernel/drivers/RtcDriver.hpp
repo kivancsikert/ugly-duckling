@@ -125,20 +125,22 @@ private:
         auto difference = newEpochTime - now;
 
         if (difference.count() == 0) {
-            Log.debug("RTC: Time is already correct");
+            Log.debug("RTC: Time is already correct at %lld",
+                duration_cast<seconds>(newEpochTime.time_since_epoch()).count());
         } else if (abs(difference) < threshold) {
             // If the difference is smaller, adjust the time gradually
             struct timeval adj = { .tv_sec = (time_t) duration_cast<seconds>(difference).count(), .tv_usec = 0 };
             adjtime(&adj, NULL);
-            Log.debug("RTC: Adjusted time by %lld ms",
-                duration_cast<milliseconds>(difference).count());
+            Log.debug("RTC: Adjusted time by %lld ms to %lld",
+                duration_cast<milliseconds>(difference).count(),
+                duration_cast<seconds>(newEpochTime.time_since_epoch()).count());
         } else {
             // If the difference is larger than the threshold, set the time directly
             struct timeval tv = { .tv_sec = (time_t) duration_cast<seconds>(newEpochTime.time_since_epoch()).count(), .tv_usec = 0 };
             settimeofday(&tv, NULL);
-            Log.debug("RTC: Set time to %lld (from: %lld)",
-                duration_cast<seconds>(newEpochTime.time_since_epoch()).count(),
-                duration_cast<seconds>(now.time_since_epoch()).count());
+            Log.debug("RTC: Set time from %lld to %lld",
+                duration_cast<seconds>(now.time_since_epoch()).count(),
+                duration_cast<seconds>(newEpochTime.time_since_epoch()).count());
         }
     }
 
