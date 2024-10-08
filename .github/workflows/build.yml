@@ -1,4 +1,4 @@
-name: PlatformIO CI
+name: CI Build
 on:
   push:
   release:
@@ -26,8 +26,6 @@ jobs:
           - environment: mk7-debug
             ud_gen: MK7
             ud_debug: 1
-          # TODO Re-add native
-          # - environment: native
 
     steps:
       - uses: actions/checkout@v4
@@ -42,21 +40,14 @@ jobs:
           command: UD_GEN=${{ matrix.ud_gen }} UD_DEBUG=${{ matrix.ud_debug }} ./idfx.py build
 
       - name: Rename firmware artifact
-        if: matrix.environment != 'native'
         run: cp ${{ github.workspace }}/build/${{ matrix.environment }}/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
 
       - name: Upload firmware artifact
-        if: matrix.environment != 'native'
         uses: actions/upload-artifact@v4
         with:
           name: firmware-${{ matrix.environment }}
           path: ugly-duckling-${{ matrix.environment }}.bin
           if-no-files-found: error
-
-      # TODO Re-add unit tests
-      # - name: Run unit tests
-      #   if: matrix.environment == 'native'
-      #   run: pio test --environment native
 
   release:
     needs: build
