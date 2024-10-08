@@ -202,7 +202,7 @@ public:
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
-        if (!request.containsKey("url")) {
+        if (!request["url"].is<String>()) {
             response["failure"] = "Command contains no URL";
             return;
         }

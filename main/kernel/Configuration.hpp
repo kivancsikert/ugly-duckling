@@ -39,6 +39,8 @@ public:
         : value(other.value) {
     }
 
+    JsonAsString& operator=(const JsonAsString& other) = default;
+
     const String& get() const {
         return value;
     }
@@ -142,7 +144,7 @@ public:
     }
 
     void load(const JsonObject& json) override {
-        if (json.containsKey(name)) {
+        if (json[name].is<JsonVariant>()) {
             namePresentAtLoad = true;
             delegate.load(json[name]);
         } else {
@@ -196,7 +198,7 @@ public:
     }
 
     void load(const JsonObject& json) override {
-        if (json.containsKey(name)) {
+        if (json[name].is<JsonVariant>()) {
             set(json[name].as<T>());
         } else {
             reset();
@@ -249,7 +251,7 @@ public:
 
     void load(const JsonObject& json) override {
         reset();
-        if (json.containsKey(name)) {
+        if (json[name].is<JsonArray>()) {
             auto jsonArray = json[name].as<JsonArray>();
             for (auto jsonEntry : jsonArray) {
                 const T& entry = jsonEntry.as<T>();

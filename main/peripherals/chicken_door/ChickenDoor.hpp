@@ -5,8 +5,6 @@
 #include <list>
 #include <variant>
 
-#include <driver/pcnt.h>
-
 #include <Arduino.h>
 
 #include <kernel/Component.hpp>
@@ -134,7 +132,7 @@ public:
             if (overrideState == DoorState::NONE) {
                 updateQueue.put(StateOverride { DoorState::NONE, time_point<system_clock>::min() });
             } else {
-                seconds duration = request.containsKey("duration")
+                seconds duration = request["duration"].is<JsonVariant>()
                     ? request["duration"].as<seconds>()
                     : hours { 1 };
                 updateQueue.put(StateOverride { overrideState, system_clock::now() + duration });
