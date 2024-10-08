@@ -26,4 +26,3 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 add_compile_definitions(FARMHUB_VERSION="${FARMHUB_VERSION}")
-target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-error=deprecated-declarations -Wno-error=deprecated-copy)
