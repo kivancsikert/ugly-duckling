@@ -1,5 +1,7 @@
 .vscode/*
 
+*.log
+
 # File system image
 data/
 data-unused/
