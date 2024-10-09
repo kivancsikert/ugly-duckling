@@ -148,9 +148,9 @@ See `FileCommands` for more information.
 
 ### Prerequisites
 
-- ESP-IDF v5.1.4
+- ESP-IDF v5.3.1
 
-We are using this version because it is the latest version that is compatible with Arduino-ESP32.
+We are using this version because it is the latest version that is compatible with Arduino-ESP32 3.1.0-rc-1.
 
 ### Building
 

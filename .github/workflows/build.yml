@@ -36,7 +36,7 @@ jobs:
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
-          esp_idf_version: v5.1.4
+          esp_idf_version: v5.3.1
           command: UD_GEN=${{ matrix.ud_gen }} UD_DEBUG=${{ matrix.ud_debug }} ./idfx.py build
 
       - name: Rename firmware artifact
