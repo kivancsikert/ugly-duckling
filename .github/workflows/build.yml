@@ -14,18 +14,23 @@ jobs:
           - environment: mk4-release
             ud_gen: MK4
             ud_debug: 0
+            target: esp32s2
           - environment: mk5-release
             ud_gen: MK5
             ud_debug: 0
+            target: esp32s3
           - environment: mk6-release
             ud_gen: MK6
             ud_debug: 0
+            target: esp32s3
           - environment: mk7-release
             ud_gen: MK7
             ud_debug: 0
+            target: esp32s3
           - environment: mk7-debug
             ud_gen: MK7
             ud_debug: 1
+            target: esp32s3
 
     steps:
       - uses: actions/checkout@v4
@@ -37,10 +42,11 @@ jobs:
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v5.3.1
-          command: UD_GEN=${{ matrix.ud_gen }} UD_DEBUG=${{ matrix.ud_debug }} ./idfx.py build
+          target: ${{ matrix.target }}
+          command: idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }}
 
       - name: Rename firmware artifact
-        run: cp ${{ github.workspace }}/build/${{ matrix.environment }}/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
+        run: cp ${{ github.workspace }}/build/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
