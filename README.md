@@ -148,7 +148,7 @@ See `FileCommands` for more information.
 
 ### Prerequisites
 
-- ESP-IDF v5.3.1
+- ESP-IDF v5.3.1 (see [installation instructions](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/index.html))
 
 We are using this version because it is the latest version that is compatible with Arduino-ESP32 3.1.0-rc-1.
 
@@ -157,30 +157,34 @@ We are using this version because it is the latest version that is compatible wi
 There are two ways to build the firmware:
 
 1. Using the ESP-IDF build system. In this case you have to set the right target and pass `UD_GEN` to the build system manually.
-2. Use the `idfx.py` wrapper, in which case you have to set `UD_GEN` as an environment variable, and the wrapper will set the right target for you.
+2. Pass the ugly duckling generation via `UD_GEN` to `idf.py`. Make sure the `IDF_TARGET` environment variable matches the target required by the specified generation.
+
+```bash
+idf.py build -DUD_GEN=MK7
+```
 
 You can also set `UD_DEBUG` as an environment variable or add `-DUD_DEBUG=1` to the build command to enable debug output.
 
 ```bash
-python idfx.py build
+idf.py build -DUD_GEN=MK7 -DUD_DEBUG=1
 ```
 
 ### Flashing
 
 ```bash
-python idfx.py flash
+idf.py flash
 ```
 
 If you also want to upload the SPIFFS image, add `-DFSUPLOAD=1` to the command:
 
 ```bash
-python idfx.py -DFSUPLOAD=1 flash
+idf.py -DFSUPLOAD=1 flash
 ```
 
 ### Monitoring
 
 ```bash
-python idfx.py monitor
+idf.py monitor
 ```
 
 ### Testing
