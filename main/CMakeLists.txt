@@ -9,9 +9,6 @@ idf_component_register(
 add_compile_definitions("${UD_GEN}")
 add_compile_definitions(FARMHUB_REPORT_MEMORY)
 
-if(NOT DEFINED UD_DEBUG)
-    set(UD_DEBUG "$ENV{UD_DEBUG}")
-endif()
 if(UD_DEBUG)
     add_compile_definitions(FARMHUB_DEBUG)
     add_compile_definitions(DUMP_MQTT)
