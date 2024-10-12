@@ -54,7 +54,7 @@ static gpio_num_t SDA = Pin::registerPin("SDA", GPIO_NUM_18);
 static gpio_num_t DMINUS = Pin::registerPin("D-", GPIO_NUM_19);
 static gpio_num_t DPLUS = Pin::registerPin("D+", GPIO_NUM_20);
 
-static gpio_num_t IOX1 = Pin::registerPin("IOX1", GPIO_NUM_21);
+static gpio_num_t IOX1 = Pin::registerPin("X1", GPIO_NUM_21);
 
 // GPIO_NUM_22 to GPIO_NUM_36 are NC
 
@@ -68,10 +68,10 @@ static gpio_num_t DNFault = Pin::registerPin("DNFault", GPIO_NUM_41);
 
 static gpio_num_t TXD0 = Pin::registerPin("TXD0", GPIO_NUM_43);
 static gpio_num_t RXD0 = Pin::registerPin("RXD0", GPIO_NUM_44);
-static gpio_num_t IOX2 = Pin::registerPin("IOX2", GPIO_NUM_45);
+static gpio_num_t IOX2 = Pin::registerPin("X2", GPIO_NUM_45);
 static gpio_num_t STATUS2 = Pin::registerPin("STATUS2", GPIO_NUM_46);
-static gpio_num_t IOB4 = Pin::registerPin("IOB4", GPIO_NUM_47);
-static gpio_num_t IOA4 = Pin::registerPin("IOA4", GPIO_NUM_48);
+static gpio_num_t IOB4 = Pin::registerPin("B4", GPIO_NUM_47);
+static gpio_num_t IOA4 = Pin::registerPin("A4", GPIO_NUM_48);
 }    // namespace pins
 
 class Mk7Config
