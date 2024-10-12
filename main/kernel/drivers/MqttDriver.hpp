@@ -207,7 +207,7 @@ public:
         , mqttReady(mqttReady) {
         Task::run("mqtt:init", 4096, [this](Task& task) {
             setup();
-            Task::run("mqtt", 4096, [this](Task& task) {
+            Task::run("mqtt", 5120, [this](Task& task) {
                 runEventLoop(task);
             });
             Task::loop("mqtt:incoming", 4096, [this](Task& task) {
