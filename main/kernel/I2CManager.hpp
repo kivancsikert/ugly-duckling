@@ -1,8 +1,8 @@
 #pragma once
 
+#include <exception>
 #include <map>
 #include <utility>
-#include <exception>
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -39,6 +39,9 @@ public:
             return *(it->second);
         } else {
             Log.trace("Creating new I2C bus for SDA: %d, SCL: %d", sda, scl);
+            if (nextBus >= 2) {
+                throw std::runtime_error("Maximum number of I2C buses reached");
+            }
             TwoWire* wire = new TwoWire(nextBus++);
             if (!wire->begin(sda, scl)) {
                 throw std::runtime_error(

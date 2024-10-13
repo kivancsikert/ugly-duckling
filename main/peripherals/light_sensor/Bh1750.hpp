@@ -53,7 +53,8 @@ public:
         // TODO Make mode configurable
         // TODO What's the difference between one-time and continuous mode here?
         //      Can we save some battery by using one-time mode? Are we losing anything by doing so?
-        if (!sensor.begin(BH1750::CONTINUOUS_LOW_RES_MODE, config.address, &i2c.getWireFor(config))) {
+        TwoWire& wire = i2c.getWireFor(config);
+        if (!sensor.begin(BH1750::CONTINUOUS_LOW_RES_MODE, config.address, &wire)) {
             throw PeripheralCreationException("Failed to initialize BH1750 light sensor");
         }
 
