@@ -1,5 +1,15 @@
 FILE(GLOB_RECURSE app_sources main.cpp **/*.cpp)
 
+if(NOT DEFINED UD_DEBUG)
+    set(UD_DEBUG "$ENV{UD_DEBUG}")
+endif()
+if(UD_DEBUG STREQUAL "")
+    set(UD_DEBUG 0)
+endif()
+
+# Make sure we reconfigure if UD_DEBUG changes
+set_property(DIRECTORY PROPERTY UD_DEBUG_TRACKER "${UD_DEBUG}")
+
 idf_component_register(
     SRCS ${app_sources}
     INCLUDE_DIRS "."

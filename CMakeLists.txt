@@ -17,9 +17,8 @@ if(UD_DEBUG STREQUAL "")
     set(UD_GEN 0)
 endif()
 
-# Make sure we reconfigure if UD_GEN and UD_DEBUG changes
+# Make sure we reconfigure if UD_GEN changes
 set_property(GLOBAL PROPERTY UD_GEN_TRACKER "${UD_GEN}")
-set_property(GLOBAL PROPERTY UD_DEBUG_TRACKER "${UD_DEBUG}")
 
 if(UD_GEN STREQUAL "MK4")
     if (NOT "$ENV{IDF_TARGET}" STREQUAL "esp32s2")
