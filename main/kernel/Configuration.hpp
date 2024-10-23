@@ -184,13 +184,9 @@ public:
     Property(ConfigurationSection* parent, const String& name, const T& defaultValue = T(), const bool secret = false)
         : name(name)
         , secret(secret)
+        , value(defaultValue)
         , defaultValue(defaultValue) {
         parent->add(*this);
-    }
-
-    void set(const T& value) {
-        this->value = value;
-        configured = true;
     }
 
     const T& get() const {
@@ -199,7 +195,8 @@ public:
 
     void load(const JsonObject& json) override {
         if (json[name].is<JsonVariant>()) {
-            set(json[name].as<T>());
+            value = json[name].as<T>();
+            configured = true;
         } else {
             reset();
         }
@@ -239,10 +236,6 @@ public:
     ArrayProperty(ConfigurationSection* parent, const String& name)
         : name(name) {
         parent->add(*this);
-    }
-
-    void set(const std::list<T>& entries) {
-        this->entries = entries;
     }
 
     const std::list<T>& get() const {
