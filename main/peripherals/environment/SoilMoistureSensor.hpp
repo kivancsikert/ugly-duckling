@@ -19,7 +19,7 @@ namespace farmhub::peripherals::environment {
 class SoilMoistureSensorDeviceConfig
     : public ConfigurationSection {
 public:
-    Property<PinPtr> pin { this, "pin" };
+    Property<InternalPinPtr> pin { this, "pin" };
     // These values need calibrating for each sensor
     Property<uint16_t> air { this, "air", 3000 };
     Property<uint16_t> water { this, "water", 1000 };
@@ -60,7 +60,7 @@ public:
 private:
     const int airValue;
     const int waterValue;
-    PinPtr pin;
+    InternalPinPtr pin;
 };
 
 class SoilMoistureSensor

@@ -34,8 +34,6 @@ public:
 
     virtual int digitalRead() const = 0;
 
-    virtual uint16_t analogRead() const = 0;
-
     inline const String& getName() const {
         return name;
     }
@@ -102,7 +100,7 @@ public:
         return ::digitalRead(gpio);
     }
 
-    inline uint16_t analogRead() const override {
+    inline uint16_t analogRead() const {
         return ::analogRead(gpio);
     }
 

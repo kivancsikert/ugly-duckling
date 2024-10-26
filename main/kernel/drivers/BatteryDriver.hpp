@@ -23,7 +23,7 @@ protected:
 class AnalogBatteryDriver
     : public BatteryDriver {
 public:
-    AnalogBatteryDriver(PinPtr pin, float voltageDividerRatio)
+    AnalogBatteryDriver(InternalPinPtr pin, float voltageDividerRatio)
         : pin(pin)
         , voltageDividerRatio(voltageDividerRatio) {
         Log.info("Initializing analog battery driver on pin %s",
@@ -38,7 +38,7 @@ public:
     }
 
 private:
-    const PinPtr pin;
+    const InternalPinPtr pin;
     const float voltageDividerRatio;
 };
 
