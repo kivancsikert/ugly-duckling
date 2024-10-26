@@ -27,47 +27,47 @@ using namespace farmhub::peripherals::valve;
 namespace farmhub::devices {
 
 namespace pins {
-static gpio_num_t BOOT = Pin::registerPin("BOOT", GPIO_NUM_0);
-static gpio_num_t BATTERY = Pin::registerPin("BATTERY", GPIO_NUM_1);
-static gpio_num_t STATUS = Pin::registerPin("STATUS", GPIO_NUM_2);
-static gpio_num_t STATUS2 = Pin::registerPin("STATUS2", GPIO_NUM_4);
+static PinPtr BOOT = Pin::registerPin("BOOT", GPIO_NUM_0);
+static PinPtr BATTERY = Pin::registerPin("BATTERY", GPIO_NUM_1);
+static PinPtr STATUS = Pin::registerPin("STATUS", GPIO_NUM_2);
+static PinPtr STATUS2 = Pin::registerPin("STATUS2", GPIO_NUM_4);
 
-static gpio_num_t IOB1 = Pin::registerPin("B1", GPIO_NUM_5);
-static gpio_num_t IOA1 = Pin::registerPin("A1", GPIO_NUM_6);
-static gpio_num_t DIPROPI = Pin::registerPin("DIPROPI", GPIO_NUM_7);
-static gpio_num_t IOA2 = Pin::registerPin("A2", GPIO_NUM_15);
-static gpio_num_t AIN1 = Pin::registerPin("AIN1", GPIO_NUM_16);
-static gpio_num_t AIN2 = Pin::registerPin("AIN2", GPIO_NUM_17);
-static gpio_num_t BIN2 = Pin::registerPin("BIN2", GPIO_NUM_18);
-static gpio_num_t BIN1 = Pin::registerPin("BIN1", GPIO_NUM_8);
+static PinPtr IOB1 = Pin::registerPin("B1", GPIO_NUM_5);
+static PinPtr IOA1 = Pin::registerPin("A1", GPIO_NUM_6);
+static PinPtr DIPROPI = Pin::registerPin("DIPROPI", GPIO_NUM_7);
+static PinPtr IOA2 = Pin::registerPin("A2", GPIO_NUM_15);
+static PinPtr AIN1 = Pin::registerPin("AIN1", GPIO_NUM_16);
+static PinPtr AIN2 = Pin::registerPin("AIN2", GPIO_NUM_17);
+static PinPtr BIN2 = Pin::registerPin("BIN2", GPIO_NUM_18);
+static PinPtr BIN1 = Pin::registerPin("BIN1", GPIO_NUM_8);
 
-static gpio_num_t DMINUS = Pin::registerPin("D-", GPIO_NUM_19);
-static gpio_num_t DPLUS = Pin::registerPin("D+", GPIO_NUM_20);
+static PinPtr DMINUS = Pin::registerPin("D-", GPIO_NUM_19);
+static PinPtr DPLUS = Pin::registerPin("D+", GPIO_NUM_20);
 
-static gpio_num_t LEDA_RED = Pin::registerPin("LEDA_RED", GPIO_NUM_46);
-static gpio_num_t LEDA_GREEN = Pin::registerPin("LEDA_GREEN", GPIO_NUM_9);
+static PinPtr LEDA_RED = Pin::registerPin("LEDA_RED", GPIO_NUM_46);
+static PinPtr LEDA_GREEN = Pin::registerPin("LEDA_GREEN", GPIO_NUM_9);
 
-static gpio_num_t NFault = Pin::registerPin("NFault", GPIO_NUM_11);
-static gpio_num_t BTN1 = Pin::registerPin("BTN1", GPIO_NUM_12);
-static gpio_num_t BTN2 = Pin::registerPin("BTN2", GPIO_NUM_13);
-static gpio_num_t IOC4 = Pin::registerPin("C4", GPIO_NUM_14);
-static gpio_num_t IOC3 = Pin::registerPin("C3", GPIO_NUM_21);
-static gpio_num_t IOC2 = Pin::registerPin("C2", GPIO_NUM_47);
-static gpio_num_t IOC1 = Pin::registerPin("C1", GPIO_NUM_48);
-static gpio_num_t IOB2 = Pin::registerPin("B2", GPIO_NUM_45);
+static PinPtr NFault = Pin::registerPin("NFault", GPIO_NUM_11);
+static PinPtr BTN1 = Pin::registerPin("BTN1", GPIO_NUM_12);
+static PinPtr BTN2 = Pin::registerPin("BTN2", GPIO_NUM_13);
+static PinPtr IOC4 = Pin::registerPin("C4", GPIO_NUM_14);
+static PinPtr IOC3 = Pin::registerPin("C3", GPIO_NUM_21);
+static PinPtr IOC2 = Pin::registerPin("C2", GPIO_NUM_47);
+static PinPtr IOC1 = Pin::registerPin("C1", GPIO_NUM_48);
+static PinPtr IOB2 = Pin::registerPin("B2", GPIO_NUM_45);
 
-static gpio_num_t SDA = Pin::registerPin("SDA", GPIO_NUM_35);
-static gpio_num_t SCL = Pin::registerPin("SCL", GPIO_NUM_36);
+static PinPtr SDA = Pin::registerPin("SDA", GPIO_NUM_35);
+static PinPtr SCL = Pin::registerPin("SCL", GPIO_NUM_36);
 
-static gpio_num_t LEDB_GREEN = Pin::registerPin("LEDB_GREEN", GPIO_NUM_37);
-static gpio_num_t LEDB_RED = Pin::registerPin("LEDB_RED", GPIO_NUM_38);
+static PinPtr LEDB_GREEN = Pin::registerPin("LEDB_GREEN", GPIO_NUM_37);
+static PinPtr LEDB_RED = Pin::registerPin("LEDB_RED", GPIO_NUM_38);
 
-static gpio_num_t TCK = Pin::registerPin("TCK", GPIO_NUM_39);
-static gpio_num_t TDO = Pin::registerPin("TDO", GPIO_NUM_40);
-static gpio_num_t TDI = Pin::registerPin("TDI", GPIO_NUM_41);
-static gpio_num_t TMS = Pin::registerPin("TMS", GPIO_NUM_42);
-static gpio_num_t RXD0 = Pin::registerPin("RXD0", GPIO_NUM_44);
-static gpio_num_t TXD0 = Pin::registerPin("TXD0", GPIO_NUM_43);
+static PinPtr TCK = Pin::registerPin("TCK", GPIO_NUM_39);
+static PinPtr TDO = Pin::registerPin("TDO", GPIO_NUM_40);
+static PinPtr TDI = Pin::registerPin("TDI", GPIO_NUM_41);
+static PinPtr TMS = Pin::registerPin("TMS", GPIO_NUM_42);
+static PinPtr RXD0 = Pin::registerPin("RXD0", GPIO_NUM_44);
+static PinPtr TXD0 = Pin::registerPin("TXD0", GPIO_NUM_43);
 }    // namespace pins
 
 class Mk6Config
@@ -81,7 +81,7 @@ public:
      * @brief The built-in motor driver's nSLEEP pin can be manually set by a jumper,
      * but can be connected to a GPIO pin, too. Defaults to C2.
      */
-    Property<gpio_num_t> motorNSleepPin { this, "motorNSleepPin", pins::IOC2 };
+    Property<PinPtr> motorNSleepPin { this, "motorNSleepPin", pins::IOC2 };
 };
 
 class UglyDucklingMk6 : public DeviceDefinition<Mk6Config> {
@@ -92,8 +92,8 @@ public:
               pins::BOOT) {
         // Switch off strapping pin
         // TODO: Add a LED driver instead
-        pinMode(pins::LEDA_RED, OUTPUT);
-        digitalWrite(pins::LEDA_RED, HIGH);
+        pins::LEDA_RED->pinMode(OUTPUT);
+        pins::LEDA_RED->digitalWrite(HIGH);
     }
 
     virtual std::shared_ptr<BatteryDriver> createBatteryDriver(I2CManager& i2c) override {

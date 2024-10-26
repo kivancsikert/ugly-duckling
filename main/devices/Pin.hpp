@@ -1,6 +1,8 @@
 #pragma once
 
+#include <exception>
 #include <map>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -10,68 +12,100 @@
 
 namespace farmhub::devices {
 
+class Pin;
+using PinPtr = std::shared_ptr<Pin>;
+
 class Pin {
 public:
-    static gpio_num_t registerPin(const String& name, gpio_num_t pin) {
-        GPIO_NUMBERS[name] = pin;
-        GPIO_NAMES[pin] = name;
+    static PinPtr registerPin(const String& name, gpio_num_t gpio) {
+        auto pin = std::make_shared<Pin>(name, gpio);
+        BY_GPIO[gpio] = pin;
+        BY_NAME[name] = pin;
         return pin;
     }
 
-    static gpio_num_t numberOf(const String& name) {
-        auto it = GPIO_NUMBERS.find(name);
-        if (it != GPIO_NUMBERS.end()) {
+    static PinPtr byName(const String& name) {
+        auto it = BY_NAME.find(name);
+        if (it != BY_NAME.end()) {
             return it->second;
         }
-        return GPIO_NUM_MAX;
+        throw std::runtime_error(String("Unknown pin: " + name).c_str());
     }
 
-    static String nameOf(gpio_num_t pin) {
-        auto it = GPIO_NAMES.find(pin);
-        if (it == GPIO_NAMES.end()) {
+    static PinPtr byGpio(gpio_num_t pin) {
+        auto it = BY_GPIO.find(pin);
+        if (it == BY_GPIO.end()) {
             String name = "GPIO_NUM_" + String(pin);
-            registerPin(name, pin);
-            return name;
+            return registerPin(name, pin);
         } else {
             return it->second;
         }
     }
 
-    static bool isRegistered(gpio_num_t pin) {
-        return GPIO_NAMES.find(pin) != GPIO_NAMES.end();
+    Pin(const String& name, gpio_num_t gpio)
+        : name(name)
+        , gpio(gpio) {
+    }
+
+    inline void pinMode(uint8_t mode) const {
+        ::pinMode(gpio, mode);
+    }
+
+    inline void digitalWrite(uint8_t val) const {
+        ::digitalWrite(gpio, val);
+    }
+
+    inline int digitalRead() const {
+        return ::digitalRead(gpio);
+    }
+
+    inline uint16_t analogRead() const {
+        return ::analogRead(gpio);
+    }
+
+    inline const String& getName() const {
+        return name;
+    }
+
+    inline gpio_num_t getGpio() const {
+        return gpio;
     }
 
 private:
-    bool useName;
+    const String name;
+    const gpio_num_t gpio;
 
-    static std::map<gpio_num_t, String> GPIO_NAMES;
-    static std::map<String, gpio_num_t> GPIO_NUMBERS;
+    static std::map<gpio_num_t, PinPtr> BY_GPIO;
+    static std::map<String, PinPtr> BY_NAME;
 };
 
-std::map<gpio_num_t, String> Pin::GPIO_NAMES;
-std::map<String, gpio_num_t> Pin::GPIO_NUMBERS;
+std::map<gpio_num_t, PinPtr> Pin::BY_GPIO;
+std::map<String, PinPtr> Pin::BY_NAME;
 
 }    // namespace farmhub::devices
 
 namespace ArduinoJson {
 
 using farmhub::devices::Pin;
+using farmhub::devices::PinPtr;
 
 template <>
-struct Converter<gpio_num_t> {
-    static void toJson(const gpio_num_t& src, JsonVariant dst) {
-        if (Pin::isRegistered(src)) {
-            dst.set(Pin::nameOf(src));
+struct Converter<PinPtr> {
+    static void toJson(const PinPtr& src, JsonVariant dst) {
+        if (src == nullptr) {
+            dst.set(nullptr);
+        } else if (src->getName().startsWith("GPIO_NUM_")) {
+            dst.set(static_cast<int>(src->getGpio()));
         } else {
-            dst.set(static_cast<int>(src));
+            dst.set(src->getName());
         }
     }
 
-    static gpio_num_t fromJson(JsonVariantConst src) {
+    static PinPtr fromJson(JsonVariantConst src) {
         if (src.is<const char*>()) {
-            return Pin::numberOf(src.as<const char*>());
+            return Pin::byName(src.as<const char*>());
         } else {
-            return static_cast<gpio_num_t>(src.as<int>());
+            return Pin::byGpio(static_cast<gpio_num_t>(src.as<int>()));
         }
     }
 

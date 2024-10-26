@@ -34,25 +34,25 @@ public:
 };
 
 namespace pins {
-static gpio_num_t BOOT = Pin::registerPin("BOOT", GPIO_NUM_0);
-static gpio_num_t STATUS = Pin::registerPin("STATUS", GPIO_NUM_26);
+static PinPtr BOOT = Pin::registerPin("BOOT", GPIO_NUM_0);
+static PinPtr STATUS = Pin::registerPin("STATUS", GPIO_NUM_26);
 
-static gpio_num_t SOIL_MOISTURE = Pin::registerPin("SOIL_MOISTURE", GPIO_NUM_6);
-static gpio_num_t SOIL_TEMP = Pin::registerPin("SOIL_TEMP", GPIO_NUM_7);
+static PinPtr SOIL_MOISTURE = Pin::registerPin("SOIL_MOISTURE", GPIO_NUM_6);
+static PinPtr SOIL_TEMP = Pin::registerPin("SOIL_TEMP", GPIO_NUM_7);
 
-static gpio_num_t VALVE_EN = Pin::registerPin("VALVE_EN", GPIO_NUM_10);
-static gpio_num_t VALVE_PH = Pin::registerPin("VALVE_PH", GPIO_NUM_11);
-static gpio_num_t VALVE_FAULT = Pin::registerPin("VALVE_FAULT", GPIO_NUM_12);
-static gpio_num_t VALVE_SLEEP = Pin::registerPin("VALVE_SLEEP", GPIO_NUM_13);
-static gpio_num_t VALVE_MODE1 = Pin::registerPin("VALVE_MODE1", GPIO_NUM_14);
-static gpio_num_t VALVE_MODE2 = Pin::registerPin("VALVE_MODE2", GPIO_NUM_15);
-static gpio_num_t VALVE_CURRENT = Pin::registerPin("VALVE_CURRENT", GPIO_NUM_16);
-static gpio_num_t FLOW = Pin::registerPin("FLOW", GPIO_NUM_17);
+static PinPtr VALVE_EN = Pin::registerPin("VALVE_EN", GPIO_NUM_10);
+static PinPtr VALVE_PH = Pin::registerPin("VALVE_PH", GPIO_NUM_11);
+static PinPtr VALVE_FAULT = Pin::registerPin("VALVE_FAULT", GPIO_NUM_12);
+static PinPtr VALVE_SLEEP = Pin::registerPin("VALVE_SLEEP", GPIO_NUM_13);
+static PinPtr VALVE_MODE1 = Pin::registerPin("VALVE_MODE1", GPIO_NUM_14);
+static PinPtr VALVE_MODE2 = Pin::registerPin("VALVE_MODE2", GPIO_NUM_15);
+static PinPtr VALVE_CURRENT = Pin::registerPin("VALVE_CURRENT", GPIO_NUM_16);
+static PinPtr FLOW = Pin::registerPin("FLOW", GPIO_NUM_17);
 
-static gpio_num_t SDA = Pin::registerPin("SDA", GPIO_NUM_8);
-static gpio_num_t SCL = Pin::registerPin("SCL", GPIO_NUM_9);
-static gpio_num_t RXD0 = Pin::registerPin("RXD0", GPIO_NUM_44);
-static gpio_num_t TXD0 = Pin::registerPin("TXD0", GPIO_NUM_43);
+static PinPtr SDA = Pin::registerPin("SDA", GPIO_NUM_8);
+static PinPtr SCL = Pin::registerPin("SCL", GPIO_NUM_9);
+static PinPtr RXD0 = Pin::registerPin("RXD0", GPIO_NUM_44);
+static PinPtr TXD0 = Pin::registerPin("TXD0", GPIO_NUM_43);
 }    // namespace pins
 
 class UglyDucklingMk4 : public DeviceDefinition<Mk4Config> {

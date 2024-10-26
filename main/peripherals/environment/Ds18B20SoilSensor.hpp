@@ -32,13 +32,13 @@ public:
     Ds18B20SoilSensorComponent(
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
-        gpio_num_t pin)
+        PinPtr pin)
         : Component(name, mqttRoot) {
 
-        Log.info("Initializing DS18B20 soil temperature sensor on pin %d",
-            pin);
+        Log.info("Initializing DS18B20 soil temperature sensor on pin %s",
+            pin->getName().c_str());
 
-        oneWire.begin(pin);
+        oneWire.begin(pin->getGpio());
 
         // locate devices on the bus
         Log.trace("Locating devices...");
@@ -90,7 +90,7 @@ private:
 class Ds18B20SoilSensor
     : public Peripheral<EmptyConfiguration> {
 public:
-    Ds18B20SoilSensor(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot, gpio_num_t pin)
+    Ds18B20SoilSensor(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PinPtr pin)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , sensor(name, mqttRoot, pin) {
     }

@@ -239,7 +239,7 @@ public:
         : logRecords(logRecords)
         , recordedLevel(recordedLevel) {
         Serial.begin(115200);
-        Serial1.begin(115200, SERIAL_8N1, pins::RXD0, pins::TXD0);
+        Serial1.begin(115200, SERIAL_8N1, pins::RXD0->getGpio(), pins::TXD0->getGpio());
 #if Serial != Serial0
         Serial0.begin(115200);
 #endif

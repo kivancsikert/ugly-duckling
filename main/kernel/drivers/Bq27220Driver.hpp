@@ -12,11 +12,11 @@ namespace farmhub::kernel::drivers {
 
 class Bq27220Driver : public BatteryDriver {
 public:
-    Bq27220Driver(I2CManager& i2c, gpio_num_t sda, gpio_num_t scl, const uint8_t address = 0x55)
+    Bq27220Driver(I2CManager& i2c, PinPtr sda, PinPtr scl, const uint8_t address = 0x55)
         : wire(i2c.getWireFor(sda, scl))
         , address(address) {
-        Log.info("Initializing BQ27220 driver on SDA %d, SCL %d",
-            sda, scl);
+        Log.info("Initializing BQ27220 driver on SDA %s, SCL %s",
+            sda->getName().c_str(), scl->getName().c_str());
 
         wire.beginTransmission(address);
         if (wire.endTransmission() != 0) {

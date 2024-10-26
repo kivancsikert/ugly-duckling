@@ -13,7 +13,7 @@ namespace farmhub::peripherals::flow_meter {
 class FlowMeterDeviceConfig
     : public ConfigurationSection {
 public:
-    Property<gpio_num_t> pin { this, "pin", GPIO_NUM_NC };
+    Property<PinPtr> pin { this, "pin" };
     Property<double> qFactor { this, "qFactor", 5.0 };
     Property<milliseconds> measurementFrequency { this, "measurementFrequency", 1s };
 };

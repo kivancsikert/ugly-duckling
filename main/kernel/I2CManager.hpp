@@ -7,21 +7,24 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+#include <devices/Pin.hpp>
 #include <kernel/Log.hpp>
 
 namespace farmhub::kernel {
 
-using GpioPair = std::pair<gpio_num_t, gpio_num_t>;
+using farmhub::devices::PinPtr;
+
+using GpioPair = std::pair<PinPtr, PinPtr>;
 using TwoWireMap = std::map<GpioPair, TwoWire*>;
 
 struct I2CConfig {
 public:
     uint8_t address;
-    gpio_num_t sda;
-    gpio_num_t scl;
+    PinPtr sda;
+    PinPtr scl;
 
     String toString() const {
-        return String("I2C address: 0x") + String(address, HEX) + ", SDA: " + String(sda) + ", SCL: " + String(scl);
+        return String("I2C address: 0x") + String(address, HEX) + ", SDA: " + sda->getName() + ", SCL: " + scl->getName();
     }
 };
 
@@ -31,21 +34,23 @@ public:
         return getWireFor(config.sda, config.scl);
     }
 
-    TwoWire& getWireFor(gpio_num_t sda, gpio_num_t scl) {
+    TwoWire& getWireFor(PinPtr sda, PinPtr scl) {
         GpioPair key = std::make_pair(sda, scl);
         auto it = wireMap.find(key);
         if (it != wireMap.end()) {
-            Log.trace("Reusing already registered I2C bus for SDA: %d, SCL: %d", sda, scl);
+            Log.trace("Reusing already registered I2C bus for SDA: %s, SCL: %s",
+                sda->getName().c_str(), scl->getName().c_str());
             return *(it->second);
         } else {
-            Log.trace("Creating new I2C bus for SDA: %d, SCL: %d", sda, scl);
+            Log.trace("Creating new I2C bus for SDA: %s, SCL: %s",
+                sda->getName().c_str(), scl->getName().c_str());
             if (nextBus >= 2) {
                 throw std::runtime_error("Maximum number of I2C buses reached");
             }
             TwoWire* wire = new TwoWire(nextBus++);
-            if (!wire->begin(sda, scl)) {
+            if (!wire->begin(sda->getGpio(), scl->getGpio())) {
                 throw std::runtime_error(
-                    String("Failed to initialize I2C bus for SDA: " + String(sda) + ", SCL: " + String(scl)).c_str());
+                    String("Failed to initialize I2C bus for SDA: " + sda->getName() + ", SCL: " + scl->getName()).c_str());
             }
             wireMap[key] = wire;
             return *wire;

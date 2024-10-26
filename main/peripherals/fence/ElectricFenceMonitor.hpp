@@ -20,7 +20,7 @@ using namespace farmhub::peripherals;
 namespace farmhub::peripherals::fence {
 
 struct FencePinConfig {
-    gpio_num_t pin;
+    PinPtr pin;
     uint16_t voltage;
 };
 
@@ -56,7 +56,7 @@ public:
         for (auto& pinConfig : config.pins.get()) {
             if (pinsDescription.length() > 0)
                 pinsDescription += ", ";
-            pinsDescription += String(pinConfig.pin) + "=" + String(pinConfig.voltage) + "V";
+            pinsDescription += pinConfig.pin->getName() + "=" + String(pinConfig.voltage) + "V";
         }
         Log.info("Initializing electric fence with pins %s", pinsDescription.c_str());
 
@@ -74,8 +74,8 @@ public:
 
                 if (count > 0) {
                     lastVoltage = max(pin.voltage, lastVoltage);
-                    Log.trace("Counted %d pulses on pin %d (voltage: %dV)",
-                        count, pin.pcntUnit.getPin(), pin.voltage);
+                    Log.trace("Counted %d pulses on pin %s (voltage: %dV)",
+                        count, pin.pcntUnit.getPin()->getName().c_str(), pin.voltage);
                 }
             }
             {

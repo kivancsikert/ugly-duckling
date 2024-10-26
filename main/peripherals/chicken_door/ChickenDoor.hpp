@@ -70,8 +70,8 @@ class ChickenDoorDeviceConfig
     : public ConfigurationSection {
 public:
     Property<String> motor { this, "motor" };
-    Property<gpio_num_t> openPin { this, "openPin", GPIO_NUM_NC };
-    Property<gpio_num_t> closedPin { this, "closedPin", GPIO_NUM_NC };
+    Property<PinPtr> openPin { this, "openPin" };
+    Property<PinPtr> closedPin { this, "closedPin" };
     Property<seconds> movementTimeout { this, "movementTimeout", seconds(60) };
 
     NamedConfigurationEntry<ChickenDoorLightSensorConfig> lightSensor { this, "lightSensor" };
@@ -95,8 +95,8 @@ public:
         SwitchManager& switches,
         PwmMotorDriver& motor,
         TLightSensorComponent& lightSensor,
-        gpio_num_t openPin,
-        gpio_num_t closedPin,
+        PinPtr openPin,
+        PinPtr closedPin,
         ticks movementTimeout,
         std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
@@ -122,8 +122,8 @@ public:
     // TODO Make this configurable
     {
 
-        Log.info("Initializing chicken door %s, open switch %d, close switch %d",
-            name.c_str(), openSwitch.getPin(), closedSwitch.getPin());
+        Log.info("Initializing chicken door %s, open switch %s, close switch %s",
+            name.c_str(), openSwitch.getPin()->getName().c_str(), closedSwitch.getPin()->getName().c_str());
 
         motor.stop();
 

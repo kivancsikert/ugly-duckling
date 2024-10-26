@@ -23,22 +23,29 @@ public:
     // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
     Drv8833Driver(
         PwmManager& pwm,
-        gpio_num_t ain1Pin,
-        gpio_num_t ain2Pin,
-        gpio_num_t bin1Pin,
-        gpio_num_t bin2Pin,
-        gpio_num_t faultPin,
-        gpio_num_t sleepPin)
-        : motorA(this, pwm, ain1Pin, ain2Pin, sleepPin != GPIO_NUM_NC)
-        , motorB(this, pwm, bin1Pin, bin2Pin, sleepPin != GPIO_NUM_NC)
+        PinPtr ain1Pin,
+        PinPtr ain2Pin,
+        PinPtr bin1Pin,
+        PinPtr bin2Pin,
+        PinPtr faultPin,
+        PinPtr sleepPin)
+        : motorA(this, pwm, ain1Pin, ain2Pin, sleepPin != nullptr)
+        , motorB(this, pwm, bin1Pin, bin2Pin, sleepPin != nullptr)
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
 
-        Log.info("Initializing DRV8833 on pins ain1 = %d, ain2 = %d, bin1 = %d, bin2 = %d, fault = %d, sleep = %d",
-            ain1Pin, ain2Pin, bin1Pin, bin2Pin, faultPin, sleepPin);
+        Log.info("Initializing DRV8833 on pins ain1 = %s, ain2 = %s, bin1 = %s, bin2 = %s, fault = %s, sleep = %s",
+            ain1Pin->getName().c_str(),
+            ain2Pin->getName().c_str(),
+            bin1Pin->getName().c_str(),
+            bin2Pin->getName().c_str(),
+            faultPin->getName().c_str(),
+            sleepPin->getName().c_str());
 
-        pinMode(sleepPin, OUTPUT);
-        pinMode(faultPin, INPUT);
+        if (sleepPin != nullptr) {
+            sleepPin->pinMode(OUTPUT);
+        }
+        faultPin->pinMode(INPUT);
 
         updateSleepState();
     }
@@ -61,22 +68,21 @@ private:
         Drv8833MotorDriver(
             Drv8833Driver* driver,
             PwmManager& pwm,
-            gpio_num_t in1Pin,
-            gpio_num_t in2Pin,
+            PinPtr in1Pin,
+            PinPtr in2Pin,
             bool canSleep)
             : driver(driver)
             , in1Channel(pwm.registerPin(in1Pin, PWM_FREQ, PWM_RESOLUTION))
             , in2Channel(pwm.registerPin(in2Pin, PWM_FREQ, PWM_RESOLUTION))
-            , canSleep(canSleep)
             , sleeping(canSleep) {
         }
 
         void drive(MotorPhase phase, double duty = 1) override {
             int dutyValue = static_cast<int>((in1Channel.maxValue() + in1Channel.maxValue() * duty) / 2);
-            Log.debug("Driving motor %s on pins %d/%d at %d%% (duty = %d)",
+            Log.debug("Driving motor %s on pins %s/%s at %d%% (duty = %d)",
                 phase == MotorPhase::FORWARD ? "forward" : "reverse",
-                in1Channel.pin,
-                in2Channel.pin,
+                in1Channel.pin->getName().c_str(),
+                in2Channel.pin->getName().c_str(),
                 (int) (duty * 100),
                 dutyValue);
 
@@ -116,7 +122,6 @@ private:
         Drv8833Driver* const driver;
         const PwmPin in1Channel;
         const PwmPin in2Channel;
-        const bool canSleep;
 
         bool sleeping;
     };
@@ -126,15 +131,15 @@ private:
     }
 
     void setSleepState(bool sleep) {
-        if (sleepPin != GPIO_NUM_NC) {
-            digitalWrite(sleepPin, sleep ? LOW : HIGH);
+        if (sleepPin != nullptr) {
+            sleepPin->digitalWrite(sleep ? LOW : HIGH);
         }
     }
 
     Drv8833MotorDriver motorA;
     Drv8833MotorDriver motorB;
-    const gpio_num_t faultPin;
-    const gpio_num_t sleepPin;
+    const PinPtr faultPin;
+    const PinPtr sleepPin;
 
     std::atomic<bool> sleeping { false };
 };

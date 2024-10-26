@@ -25,53 +25,53 @@ using namespace farmhub::peripherals::valve;
 namespace farmhub::devices {
 
 namespace pins {
-static gpio_num_t BOOT = Pin::registerPin("BOOT", GPIO_NUM_0);
+static PinPtr BOOT = Pin::registerPin("BOOT", GPIO_NUM_0);
 
-static gpio_num_t IOA2 = Pin::registerPin("A2", GPIO_NUM_1);
-static gpio_num_t IOA1 = Pin::registerPin("A1", GPIO_NUM_2);
-static gpio_num_t IOA3 = Pin::registerPin("A3", GPIO_NUM_3);
-static gpio_num_t IOB3 = Pin::registerPin("B3", GPIO_NUM_4);
-static gpio_num_t IOB1 = Pin::registerPin("B1", GPIO_NUM_5);
-static gpio_num_t IOB2 = Pin::registerPin("B2", GPIO_NUM_6);
+static PinPtr IOA2 = Pin::registerPin("A2", GPIO_NUM_1);
+static PinPtr IOA1 = Pin::registerPin("A1", GPIO_NUM_2);
+static PinPtr IOA3 = Pin::registerPin("A3", GPIO_NUM_3);
+static PinPtr IOB3 = Pin::registerPin("B3", GPIO_NUM_4);
+static PinPtr IOB1 = Pin::registerPin("B1", GPIO_NUM_5);
+static PinPtr IOB2 = Pin::registerPin("B2", GPIO_NUM_6);
 
 // GPIO_NUM_7 is NC
 
-static gpio_num_t BAT_GPIO = Pin::registerPin("BAT_GPIO", GPIO_NUM_8);
+static PinPtr BAT_GPIO = Pin::registerPin("BAT_GPIO", GPIO_NUM_8);
 
-static gpio_num_t FSPIHD = Pin::registerPin("FSPIHD", GPIO_NUM_9);
-static gpio_num_t FSPICS0 = Pin::registerPin("FSPICS0", GPIO_NUM_10);
-static gpio_num_t FSPID = Pin::registerPin("FSPID", GPIO_NUM_11);
-static gpio_num_t FSPICLK = Pin::registerPin("FSPICLK", GPIO_NUM_12);
-static gpio_num_t FSPIQ = Pin::registerPin("FSPIQ", GPIO_NUM_13);
-static gpio_num_t FSPIWP = Pin::registerPin("FSPIWP", GPIO_NUM_14);
+static PinPtr FSPIHD = Pin::registerPin("FSPIHD", GPIO_NUM_9);
+static PinPtr FSPICS0 = Pin::registerPin("FSPICS0", GPIO_NUM_10);
+static PinPtr FSPID = Pin::registerPin("FSPID", GPIO_NUM_11);
+static PinPtr FSPICLK = Pin::registerPin("FSPICLK", GPIO_NUM_12);
+static PinPtr FSPIQ = Pin::registerPin("FSPIQ", GPIO_NUM_13);
+static PinPtr FSPIWP = Pin::registerPin("FSPIWP", GPIO_NUM_14);
 
-static gpio_num_t STATUS = Pin::registerPin("STATUS", GPIO_NUM_15);
-static gpio_num_t LOADEN = Pin::registerPin("LOADEN", GPIO_NUM_16);
+static PinPtr STATUS = Pin::registerPin("STATUS", GPIO_NUM_15);
+static PinPtr LOADEN = Pin::registerPin("LOADEN", GPIO_NUM_16);
 
-static gpio_num_t SCL = Pin::registerPin("SCL", GPIO_NUM_17);
-static gpio_num_t SDA = Pin::registerPin("SDA", GPIO_NUM_18);
+static PinPtr SCL = Pin::registerPin("SCL", GPIO_NUM_17);
+static PinPtr SDA = Pin::registerPin("SDA", GPIO_NUM_18);
 
-static gpio_num_t DMINUS = Pin::registerPin("D-", GPIO_NUM_19);
-static gpio_num_t DPLUS = Pin::registerPin("D+", GPIO_NUM_20);
+static PinPtr DMINUS = Pin::registerPin("D-", GPIO_NUM_19);
+static PinPtr DPLUS = Pin::registerPin("D+", GPIO_NUM_20);
 
-static gpio_num_t IOX1 = Pin::registerPin("X1", GPIO_NUM_21);
+static PinPtr IOX1 = Pin::registerPin("X1", GPIO_NUM_21);
 
 // GPIO_NUM_22 to GPIO_NUM_36 are NC
 
-static gpio_num_t DBIN1 = Pin::registerPin("DBIN1", GPIO_NUM_37);
-static gpio_num_t DBIN2 = Pin::registerPin("DBIN2", GPIO_NUM_38);
-static gpio_num_t DAIN2 = Pin::registerPin("DAIN2", GPIO_NUM_39);
-static gpio_num_t DAIN1 = Pin::registerPin("DAIN1", GPIO_NUM_40);
-static gpio_num_t DNFault = Pin::registerPin("DNFault", GPIO_NUM_41);
+static PinPtr DBIN1 = Pin::registerPin("DBIN1", GPIO_NUM_37);
+static PinPtr DBIN2 = Pin::registerPin("DBIN2", GPIO_NUM_38);
+static PinPtr DAIN2 = Pin::registerPin("DAIN2", GPIO_NUM_39);
+static PinPtr DAIN1 = Pin::registerPin("DAIN1", GPIO_NUM_40);
+static PinPtr DNFault = Pin::registerPin("DNFault", GPIO_NUM_41);
 
 // GPIO_NUM_42 is NC
 
-static gpio_num_t TXD0 = Pin::registerPin("TXD0", GPIO_NUM_43);
-static gpio_num_t RXD0 = Pin::registerPin("RXD0", GPIO_NUM_44);
-static gpio_num_t IOX2 = Pin::registerPin("X2", GPIO_NUM_45);
-static gpio_num_t STATUS2 = Pin::registerPin("STATUS2", GPIO_NUM_46);
-static gpio_num_t IOB4 = Pin::registerPin("B4", GPIO_NUM_47);
-static gpio_num_t IOA4 = Pin::registerPin("A4", GPIO_NUM_48);
+static PinPtr TXD0 = Pin::registerPin("TXD0", GPIO_NUM_43);
+static PinPtr RXD0 = Pin::registerPin("RXD0", GPIO_NUM_44);
+static PinPtr IOX2 = Pin::registerPin("X2", GPIO_NUM_45);
+static PinPtr STATUS2 = Pin::registerPin("STATUS2", GPIO_NUM_46);
+static PinPtr IOB4 = Pin::registerPin("B4", GPIO_NUM_47);
+static PinPtr IOA4 = Pin::registerPin("A4", GPIO_NUM_48);
 }    // namespace pins
 
 class Mk7Config

@@ -36,7 +36,7 @@ public:
         SleepManager& sleepManager,
         PwmMotorDriver& controller,
         ValveControlStrategy& strategy,
-        gpio_num_t pin,
+        PinPtr pin,
         double qFactor,
         milliseconds measurementFrequency)
         : Peripheral<FlowControlConfig>(name, mqttRoot)

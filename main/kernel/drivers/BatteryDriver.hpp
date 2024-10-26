@@ -2,8 +2,11 @@
 
 #include <Arduino.h>
 
+#include <devices/Pin.hpp>
 #include <kernel/Log.hpp>
 #include <kernel/Telemetry.hpp>
+
+using farmhub::devices::PinPtr;
 
 namespace farmhub::kernel::drivers {
 
@@ -20,22 +23,22 @@ protected:
 class AnalogBatteryDriver
     : public BatteryDriver {
 public:
-    AnalogBatteryDriver(gpio_num_t pin, float voltageDividerRatio)
+    AnalogBatteryDriver(PinPtr pin, float voltageDividerRatio)
         : pin(pin)
         , voltageDividerRatio(voltageDividerRatio) {
-        Log.info("Initializing analog battery driver on pin %d",
-            pin);
+        Log.info("Initializing analog battery driver on pin %s",
+            pin->getName().c_str());
 
-        pinMode(pin, INPUT);
+        pin->pinMode(INPUT);
     }
 
     float getVoltage() {
-        auto batteryLevel = analogRead(pin);
+        auto batteryLevel = pin->analogRead();
         return batteryLevel * 3.3 / 4096 * voltageDividerRatio;
     }
 
 private:
-    const gpio_num_t pin;
+    const PinPtr pin;
     const float voltageDividerRatio;
 };
 
