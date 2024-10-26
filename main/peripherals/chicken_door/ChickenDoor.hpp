@@ -70,8 +70,8 @@ class ChickenDoorDeviceConfig
     : public ConfigurationSection {
 public:
     Property<String> motor { this, "motor" };
-    Property<PinPtr> openPin { this, "openPin" };
-    Property<PinPtr> closedPin { this, "closedPin" };
+    Property<InternalPinPtr> openPin { this, "openPin" };
+    Property<InternalPinPtr> closedPin { this, "closedPin" };
     Property<seconds> movementTimeout { this, "movementTimeout", seconds(60) };
 
     NamedConfigurationEntry<ChickenDoorLightSensorConfig> lightSensor { this, "lightSensor" };
@@ -95,8 +95,8 @@ public:
         SwitchManager& switches,
         PwmMotorDriver& motor,
         TLightSensorComponent& lightSensor,
-        PinPtr openPin,
-        PinPtr closedPin,
+        InternalPinPtr openPin,
+        InternalPinPtr closedPin,
         ticks movementTimeout,
         std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)

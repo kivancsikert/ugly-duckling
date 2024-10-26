@@ -20,8 +20,8 @@ using TwoWireMap = std::map<GpioPair, TwoWire*>;
 struct I2CConfig {
 public:
     uint8_t address;
-    PinPtr sda;
-    PinPtr scl;
+    InternalPinPtr sda;
+    InternalPinPtr scl;
 
     String toString() const {
         return String("I2C address: 0x") + String(address, HEX) + ", SDA: " + sda->getName() + ", SCL: " + scl->getName();
@@ -34,7 +34,7 @@ public:
         return getWireFor(config.sda, config.scl);
     }
 
-    TwoWire& getWireFor(PinPtr sda, PinPtr scl) {
+    TwoWire& getWireFor(InternalPinPtr sda, InternalPinPtr scl) {
         GpioPair key = std::make_pair(sda, scl);
         auto it = wireMap.find(key);
         if (it != wireMap.end()) {

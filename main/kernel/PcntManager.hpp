@@ -15,7 +15,7 @@ namespace farmhub::kernel {
 
 // TODO Limit number of channels available
 struct PcntUnit {
-    PcntUnit(pcnt_unit_handle_t unit, PinPtr pin)
+    PcntUnit(pcnt_unit_handle_t unit, InternalPinPtr pin)
         : unit(unit)
         , pin(pin) {
     }
@@ -54,12 +54,12 @@ struct PcntUnit {
 
 private:
     pcnt_unit_handle_t unit;
-    PinPtr pin;
+    InternalPinPtr pin;
 };
 
 class PcntManager {
 public:
-    PcntUnit registerUnit(PinPtr pin) {
+    PcntUnit registerUnit(InternalPinPtr pin) {
         pcnt_unit_config_t unitConfig = {
             .low_limit = std::numeric_limits<int16_t>::min(),
             .high_limit = std::numeric_limits<int16_t>::max(),

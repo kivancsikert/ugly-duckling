@@ -64,7 +64,7 @@ public:
 template <typename TDeviceConfiguration>
 class DeviceDefinition {
 public:
-    DeviceDefinition(PinPtr statusPin, PinPtr bootPin)
+    DeviceDefinition(PinPtr statusPin, InternalPinPtr bootPin)
         : statusLed("status", statusPin)
         , bootPin(bootPin) {
     }
@@ -99,7 +99,7 @@ public:
     LedDriver statusLed;
     PcntManager pcnt;
     PwmManager pwm;
-    const PinPtr bootPin;
+    const InternalPinPtr bootPin;
 
 private:
     ConfigurationFile<TDeviceConfiguration> configFile { FileSystem::get(), "/device-config.json" };

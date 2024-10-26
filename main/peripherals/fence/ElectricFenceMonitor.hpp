@@ -20,7 +20,7 @@ using namespace farmhub::peripherals;
 namespace farmhub::peripherals::fence {
 
 struct FencePinConfig {
-    PinPtr pin;
+    InternalPinPtr pin;
     uint16_t voltage;
 };
 

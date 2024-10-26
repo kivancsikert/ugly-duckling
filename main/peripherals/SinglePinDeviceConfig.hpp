@@ -14,7 +14,7 @@ namespace farmhub::peripherals {
 class SinglePinDeviceConfig
     : public ConfigurationSection {
 public:
-    Property<PinPtr> pin { this, "pin" };
+    Property<InternalPinPtr> pin { this, "pin" };
 };
 
 }    // namespace farmhub::peripherals::environment

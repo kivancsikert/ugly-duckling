@@ -27,7 +27,7 @@ enum class SwitchMode {
 class Switch {
 public:
     virtual const String& getName() const = 0;
-    virtual PinPtr getPin() const = 0;
+    virtual InternalPinPtr getPin() const = 0;
     virtual bool isEngaged() const = 0;
 };
 
@@ -55,17 +55,17 @@ public:
     typedef std::function<void(const Switch&)> SwitchEngagementHandler;
     typedef std::function<void(const Switch&, milliseconds duration)> SwitchReleaseHandler;
 
-    const Switch& onEngaged(const String& name, PinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
+    const Switch& onEngaged(const String& name, InternalPinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
         return registerHandler(
             name, pin, mode, engagementHandler, [](const Switch&, milliseconds) {});
     }
 
-    const Switch& onReleased(const String& name, PinPtr pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
+    const Switch& onReleased(const String& name, InternalPinPtr pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
         return registerHandler(
             name, pin, mode, [](const Switch&) {}, releaseHandler);
     }
 
-    const Switch& registerHandler(const String& name, PinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
+    const Switch& registerHandler(const String& name, InternalPinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
         Log.info("Registering switch %s on pin %s, mode %s",
             name.c_str(), pin->getName().c_str(), mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
 
@@ -97,7 +97,7 @@ private:
             return name;
         }
 
-        PinPtr getPin() const override {
+        InternalPinPtr getPin() const override {
             return pin;
         }
 
@@ -107,7 +107,7 @@ private:
 
     private:
         String name;
-        PinPtr pin;
+        InternalPinPtr pin;
         SwitchMode mode;
 
         SwitchEngagementHandler engagementHandler;

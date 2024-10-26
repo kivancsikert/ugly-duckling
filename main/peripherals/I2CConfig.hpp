@@ -19,10 +19,10 @@ public:
     // but JSON doesn't support 0x notation, so we
     // take it as a string instead
     Property<String> address { this, "address" };
-    Property<PinPtr> sda { this, "sda" };
-    Property<PinPtr> scl { this, "scl" };
+    Property<InternalPinPtr> sda { this, "sda" };
+    Property<InternalPinPtr> scl { this, "scl" };
 
-    I2CConfig parse(uint8_t defaultAddress = 0xFF, PinPtr defaultSda = nullptr, PinPtr defaultScl = nullptr) const {
+    I2CConfig parse(uint8_t defaultAddress = 0xFF, InternalPinPtr defaultSda = nullptr, InternalPinPtr defaultScl = nullptr) const {
         return {
             address.get().isEmpty()
                 ? defaultAddress

@@ -27,7 +27,7 @@ public:
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         PcntManager& pcnt,
-        PinPtr pin,
+        InternalPinPtr pin,
         double qFactor,
         milliseconds measurementFrequency)
         : Component(name, mqttRoot)

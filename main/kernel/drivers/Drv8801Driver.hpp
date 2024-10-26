@@ -29,7 +29,7 @@ public:
     Drv8801Driver(
         PwmManager& pwm,
         PinPtr enablePin,
-        PinPtr phasePin,
+        InternalPinPtr phasePin,
         PinPtr mode1Pin,
         PinPtr mode2Pin,
         PinPtr currentPin,

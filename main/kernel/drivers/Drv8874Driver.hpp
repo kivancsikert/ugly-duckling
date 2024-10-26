@@ -28,8 +28,8 @@ public:
     // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
     Drv8874Driver(
         PwmManager& pwm,
-        PinPtr in1Pin,
-        PinPtr in2Pin,
+        InternalPinPtr in1Pin,
+        InternalPinPtr in2Pin,
         PinPtr currentPin,
         PinPtr faultPin,
         PinPtr sleepPin)

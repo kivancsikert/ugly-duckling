@@ -32,7 +32,7 @@ public:
     Ds18B20SoilSensorComponent(
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
-        PinPtr pin)
+        InternalPinPtr pin)
         : Component(name, mqttRoot) {
 
         Log.info("Initializing DS18B20 soil temperature sensor on pin %s",
@@ -90,7 +90,7 @@ private:
 class Ds18B20SoilSensor
     : public Peripheral<EmptyConfiguration> {
 public:
-    Ds18B20SoilSensor(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PinPtr pin)
+    Ds18B20SoilSensor(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot, InternalPinPtr pin)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , sensor(name, mqttRoot, pin) {
     }
