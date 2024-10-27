@@ -87,20 +87,9 @@ public:
     }
 
     unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
-        const ValveDeviceConfig& valveConfig = deviceConfig.valve.get();
-        const FlowMeterDeviceConfig& flowMeterConfig = deviceConfig.flowMeter.get();
+        auto strategy = deviceConfig.valve.get().createValveControlStrategy(this);
 
-        PwmMotorDriver& targetMotor = findMotor(valveConfig.motor.get());
-        ValveControlStrategy* strategy;
-        try {
-            strategy = createMotorValveControlStrategy(
-                targetMotor,
-                valveConfig.strategy.get(),
-                valveConfig.switchDuration.get(),
-                valveConfig.holdDuty.get() / 100.0);
-        } catch (const std::exception& e) {
-            throw PeripheralCreationException("failed to create strategy: " + String(e.what()));
-        }
+        auto flowMeterConfig = deviceConfig.flowMeter.get();
         return make_unique<FlowControl>(
             name,
             mqttRoot,

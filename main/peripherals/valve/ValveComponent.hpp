@@ -171,6 +171,34 @@ private:
     const double switchDuty;
 };
 
+class LatchingPinValveControlStrategy
+    : public ValveControlStrategy {
+public:
+    LatchingPinValveControlStrategy(PinPtr pin)
+        : pin(pin) {
+        pin->pinMode(OUTPUT);
+    }
+
+    void open() override {
+        pin->digitalWrite(HIGH);
+    }
+
+    void close() override {
+        pin->digitalWrite(LOW);
+    }
+
+    ValveState getDefaultState() const override {
+        return ValveState::NONE;
+    }
+
+    String describe() const override {
+        return "latching with pin " + pin->getName();
+    }
+
+private:
+    PinPtr pin;
+};
+
 class ValveComponent : public Component {
 public:
     ValveComponent(

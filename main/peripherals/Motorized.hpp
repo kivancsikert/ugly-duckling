@@ -20,7 +20,6 @@ public:
         : motors(motors) {
     }
 
-protected:
     PwmMotorDriver& findMotor(const String& motorName) {
         // If there's only one motor and no name is specified, use it
         if (motorName.isEmpty() && motors.size() == 1) {

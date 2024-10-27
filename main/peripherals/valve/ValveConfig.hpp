@@ -24,19 +24,6 @@ enum class ValveControlStrategyType {
     Latching
 };
 
-static MotorValveControlStrategy* createMotorValveControlStrategy(PwmMotorDriver& motor, ValveControlStrategyType strategy, milliseconds switchDuration, double holdDuty) {
-    switch (strategy) {
-        case ValveControlStrategyType::NormallyOpen:
-            return new NormallyOpenMotorValveControlStrategy(motor, switchDuration, holdDuty);
-        case ValveControlStrategyType::NormallyClosed:
-            return new NormallyClosedMotorValveControlStrategy(motor, switchDuration, holdDuty);
-        case ValveControlStrategyType::Latching:
-            return new LatchingMotorValveControlStrategy(motor, switchDuration, holdDuty);
-        default:
-            throw std::runtime_error("Unknown strategy");
-    }
-}
-
 class ValveConfig
     : public ConfigurationSection {
 public:
@@ -50,10 +37,64 @@ public:
         : strategy(this, "strategy", defaultStrategy) {
     }
 
+    /**
+     * @brief The pin to use to control the valve.
+     *
+     * @details This can be an internal or an external pin. When specified, the motor is ignored.
+     */
+    Property<PinPtr> pin { this, "pin" };
+
+    /**
+     * @brief The name of the motor service to use to control the valve.
+     *
+     * @details When the pin is specified, this is ignored.
+     */
     Property<String> motor { this, "motor" };
+
+    /**
+     * @brief The strategy to use to control the motorized valve.
+     *
+     * @details Ignored when the pin is specified.
+     */
     Property<ValveControlStrategyType> strategy;
+
+    /**
+     * @brief Duty to use to hold the motorized valve in place.
+     *
+     * @details This is a percentage from 0 to 100, default is 100%. This is ignored for latching strategies and when the pin is specified.
+     */
     Property<double> holdDuty { this, "holdDuty", 100 };    // This is a percentage
+
+    /**
+     * @brief Duration to keep the motor running to switch the motorized valve.
+     *
+     * @details This is in milliseconds, default is 500ms. This is ignored when the pin is specified.
+     */
     Property<milliseconds> switchDuration { this, "switchDuration", 500ms };
+
+    ValveControlStrategy* createValveControlStrategy(Motorized* motorOwner) const {
+        PinPtr pin = this->pin.get();
+        if (pin != nullptr) {
+            return new LatchingPinValveControlStrategy(pin);
+        }
+
+        PwmMotorDriver& motor = motorOwner->findMotor(this->motor.get());
+        ValveControlStrategy* strategy;
+
+        auto switchDuration = this->switchDuration.get();
+        auto holdDuty = this->holdDuty.get() / 100.0;
+
+        switch (this->strategy.get()) {
+            case ValveControlStrategyType::NormallyOpen:
+                return new NormallyOpenMotorValveControlStrategy(motor, switchDuration, holdDuty);
+            case ValveControlStrategyType::NormallyClosed:
+                return new NormallyClosedMotorValveControlStrategy(motor, switchDuration, holdDuty);
+            case ValveControlStrategyType::Latching:
+                return new LatchingMotorValveControlStrategy(motor, switchDuration, holdDuty);
+            default:
+                throw PeripheralCreationException("unknown strategy");
+        }
+    }
 };
 
 // JSON: ValveControlStrategyType
