@@ -18,7 +18,6 @@ using std::shared_ptr;
 using farmhub::devices::PinPtr;
 
 using GpioPair = std::pair<PinPtr, PinPtr>;
-using TwoWireMap = std::map<GpioPair, TwoWire*>;
 
 struct I2CConfig {
 public:
@@ -31,19 +30,29 @@ public:
     }
 };
 
+class I2CBus {
+public:
+    I2CBus(TwoWire& wire)
+        : wire(wire) {
+    }
+
+    TwoWire& wire;
+    Mutex mutex;
+};
+
 class I2CTransmission;
 
 class I2CDevice {
 public:
-    I2CDevice(const String& name, TwoWire& wire, uint8_t address)
+    I2CDevice(const String& name, I2CBus& bus, uint8_t address)
         : name(name)
-        , wire(wire)
+        , bus(bus)
         , address(address) {
     }
 
 private:
     const String name;
-    TwoWire& wire;
+    I2CBus& bus;
     const uint8_t address;
 
     friend class I2CTransmission;
@@ -52,12 +61,13 @@ private:
 class I2CTransmission {
 public:
     I2CTransmission(shared_ptr<I2CDevice> device)
-        : device(device) {
-        device->wire.beginTransmission(device->address);
+        : device(device)
+        , lock(device->bus.mutex) {
+        wire().beginTransmission(device->address);
     }
 
     ~I2CTransmission() {
-        auto result = device->wire.endTransmission();
+        auto result = wire().endTransmission();
         if (result != 0) {
             Log.error("Communication unsuccessful with I2C device %s at address 0x%02x, result: %d",
                 device->name.c_str(), device->address, result);
@@ -67,7 +77,7 @@ public:
     size_t requestFrom(size_t len, bool stopBit = true) {
         Log.trace("Requesting %d bytes from I2C device %s at address 0x%02x",
             len, device->name.c_str(), device->address);
-        auto count = device->wire.requestFrom(device->address, len, stopBit);
+        auto count = wire().requestFrom(device->address, len, stopBit);
         Log.trace("Received %d bytes from I2C device %s at address 0x%02x",
             count, device->name.c_str(), device->address);
         return count;
@@ -76,7 +86,7 @@ public:
     size_t write(uint8_t data) {
         Log.trace("Writing 0x%02x to I2C device %s at address 0x%02x",
             data, device->name.c_str(), device->address);
-        auto count = device->wire.write(data);
+        auto count = wire().write(data);
         Log.trace("Wrote %d bytes to I2C device %s at address 0x%02x",
             count, device->name.c_str(), device->address);
         return count;
@@ -85,25 +95,25 @@ public:
     size_t write(const uint8_t *data, size_t quantity) {
         Log.trace("Writing %d bytes to I2C device %s at address 0x%02x",
             quantity, device->name.c_str(), device->address);
-        auto count = device->wire.write(data, quantity);
+        auto count = wire().write(data, quantity);
         Log.trace("Wrote %d bytes to I2C device %s at address 0x%02x",
             count, device->name.c_str(), device->address);
         return count;
     }
 
     int available() {
-        return device->wire.available();
+        return wire().available();
     }
 
     int read() {
-        auto value = device->wire.read();
+        auto value = wire().read();
         Log.trace("Read 0x%02x from I2C device %s at address 0x%02x",
             value, device->name.c_str(), device->address);
         return value;
     }
 
     int peek() {
-        auto value = device->wire.peek();
+        auto value = wire().peek();
         Log.trace("Peeked 0x%02x from I2C device %s at address 0x%02x",
             value, device->name.c_str(), device->address);
         return value;
@@ -112,11 +122,16 @@ public:
     void flush() {
         Log.trace("Flushing I2C device %s at address 0x%02x",
             device->name.c_str(), device->address);
-        device->wire.flush();
+        wire().flush();
     }
 
 private:
+    inline TwoWire& wire() const {
+        return device->bus.wire;
+    }
+
     shared_ptr<I2CDevice> device;
+    Lock lock;
 };
 
 class I2CManager {
@@ -126,9 +141,27 @@ public:
     }
 
     TwoWire& getWireFor(InternalPinPtr sda, InternalPinPtr scl) {
+        return getBusFor(sda, scl).wire;
+    }
+
+    shared_ptr<I2CDevice> createDevice(const String& name, const I2CConfig& config) {
+        return createDevice(name, config.sda, config.scl, config.address);
+    }
+
+    shared_ptr<I2CDevice> createDevice(const String& name, InternalPinPtr sda, InternalPinPtr scl, uint8_t address) {
+        auto device = std::make_shared<I2CDevice>(name, getBusFor(sda, scl), address);
+        Log.info("Created I2C device %s at address 0x%02x",
+            name.c_str(), address);
+        // Test if communication is possible
+        I2CTransmission tx(device);
+        return device;
+    }
+
+private:
+    I2CBus& getBusFor(InternalPinPtr sda, InternalPinPtr scl) {
         GpioPair key = std::make_pair(sda, scl);
-        auto it = wireMap.find(key);
-        if (it != wireMap.end()) {
+        auto it = busMap.find(key);
+        if (it != busMap.end()) {
             Log.trace("Reusing already registered I2C bus for SDA: %s, SCL: %s",
                 sda->getName().c_str(), scl->getName().c_str());
             return *(it->second);
@@ -143,28 +176,15 @@ public:
                 throw std::runtime_error(
                     String("Failed to initialize I2C bus for SDA: " + sda->getName() + ", SCL: " + scl->getName()).c_str());
             }
-            wireMap[key] = wire;
-            return *wire;
+            I2CBus* bus = new I2CBus(*wire);
+            busMap[key] = bus;
+            return *bus;
         }
     }
 
-    shared_ptr<I2CDevice> createDevice(const String& name, const I2CConfig& config) {
-        return createDevice(name, config.sda, config.scl, config.address);
-    }
-
-    shared_ptr<I2CDevice> createDevice(const String& name, InternalPinPtr sda, InternalPinPtr scl, uint8_t address) {
-        auto device = std::make_shared<I2CDevice>(name, getWireFor(sda, scl), address);
-        Log.info("Created I2C device %s at address 0x%02x",
-            name.c_str(), address);
-        // Test if communication is possible
-        I2CTransmission tx(device);
-        return device;
-    }
-
-private:
     uint8_t nextBus = 0;
 
-    TwoWireMap wireMap;
+    std::map<GpioPair, I2CBus*> busMap;
 };
 
 }    // namespace farmhub::kernel
