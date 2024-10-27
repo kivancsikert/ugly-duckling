@@ -42,12 +42,23 @@ public:
     virtual String describe() const = 0;
 };
 
-class HoldingValveControlStrategy
+class MotorValveControlStrategy
     : public ValveControlStrategy {
+public:
+    MotorValveControlStrategy(PwmMotorDriver& controller)
+        : controller(controller) {
+    }
+
+protected:
+    PwmMotorDriver& controller;
+};
+
+class HoldingMotorValveControlStrategy
+    : public MotorValveControlStrategy {
 
 public:
-    HoldingValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double holdDuty)
-        : controller(controller)
+    HoldingMotorValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double holdDuty)
+        : MotorValveControlStrategy(controller)
         , switchDuration(switchDuration)
         , holdDuty(holdDuty) {
     }
@@ -67,7 +78,6 @@ protected:
         }
     }
 
-    PwmMotorDriver& controller;
     const milliseconds switchDuration;
     const double holdDuty;
 
@@ -79,11 +89,11 @@ private:
     }
 };
 
-class NormallyClosedValveControlStrategy
-    : public HoldingValveControlStrategy {
+class NormallyClosedMotorValveControlStrategy
+    : public HoldingMotorValveControlStrategy {
 public:
-    NormallyClosedValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double holdDuty)
-        : HoldingValveControlStrategy(controller, switchDuration, holdDuty) {
+    NormallyClosedMotorValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double holdDuty)
+        : HoldingMotorValveControlStrategy(controller, switchDuration, holdDuty) {
     }
 
     void open() override {
@@ -103,11 +113,11 @@ public:
     }
 };
 
-class NormallyOpenValveControlStrategy
-    : public HoldingValveControlStrategy {
+class NormallyOpenMotorValveControlStrategy
+    : public HoldingMotorValveControlStrategy {
 public:
-    NormallyOpenValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double holdDuty)
-        : HoldingValveControlStrategy(controller, switchDuration, holdDuty) {
+    NormallyOpenMotorValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double holdDuty)
+        : HoldingMotorValveControlStrategy(controller, switchDuration, holdDuty) {
     }
 
     void open() override {
@@ -127,11 +137,11 @@ public:
     }
 };
 
-class LatchingValveControlStrategy
-    : public ValveControlStrategy {
+class LatchingMotorValveControlStrategy
+    : public MotorValveControlStrategy {
 public:
-    LatchingValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double switchDuty = 1.0)
-        : controller(controller)
+    LatchingMotorValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double switchDuty = 1.0)
+        : MotorValveControlStrategy(controller)
         , switchDuration(switchDuration)
         , switchDuty(switchDuty) {
     }
@@ -157,7 +167,6 @@ public:
     }
 
 private:
-    PwmMotorDriver& controller;
     const milliseconds switchDuration;
     const double switchDuty;
 };

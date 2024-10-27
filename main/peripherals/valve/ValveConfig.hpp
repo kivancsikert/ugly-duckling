@@ -24,14 +24,14 @@ enum class ValveControlStrategyType {
     Latching
 };
 
-static ValveControlStrategy* createValveControlStrategy(PwmMotorDriver& motor, ValveControlStrategyType strategy, milliseconds switchDuration, double holdDuty) {
+static MotorValveControlStrategy* createMotorValveControlStrategy(PwmMotorDriver& motor, ValveControlStrategyType strategy, milliseconds switchDuration, double holdDuty) {
     switch (strategy) {
         case ValveControlStrategyType::NormallyOpen:
-            return new NormallyOpenValveControlStrategy(motor, switchDuration, holdDuty);
+            return new NormallyOpenMotorValveControlStrategy(motor, switchDuration, holdDuty);
         case ValveControlStrategyType::NormallyClosed:
-            return new NormallyClosedValveControlStrategy(motor, switchDuration, holdDuty);
+            return new NormallyClosedMotorValveControlStrategy(motor, switchDuration, holdDuty);
         case ValveControlStrategyType::Latching:
-            return new LatchingValveControlStrategy(motor, switchDuration, holdDuty);
+            return new LatchingMotorValveControlStrategy(motor, switchDuration, holdDuty);
         default:
             throw std::runtime_error("Unknown strategy");
     }

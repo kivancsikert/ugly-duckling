@@ -75,7 +75,7 @@ public:
         PwmMotorDriver& targetMotor = findMotor(deviceConfig.motor.get());
         ValveControlStrategy* strategy;
         try {
-            strategy = createValveControlStrategy(
+            strategy = createMotorValveControlStrategy(
                 targetMotor,
                 deviceConfig.strategy.get(),
                 deviceConfig.switchDuration.get(),
