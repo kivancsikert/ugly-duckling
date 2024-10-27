@@ -10,7 +10,7 @@
 
 #include <ArduinoJson.h>
 
-namespace farmhub::devices {
+namespace farmhub::kernel {
 
 class Pin;
 using PinPtr = std::shared_ptr<Pin>;
@@ -125,14 +125,14 @@ private:
 std::map<String, InternalPinPtr> InternalPin::INTERNAL_BY_NAME;
 std::map<gpio_num_t, InternalPinPtr> InternalPin::INTERNAL_BY_GPIO;
 
-}    // namespace farmhub::devices
+}    // namespace farmhub::kernel
 
 namespace ArduinoJson {
 
-using farmhub::devices::Pin;
-using farmhub::devices::PinPtr;
-using farmhub::devices::InternalPin;
-using farmhub::devices::InternalPinPtr;
+using farmhub::kernel::InternalPin;
+using farmhub::kernel::InternalPinPtr;
+using farmhub::kernel::Pin;
+using farmhub::kernel::PinPtr;
 
 template <>
 struct Converter<PinPtr> {

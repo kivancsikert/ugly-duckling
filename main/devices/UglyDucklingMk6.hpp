@@ -4,6 +4,7 @@
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/Kernel.hpp>
+#include <kernel/Pin.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/Drv8833Driver.hpp>
@@ -16,7 +17,6 @@
 #include <peripherals/valve/Valve.hpp>
 
 #include <devices/DeviceDefinition.hpp>
-#include <devices/Pin.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals::chicken_door;

@@ -8,14 +8,14 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include <devices/Pin.hpp>
 #include <kernel/Log.hpp>
+#include <kernel/Pin.hpp>
 
 namespace farmhub::kernel {
 
 using std::shared_ptr;
 
-using farmhub::devices::PinPtr;
+using farmhub::kernel::PinPtr;
 
 using GpioPair = std::pair<PinPtr, PinPtr>;
 
@@ -92,7 +92,7 @@ public:
         return count;
     }
 
-    size_t write(const uint8_t *data, size_t quantity) {
+    size_t write(const uint8_t* data, size_t quantity) {
         Log.trace("Writing %d bytes to I2C device %s at address 0x%02x",
             quantity, device->name.c_str(), device->address);
         auto count = wire().write(data, quantity);

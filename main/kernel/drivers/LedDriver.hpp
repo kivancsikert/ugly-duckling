@@ -4,14 +4,14 @@
 #include <chrono>
 #include <list>
 
-#include <devices/Pin.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/Log.hpp>
+#include <kernel/Pin.hpp>
 #include <kernel/Task.hpp>
 
 using namespace std::chrono;
 
-using farmhub::devices::PinPtr;
+using farmhub::kernel::PinPtr;
 
 namespace farmhub::kernel::drivers {
 

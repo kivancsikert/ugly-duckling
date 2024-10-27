@@ -2,11 +2,11 @@
 
 #include <Arduino.h>
 
-#include <devices/Pin.hpp>
 #include <kernel/Log.hpp>
+#include <kernel/Pin.hpp>
 #include <kernel/Telemetry.hpp>
 
-using farmhub::devices::PinPtr;
+using farmhub::kernel::PinPtr;
 
 namespace farmhub::kernel::drivers {
 

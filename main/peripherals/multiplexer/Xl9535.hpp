@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include <devices/Pin.hpp>
+#include <kernel/Pin.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>
 

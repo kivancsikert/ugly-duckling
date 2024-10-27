@@ -2,6 +2,7 @@
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/Kernel.hpp>
+#include <kernel/Pin.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/Drv8874Driver.hpp>
@@ -13,7 +14,6 @@
 #include <peripherals/valve/Valve.hpp>
 
 #include <devices/DeviceDefinition.hpp>
-#include <devices/Pin.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals::chicken_door;
@@ -79,8 +79,8 @@ class UglyDucklingMk5 : public DeviceDefinition<Mk5Config> {
 public:
     UglyDucklingMk5()
         : DeviceDefinition<Mk5Config>(
-            pins::STATUS,
-            pins::BOOT) {
+              pins::STATUS,
+              pins::BOOT) {
     }
 
     void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
