@@ -65,28 +65,28 @@ public:
     }
 
     size_t requestFrom(size_t len, bool stopBit = true) {
-        Log.debug("Requesting %d bytes from I2C device %s at address 0x%02x",
+        Log.trace("Requesting %d bytes from I2C device %s at address 0x%02x",
             len, device->name.c_str(), device->address);
         auto count = device->wire.requestFrom(device->address, len, stopBit);
-        Log.debug("Received %d bytes from I2C device %s at address 0x%02x",
+        Log.trace("Received %d bytes from I2C device %s at address 0x%02x",
             count, device->name.c_str(), device->address);
         return count;
     }
 
     size_t write(uint8_t data) {
-        Log.debug("Writing 0x%02x to I2C device %s at address 0x%02x",
+        Log.trace("Writing 0x%02x to I2C device %s at address 0x%02x",
             data, device->name.c_str(), device->address);
         auto count = device->wire.write(data);
-        Log.debug("Wrote %d bytes to I2C device %s at address 0x%02x",
+        Log.trace("Wrote %d bytes to I2C device %s at address 0x%02x",
             count, device->name.c_str(), device->address);
         return count;
     }
 
     size_t write(const uint8_t *data, size_t quantity) {
-        Log.debug("Writing %d bytes to I2C device %s at address 0x%02x",
+        Log.trace("Writing %d bytes to I2C device %s at address 0x%02x",
             quantity, device->name.c_str(), device->address);
         auto count = device->wire.write(data, quantity);
-        Log.debug("Wrote %d bytes to I2C device %s at address 0x%02x",
+        Log.trace("Wrote %d bytes to I2C device %s at address 0x%02x",
             count, device->name.c_str(), device->address);
         return count;
     }
@@ -97,20 +97,20 @@ public:
 
     int read() {
         auto value = device->wire.read();
-        Log.debug("Read 0x%02x from I2C device %s at address 0x%02x",
+        Log.trace("Read 0x%02x from I2C device %s at address 0x%02x",
             value, device->name.c_str(), device->address);
         return value;
     }
 
     int peek() {
         auto value = device->wire.peek();
-        Log.debug("Peeked 0x%02x from I2C device %s at address 0x%02x",
+        Log.trace("Peeked 0x%02x from I2C device %s at address 0x%02x",
             value, device->name.c_str(), device->address);
         return value;
     }
 
     void flush() {
-        Log.debug("Flushing I2C device %s at address 0x%02x",
+        Log.trace("Flushing I2C device %s at address 0x%02x",
             device->name.c_str(), device->address);
         device->wire.flush();
     }
@@ -133,7 +133,7 @@ public:
                 sda->getName().c_str(), scl->getName().c_str());
             return *(it->second);
         } else {
-            Log.trace("Creating new I2C bus for SDA: %s, SCL: %s",
+            Log.debug("Creating new I2C bus for SDA: %s, SCL: %s",
                 sda->getName().c_str(), scl->getName().c_str());
             if (nextBus >= 2) {
                 throw std::runtime_error("Maximum number of I2C buses reached");
