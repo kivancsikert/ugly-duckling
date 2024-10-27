@@ -11,7 +11,7 @@ namespace farmhub::kernel {
 
 // TODO Limit number of channels available
 struct PwmPin {
-    PwmPin(gpio_num_t pin, uint32_t freq, uint8_t resolutionBits)
+    PwmPin(InternalPinPtr pin, uint32_t freq, uint8_t resolutionBits)
         : pin(pin)
         , freq(freq)
         , resolutionBits(resolutionBits) {
@@ -26,20 +26,20 @@ struct PwmPin {
     }
 
     void write(uint32_t value) const {
-        ledcWrite(pin, value);
+        ledcWrite(pin->getGpio(), value);
     }
 
-    const gpio_num_t pin;
+    const InternalPinPtr pin;
     const uint32_t freq;
     const uint8_t resolutionBits;
 };
 
 class PwmManager {
 public:
-    PwmPin registerPin(gpio_num_t pin, uint32_t freq, uint8_t resolutionBits = 8) {
-        ledcAttach(pin, freq, resolutionBits);
-        Log.debug("Registered PWM channel on pin %d with freq %ld and resolution %d",
-            pin, freq, resolutionBits);
+    PwmPin registerPin(InternalPinPtr pin, uint32_t freq, uint8_t resolutionBits = 8) {
+        ledcAttach(pin->getGpio(), freq, resolutionBits);
+        Log.debug("Registered PWM channel on pin %s with freq %ld and resolution %d",
+            pin->getName().c_str(), freq, resolutionBits);
         return PwmPin(pin, freq, resolutionBits);
     }
 };

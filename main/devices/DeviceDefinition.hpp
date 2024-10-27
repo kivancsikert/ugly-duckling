@@ -26,6 +26,7 @@
 #include <peripherals/fence/ElectricFenceMonitor.hpp>
 #include <peripherals/light_sensor/Bh1750.hpp>
 #include <peripherals/light_sensor/Tsl2591.hpp>
+#include <peripherals/multiplexer/Xl9535.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
@@ -64,7 +65,7 @@ public:
 template <typename TDeviceConfiguration>
 class DeviceDefinition {
 public:
-    DeviceDefinition(gpio_num_t statusPin, gpio_num_t bootPin)
+    DeviceDefinition(PinPtr statusPin, InternalPinPtr bootPin)
         : statusLed("status", statusPin)
         , bootPin(bootPin) {
     }
@@ -78,6 +79,7 @@ public:
         peripheralManager.registerFactory(electricFenceMonitorFactory);
         peripheralManager.registerFactory(bh1750Factory);
         peripheralManager.registerFactory(tsl2591Factory);
+        peripheralManager.registerFactory(xl9535Factory);
         registerDeviceSpecificPeripheralFactories(peripheralManager);
     }
 
@@ -99,7 +101,7 @@ public:
     LedDriver statusLed;
     PcntManager pcnt;
     PwmManager pwm;
-    const gpio_num_t bootPin;
+    const InternalPinPtr bootPin;
 
 private:
     ConfigurationFile<TDeviceConfiguration> configFile { FileSystem::get(), "/device-config.json" };
@@ -121,6 +123,8 @@ private:
 
     farmhub::peripherals::light_sensor::Bh1750Factory bh1750Factory;
     farmhub::peripherals::light_sensor::Tsl2591Factory tsl2591Factory;
+
+    farmhub::peripherals::multiplexer::Xl9535Factory xl9535Factory;
 };
 
 }    // namespace farmhub::devices

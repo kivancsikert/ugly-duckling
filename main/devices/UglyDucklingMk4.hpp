@@ -4,6 +4,7 @@
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/Kernel.hpp>
+#include <kernel/Pin.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/Drv8801Driver.hpp>
@@ -15,7 +16,6 @@
 #include <peripherals/valve/Valve.hpp>
 
 #include <devices/DeviceDefinition.hpp>
-#include <devices/Pin.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals::chicken_door;
@@ -34,33 +34,33 @@ public:
 };
 
 namespace pins {
-static gpio_num_t BOOT = Pin::registerPin("BOOT", GPIO_NUM_0);
-static gpio_num_t STATUS = Pin::registerPin("STATUS", GPIO_NUM_26);
+static InternalPinPtr BOOT = InternalPin::registerPin("BOOT", GPIO_NUM_0);
+static InternalPinPtr STATUS = InternalPin::registerPin("STATUS", GPIO_NUM_26);
 
-static gpio_num_t SOIL_MOISTURE = Pin::registerPin("SOIL_MOISTURE", GPIO_NUM_6);
-static gpio_num_t SOIL_TEMP = Pin::registerPin("SOIL_TEMP", GPIO_NUM_7);
+static InternalPinPtr SOIL_MOISTURE = InternalPin::registerPin("SOIL_MOISTURE", GPIO_NUM_6);
+static InternalPinPtr SOIL_TEMP = InternalPin::registerPin("SOIL_TEMP", GPIO_NUM_7);
 
-static gpio_num_t VALVE_EN = Pin::registerPin("VALVE_EN", GPIO_NUM_10);
-static gpio_num_t VALVE_PH = Pin::registerPin("VALVE_PH", GPIO_NUM_11);
-static gpio_num_t VALVE_FAULT = Pin::registerPin("VALVE_FAULT", GPIO_NUM_12);
-static gpio_num_t VALVE_SLEEP = Pin::registerPin("VALVE_SLEEP", GPIO_NUM_13);
-static gpio_num_t VALVE_MODE1 = Pin::registerPin("VALVE_MODE1", GPIO_NUM_14);
-static gpio_num_t VALVE_MODE2 = Pin::registerPin("VALVE_MODE2", GPIO_NUM_15);
-static gpio_num_t VALVE_CURRENT = Pin::registerPin("VALVE_CURRENT", GPIO_NUM_16);
-static gpio_num_t FLOW = Pin::registerPin("FLOW", GPIO_NUM_17);
+static InternalPinPtr VALVE_EN = InternalPin::registerPin("VALVE_EN", GPIO_NUM_10);
+static InternalPinPtr VALVE_PH = InternalPin::registerPin("VALVE_PH", GPIO_NUM_11);
+static InternalPinPtr VALVE_FAULT = InternalPin::registerPin("VALVE_FAULT", GPIO_NUM_12);
+static InternalPinPtr VALVE_SLEEP = InternalPin::registerPin("VALVE_SLEEP", GPIO_NUM_13);
+static InternalPinPtr VALVE_MODE1 = InternalPin::registerPin("VALVE_MODE1", GPIO_NUM_14);
+static InternalPinPtr VALVE_MODE2 = InternalPin::registerPin("VALVE_MODE2", GPIO_NUM_15);
+static InternalPinPtr VALVE_CURRENT = InternalPin::registerPin("VALVE_CURRENT", GPIO_NUM_16);
+static InternalPinPtr FLOW = InternalPin::registerPin("FLOW", GPIO_NUM_17);
 
-static gpio_num_t SDA = Pin::registerPin("SDA", GPIO_NUM_8);
-static gpio_num_t SCL = Pin::registerPin("SCL", GPIO_NUM_9);
-static gpio_num_t RXD0 = Pin::registerPin("RXD0", GPIO_NUM_44);
-static gpio_num_t TXD0 = Pin::registerPin("TXD0", GPIO_NUM_43);
+static InternalPinPtr SDA = InternalPin::registerPin("SDA", GPIO_NUM_8);
+static InternalPinPtr SCL = InternalPin::registerPin("SCL", GPIO_NUM_9);
+static InternalPinPtr RXD0 = InternalPin::registerPin("RXD0", GPIO_NUM_44);
+static InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43);
 }    // namespace pins
 
 class UglyDucklingMk4 : public DeviceDefinition<Mk4Config> {
 public:
     UglyDucklingMk4()
         : DeviceDefinition<Mk4Config>(
-            pins::STATUS,
-            pins::BOOT) {
+              pins::STATUS,
+              pins::BOOT) {
     }
 
     void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {

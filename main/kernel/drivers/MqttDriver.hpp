@@ -400,8 +400,8 @@ private:
             } else {
                 Log.debug("MQTT: server: %s:%d, client ID is '%s', using TLS",
                     hostname.c_str(), mqttServer.port, clientId.c_str());
-                Log.debug("Server cert: %s", serverCert.c_str());
-                Log.debug("Client cert: %s", clientCert.c_str());
+                Log.trace("Server cert: %s", serverCert.c_str());
+                Log.trace("Client cert: %s", clientCert.c_str());
                 wifiClientSecure.setCACert(serverCert.c_str());
                 wifiClientSecure.setCertificate(clientCert.c_str());
                 wifiClientSecure.setPrivateKey(clientKey.c_str());
@@ -490,7 +490,7 @@ private:
 
     // Actually subscribe to the given topic
     bool registerSubscriptionWithMqtt(const Subscription& subscription) {
-        Log.debug("MQTT: Subscribing to topic '%s' (qos = %d)",
+        Log.trace("MQTT: Subscribing to topic '%s' (qos = %d)",
             subscription.topic.c_str(), static_cast<int>(subscription.qos));
         bool success = mqttClient.subscribe(subscription.topic, static_cast<int>(subscription.qos), [](const String& payload, const size_t size) {
             // Global handler will take care of putting the received message on the incoming queue

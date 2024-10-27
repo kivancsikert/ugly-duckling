@@ -6,9 +6,12 @@
 
 #include <kernel/Concurrent.hpp>
 #include <kernel/Log.hpp>
+#include <kernel/Pin.hpp>
 #include <kernel/Task.hpp>
 
 using namespace std::chrono;
+
+using farmhub::kernel::PinPtr;
 
 namespace farmhub::kernel::drivers {
 
@@ -16,14 +19,14 @@ class LedDriver {
 public:
     typedef std::list<milliseconds> BlinkPattern;
 
-    LedDriver(const String& name, gpio_num_t pin)
+    LedDriver(const String& name, PinPtr pin)
         : pin(pin)
         , patternQueue(name, 1)
         , pattern({ -milliseconds::max() }) {
-        Log.info("Initializing LED driver on pin %d",
-            pin);
+        Log.info("Initializing LED driver on pin %s",
+            pin->getName().c_str());
 
-        pinMode(pin, OUTPUT);
+        pin->pinMode(OUTPUT);
         Task::loop(name, 2048, [this](Task& task) {
             if (currentPattern.empty()) {
                 currentPattern = pattern;
@@ -77,10 +80,10 @@ private:
 
     void setLedState(bool state) {
         this->ledState = state;
-        digitalWrite(pin, state);
+        pin->digitalWrite(state);
     }
 
-    const gpio_num_t pin;
+    const PinPtr pin;
     Queue<BlinkPattern> patternQueue;
     BlinkPattern pattern;
     std::atomic<bool> ledState;

@@ -10,9 +10,12 @@
 
 #include <kernel/Concurrent.hpp>
 #include <kernel/Log.hpp>
+#include <kernel/Pin.hpp>
 #include <kernel/Task.hpp>
 
 using namespace std::chrono;
+
+using farmhub::kernel::PinPtr;
 
 namespace farmhub::kernel::drivers {
 
@@ -24,7 +27,7 @@ enum class SwitchMode {
 class Switch {
 public:
     virtual const String& getName() const = 0;
-    virtual gpio_num_t getPin() const = 0;
+    virtual InternalPinPtr getPin() const = 0;
     virtual bool isEngaged() const = 0;
 };
 
@@ -52,22 +55,22 @@ public:
     typedef std::function<void(const Switch&)> SwitchEngagementHandler;
     typedef std::function<void(const Switch&, milliseconds duration)> SwitchReleaseHandler;
 
-    const Switch& onEngaged(const String& name, gpio_num_t pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
+    const Switch& onEngaged(const String& name, InternalPinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
         return registerHandler(
             name, pin, mode, engagementHandler, [](const Switch&, milliseconds) {});
     }
 
-    const Switch& onReleased(const String& name, gpio_num_t pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
+    const Switch& onReleased(const String& name, InternalPinPtr pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
         return registerHandler(
             name, pin, mode, [](const Switch&) {}, releaseHandler);
     }
 
-    const Switch& registerHandler(const String& name, gpio_num_t pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
-        Log.info("Registering switch %s on pin %d, mode %s",
-            name.c_str(), pin, mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
+    const Switch& registerHandler(const String& name, InternalPinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
+        Log.info("Registering switch %s on pin %s, mode %s",
+            name.c_str(), pin->getName().c_str(), mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
 
         // Configure PIN_INPUT as input
-        pinMode(pin, mode == SwitchMode::PullUp ? INPUT_PULLUP : INPUT_PULLDOWN);
+        pin->pinMode(mode == SwitchMode::PullUp ? INPUT_PULLUP : INPUT_PULLDOWN);
         // gpio_set_direction(pin, GPIO_MODE_INPUT);
         // gpio_set_pull_mode(pin, mode == SwitchMode::PullUp ? GPIO_PULLUP_ONLY : GPIO_PULLDOWN_ONLY);
 
@@ -81,8 +84,8 @@ public:
 
         // Install GPIO ISR
         gpio_install_isr_service(0);
-        gpio_isr_handler_add(pin, handleSwitchInterrupt, switchState);
-        gpio_set_intr_type(pin, GPIO_INTR_ANYEDGE);
+        gpio_isr_handler_add(pin->getGpio(), handleSwitchInterrupt, switchState);
+        gpio_set_intr_type(pin->getGpio(), GPIO_INTR_ANYEDGE);
 
         return *switchState;
     }
@@ -94,17 +97,17 @@ private:
             return name;
         }
 
-        gpio_num_t getPin() const override {
+        InternalPinPtr getPin() const override {
             return pin;
         }
 
         bool isEngaged() const override {
-            return digitalRead(pin) == (mode == SwitchMode::PullUp ? LOW : HIGH);
+            return pin->digitalRead() == (mode == SwitchMode::PullUp ? LOW : HIGH);
         }
 
     private:
         String name;
-        gpio_num_t pin;
+        InternalPinPtr pin;
         SwitchMode mode;
 
         SwitchEngagementHandler engagementHandler;
@@ -133,7 +136,7 @@ private:
 // ISR handler for GPIO interrupt
 static void IRAM_ATTR handleSwitchInterrupt(void* arg) {
     SwitchManager::SwitchState* state = static_cast<SwitchManager::SwitchState*>(arg);
-    bool engaged = digitalRead(state->pin) == (state->mode == SwitchMode::PullUp ? LOW : HIGH);
+    bool engaged = state->pin->digitalRead() == (state->mode == SwitchMode::PullUp ? LOW : HIGH);
     state->manager->queueSwitchStateChange(state, engaged);
 }
 

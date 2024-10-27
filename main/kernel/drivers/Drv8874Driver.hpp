@@ -28,23 +28,27 @@ public:
     // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
     Drv8874Driver(
         PwmManager& pwm,
-        gpio_num_t in1Pin,
-        gpio_num_t in2Pin,
-        gpio_num_t currentPin,
-        gpio_num_t faultPin,
-        gpio_num_t sleepPin)
+        InternalPinPtr in1Pin,
+        InternalPinPtr in2Pin,
+        PinPtr currentPin,
+        PinPtr faultPin,
+        PinPtr sleepPin)
         : in1Channel(pwm.registerPin(in1Pin, PWM_FREQ, PWM_RESOLUTION))
         , in2Channel(pwm.registerPin(in2Pin, PWM_FREQ, PWM_RESOLUTION))
         , currentPin(currentPin)
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
 
-        Log.info("Initializing DRV8874 on pins in1 = %d, in2 = %d, fault = %d, sleep = %d, current = %d",
-            in1Pin, in2Pin, faultPin, sleepPin, currentPin);
+        Log.info("Initializing DRV8874 on pins in1 = %s, in2 = %s, fault = %s, sleep = %s, current = %s",
+            in1Pin->getName().c_str(),
+            in2Pin->getName().c_str(),
+            faultPin->getName().c_str(),
+            sleepPin->getName().c_str(),
+            currentPin->getName().c_str());
 
-        pinMode(sleepPin, OUTPUT);
-        pinMode(faultPin, INPUT);
-        pinMode(currentPin, INPUT);
+        sleepPin->pinMode(OUTPUT);
+        faultPin->pinMode(INPUT);
+        currentPin->pinMode(INPUT);
 
         sleep();
     }
@@ -75,12 +79,12 @@ public:
     }
 
     void sleep() {
-        digitalWrite(sleepPin, LOW);
+        sleepPin->digitalWrite(LOW);
         sleeping = true;
     }
 
     void wakeUp() {
-        digitalWrite(sleepPin, HIGH);
+        sleepPin->digitalWrite(HIGH);
         sleeping = false;
     }
 
@@ -91,9 +95,9 @@ public:
 private:
     const PwmPin in1Channel;
     const PwmPin in2Channel;
-    const gpio_num_t currentPin;
-    const gpio_num_t faultPin;
-    const gpio_num_t sleepPin;
+    const PinPtr currentPin;
+    const PinPtr faultPin;
+    const PinPtr sleepPin;
 
     std::atomic<bool> sleeping { false };
 };

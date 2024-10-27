@@ -14,7 +14,7 @@ namespace farmhub::peripherals {
 class SinglePinDeviceConfig
     : public ConfigurationSection {
 public:
-    Property<gpio_num_t> pin { this, "pin", GPIO_NUM_NC };
+    Property<InternalPinPtr> pin { this, "pin" };
 };
 
 }    // namespace farmhub::peripherals::environment

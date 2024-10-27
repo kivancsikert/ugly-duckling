@@ -19,7 +19,7 @@ namespace farmhub::peripherals::environment {
 class SoilMoistureSensorDeviceConfig
     : public ConfigurationSection {
 public:
-    Property<gpio_num_t> pin { this, "pin", GPIO_NUM_NC };
+    Property<InternalPinPtr> pin { this, "pin" };
     // These values need calibrating for each sensor
     Property<uint16_t> air { this, "air", 3000 };
     Property<uint16_t> water { this, "water", 1000 };
@@ -38,14 +38,14 @@ public:
         , waterValue(config.water.get())
         , pin(config.pin.get()) {
 
-        Log.info("Initializing soil moisture sensor on pin %d; air value: %d; water value: %d",
-            pin, airValue, waterValue);
+        Log.info("Initializing soil moisture sensor on pin %s; air value: %d; water value: %d",
+            pin->getName().c_str(), airValue, waterValue);
 
-        pinMode(pin, INPUT);
+        pin->pinMode(INPUT);
     }
 
     void populateTelemetry(JsonObject& json) override {
-        uint16_t soilMoistureValue = analogRead(pin);
+        uint16_t soilMoistureValue = pin->analogRead();
         Log.trace("Soil moisture value: %d",
             soilMoistureValue);
 
@@ -60,7 +60,7 @@ public:
 private:
     const int airValue;
     const int waterValue;
-    gpio_num_t pin;
+    InternalPinPtr pin;
 };
 
 class SoilMoistureSensor

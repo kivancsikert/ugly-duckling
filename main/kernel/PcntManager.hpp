@@ -15,13 +15,13 @@ namespace farmhub::kernel {
 
 // TODO Limit number of channels available
 struct PcntUnit {
-    PcntUnit(pcnt_unit_handle_t unit, gpio_num_t pin)
+    PcntUnit(pcnt_unit_handle_t unit, InternalPinPtr pin)
         : unit(unit)
         , pin(pin) {
     }
 
     PcntUnit()
-        : PcntUnit(nullptr, GPIO_NUM_MAX) {
+        : PcntUnit(nullptr, nullptr) {
     }
 
     PcntUnit(const PcntUnit& other)
@@ -48,18 +48,18 @@ struct PcntUnit {
         return count;
     }
 
-    gpio_num_t getPin() const {
+    PinPtr getPin() const {
         return pin;
     }
 
 private:
     pcnt_unit_handle_t unit;
-    gpio_num_t pin;
+    InternalPinPtr pin;
 };
 
 class PcntManager {
 public:
-    PcntUnit registerUnit(gpio_num_t pin) {
+    PcntUnit registerUnit(InternalPinPtr pin) {
         pcnt_unit_config_t unitConfig = {
             .low_limit = std::numeric_limits<int16_t>::min(),
             .high_limit = std::numeric_limits<int16_t>::max(),
@@ -75,7 +75,7 @@ public:
         ESP_ERROR_CHECK(pcnt_unit_set_glitch_filter(unit, &filterConfig));
 
         pcnt_chan_config_t channelConfig = {
-            .edge_gpio_num = pin,
+            .edge_gpio_num = pin->getGpio(),
             .level_gpio_num = -1,
             .flags = {},
         };
@@ -87,8 +87,8 @@ public:
         ESP_ERROR_CHECK(pcnt_unit_clear_count(unit));
         ESP_ERROR_CHECK(pcnt_unit_start(unit));
 
-        Log.debug("Registered PCNT unit on pin %d",
-            pin);
+        Log.debug("Registered PCNT unit on pin %s",
+            pin->getName().c_str());
         return PcntUnit(unit, pin);
     }
 };

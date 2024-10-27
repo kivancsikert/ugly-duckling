@@ -27,13 +27,14 @@ public:
         const String& name,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         PcntManager& pcnt,
-        gpio_num_t pin,
+        InternalPinPtr pin,
         double qFactor,
         milliseconds measurementFrequency)
         : Component(name, mqttRoot)
         , qFactor(qFactor) {
 
-        Log.info("Initializing flow meter on pin %d with Q = %.2f", pin, qFactor);
+        Log.info("Initializing flow meter on pin %s with Q = %.2f",
+            pin->getName().c_str(), qFactor);
 
         pcntUnit = pcnt.registerUnit(pin);
 

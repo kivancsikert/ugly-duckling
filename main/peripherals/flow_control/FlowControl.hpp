@@ -34,13 +34,12 @@ public:
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         PcntManager& pcnt,
         SleepManager& sleepManager,
-        PwmMotorDriver& controller,
         ValveControlStrategy& strategy,
-        gpio_num_t pin,
+        InternalPinPtr pin,
         double qFactor,
         milliseconds measurementFrequency)
         : Peripheral<FlowControlConfig>(name, mqttRoot)
-        , valve(name, sleepManager, controller, strategy, mqttRoot, [this]() {
+        , valve(name, sleepManager, strategy, mqttRoot, [this]() {
             publishTelemetry();
         })
         , flowMeter(name, mqttRoot, pcnt, pin, qFactor, measurementFrequency) {
@@ -88,26 +87,15 @@ public:
     }
 
     unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
-        const ValveDeviceConfig& valveConfig = deviceConfig.valve.get();
-        const FlowMeterDeviceConfig& flowMeterConfig = deviceConfig.flowMeter.get();
+        auto strategy = deviceConfig.valve.get().createValveControlStrategy(this);
 
-        PwmMotorDriver& targetMotor = findMotor(valveConfig.motor.get());
-        ValveControlStrategy* strategy;
-        try {
-            strategy = createValveControlStrategy(
-                valveConfig.strategy.get(),
-                valveConfig.switchDuration.get(),
-                valveConfig.holdDuty.get() / 100.0);
-        } catch (const std::exception& e) {
-            throw PeripheralCreationException("failed to create strategy: " + String(e.what()));
-        }
+        auto flowMeterConfig = deviceConfig.flowMeter.get();
         return make_unique<FlowControl>(
             name,
             mqttRoot,
 
             services.pcntManager,
             services.sleepManager,
-            targetMotor,
             *strategy,
 
             flowMeterConfig.pin.get(),

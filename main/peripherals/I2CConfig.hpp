@@ -19,18 +19,18 @@ public:
     // but JSON doesn't support 0x notation, so we
     // take it as a string instead
     Property<String> address { this, "address" };
-    Property<gpio_num_t> sda { this, "sda", GPIO_NUM_NC };
-    Property<gpio_num_t> scl { this, "scl", GPIO_NUM_NC };
+    Property<InternalPinPtr> sda { this, "sda" };
+    Property<InternalPinPtr> scl { this, "scl" };
 
-    I2CConfig parse(uint8_t defaultAddress = 0xFF, gpio_num_t defaultSda = GPIO_NUM_NC, gpio_num_t defaultScl = GPIO_NUM_NC) const {
+    I2CConfig parse(uint8_t defaultAddress = 0xFF, InternalPinPtr defaultSda = nullptr, InternalPinPtr defaultScl = nullptr) const {
         return {
             address.get().isEmpty()
                 ? defaultAddress
                 : (uint8_t) strtol(address.get().c_str(), nullptr, 0),
-            sda.get() == GPIO_NUM_NC
+            sda.get() == nullptr
                 ? defaultSda
                 : sda.get(),
-            scl.get() == GPIO_NUM_NC
+            scl.get() == nullptr
                 ? defaultScl
                 : scl.get()
         };

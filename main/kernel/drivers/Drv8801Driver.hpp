@@ -28,32 +28,38 @@ public:
     // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
     Drv8801Driver(
         PwmManager& pwm,
-        gpio_num_t enablePin,
-        gpio_num_t phasePin,
-        gpio_num_t mode1Pin,
-        gpio_num_t mode2Pin,
-        gpio_num_t currentPin,
-        gpio_num_t faultPin,
-        gpio_num_t sleepPin)
+        PinPtr enablePin,
+        InternalPinPtr phasePin,
+        PinPtr mode1Pin,
+        PinPtr mode2Pin,
+        PinPtr currentPin,
+        PinPtr faultPin,
+        PinPtr sleepPin)
         : enablePin(enablePin)
         , phaseChannel(pwm.registerPin(phasePin, PWM_FREQ, PWM_RESOLUTION))
         , currentPin(currentPin)
         , faultPin(faultPin)
         , sleepPin(sleepPin) {
 
-        Log.info("Initializing DRV8801 on pins enable = %d, phase = %d, fault = %d, sleep = %d, mode1 = %d, mode2 = %d, current = %d",
-            enablePin, phasePin, faultPin, sleepPin, mode1Pin, mode2Pin, currentPin);
+        Log.info("Initializing DRV8801 on pins enable = %s, phase = %s, fault = %s, sleep = %s, mode1 = %s, mode2 = %s, current = %s",
+            enablePin->getName().c_str(),
+            phasePin->getName().c_str(),
+            faultPin->getName().c_str(),
+            sleepPin->getName().c_str(),
+            mode1Pin->getName().c_str(),
+            mode2Pin->getName().c_str(),
+            currentPin->getName().c_str());
 
-        pinMode(enablePin, OUTPUT);
-        pinMode(mode1Pin, OUTPUT);
-        pinMode(mode2Pin, OUTPUT);
-        pinMode(sleepPin, OUTPUT);
-        pinMode(faultPin, INPUT);
-        pinMode(currentPin, INPUT);
+        enablePin->pinMode(OUTPUT);
+        mode1Pin->pinMode(OUTPUT);
+        mode2Pin->pinMode(OUTPUT);
+        sleepPin->pinMode(OUTPUT);
+        faultPin->pinMode(INPUT);
+        currentPin->pinMode(INPUT);
 
         // TODO Allow using the DRV8801 in other modes
-        digitalWrite(mode1Pin, HIGH);
-        digitalWrite(mode2Pin, HIGH);
+        mode1Pin->digitalWrite(HIGH);
+        mode2Pin->digitalWrite(HIGH);
 
         sleep();
     }
@@ -62,11 +68,11 @@ public:
         if (duty == 0) {
             Log.debug("Stopping");
             sleep();
-            digitalWrite(enablePin, LOW);
+            enablePin->digitalWrite(LOW);
             return;
         }
         wakeUp();
-        digitalWrite(enablePin, HIGH);
+        enablePin->digitalWrite(HIGH);
 
         int direction = (phase == MotorPhase::FORWARD ? 1 : -1);
         int dutyValue = phaseChannel.maxValue() / 2 + direction * (int) (phaseChannel.maxValue() / 2 * duty);
@@ -78,12 +84,12 @@ public:
     }
 
     void sleep() {
-        digitalWrite(sleepPin, LOW);
+        sleepPin->digitalWrite(LOW);
         sleeping = true;
     }
 
     void wakeUp() {
-        digitalWrite(sleepPin, HIGH);
+        sleepPin->digitalWrite(HIGH);
         sleeping = false;
     }
 
@@ -92,11 +98,11 @@ public:
     }
 
 private:
-    const gpio_num_t enablePin;
+    const PinPtr enablePin;
     const PwmPin phaseChannel;
-    const gpio_num_t currentPin;
-    const gpio_num_t faultPin;
-    const gpio_num_t sleepPin;
+    const PinPtr currentPin;
+    const PinPtr faultPin;
+    const PinPtr sleepPin;
 
     std::atomic<bool> sleeping { false };
 };

@@ -197,9 +197,6 @@ public:
         }
 
         String name = deviceConfig.name.get();
-        if (name.isEmpty()) {
-            name = "default";
-        }
         String type = deviceConfig.type.get();
         try {
             Lock lock(stateMutex);
@@ -249,7 +246,7 @@ public:
 private:
     class PeripheralDeviceConfiguration : public ConfigurationSection {
     public:
-        Property<String> name { this, "name" };
+        Property<String> name { this, "name", "default" };
         Property<String> type { this, "type" };
         Property<JsonAsString> params { this, "params" };
     };

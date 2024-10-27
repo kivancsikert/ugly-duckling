@@ -19,7 +19,7 @@ namespace farmhub::peripherals::flow_meter {
 class FlowMeter
     : public Peripheral<EmptyConfiguration> {
 public:
-    FlowMeter(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PcntManager& pcnt, gpio_num_t pin, double qFactor, milliseconds measurementFrequency)
+    FlowMeter(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PcntManager& pcnt, InternalPinPtr pin, double qFactor, milliseconds measurementFrequency)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , flowMeter(name, mqttRoot, pcnt, pin, qFactor, measurementFrequency) {
     }

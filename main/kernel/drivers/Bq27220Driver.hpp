@@ -12,18 +12,10 @@ namespace farmhub::kernel::drivers {
 
 class Bq27220Driver : public BatteryDriver {
 public:
-    Bq27220Driver(I2CManager& i2c, gpio_num_t sda, gpio_num_t scl, const uint8_t address = 0x55)
-        : wire(i2c.getWireFor(sda, scl))
-        , address(address) {
-        Log.info("Initializing BQ27220 driver on SDA %d, SCL %d",
-            sda, scl);
-
-        wire.beginTransmission(address);
-        if (wire.endTransmission() != 0) {
-            // TODO Throw an actual exception?
-            Log.error("BQ27220 not found at address 0x%02x", address);
-            return;
-        }
+    Bq27220Driver(I2CManager& i2c, InternalPinPtr sda, InternalPinPtr scl, const uint8_t address = 0x55)
+        : device(i2c.createDevice("battery:bq27220", sda, scl, address)) {
+        Log.info("Initializing BQ27220 driver on SDA %s, SCL %s",
+            sda->getName().c_str(), scl->getName().c_str());
 
         auto deviceType = readControlWord(0x0001);
         if (deviceType != 0x0220) {
@@ -61,34 +53,28 @@ protected:
 
 private:
     bool readFrom(uint8_t reg, uint8_t* buffer, size_t length) {
-        wire.beginTransmission(address);
-        wire.write(reg);
-        auto txResult = wire.endTransmission();
-        if (txResult != 0) {
-            Log.error("Failed to write to 0x%02x: %d", reg, txResult);
-            return false;
+        {
+            I2CTransmission tx(device);
+            tx.write(reg);
         }
-
-        auto rxResult = wire.requestFrom(address, (uint8_t) length);
-        if (rxResult != length) {
-            Log.error("Failed to read from 0x%02x: %d", reg, rxResult);
-            return false;
-        }
-        for (size_t i = 0; i < length; i++) {
-            buffer[i] = wire.read();
-           // Log.trace("Read 0x%02x from 0x%02x", buffer[i], reg);
+        {
+            I2CTransmission tx(device);
+            auto rxResult = tx.requestFrom((uint8_t) length);
+            if (rxResult != length) {
+                Log.error("Failed to read from 0x%02x: %d", reg, rxResult);
+                return false;
+            }
+            for (size_t i = 0; i < length; i++) {
+                buffer[i] = tx.read();
+            }
         }
         return true;
     }
 
-    bool writeTo(uint8_t reg, const uint8_t* buffer, size_t length) {
-        wire.beginTransmission(address);
-        wire.write(reg);
-        for (size_t i = 0; i < length; i++) {
-            // Log.trace("Writing 0x%02x to 0x%02x", buffer[i], reg);
-            wire.write(buffer[i]);
-        }
-        return wire.endTransmission() == 0;
+    void writeTo(uint8_t reg, const uint8_t* buffer, size_t length) {
+        I2CTransmission tx(device);
+        tx.write(reg);
+        tx.write(buffer, length);
     }
 
     uint8_t readByte(uint8_t reg) {
@@ -107,9 +93,9 @@ private:
         return static_cast<int16_t>(readWord(reg));
     }
 
-    bool writeWord(uint8_t reg, uint16_t value) {
+    void writeWord(uint8_t reg, uint16_t value) {
         uint16_t buffer = value;
-        return writeTo(reg, reinterpret_cast<uint8_t*>(&buffer), 2);
+        writeTo(reg, reinterpret_cast<uint8_t*>(&buffer), 2);
     }
 
     uint16_t readControlWord(uint16_t subcommand) {
@@ -117,8 +103,7 @@ private:
         return readByte(0x40) | (readByte(0x41) << 8);
     }
 
-    TwoWire& wire;
-    const uint8_t address;
+    shared_ptr<I2CDevice> device;
 };
 
 }    // namespace farmhub::kernel::drivers
