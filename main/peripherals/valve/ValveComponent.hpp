@@ -35,8 +35,8 @@ namespace farmhub::peripherals::valve {
 
 class ValveControlStrategy {
 public:
-    virtual void open(PwmMotorDriver& controller) = 0;
-    virtual void close(PwmMotorDriver& controller) = 0;
+    virtual void open() = 0;
+    virtual void close() = 0;
     virtual ValveState getDefaultState() const = 0;
 
     virtual String describe() const = 0;
@@ -46,19 +46,20 @@ class HoldingValveControlStrategy
     : public ValveControlStrategy {
 
 public:
-    HoldingValveControlStrategy(milliseconds switchDuration, double holdDuty)
-        : switchDuration(switchDuration)
+    HoldingValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double holdDuty)
+        : controller(controller)
+        , switchDuration(switchDuration)
         , holdDuty(holdDuty) {
     }
 
 protected:
-    void driveAndHold(PwmMotorDriver& controller, ValveState targetState) {
+    void driveAndHold(ValveState targetState) {
         switch (targetState) {
             case ValveState::OPEN:
-                driveAndHold(controller, MotorPhase::FORWARD);
+                driveAndHold(MotorPhase::FORWARD);
                 break;
             case ValveState::CLOSED:
-                driveAndHold(controller, MotorPhase::REVERSE);
+                driveAndHold(MotorPhase::REVERSE);
                 break;
             default:
                 // Ignore
@@ -66,11 +67,12 @@ protected:
         }
     }
 
+    PwmMotorDriver& controller;
     const milliseconds switchDuration;
     const double holdDuty;
 
 private:
-    void driveAndHold(PwmMotorDriver& controller, MotorPhase phase) {
+    void driveAndHold(MotorPhase phase) {
         controller.drive(phase, 1.0);
         delay(switchDuration.count());
         controller.drive(phase, holdDuty);
@@ -80,15 +82,15 @@ private:
 class NormallyClosedValveControlStrategy
     : public HoldingValveControlStrategy {
 public:
-    NormallyClosedValveControlStrategy(milliseconds switchDuration, double holdDuty)
-        : HoldingValveControlStrategy(switchDuration, holdDuty) {
+    NormallyClosedValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double holdDuty)
+        : HoldingValveControlStrategy(controller, switchDuration, holdDuty) {
     }
 
-    void open(PwmMotorDriver& controller) override {
-        driveAndHold(controller, ValveState::OPEN);
+    void open() override {
+        driveAndHold(ValveState::OPEN);
     }
 
-    void close(PwmMotorDriver& controller) override {
+    void close() override {
         controller.stop();
     }
 
@@ -104,16 +106,16 @@ public:
 class NormallyOpenValveControlStrategy
     : public HoldingValveControlStrategy {
 public:
-    NormallyOpenValveControlStrategy(milliseconds switchDuration, double holdDuty)
-        : HoldingValveControlStrategy(switchDuration, holdDuty) {
+    NormallyOpenValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double holdDuty)
+        : HoldingValveControlStrategy(controller, switchDuration, holdDuty) {
     }
 
-    void open(PwmMotorDriver& controller) override {
+    void open() override {
         controller.stop();
     }
 
-    void close(PwmMotorDriver& controller) override {
-        driveAndHold(controller, ValveState::CLOSED);
+    void close() override {
+        driveAndHold(ValveState::CLOSED);
     }
 
     ValveState getDefaultState() const override {
@@ -128,18 +130,19 @@ public:
 class LatchingValveControlStrategy
     : public ValveControlStrategy {
 public:
-    LatchingValveControlStrategy(milliseconds switchDuration, double switchDuty = 1.0)
-        : switchDuration(switchDuration)
+    LatchingValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double switchDuty = 1.0)
+        : controller(controller)
+        , switchDuration(switchDuration)
         , switchDuty(switchDuty) {
     }
 
-    void open(PwmMotorDriver& controller) override {
+    void open() override {
         controller.drive(MotorPhase::FORWARD, switchDuty);
         delay(switchDuration.count());
         controller.stop();
     }
 
-    void close(PwmMotorDriver& controller) override {
+    void close() override {
         controller.drive(MotorPhase::REVERSE, switchDuty);
         delay(switchDuration.count());
         controller.stop();
@@ -154,6 +157,7 @@ public:
     }
 
 private:
+    PwmMotorDriver& controller;
     const milliseconds switchDuration;
     const double switchDuty;
 };
@@ -163,13 +167,11 @@ public:
     ValveComponent(
         const String& name,
         SleepManager& sleepManager,
-        PwmMotorDriver& controller,
         ValveControlStrategy& strategy,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
         , sleepManager(sleepManager)
-        , controller(controller)
         , nvs(name)
         , strategy(strategy)
         , publishTelemetry(publishTelemetry) {
@@ -177,41 +179,33 @@ public:
         Log.info("Creating valve '%s' with strategy %s",
             name.c_str(), strategy.describe().c_str());
 
-        controller.stop();
-
-        // Rewrite this to a switch statement
-        if (strategy.getDefaultState() == ValveState::OPEN) {
-            state = ValveState::OPEN;
-        } else if (strategy.getDefaultState() == ValveState::CLOSED) {
-            state = ValveState::CLOSED;
-        }
-
+        ValveState initState;
         switch (strategy.getDefaultState()) {
             case ValveState::OPEN:
                 Log.info("Assuming valve '%s' is open by default",
                     name.c_str());
-                state = ValveState::OPEN;
+                initState = ValveState::OPEN;
                 break;
             case ValveState::CLOSED:
                 Log.info("Assuming valve '%s' is closed by default",
                     name.c_str());
-                state = ValveState::CLOSED;
+                initState = ValveState::CLOSED;
                 break;
             default:
                 // Try to load from NVS
                 ValveState lastStoredState;
                 if (nvs.get("state", lastStoredState)) {
-                    state = lastStoredState;
+                    initState = lastStoredState;
                     Log.info("Restored state for valve '%s' from NVS: %d",
                         name.c_str(), static_cast<int>(state));
                 } else {
-                    Log.info("No stored state for valve '%s'",
+                    initState = ValveState::CLOSED;
+                    Log.info("No stored state for valve '%s', defaulting to closed",
                         name.c_str());
                 }
                 break;
         }
-
-        // TODO Restore stored state?
+        doTransitionTo(initState);
 
         mqttRoot->registerCommand("override", [this](const JsonObject& request, JsonObject& response) {
             ValveState targetState = request["state"].as<ValveState>();
@@ -313,14 +307,14 @@ private:
     void open() {
         Log.info("Opening valve '%s'", name.c_str());
         KeepAwake keepAwake(sleepManager);
-        strategy.open(controller);
+        strategy.open();
         setState(ValveState::OPEN);
     }
 
     void close() {
         Log.info("Closing valve '%s'", name.c_str());
         KeepAwake keepAwake(sleepManager);
-        strategy.close(controller);
+        strategy.close();
         setState(ValveState::CLOSED);
     }
 
@@ -329,7 +323,15 @@ private:
         if (this->state == state) {
             return;
         }
+        doTransitionTo(state);
 
+        mqttRoot->publish("events/state", [=](JsonObject& json) {
+            json["state"] = state;
+        });
+        publishTelemetry();
+    }
+
+    void doTransitionTo(ValveState state) {
         switch (state) {
             case ValveState::OPEN:
                 open();
@@ -341,10 +343,6 @@ private:
                 // Ignore
                 break;
         }
-        mqttRoot->publish("events/state", [=](JsonObject& json) {
-            json["state"] = state;
-        });
-        publishTelemetry();
     }
 
     void setState(ValveState state) {
@@ -356,7 +354,6 @@ private:
     }
 
     SleepManager& sleepManager;
-    PwmMotorDriver& controller;
     NvsStore nvs;
     ValveControlStrategy& strategy;
     std::function<void()> publishTelemetry;

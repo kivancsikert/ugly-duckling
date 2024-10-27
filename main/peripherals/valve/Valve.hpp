@@ -36,11 +36,10 @@ public:
     Valve(
         const String& name,
         SleepManager& sleepManager,
-        PwmMotorDriver& controller,
         ValveControlStrategy& strategy,
         shared_ptr<MqttDriver::MqttRoot> mqttRoot)
         : Peripheral<ValveConfig>(name, mqttRoot)
-        , valve(name, sleepManager, controller, strategy, mqttRoot, [this]() {
+        , valve(name, sleepManager, strategy, mqttRoot, [this]() {
             publishTelemetry();
         }) {
     }
@@ -77,13 +76,14 @@ public:
         ValveControlStrategy* strategy;
         try {
             strategy = createValveControlStrategy(
+                targetMotor,
                 deviceConfig.strategy.get(),
                 deviceConfig.switchDuration.get(),
                 deviceConfig.holdDuty.get() / 100.0);
         } catch (const std::exception& e) {
             throw PeripheralCreationException("failed to create strategy: " + String(e.what()));
         }
-        return make_unique<Valve>(name, services.sleepManager, targetMotor, *strategy, mqttRoot);
+        return make_unique<Valve>(name, services.sleepManager, *strategy, mqttRoot);
     }
 };
 

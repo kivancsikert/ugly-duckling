@@ -34,13 +34,12 @@ public:
         shared_ptr<MqttDriver::MqttRoot> mqttRoot,
         PcntManager& pcnt,
         SleepManager& sleepManager,
-        PwmMotorDriver& controller,
         ValveControlStrategy& strategy,
         InternalPinPtr pin,
         double qFactor,
         milliseconds measurementFrequency)
         : Peripheral<FlowControlConfig>(name, mqttRoot)
-        , valve(name, sleepManager, controller, strategy, mqttRoot, [this]() {
+        , valve(name, sleepManager, strategy, mqttRoot, [this]() {
             publishTelemetry();
         })
         , flowMeter(name, mqttRoot, pcnt, pin, qFactor, measurementFrequency) {
@@ -95,6 +94,7 @@ public:
         ValveControlStrategy* strategy;
         try {
             strategy = createValveControlStrategy(
+                targetMotor,
                 valveConfig.strategy.get(),
                 valveConfig.switchDuration.get(),
                 valveConfig.holdDuty.get() / 100.0);
@@ -107,7 +107,6 @@ public:
 
             services.pcntManager,
             services.sleepManager,
-            targetMotor,
             *strategy,
 
             flowMeterConfig.pin.get(),
