@@ -18,6 +18,11 @@ using PinPtr = std::shared_ptr<Pin>;
 class InternalPin;
 using InternalPinPtr = std::shared_ptr<InternalPin>;
 
+/**
+ * @brief A GPIO pin abstraction that allows digital reads and writes.
+ *
+ * @details This can be implemented by internal pins (GPIO pins of the MCU) or external pins provided by external peripherals.
+ */
 class Pin {
 public:
     static PinPtr byName(const String& name) {
@@ -55,6 +60,9 @@ protected:
 
 std::map<String, PinPtr> Pin::BY_NAME;
 
+/**
+ * @brief An internal GPIO pin of the MCU. These pins can do analog reads as well, and can expose the GPIO number.
+ */
 class InternalPin : public Pin {
 public:
     static InternalPinPtr registerPin(const String& name, gpio_num_t gpio) {
