@@ -38,13 +38,13 @@ public:
         return name;
     }
 
+    static void registerPin(const String& name, PinPtr pin) {
+        BY_NAME[name] = pin;
+    }
+
 protected:
     Pin(const String& name)
         : name(name) {
-    }
-
-    static void registerPin(const String& name, PinPtr pin) {
-        BY_NAME[name] = pin;
     }
 
 protected:
