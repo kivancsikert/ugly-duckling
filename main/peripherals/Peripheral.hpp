@@ -184,7 +184,7 @@ public:
         factories.insert(std::make_pair(factory.factoryType, std::reference_wrapper<PeripheralFactoryBase>(factory)));
     }
 
-    void createPeripheral(const String& peripheralConfig) {
+    bool createPeripheral(const String& peripheralConfig) {
         Log.info("Creating peripheral with config: %s",
             peripheralConfig.c_str());
         PeripheralDeviceConfiguration deviceConfig;
@@ -193,7 +193,7 @@ public:
         } catch (const std::exception& e) {
             Log.error("Failed to parse peripheral config because %s:\n%s",
                 e.what(), peripheralConfig.c_str());
-            return;
+            return false;
         }
 
         String name = deviceConfig.name.get();
@@ -203,16 +203,19 @@ public:
             if (state == State::Stopped) {
                 Log.error("Not creating peripheral '%s' because the peripheral manager is stopped",
                     name.c_str());
-                return;
+                return false;
             }
             unique_ptr<PeripheralBase> peripheral = createPeripheral(name, type, deviceConfig.params.get().get());
             peripherals.push_back(move(peripheral));
+            return true;
         } catch (const std::exception& e) {
             Log.error("Failed to create '%s' peripheral '%s' because %s",
                 type.c_str(), name.c_str(), e.what());
+            return false;
         } catch (...) {
             Log.error("Failed to create '%s' peripheral '%s' because of an unknown exception",
                 type.c_str(), name.c_str());
+            return false;
         }
     }
 

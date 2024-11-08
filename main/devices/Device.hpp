@@ -462,9 +462,14 @@ public:
         auto& peripheralsConfig = deviceConfig.peripherals.get();
         Log.info("Loading configuration for %d user-configured peripherals",
             peripheralsConfig.size());
+        bool peripheralError = false;
         for (auto& perpheralConfig : peripheralsConfig) {
-            peripheralManager.createPeripheral(perpheralConfig.get());
+            if (!peripheralManager.createPeripheral(perpheralConfig.get())) {
+                peripheralError = true;
+            }
         }
+
+        InitState initState = peripheralError ? InitState::PeripheralError : InitState::Success;
 
         mqttDeviceRoot->publish(
             "init",
@@ -483,6 +488,7 @@ public:
                 json["wakeup"] = esp_sleep_get_wakeup_cause();
                 json["bootCount"] = bootCount++;
                 json["time"] = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+                json["state"] = static_cast<int>(initState);
                 json["sleepWhenIdle"] = kernel.sleepManager.sleepWhenIdle;
             },
             MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::max());
@@ -512,6 +518,11 @@ public:
     }
 
 private:
+    enum class InitState {
+        Success = 0,
+        PeripheralError = 1,
+    };
+
     void publishTelemetry() {
         deviceTelemetryPublisher.publishTelemetry();
         peripheralManager.publishTelemetry();
