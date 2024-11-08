@@ -79,7 +79,6 @@ public:
         }
 
         PwmMotorDriver& motor = motorOwner->findMotor(this->motor.get());
-        ValveControlStrategy* strategy;
 
         auto switchDuration = this->switchDuration.get();
         auto holdDuty = this->holdDuty.get() / 100.0;
