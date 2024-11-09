@@ -507,13 +507,14 @@ public:
 
         kernel.getKernelReadyState().set();
 
-        Log.info("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', current time is %lld)",
+        Log.info("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
             millis() / 1000.0,
             kernel.version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
             deviceConfig.getHostname().c_str(),
             WiFi.localIP().toString().c_str(),
+            WiFi.SSID().c_str(),
             duration_cast<seconds>(system_clock::now().time_since_epoch()).count());
     }
 
