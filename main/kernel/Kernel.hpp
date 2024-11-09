@@ -108,7 +108,7 @@ public:
         fUpdate.close();
     }
 
-    void performFactoryReset() {
+    void performFactoryReset(bool completeReset) {
         Log.printlnToSerial("Performing factory reset");
 
         statusLed.turnOn();
@@ -117,15 +117,20 @@ public:
         delay(1000);
         statusLed.turnOn();
 
-        Log.printlnToSerial(" - Deleting the file system...");
-        fs.reset();
+        if (completeReset) {
+            delay(1000);
+            statusLed.turnOff();
+            delay(1000);
+            statusLed.turnOn();
+
+            Log.printlnToSerial(" - Deleting the file system...");
+            fs.reset();
+        }
 
         Log.printlnToSerial(" - Clearing NVS...");
-
         nvs_flash_erase();
 
         Log.printlnToSerial(" - Restarting...");
-
         ESP.restart();
     }
 
