@@ -39,7 +39,7 @@ set(SDKCONFIG_DEFAULTS "sdkconfig.defaults;sdkconfig.${UD_GEN_LOWER}.defaults")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-# idf_build_set_property(DEPENDENCIES_LOCK "dependencies.${UD_GEN_LOWER}.lock")
+idf_build_set_property(DEPENDENCIES_LOCK "dependencies.lock")
 
 # list(APPEND EXTRA_COMPONENT_DIRS $ENV{IDF_PATH}/components)
 list(APPEND EXTRA_COMPONENT_DIRS components)
