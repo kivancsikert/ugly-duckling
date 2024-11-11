@@ -455,11 +455,14 @@ public:
         // We want RTC to be in sync before we start setting up peripherals
         kernel.getRtcInSyncState().awaitSet();
 
+        JsonDocument peripheralsInitDoc;
+        JsonArray peripheralsInitJson = peripheralsInitDoc.to<JsonArray>();
+
         auto builtInPeripheralsCofig = deviceDefinition.getBuiltInPeripherals();
         Log.debug("Loading configuration for %d built-in peripherals",
             builtInPeripheralsCofig.size());
         for (auto& perpheralConfig : builtInPeripheralsCofig) {
-            peripheralManager.createPeripheral(perpheralConfig);
+            peripheralManager.createPeripheral(perpheralConfig, peripheralsInitJson);
         }
 
         auto& peripheralsConfig = deviceConfig.peripherals.get();
@@ -467,7 +470,7 @@ public:
             peripheralsConfig.size());
         bool peripheralError = false;
         for (auto& perpheralConfig : peripheralsConfig) {
-            if (!peripheralManager.createPeripheral(perpheralConfig.get())) {
+            if (!peripheralManager.createPeripheral(perpheralConfig.get(), peripheralsInitJson)) {
                 peripheralError = true;
             }
         }
@@ -492,6 +495,7 @@ public:
                 json["bootCount"] = bootCount++;
                 json["time"] = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
                 json["state"] = static_cast<int>(initState);
+                json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
                 json["sleepWhenIdle"] = kernel.sleepManager.sleepWhenIdle;
             },
             MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::max());

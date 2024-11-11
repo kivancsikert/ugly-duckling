@@ -115,7 +115,7 @@ public:
         , peripheralType(peripheralType) {
     }
 
-    virtual unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) = 0;
+    virtual unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) = 0;
 
     const String factoryType;
     const String peripheralType;
@@ -134,7 +134,7 @@ public:
         , deviceConfigArgs(std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
-    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) override {
         // Use short prefix because SPIFFS has a 32 character limit
         ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/p/" + name);
         mqttRoot->subscribe("config", [name, configFile](const String&, const JsonObject& configJson) {
@@ -149,10 +149,9 @@ public:
         deviceConfig.loadFromString(jsonConfig);
         unique_ptr<Peripheral<TConfig>> peripheral = createPeripheral(name, deviceConfig, mqttRoot, services);
         peripheral->configure(configFile->config);
-        mqttRoot->publish("init", [&](JsonObject& json) {
-            auto config = json["config"].to<JsonObject>();
-            configFile->config.store(config, false);
-        });
+
+        // Store configuration in init message
+        configFile->config.store(initConfigJson, false);
         return peripheral;
     }
 
@@ -184,7 +183,7 @@ public:
         factories.insert(std::make_pair(factory.factoryType, std::reference_wrapper<PeripheralFactoryBase>(factory)));
     }
 
-    bool createPeripheral(const String& peripheralConfig) {
+    bool createPeripheral(const String& peripheralConfig, JsonArray peripheralsInitJson) {
         Log.info("Creating peripheral with config: %s",
             peripheralConfig.c_str());
         PeripheralDeviceConfiguration deviceConfig;
@@ -198,6 +197,8 @@ public:
 
         String name = deviceConfig.name.get();
         String type = deviceConfig.type.get();
+        JsonObject initJson = peripheralsInitJson.add<JsonObject>();
+        deviceConfig.store(initJson, true);
         try {
             Lock lock(stateMutex);
             if (state == State::Stopped) {
@@ -205,16 +206,22 @@ public:
                     name.c_str());
                 return false;
             }
-            unique_ptr<PeripheralBase> peripheral = createPeripheral(name, type, deviceConfig.params.get().get());
+            JsonDocument initConfigDoc;
+            JsonObject initConfigJson = initConfigDoc.to<JsonObject>();
+            unique_ptr<PeripheralBase> peripheral = createPeripheral(name, type, deviceConfig.params.get().get(), initConfigJson);
+            initJson["config"].to<JsonObject>().set(initConfigJson);
             peripherals.push_back(move(peripheral));
+
             return true;
         } catch (const std::exception& e) {
             Log.error("Failed to create '%s' peripheral '%s' because %s",
                 type.c_str(), name.c_str(), e.what());
+            initJson["error"] = e.what();
             return false;
         } catch (...) {
             Log.error("Failed to create '%s' peripheral '%s' because of an unknown exception",
                 type.c_str(), name.c_str());
+            initJson["error"] = "unknown exception";
             return false;
         }
     }
@@ -254,7 +261,7 @@ private:
         Property<JsonAsString> params { this, "params" };
     };
 
-    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& factoryType, const String& configJson) {
+    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& factoryType, const String& configJson, JsonObject& initConfigJson) {
         Log.debug("Creating peripheral '%s' with factory '%s'",
             name.c_str(), factoryType.c_str());
         auto it = factories.find(factoryType);
@@ -264,7 +271,7 @@ private:
         const String& peripheralType = it->second.get().peripheralType;
         shared_ptr<MqttDriver::MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
         PeripheralFactoryBase& factory = it->second.get();
-        return factory.createPeripheral(name, configJson, mqttRoot, services);
+        return factory.createPeripheral(name, configJson, mqttRoot, services, initConfigJson);
     }
 
     enum class State {
