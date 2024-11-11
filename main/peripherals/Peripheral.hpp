@@ -216,7 +216,7 @@ public:
         } catch (const std::exception& e) {
             Log.error("Failed to create '%s' peripheral '%s' because %s",
                 type.c_str(), name.c_str(), e.what());
-            initJson["error"] = e.what();
+            initJson["error"] = String(e.what());
             return false;
         } catch (...) {
             Log.error("Failed to create '%s' peripheral '%s' because of an unknown exception",
