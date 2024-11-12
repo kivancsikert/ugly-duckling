@@ -148,6 +148,11 @@ private:
         // Print wifi status
         Log.debug("WiFi status: %d",
             WiFi.status());
+#ifdef WOKWI
+        Log.debug("Skipping WiFi provisioning on Wokwi");
+        // Use Wokwi WiFi network
+        WiFi.begin("Wokwi-GUEST", "", 6);
+#else
         StringPrint qr;
 // BLE Provisioning using the ESP SoftAP Prov works fine for any BLE SoC, including ESP32, ESP32S3 and ESP32C3.
 #if CONFIG_BLUEDROID_ENABLED && !defined(USE_SOFT_AP)
@@ -165,6 +170,7 @@ private:
 #endif
         Log.debug("%s",
             qr.buffer.c_str());
+#endif
     }
 
     static constexpr const char* pop = "abcd1234";
