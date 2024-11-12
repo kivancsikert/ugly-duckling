@@ -290,8 +290,15 @@ public:
             JsonDocument json;
             DeserializationError error = deserializeJson(json, file);
             file.close();
-            if (error) {
-                throw ConfigurationException("Cannot open config file " + path + " (" + String(error.c_str()) + ")");
+            switch (error.code()) {
+                case DeserializationError::Code::Ok:
+                    break;
+                case DeserializationError::Code::EmptyInput:
+                    Log.debug("The configuration file '%s' is empty, falling back to defaults",
+                        path.c_str());
+                    break;
+                default:
+                    throw ConfigurationException("Cannot open config file " + path + " (" + String(error.c_str()) + ")");
             }
             update(json.as<JsonObject>());
             Log.info("Effective configuration for '%s': %s",
