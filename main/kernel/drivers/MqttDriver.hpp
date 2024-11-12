@@ -372,6 +372,11 @@ private:
             String clientKey;
 
             MdnsRecord mqttServer;
+#ifdef WOKWI
+            Log.debug("MQTT: Using MQTT server on Wokwi host");
+            mqttServer.hostname = "host.wokwi.internal";
+            mqttServer.port = 1883;
+#else
             if (config.host.get().length() > 0) {
                 mqttServer.hostname = config.host.get();
                 mqttServer.port = config.port.get();
@@ -384,6 +389,7 @@ private:
                 // TODO Handle lookup failure
                 mdns.lookupService("mqtt", "tcp", mqttServer, trustMdnsCache);
             }
+#endif
 
             String hostname;
             if (mqttServer.ip == IPAddress()) {
