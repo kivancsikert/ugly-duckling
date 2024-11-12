@@ -4,6 +4,7 @@ if(NOT DEFINED UD_DEBUG)
     set(UD_DEBUG "$ENV{UD_DEBUG}")
 endif()
 if(UD_DEBUG STREQUAL "")
+    message("UD_DEBUG is not set, assuming 0.")
     set(UD_DEBUG 0)
 endif()
 
