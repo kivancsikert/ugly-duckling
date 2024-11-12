@@ -1,3 +1,7 @@
+// Helper macros to convert macro to string
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
 #include <atomic>
 #include <chrono>
 
