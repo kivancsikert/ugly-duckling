@@ -136,27 +136,17 @@ public:
     }
 
     void printlnToSerial(const char* message = "") {
-        Serial.println(message);
-        Serial1.println(message);
-#if Serial != Serial0
-        Serial0.println(line);
-#endif
+        printf("%s\n", message);
     }
 
     void printToSerial(const char* message) {
-        Serial.print(message);
-        Serial1.print(message);
-#if Serial != Serial0
-        Serial0.print(line);
-#endif
+        printf("%s", message);
     }
 
     inline void __attribute__((format(printf, 2, 3))) printfToSerial(const char* format, ...) {
         va_list args;
         va_start(args, format);
-        withFormattedString(format, args, [this](const char* buffer) {
-            printToSerial(buffer);
-        });
+        vprintf(format, args);
         va_end(args);
     }
 
