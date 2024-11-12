@@ -8,6 +8,10 @@ if(UD_DEBUG STREQUAL "")
     set(UD_DEBUG 0)
 endif()
 
+if(NOT DEFINED WOKWI)
+    set(WOKWI "$ENV{WOKWI}")
+endif()
+
 # Make sure we reconfigure if UD_DEBUG changes
 set_property(DIRECTORY PROPERTY UD_DEBUG_TRACKER "${UD_DEBUG}")
 
@@ -25,6 +29,10 @@ if(UD_DEBUG)
     add_compile_definitions(DUMP_MQTT)
 else()
     add_compile_options(-O2)
+endif()
+
+if(WOKWI)
+    add_compile_definitions(WOKWI)
 endif()
 
 # Set Git version
