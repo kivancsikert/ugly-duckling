@@ -90,6 +90,10 @@ private:
             return;
         }
 
+#ifdef WOKWI
+        Log.debug("RTC: using default NTP server for Wokwi");
+        ntpClient.emplace(udp);
+#else
         if (ntpConfig.host.get().length() > 0) {
             Log.info("RTC: using NTP server %s from configuration",
                 ntpConfig.host.get().c_str());
@@ -107,6 +111,7 @@ private:
                 ntpClient.emplace(udp);
             }
         }
+#endif
 
         // TODO Use built in configTime() instead
         //      We are using the external NTP client library, because the built in configTime() does not
