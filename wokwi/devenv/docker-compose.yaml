@@ -1,0 +1,15 @@
+services:
+  mqtt-relay:
+    build: mosquitto
+    environment:
+      - BROKER_ADDRESS=${BROKER_ADDRESS}
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+
+  wokwi:
+    image: wokwi/wokwi-ci-server
+    ports:
+      - "9177:3000"

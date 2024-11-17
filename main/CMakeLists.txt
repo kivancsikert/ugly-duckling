@@ -4,7 +4,12 @@ if(NOT DEFINED UD_DEBUG)
     set(UD_DEBUG "$ENV{UD_DEBUG}")
 endif()
 if(UD_DEBUG STREQUAL "")
+    message("UD_DEBUG is not set, assuming 0.")
     set(UD_DEBUG 0)
+endif()
+
+if(NOT DEFINED WOKWI)
+    set(WOKWI "$ENV{WOKWI}")
 endif()
 
 # Make sure we reconfigure if UD_DEBUG changes
@@ -24,6 +29,10 @@ if(UD_DEBUG)
     add_compile_definitions(DUMP_MQTT)
 else()
     add_compile_options(-O2)
+endif()
+
+if(WOKWI)
+    add_compile_definitions(WOKWI)
 endif()
 
 # Set Git version

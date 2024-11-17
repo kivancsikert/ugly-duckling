@@ -1,14 +1,14 @@
-.vscode/*
+/.vscode/*
 
 *.log
 
 # File system image
-data/
-data-unused/
+/data/
+/data-unused/
 
 # ESP-IDF generated files
 /build/
 /managed_components/
-sdkconfig*
-!sdkconfig*.defaults
-dependencies*.lock
+/sdkconfig*
+/!sdkconfig*.defaults
+/dependencies*.lock
