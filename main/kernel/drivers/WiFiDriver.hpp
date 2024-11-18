@@ -3,9 +3,8 @@
 #include <chrono>
 #include <list>
 
-#include <WiFi.h>
-#include <WiFiProv.h>
-
+#include <esp_event.h>
+#include <esp_netif.h>
 #include <esp_wifi.h>
 
 #include <kernel/Concurrent.hpp>
@@ -29,7 +28,15 @@ public:
         , powerSaveMode(powerSaveMode) {
         Log.debug("WiFi: initializing");
 
-        WiFi.begin();
+        ESP_ERROR_CHECK(esp_netif_init());
+        ESP_ERROR_CHECK(esp_event_loop_create_default());
+        esp_netif_create_default_wifi_ap();
+
+        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+        ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+        ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifiEventHandler, this, NULL));
+        ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID, &ipEventHandler, this, NULL));
+
         if (powerSaveMode) {
             auto listenInterval = 50;
             Log.debug("WiFi enabling power save mode, listen interval: %d",
@@ -41,74 +48,73 @@ public:
             ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &conf));
         }
 
-        WiFi.onEvent(
-            [](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: connected to %s",
-                    String(info.wifi_sta_connected.ssid, info.wifi_sta_connected.ssid_len).c_str());
-            },
-            ARDUINO_EVENT_WIFI_STA_CONNECTED);
-        WiFi.onEvent(
-            [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: got IP %s, netmask %s, gateway %s",
-                    IPAddress(info.got_ip.ip_info.ip.addr).toString().c_str(),
-                    IPAddress(info.got_ip.ip_info.netmask.addr).toString().c_str(),
-                    IPAddress(info.got_ip.ip_info.gw.addr).toString().c_str());
-                networkReady.set();
-                eventQueue.offer(WiFiEvent::CONNECTED);
-            },
-            ARDUINO_EVENT_WIFI_STA_GOT_IP);
-        WiFi.onEvent(
-            [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: lost IP address");
-                networkReady.clear();
-                eventQueue.offer(WiFiEvent::DISCONNECTED);
-            },
-            ARDUINO_EVENT_WIFI_STA_LOST_IP);
-        WiFi.onEvent(
-            [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: disconnected from %s, reason: %s",
-                    String(info.wifi_sta_disconnected.ssid, info.wifi_sta_disconnected.ssid_len).c_str(),
-                    WiFi.disconnectReasonName(static_cast<wifi_err_reason_t>(info.wifi_sta_disconnected.reason)));
-                networkReady.clear();
-                eventQueue.offer(WiFiEvent::DISCONNECTED);
-            },
-            ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
-        WiFi.onEvent(
-            [&configPortalRunning](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: provisioning started");
-                configPortalRunning.set();
-            },
-            ARDUINO_EVENT_PROV_START);
-        WiFi.onEvent(
-            [](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("Received Wi-Fi credentials for SSID '%s'",
-                    (const char*) info.prov_cred_recv.ssid);
-            },
-            ARDUINO_EVENT_PROV_CRED_RECV);
-        WiFi.onEvent(
-            [](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: provisioning failed because %s",
-                    info.prov_fail_reason == NETWORK_PROV_WIFI_STA_AUTH_ERROR ? "authentication failed" : "AP not found");
-            },
-            ARDUINO_EVENT_PROV_CRED_FAIL);
-        WiFi.onEvent(
-            [](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: provisioning successful");
-            },
-            ARDUINO_EVENT_PROV_CRED_SUCCESS);
-        WiFi.onEvent(
-            [&configPortalRunning](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: provisioning finished");
-                configPortalRunning.clear();
-            },
-            ARDUINO_EVENT_PROV_END);
-
         Task::run("wifi", 3072, [this](Task&) {
             runLoop();
         });
     }
 
+    static void wifiEventHandler(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
+        WiFiDriver* driver = static_cast<WiFiDriver*>(arg);
+        driver->handleWiFiEvent(eventId, eventData);
+    }
+
+    static void ipEventHandler(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
+        WiFiDriver* driver = static_cast<WiFiDriver*>(arg);
+        driver->handleIpEvent(eventId, eventData);
+    }
+
 private:
+    void handleWiFiEvent(int32_t eventId, void* eventData) {
+        switch (eventId) {
+            case WIFI_EVENT_STA_CONNECTED: {
+                wifi_event_sta_connected_t* event = static_cast<wifi_event_sta_connected_t*>(eventData);
+                Log.debug("WiFi: connected to %s",
+                    String(event->ssid, event->ssid_len).c_str());
+                break;
+            }
+            case WIFI_EVENT_STA_DISCONNECTED: {
+                wifi_event_sta_disconnected_t* event = static_cast<wifi_event_sta_disconnected_t*>(eventData);
+                Log.debug("WiFi: disconnected from %s, reason: %u",
+                    String(event->ssid, event->ssid_len).c_str(),
+                    event->reason);
+                networkReady.clear();
+                eventQueue.offer(WiFiEvent::DISCONNECTED);
+                break;
+            }
+            case WIFI_EVENT_AP_START: {
+                Log.debug("WiFi: `softAP started");
+                configPortalRunning.set();
+                break;
+            }
+            case WIFI_EVENT_AP_STOP: {
+                Log.debug("WiFi: softAP finished");
+                configPortalRunning.clear();
+                break;
+            }
+        }
+    }
+
+    void handleIpEvent(int32_t eventId, void* eventData) {
+        switch (eventId) {
+            case IP_EVENT_STA_GOT_IP: {
+                ip_event_got_ip_t* event = static_cast<ip_event_got_ip_t*>(eventData);
+                Log.debug("WiFi: got IP %s, netmask %s, gateway %s",
+                    IPAddress(event->ip_info.ip.addr).toString().c_str(),
+                    IPAddress(event->ip_info.netmask.addr).toString().c_str(),
+                    IPAddress(event->ip_info.gw.addr).toString().c_str());
+                networkReady.set();
+                eventQueue.offer(WiFiEvent::CONNECTED);
+                break;
+            }
+            case IP_EVENT_STA_LOST_IP: {
+                Log.debug("WiFi: lost IP address");
+                networkReady.clear();
+                eventQueue.offer(WiFiEvent::DISCONNECTED);
+                break;
+            }
+        }
+    }
+
     inline void runLoop() {
         int clients = 0;
         while (true) {
@@ -192,9 +198,9 @@ private:
         return networkReady;
     }
 
-    StateSource& networkRequested;
-    StateSource& networkReady;
-    StateSource& configPortalRunning;
+    StateSource & networkRequested;
+    StateSource & networkReady;
+    StateSource & configPortalRunning;
     const String hostname;
     const bool powerSaveMode;
 
