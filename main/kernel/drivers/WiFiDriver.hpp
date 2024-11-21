@@ -34,8 +34,8 @@ public:
 
         wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
         ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifiEventHandler, this, NULL));
-        ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID, &ipEventHandler, this, NULL));
+        ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &eventHandler, this, NULL));
+        ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID, &eventHandler, this, NULL));
 
         if (powerSaveMode) {
             auto listenInterval = 50;
@@ -53,64 +53,59 @@ public:
         });
     }
 
-    static void wifiEventHandler(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
+    static void eventHandler(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
         WiFiDriver* driver = static_cast<WiFiDriver*>(arg);
-        driver->handleWiFiEvent(eventId, eventData);
-    }
-
-    static void ipEventHandler(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
-        WiFiDriver* driver = static_cast<WiFiDriver*>(arg);
-        driver->handleIpEvent(eventId, eventData);
+        driver->handleEvent(eventBase, eventId, eventData);
     }
 
 private:
-    void handleWiFiEvent(int32_t eventId, void* eventData) {
-        switch (eventId) {
-            case WIFI_EVENT_STA_CONNECTED: {
-                wifi_event_sta_connected_t* event = static_cast<wifi_event_sta_connected_t*>(eventData);
-                Log.debug("WiFi: connected to %s",
-                    String(event->ssid, event->ssid_len).c_str());
-                break;
+    void handleEvent(esp_event_base_t eventBase, int32_t eventId, void* eventData) {
+        if (eventBase == WIFI_EVENT) {
+            switch (eventId) {
+                case WIFI_EVENT_STA_CONNECTED: {
+                    wifi_event_sta_connected_t* event = static_cast<wifi_event_sta_connected_t*>(eventData);
+                    Log.debug("WiFi: connected to %s",
+                        String(event->ssid, event->ssid_len).c_str());
+                    break;
+                }
+                case WIFI_EVENT_STA_DISCONNECTED: {
+                    wifi_event_sta_disconnected_t* event = static_cast<wifi_event_sta_disconnected_t*>(eventData);
+                    Log.debug("WiFi: disconnected from %s, reason: %u",
+                        String(event->ssid, event->ssid_len).c_str(),
+                        event->reason);
+                    networkReady.clear();
+                    eventQueue.offer(WiFiEvent::DISCONNECTED);
+                    break;
+                }
+                case WIFI_EVENT_AP_START: {
+                    Log.debug("WiFi: `softAP started");
+                    configPortalRunning.set();
+                    break;
+                }
+                case WIFI_EVENT_AP_STOP: {
+                    Log.debug("WiFi: softAP finished");
+                    configPortalRunning.clear();
+                    break;
+                }
             }
-            case WIFI_EVENT_STA_DISCONNECTED: {
-                wifi_event_sta_disconnected_t* event = static_cast<wifi_event_sta_disconnected_t*>(eventData);
-                Log.debug("WiFi: disconnected from %s, reason: %u",
-                    String(event->ssid, event->ssid_len).c_str(),
-                    event->reason);
-                networkReady.clear();
-                eventQueue.offer(WiFiEvent::DISCONNECTED);
-                break;
-            }
-            case WIFI_EVENT_AP_START: {
-                Log.debug("WiFi: `softAP started");
-                configPortalRunning.set();
-                break;
-            }
-            case WIFI_EVENT_AP_STOP: {
-                Log.debug("WiFi: softAP finished");
-                configPortalRunning.clear();
-                break;
-            }
-        }
-    }
-
-    void handleIpEvent(int32_t eventId, void* eventData) {
-        switch (eventId) {
-            case IP_EVENT_STA_GOT_IP: {
-                ip_event_got_ip_t* event = static_cast<ip_event_got_ip_t*>(eventData);
-                Log.debug("WiFi: got IP %s, netmask %s, gateway %s",
-                    IPAddress(event->ip_info.ip.addr).toString().c_str(),
-                    IPAddress(event->ip_info.netmask.addr).toString().c_str(),
-                    IPAddress(event->ip_info.gw.addr).toString().c_str());
-                networkReady.set();
-                eventQueue.offer(WiFiEvent::CONNECTED);
-                break;
-            }
-            case IP_EVENT_STA_LOST_IP: {
-                Log.debug("WiFi: lost IP address");
-                networkReady.clear();
-                eventQueue.offer(WiFiEvent::DISCONNECTED);
-                break;
+        } else if (eventBase == IP_EVENT) {
+            switch (eventId) {
+                case IP_EVENT_STA_GOT_IP: {
+                    ip_event_got_ip_t* event = static_cast<ip_event_got_ip_t*>(eventData);
+                    Log.debug("WiFi: got IP %s, netmask %s, gateway %s",
+                        IPAddress(event->ip_info.ip.addr).toString().c_str(),
+                        IPAddress(event->ip_info.netmask.addr).toString().c_str(),
+                        IPAddress(event->ip_info.gw.addr).toString().c_str());
+                    networkReady.set();
+                    eventQueue.offer(WiFiEvent::CONNECTED);
+                    break;
+                }
+                case IP_EVENT_STA_LOST_IP: {
+                    Log.debug("WiFi: lost IP address");
+                    networkReady.clear();
+                    eventQueue.offer(WiFiEvent::DISCONNECTED);
+                    break;
+                }
             }
         }
     }
@@ -198,9 +193,9 @@ private:
         return networkReady;
     }
 
-    StateSource & networkRequested;
-    StateSource & networkReady;
-    StateSource & configPortalRunning;
+    StateSource& networkRequested;
+    StateSource& networkReady;
+    StateSource& configPortalRunning;
     const String hostname;
     const bool powerSaveMode;
 
