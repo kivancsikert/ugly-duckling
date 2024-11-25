@@ -175,10 +175,18 @@ idf.py build -DUD_GEN=MK7 -DUD_DEBUG=1
 idf.py flash
 ```
 
-If you also want to upload the SPIFFS image, add `-DFSUPLOAD=1` to the command:
+If you also want to upload the SPIFFS image with the firmware, add `-DFSUPLOAD=1` to the command:
 
 ```bash
 idf.py -DFSUPLOAD=1 flash
+```
+
+#### Uploading just data
+
+To upload only the SPIFFS image:
+
+```bash
+mkspiffs -c data -s 0x30000 build/data.bin; esptool write_flash 0x3D0000 build/data.bin
 ```
 
 ### Monitoring
