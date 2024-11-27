@@ -5,6 +5,27 @@
 #include <atomic>
 #include <chrono>
 
+#ifdef CONFIG_HEAP_TRACING
+#include <esp_heap_trace.h>
+#include <esp_system.h>
+
+#define NUM_RECORDS 64
+static heap_trace_record_t trace_record[NUM_RECORDS];    // This buffer must be in internal RAM
+
+class HeapTrace {
+public:
+    HeapTrace() {
+        ESP_ERROR_CHECK(heap_trace_start(HEAP_TRACE_LEAKS));
+    }
+
+    ~HeapTrace() {
+        ESP_ERROR_CHECK(heap_trace_stop());
+        heap_trace_dump();
+        printf("Free heap: %lu\n", esp_get_free_heap_size());
+    }
+};
+#endif
+
 #include <devices/Device.hpp>
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
@@ -44,13 +65,6 @@ static void dumpPerTaskHeapInfo() {
 }
 #endif
 
-#ifdef CONFIG_HEAP_TRACING
-#include "esp_heap_trace.h"
-
-#define NUM_RECORDS 100
-static heap_trace_record_t trace_record[NUM_RECORDS];    // This buffer must be in internal RAM
-#endif
-
 extern "C" void app_main() {
     initArduino();
 
@@ -65,13 +79,6 @@ extern "C" void app_main() {
 #ifdef CONFIG_HEAP_TASK_TRACKING
         dumpPerTaskHeapInfo();
 #endif
-
-        ESP_ERROR_CHECK(heap_trace_start(HEAP_TRACE_LEAKS));
-
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-        ESP_ERROR_CHECK(heap_trace_stop());
-        heap_trace_dump();
 #else
         vTaskDelay(portMAX_DELAY);
 #endif
