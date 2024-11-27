@@ -74,7 +74,7 @@ public:
     }
 
 private:
-    void setPattern(BlinkPattern pattern) {
+    void setPattern(const BlinkPattern& pattern) {
         patternQueue.put(pattern);
     }
 

@@ -250,7 +250,7 @@ public:
 
     void consumeLog(Level level, const char* message) override {
         if (level <= recordedLevel) {
-            logRecords.offer(LogRecord { level, message });
+            logRecords.offer(level, message);
         }
 #ifdef FARMHUB_DEBUG
         consolePrinter.printLog(level, message);
