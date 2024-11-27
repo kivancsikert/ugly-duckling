@@ -164,7 +164,7 @@ public:
             return time - (currentTime - ticks(lastWakeTime));
         } else {
             // 'currentTime' has surpassed our target time, indicating the delay has expired.
-            Log.printfToSerial("Task '%s' missed deadline by %lld ms\n",
+            Log.printfToSerial("Task '%s' is already past deadline by %lld ms\n",
                 pcTaskGetName(nullptr), duration_cast<milliseconds>(currentTime - ticks(lastWakeTime)).count());
             return ticks::zero();
         }
