@@ -67,12 +67,6 @@ public:
         return sentWithoutDropping;
     }
 
-    template <typename... Args>
-    void overwrite(Args&&... args) {
-        TMessage* copy = new TMessage(std::forward<Args>(args)...);
-        xQueueOverwrite(this->queue, &copy);
-    }
-
     typedef std::function<void(TMessage&)> MessageHandler;
 
     size_t drain(MessageHandler handler) {
@@ -126,24 +120,10 @@ public:
 };
 
 template <typename TMessage>
-
 class CopyQueue : public BaseQueue {
 public:
     CopyQueue(const String& name, size_t capacity = 16)
         : BaseQueue(name, sizeof(TMessage), capacity) {
-    }
-
-    bool IRAM_ATTR offerFromISR(const TMessage& message) {
-        BaseType_t xHigherPriorityTaskWoken;
-        bool sentWithoutDropping = xQueueSendFromISR(this->queue, &message, &xHigherPriorityTaskWoken) == pdTRUE;
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-        return sentWithoutDropping;
-    }
-
-    void IRAM_ATTR overwriteFromISR(const TMessage& message) {
-        BaseType_t xHigherPriorityTaskWoken;
-        xQueueOverwriteFromISR(this->queue, &message, &xHigherPriorityTaskWoken);
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 
     void put(const TMessage message) {
@@ -161,6 +141,23 @@ public:
                 this->name.c_str());
         }
         return sentWithoutDropping;
+    }
+
+    bool IRAM_ATTR offerFromISR(const TMessage& message) {
+        BaseType_t xHigherPriorityTaskWoken;
+        bool sentWithoutDropping = xQueueSendFromISR(this->queue, &message, &xHigherPriorityTaskWoken) == pdTRUE;
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+        return sentWithoutDropping;
+    }
+
+    void overwrite(const TMessage message) {
+        xQueueOverwrite(this->queue, &message);
+    }
+
+    void IRAM_ATTR overwriteFromISR(const TMessage& message) {
+        BaseType_t xHigherPriorityTaskWoken;
+        xQueueOverwriteFromISR(this->queue, &message, &xHigherPriorityTaskWoken);
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 
     TMessage take() {
