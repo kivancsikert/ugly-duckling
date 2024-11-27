@@ -2,6 +2,8 @@
 
 #include <chrono>
 #include <functional>
+#include <optional>
+#include <memory>
 #include <utility>
 
 #include <freertos/FreeRTOS.h>
@@ -144,11 +146,42 @@ public:
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 
-    TMessage take() {
-        TMessage message;
-        while (!xQueueReceive(this->queue, &message, ticks::max().count())) {
+    void put(const TMessage message) {
+        while (!offerIn(ticks::max(), message)) { }
+    }
+
+    bool offer(const TMessage message) {
+        return offerIn(ticks::zero(), message);
+    }
+
+    bool offerIn(ticks timeout, const TMessage message) {
+        bool sentWithoutDropping = xQueueSend(this->queue, &message, timeout.count()) == pdTRUE;
+        if (!sentWithoutDropping) {
+            ESP_LOGW("farmhub", "Overflow in queue '%s', dropping message",
+                this->name.c_str());
         }
-        return message;
+        return sentWithoutDropping;
+    }
+
+    TMessage take() {
+        while (true) {
+            auto message = pollIn(ticks::max());
+            if (message.has_value()) {
+                return message.value();
+            }
+        }
+    }
+
+    std::optional<TMessage> poll() {
+        return pollIn(ticks::zero());
+    }
+
+    std::optional<TMessage> pollIn(ticks timeout) {
+        TMessage message;
+        if (xQueueReceive(this->queue, &message, timeout.count())) {
+            return message;
+        }
+        return std::nullopt;
     }
 
     void clear() {

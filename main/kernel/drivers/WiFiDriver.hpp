@@ -112,8 +112,9 @@ private:
     inline void runLoop() {
         int clients = 0;
         while (true) {
-            eventQueue.pollIn(WIFI_CHECK_INTERVAL, [&clients](const WiFiEvent event) {
-                switch (event) {
+            auto event = eventQueue.pollIn(WIFI_CHECK_INTERVAL);
+            if (event.has_value()) {
+                switch (event.value()) {
                     case WiFiEvent::CONNECTED:
                         break;
                     case WiFiEvent::DISCONNECTED:
@@ -125,7 +126,7 @@ private:
                         clients--;
                         break;
                 }
-            });
+            }
 
             bool connected = WiFi.isConnected();
             if (clients > 0) {
@@ -205,7 +206,7 @@ private:
         WANTS_DISCONNECT
     };
 
-    Queue<WiFiEvent> eventQueue { "wifi-events", 16 };
+    CopyQueue<WiFiEvent> eventQueue { "wifi-events", 16 };
 
     static constexpr milliseconds WIFI_QUEUE_TIMEOUT = 1s;
     static constexpr milliseconds WIFI_CHECK_INTERVAL = 5s;

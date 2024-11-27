@@ -573,7 +573,7 @@ private:
         kernel.prepareUpdate(url);
     } };
 
-    Queue<bool> telemetryPublishQueue { "telemetry-publish", 1 };
+    CopyQueue<bool> telemetryPublishQueue { "telemetry-publish", 1 };
 };
 
 }    // namespace farmhub::devices
