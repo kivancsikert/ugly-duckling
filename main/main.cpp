@@ -39,18 +39,17 @@ static heap_task_totals_t s_totals_arr[MAX_TASK_NUM];
 static heap_task_block_t s_block_arr[MAX_BLOCK_NUM];
 
 static void dumpPerTaskHeapInfo() {
-    heap_task_info_params_t heap_info = { 0 };
-    heap_info.caps[0] = MALLOC_CAP_8BIT;    // Gets heap with CAP_8BIT capabilities
-    heap_info.mask[0] = MALLOC_CAP_8BIT;
-    heap_info.caps[1] = MALLOC_CAP_32BIT;    // Gets heap info with CAP_32BIT capabilities
-    heap_info.mask[1] = MALLOC_CAP_32BIT;
-    heap_info.tasks = NULL;    // Passing NULL captures heap info for all tasks
-    heap_info.num_tasks = 0;
-    heap_info.totals = s_totals_arr;    // Gets task wise allocation details
-    heap_info.num_totals = &s_prepopulated_num;
-    heap_info.max_totals = MAX_TASK_NUM;     // Maximum length of "s_totals_arr"
-    heap_info.blocks = s_block_arr;          // Gets block wise allocation details. For each block, gets owner task, address and size
-    heap_info.max_blocks = MAX_BLOCK_NUM;    // Maximum length of "s_block_arr"
+    heap_task_info_params_t heap_info = {
+        .caps = { MALLOC_CAP_8BIT, MALLOC_CAP_32BIT },
+        .mask = { MALLOC_CAP_8BIT, MALLOC_CAP_32BIT },
+        .tasks = nullptr,
+        .num_tasks = 0,
+        .totals = s_totals_arr,
+        .num_totals = &s_prepopulated_num,
+        .max_totals = MAX_TASK_NUM,
+        .blocks = s_block_arr,
+        .max_blocks = MAX_BLOCK_NUM
+    };
 
     heap_caps_get_per_task_info(&heap_info);
 
@@ -74,13 +73,12 @@ extern "C" void app_main() {
 
     new farmhub::devices::Device();
 
-    while (true) {
-#ifdef CONFIG_HEAP_TRACING
 #ifdef CONFIG_HEAP_TASK_TRACKING
-        dumpPerTaskHeapInfo();
+    Task::loop("task-heaps", 8192, [](Task& task) {
+        while (true) {
+            dumpPerTaskHeapInfo();
+            vTaskDelay(ticks(5s).count());
+        }
+    });
 #endif
-#else
-        vTaskDelay(portMAX_DELAY);
-#endif
-    }
 }
