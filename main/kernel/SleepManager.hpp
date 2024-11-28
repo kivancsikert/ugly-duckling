@@ -37,6 +37,10 @@ public:
 #if FARMHUB_DEBUG
             Log.warn("Light sleep is disabled in debug mode");
             return false;
+#elif WOKWI
+            // See https://github.com/wokwi/wokwi-features/issues/922
+            Log.warn("Light sleep is disabled when running under Wokwi");
+            return false;
 #elif not(CONFIG_PM_ENABLE)
             Log.info("Power management is disabled because CONFIG_PM_ENABLE is not set");
             return false;
