@@ -2,6 +2,8 @@
 
 #include <chrono>
 #include <functional>
+#include <optional>
+#include <memory>
 #include <utility>
 
 #include <freertos/FreeRTOS.h>
@@ -65,12 +67,6 @@ public:
         return sentWithoutDropping;
     }
 
-    template <typename... Args>
-    void overwrite(Args&&... args) {
-        TMessage* copy = new TMessage(std::forward<Args>(args)...);
-        xQueueOverwrite(this->queue, &copy);
-    }
-
     typedef std::function<void(TMessage&)> MessageHandler;
 
     size_t drain(MessageHandler handler) {
@@ -124,11 +120,27 @@ public:
 };
 
 template <typename TMessage>
-
 class CopyQueue : public BaseQueue {
 public:
     CopyQueue(const String& name, size_t capacity = 16)
         : BaseQueue(name, sizeof(TMessage), capacity) {
+    }
+
+    void put(const TMessage message) {
+        while (!offerIn(ticks::max(), message)) { }
+    }
+
+    bool offer(const TMessage message) {
+        return offerIn(ticks::zero(), message);
+    }
+
+    bool offerIn(ticks timeout, const TMessage message) {
+        bool sentWithoutDropping = xQueueSend(this->queue, &message, timeout.count()) == pdTRUE;
+        if (!sentWithoutDropping) {
+            ESP_LOGW("farmhub", "Overflow in queue '%s', dropping message",
+                this->name.c_str());
+        }
+        return sentWithoutDropping;
     }
 
     bool IRAM_ATTR offerFromISR(const TMessage& message) {
@@ -138,6 +150,10 @@ public:
         return sentWithoutDropping;
     }
 
+    void overwrite(const TMessage message) {
+        xQueueOverwrite(this->queue, &message);
+    }
+
     void IRAM_ATTR overwriteFromISR(const TMessage& message) {
         BaseType_t xHigherPriorityTaskWoken;
         xQueueOverwriteFromISR(this->queue, &message, &xHigherPriorityTaskWoken);
@@ -145,10 +161,24 @@ public:
     }
 
     TMessage take() {
-        TMessage message;
-        while (!xQueueReceive(this->queue, &message, ticks::max().count())) {
+        while (true) {
+            auto message = pollIn(ticks::max());
+            if (message.has_value()) {
+                return message.value();
+            }
         }
-        return message;
+    }
+
+    std::optional<TMessage> poll() {
+        return pollIn(ticks::zero());
+    }
+
+    std::optional<TMessage> pollIn(ticks timeout) {
+        TMessage message;
+        if (xQueueReceive(this->queue, &message, timeout.count())) {
+            return message;
+        }
+        return std::nullopt;
     }
 
     void clear() {

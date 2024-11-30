@@ -195,6 +195,22 @@ mkspiffs -c data -s 0x30000 build/data.bin; esptool write_flash 0x3D0000 build/d
 idf.py monitor
 ```
 
+### Simulation
+
+Can use [Wokwi](https://wokwi.com/) to run the firmware in a simulated environment.
+For this the firmware must be built with `-DWOKWI=1`.
+
+```bash
+idf.py -DUD_GEN=MK6 -DUD_DEBUG=0 -DFSUPLOAD=1 -DWOKWI=1 build
+```
+
+The opening a diagram in the [`wokwi`](wokwi) directory will start the simulation.
+
+#### Debugging with Wokwi
+
+To start the simulation with the debugger enabled, place a breakpoint, then hit `Cmd+Shift+P` and select `Wokwi: Start Simulator and Wait for Debugger`.
+After that from the "Run and Debug" panel select the "Wokwi GDB" configuration and hit the play button.
+
 ### Testing
 
 TBD
