@@ -19,9 +19,6 @@ idf_component_register(
     SRCS ${mqtt_sources}
     INCLUDE_DIRS "MQTTPubSubClient/src" "ArxTypeTraits" "ArxContainer"
 
-    SRCS "NTPClient/NTPClient.cpp"
-    INCLUDE_DIRS "NTPClient"
-
     SRCS "OneWire/OneWire.cpp"
     INCLUDE_DIRS "OneWire"
 

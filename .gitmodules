@@ -7,9 +7,6 @@
 [submodule "components/ArxContainer"]
 	path = components/ArxContainer
 	url = https://github.com/hideakitai/ArxContainer
-[submodule "components/NTPClient"]
-	path = components/NTPClient
-	url = https://github.com/arduino-libraries/NTPClient
 [submodule "components/SHT31"]
 	path = components/SHT31
 	url = https://github.com/RobTillaart/SHT31
