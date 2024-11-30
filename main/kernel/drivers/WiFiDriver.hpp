@@ -180,7 +180,9 @@ private:
 
     void disconnect() {
         networkReady.clear();
-        WiFi.disconnect(true);
+        if (!WiFi.disconnect(true)) {
+            Log.error("WiFi: failed to shut down");
+        }
     }
 
     StateSource& acquire() {
