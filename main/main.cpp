@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <string>
 
 #ifdef CONFIG_HEAP_TRACING
 #include <esp_heap_trace.h>
@@ -26,8 +27,6 @@ public:
 };
 #endif
 
-#include <devices/Device.hpp>
-
 #ifdef CONFIG_HEAP_TASK_TRACKING
 #include <esp_heap_task_info.h>
 
@@ -39,7 +38,7 @@ static heap_task_totals_t s_totals_arr[MAX_TASK_NUM];
 static heap_task_block_t s_block_arr[MAX_BLOCK_NUM];
 
 static void dumpPerTaskHeapInfo() {
-    heap_task_info_params_t heap_info = {
+    heap_task_info_params_t heapInfo = {
         .caps = { MALLOC_CAP_8BIT, MALLOC_CAP_32BIT },
         .mask = { MALLOC_CAP_8BIT, MALLOC_CAP_32BIT },
         .tasks = nullptr,
@@ -51,18 +50,26 @@ static void dumpPerTaskHeapInfo() {
         .max_blocks = MAX_BLOCK_NUM
     };
 
-    heap_caps_get_per_task_info(&heap_info);
+    heap_caps_get_per_task_info(&heapInfo);
 
-    for (int i = 0; i < *heap_info.num_totals; i++) {
-        printf("Task: %s -> CAP_8BIT: %d CAP_32BIT: %d\n",
-            heap_info.totals[i].task ? pcTaskGetName(heap_info.totals[i].task) : "Pre-Scheduler allocs",
-            heap_info.totals[i].size[0],     // Heap size with CAP_8BIT capabilities
-            heap_info.totals[i].size[1]);    // Heap size with CAP32_BIT capabilities
+    for (int i = 0; i < *heapInfo.num_totals; i++) {
+        auto taskInfo = heapInfo.totals[i];
+        std::string taskName = taskInfo.task
+            ? pcTaskGetName(taskInfo.task)
+            : "Pre-Scheduler allocs";
+        taskName.resize(configMAX_TASK_NAME_LEN, ' ');
+        printf("Task %p: %s CAP_8BIT: %d, CAP_32BIT: %d\n",
+            taskInfo.task,
+            taskName.c_str(),
+            taskInfo.size[0],
+            taskInfo.size[1]);
     }
 
     printf("\n\n");
 }
 #endif
+
+#include <devices/Device.hpp>
 
 extern "C" void app_main() {
     initArduino();
