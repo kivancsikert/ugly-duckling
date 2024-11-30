@@ -1,7 +1,8 @@
 #pragma once
 
 #include <ArduinoJson.h>
-#include <ESPmDNS.h>
+
+#include <mdns.h>
 
 #include <kernel/Concurrent.hpp>
 #include <kernel/Log.hpp>
@@ -37,27 +38,32 @@ public:
             Log.info("mDNS: initializing");
             WiFiConnection connection(wifi);
 
-            MDNS.begin(hostname);
-            MDNS.setInstanceName(instanceName);
+            ESP_ERROR_CHECK(mdns_init());
+
+            mdns_hostname_set(hostname.c_str());
+            mdns_instance_name_set(instanceName.c_str());
             Log.debug("mDNS: Advertising service %s on %s.local, version: %s",
                 instanceName.c_str(), hostname.c_str(), version.c_str());
-            MDNS.addService("farmhub", "tcp", 80);
-            MDNS.addServiceTxt("farmhub", "tcp", "version", version);
+            mdns_service_add(instanceName.c_str(), "_farmhub", "_tcp", 80, nullptr, 0);
+            mdns_txt_item_t txt[] = {
+                { "version", version.c_str() },
+            };
+            mdns_service_txt_set("_farmhub", "_tcp", txt, 1);
             Log.info("mDNS: configured");
 
             mdnsReady.set();
         });
     }
 
-    bool lookupService(const String& serviceName, const String& port, MdnsRecord& record, bool loadFromCache = true) {
+    bool lookupService(const String& serviceName, const String& port, MdnsRecord& record, bool loadFromCache = true, milliseconds timeout = 5s) {
         // Wait indefinitely
         Lock lock(lookupMutex);
-        auto result = lookupServiceUnderMutex(serviceName, port, record, loadFromCache);
+        auto result = lookupServiceUnderMutex(serviceName, port, record, loadFromCache, timeout);
         return result;
     }
 
 private:
-    bool lookupServiceUnderMutex(const String& serviceName, const String& port, MdnsRecord& record, bool loadFromCache) {
+    bool lookupServiceUnderMutex(const String& serviceName, const String& port, MdnsRecord& record, bool loadFromCache, milliseconds timeout) {
         // TODO Use a callback and retry if cached entry doesn't work
         String cacheKey = serviceName + "." + port;
         if (loadFromCache) {
@@ -80,23 +86,25 @@ private:
 
         WiFiConnection connection(wifi);
         mdnsReady.awaitSet();
-        auto count = MDNS.queryService(serviceName.c_str(), port.c_str());
-        if (count == 0) {
+
+        mdns_result_t* results = nullptr;
+        esp_err_t err = mdns_query_ptr(String("_" + serviceName).c_str(), String("_" + port).c_str(), timeout.count(), 1, &results);
+        if (err) {
+            Log.error("mDNS: query failed for %s.%s: %d",
+                serviceName.c_str(), port.c_str(), err);
             return false;
         }
-        Log.info("mDNS: found %d services, choosing first:",
-            count);
-        for (int i = 0; i < count; i++) {
-            Log.info(" %s%d) %s:%d (%s)",
-                i == 0 ? "*" : " ",
-                i + 1,
-                MDNS.hostname(i).c_str(),
-                MDNS.port(i),
-                MDNS.address(i).toString().c_str());
+        if (results == nullptr) {
+            Log.info("mDNS: no results found for %s.%s",
+                serviceName.c_str(), port.c_str());
+            return false;
         }
-        record.hostname = MDNS.hostname(0);
-        record.ip = MDNS.address(0);
-        record.port = MDNS.port(0);
+
+        auto& result = results[0];
+        record.hostname = result.hostname;
+        record.ip = IPAddress(result.addr->addr.u_addr.ip4.addr);
+        record.port = result.port;
+        mdns_query_results_free(results);
 
         nvs.set(cacheKey, record);
 
