@@ -426,6 +426,7 @@ private:
                 if (err != ESP_OK) {
                     Log.error("MQTT: Connection failed, error = 0x%x", err);
                     trustMdnsCache = false;
+                    stopMqttClient();
                     return false;
                 } else {
                     trustMdnsCache = true;
@@ -629,7 +630,7 @@ private:
     const bool powerSaveMode;
     StateSource& mqttReady;
 
-    esp_mqtt_client_handle_t client;
+    esp_mqtt_client_handle_t client = nullptr;
 
     Queue<std::variant<OutgoingMessage, Subscription>> outgoingQueue { "mqtt-outgoing", config.queueSize.get() };
     Queue<IncomingMessage> incomingQueue { "mqtt-incoming", config.queueSize.get() };
