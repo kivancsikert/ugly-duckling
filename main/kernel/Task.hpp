@@ -129,7 +129,7 @@ public:
         });
     }
 
-    void delay(ticks time) {
+    static void delay(ticks time) {
         // Log.trace("Task '%s' delaying for %lld ms",
         //     pcTaskGetName(nullptr), duration_cast<milliseconds>(time).count());
         vTaskDelay(time.count());
