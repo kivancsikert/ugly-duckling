@@ -238,8 +238,6 @@ private:
             return "Network not ready, aborting update";
         }
 
-        Log.info("WiFi connected: %s", WiFi.localIP().toString().c_str());
-
         // TODO Disable power save mode for WiFi
 
         esp_http_client_config_t httpConfig = {
@@ -324,7 +322,10 @@ private:
     StateSource mqttReadyState = stateManager.createStateSource("mqtt-ready");
     StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
+public:
     WiFiDriver wifi { networkRequestedState, networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
+
+private:
     MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
     RtcDriver rtc { wifi, mdns, deviceConfig.ntp.get(), rtcInSyncState };
 

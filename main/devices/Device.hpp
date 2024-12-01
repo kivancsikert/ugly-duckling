@@ -5,6 +5,8 @@
 
 #include <Arduino.h>
 
+#include "esp_netif.h"
+#include "esp_wifi.h"
 #include <esp_pm.h>
 #include <esp_private/esp_clk.h>
 
@@ -194,26 +196,34 @@ public:
 
 private:
     static String wifiStatus() {
-        switch (WiFi.status()) {
-            case WL_NO_SHIELD:
-                return "\033[0;31moff\033[0m";
-            case WL_IDLE_STATUS:
-                return "\033[0;31midle\033[0m";
-            case WL_NO_SSID_AVAIL:
-                return "\033[0;31mno SSID\033[0m";
-            case WL_SCAN_COMPLETED:
-                return "\033[0;33mscan completed\033[0m";
-            case WL_CONNECTED:
-                return "\033[0;33m" + WiFi.localIP().toString() + "\033[0m";
-            case WL_CONNECT_FAILED:
-                return "\033[0;31mfailed\033[0m";
-            case WL_CONNECTION_LOST:
-                return "\033[0;31mconnection lost\033[0m";
-            case WL_DISCONNECTED:
-                return "\033[0;33mdisconnected\033[0m";
-            default:
-                return "\033[0;31munknown\033[0m";
+        esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+        if (!netif) {
+            return "\033[0;31moff\033[0m";
         }
+
+        // Retrieve the current Wi-Fi station connection status
+        wifi_ap_record_t ap_info;
+        esp_err_t err = esp_wifi_sta_get_ap_info(&ap_info);
+
+        // TODO Handle ESP_ERR_WIFI_CONN, or better yet, use `WiFiDriver` directly
+        if (err == ESP_ERR_WIFI_NOT_CONNECT) {
+            return "\033[0;33mdisconnected\033[0m";
+        } else if (err == ESP_ERR_WIFI_NOT_STARTED) {
+            return "\033[0;31mWi-Fi not started\033[0m";
+        } else if (err != ESP_OK) {
+            return "\033[0;31m" + String(esp_err_to_name(err)) + "\033[0m";
+        }
+
+        // Check IP address
+        esp_netif_ip_info_t ip_info;
+        err = esp_netif_get_ip_info(netif, &ip_info);
+        if (err == ESP_OK && ip_info.ip.addr != 0) {
+            static char ip_str[32];
+            snprintf(ip_str, sizeof(ip_str), "\033[0;33m" IPSTR "\033[0m", IP2STR(&ip_info.ip));
+            return ip_str;
+        }
+
+        return "\033[0;31midle\033[0m";
     }
 
     int counter;
@@ -522,8 +532,8 @@ public:
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
             deviceConfig.getHostname().c_str(),
-            WiFi.localIP().toString().c_str(),
-            WiFi.SSID().c_str(),
+            kernel.wifi.getIp().value_or("<no-ip>").c_str(),
+            kernel.wifi.getSsid().value_or("<no-ssid>").c_str(),
             duration_cast<seconds>(system_clock::now().time_since_epoch()).count());
     }
 
