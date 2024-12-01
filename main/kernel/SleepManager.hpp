@@ -89,7 +89,7 @@ private:
         esp_pm_config_t pm_config = {
             .max_freq_mhz = MAX_CPU_FREQ_MHZ,
             .min_freq_mhz = MIN_CPU_FREQ_MHZ,
-            .light_sleep_enable = enableLightSleep
+            .light_sleep_enable = enableLightSleep,
         };
         ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
     }

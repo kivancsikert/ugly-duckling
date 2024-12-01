@@ -196,7 +196,8 @@ private:
             .sta = {
                 .ssid = "Wokwi-GUEST",
                 .password = "",
-                .channel = 6 }
+                .channel = 6,
+            }
         };
 
         setWiFiMode(WIFI_MODE_STA, wifi_config);

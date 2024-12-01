@@ -47,7 +47,7 @@ static void dumpPerTaskHeapInfo() {
         .num_totals = &s_prepopulated_num,
         .max_totals = MAX_TASK_NUM,
         .blocks = s_block_arr,
-        .max_blocks = MAX_BLOCK_NUM
+        .max_blocks = MAX_BLOCK_NUM,
     };
 
     heap_caps_get_per_task_info(&heapInfo);
