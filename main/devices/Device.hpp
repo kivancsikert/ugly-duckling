@@ -196,9 +196,25 @@ public:
 
 private:
     static String wifiStatus() {
-        esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+        auto netif = esp_netif_get_default_netif();
         if (!netif) {
             return "\033[0;31moff\033[0m";
+        }
+
+        wifi_mode_t mode;
+        ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
+
+        switch (mode) {
+            case WIFI_MODE_STA:
+                break;
+            case WIFI_MODE_NULL:
+                return "\033[0;31moff\033[0m";
+            case WIFI_MODE_AP:
+                return "\033[0;32mAP\033[0m";
+            case WIFI_MODE_APSTA:
+                return "\033[0;32mAPSTA\033[0m";
+            default:
+                return "\033[0;31munknown mode\033[0m";
         }
 
         // Retrieve the current Wi-Fi station connection status
@@ -206,12 +222,17 @@ private:
         esp_err_t err = esp_wifi_sta_get_ap_info(&ap_info);
 
         // TODO Handle ESP_ERR_WIFI_CONN, or better yet, use `WiFiDriver` directly
-        if (err == ESP_ERR_WIFI_NOT_CONNECT) {
-            return "\033[0;33mdisconnected\033[0m";
-        } else if (err == ESP_ERR_WIFI_NOT_STARTED) {
-            return "\033[0;31mWi-Fi not started\033[0m";
-        } else if (err != ESP_OK) {
-            return "\033[0;31m" + String(esp_err_to_name(err)) + "\033[0m";
+        switch (err) {
+            case ESP_OK:
+                break;
+            case ESP_ERR_WIFI_CONN:
+                return "\033[0;32mconnection-error\033[0m";
+            case ESP_ERR_WIFI_NOT_CONNECT:
+                return "\033[0;33mdisconnected\033[0m";
+            case ESP_ERR_WIFI_NOT_STARTED:
+                return "\033[0;31mWi-Fi not started\033[0m";
+            default:
+                return "\033[0;31m" + String(esp_err_to_name(err)) + "\033[0m";
         }
 
         // Check IP address
