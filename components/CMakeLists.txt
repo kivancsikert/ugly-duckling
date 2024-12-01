@@ -25,10 +25,6 @@ idf_component_register(
     SRCS "SHT2x/SHT2x.cpp"
     INCLUDE_DIRS "SHT2x"
 
-    SRCS "../managed_components/espressif__arduino-esp32/libraries/HTTPUpdate/src/HTTPUpdate.cpp"
-    INCLUDE_DIRS "../managed_components/espressif__arduino-esp32/libraries/HTTPUpdate/src"
-    REQUIRES app_update
-
     REQUIRES "arduino-esp32"
 )
 
