@@ -131,7 +131,7 @@ private:
     }
 
     static void printServers(void) {
-        Log.info("List of configured NTP servers:");
+        Log.debug("List of configured NTP servers:");
 
         for (uint8_t i = 0; i < SNTP_MAX_SERVERS; ++i) {
             if (esp_sntp_getservername(i)) {
@@ -140,7 +140,7 @@ private:
                 char buff[48];
                 ip_addr_t const* ip = esp_sntp_getserver(i);
                 if (ipaddr_ntoa_r(ip, buff, 48) != NULL) {
-                    Log.info(" - server %d: %s", i, buff);
+                    Log.debug(" - server %d: %s", i, buff);
                 }
             }
         }
