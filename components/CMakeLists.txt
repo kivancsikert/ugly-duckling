@@ -16,9 +16,6 @@ idf_component_register(
     SRCS "DallasTemperature/DallasTemperature.cpp"
     INCLUDE_DIRS "DallasTemperature"
 
-    SRCS ${mqtt_sources}
-    INCLUDE_DIRS "MQTTPubSubClient/src" "ArxTypeTraits" "ArxContainer"
-
     SRCS "OneWire/OneWire.cpp"
     INCLUDE_DIRS "OneWire"
 

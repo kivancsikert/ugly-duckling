@@ -7,6 +7,8 @@
 #include <esp_mac.h>
 
 #include <HTTPUpdate.h>
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
 
 #include <nvs_flash.h>
 

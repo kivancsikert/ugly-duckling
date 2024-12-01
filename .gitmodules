@@ -1,12 +1,3 @@
-[submodule "components/MQTTPubSubClient"]
-	path = components/MQTTPubSubClient
-	url = https://github.com/hideakitai/MQTTPubSubClient
-[submodule "components/ArxTypeTraits"]
-	path = components/ArxTypeTraits
-	url = https://github.com/hideakitai/ArxTypeTraits
-[submodule "components/ArxContainer"]
-	path = components/ArxContainer
-	url = https://github.com/hideakitai/ArxContainer
 [submodule "components/SHT31"]
 	path = components/SHT31
 	url = https://github.com/RobTillaart/SHT31
