@@ -4,11 +4,10 @@
 #include <functional>
 #include <optional>
 
+#include <esp_crt_bundle.h>
+#include <esp_http_client.h>
+#include <esp_https_ota.h>
 #include <esp_mac.h>
-
-#include <HTTPUpdate.h>
-#include <WiFi.h>
-#include <WiFiClientSecure.h>
 
 #include <nvs_flash.h>
 
@@ -216,7 +215,6 @@ private:
             return "";
         }
 
-        Log.info("Starting update...");
         auto fUpdate = fs.open(UPDATE_FILE, FILE_READ);
         JsonDocument doc;
         auto error = deserializeJson(doc, fUpdate);
@@ -231,39 +229,80 @@ private:
             return "Command contains empty url";
         }
 
+        Log.info("Updating from version %s via URL %s",
+            FARMHUB_VERSION, url.c_str());
+
         Log.debug("Waiting for network...");
         WiFiConnection connection(wifi, WiFiConnection::Mode::NoAwait);
         if (!connection.await(15s)) {
             return "Network not ready, aborting update";
         }
 
-        httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-        Log.info("Updating from version %s via URL %s",
-            FARMHUB_VERSION, url.c_str());
+        Log.info("WiFi connected: %s", WiFi.localIP().toString().c_str());
 
-        HTTPUpdateResult result = HTTP_UPDATE_NO_UPDATES;
-        // Run in separate task to allocate enough stack
-        SemaphoreHandle_t completionSemaphore = xSemaphoreCreateBinary();
-        Task::run("http-update", 16 * 1024, [&](Task& task) {
-            // Allocate on heap to avoid wasting stack
-            std::unique_ptr<WiFiClientSecure> client = std::make_unique<WiFiClientSecure>();
-            // Allow insecure connections for testing
-            client->setInsecure();
-            result = httpUpdate.update(*client, url, FARMHUB_VERSION);
-            xSemaphoreGive(completionSemaphore);
-        });
-        xSemaphoreTake(completionSemaphore, portMAX_DELAY);
+        // TODO Disable power save mode for WiFi
 
-        switch (result) {
-            case HTTP_UPDATE_FAILED:
-                return httpUpdate.getLastErrorString() + " (" + String(httpUpdate.getLastError()) + ")";
-            case HTTP_UPDATE_NO_UPDATES:
-                return "No updates available";
-            case HTTP_UPDATE_OK:
-                return "Update OK";
-            default:
-                return "Unknown response";
+        esp_http_client_config_t httpConfig = {
+            .url = url.c_str(),
+            .timeout_ms = duration_cast<milliseconds>(2min).count(),
+            .max_redirection_count = 5,
+            .event_handler = httpEventHandler,
+            .buffer_size = 8192,
+            .buffer_size_tx = 8192,
+            .user_data = this,
+            // TODO Do we need this?
+            .skip_cert_common_name_check = true,
+            .crt_bundle_attach = esp_crt_bundle_attach,
+            .keep_alive_enable = true,
+        };
+        esp_https_ota_config_t otaConfig = {
+            .http_config = &httpConfig,
+            // TODO Make it work without partial downloads
+            // With this we seem to be able to install a new firmware, even if very slowly;
+            // without it we get the error upon download completion: 'no more processes'.
+            .partial_http_download = true,
+        };
+        esp_err_t ret = esp_https_ota(&otaConfig);
+        if (ret == ESP_OK) {
+            Log.info("Update succeeded, rebooting in 5 seconds...");
+            Task::delay(5s);
+            esp_restart();
+        } else {
+            Log.error("Update failed (err = %d), continuing with regular boot",
+                ret);
+            return "Firmware upgrade failed: " + String(ret);
         }
+    }    // namespace farmhub::kernel
+
+    static esp_err_t httpEventHandler(esp_http_client_event_t* event) {
+        switch (event->event_id) {
+            case HTTP_EVENT_ERROR:
+                Log.error("HTTP error, status code: %d",
+                    esp_http_client_get_status_code(event->client));
+                break;
+            case HTTP_EVENT_ON_CONNECTED:
+                Log.debug("HTTP connected");
+                break;
+            case HTTP_EVENT_HEADERS_SENT:
+                Log.trace("HTTP headers sent");
+                break;
+            case HTTP_EVENT_ON_HEADER:
+                Log.trace("HTTP header: %s: %s", event->header_key, event->header_value);
+                break;
+            case HTTP_EVENT_ON_DATA:
+                Log.debug("HTTP data: %d bytes", event->data_len);
+                break;
+            case HTTP_EVENT_ON_FINISH:
+                Log.debug("HTTP finished");
+                break;
+            case HTTP_EVENT_DISCONNECTED:
+                Log.debug("HTTP disconnected");
+                break;
+            default:
+                Log.warn("Unknown HTTP event %d", event->event_id);
+                break;
+        }
+        return ESP_OK;
     }
 
     TDeviceConfiguration& deviceConfig;
