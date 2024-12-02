@@ -1,24 +1,33 @@
 #pragma once
 
-#include <deque>
+#include <vector>
 
 namespace farmhub::kernel {
 
 template <typename T>
 class MovingAverage {
 public:
-    MovingAverage(size_t maxMeasurements)
-        : maxMeasurements(maxMeasurements) {
+    explicit MovingAverage(std::size_t maxMeasurements)
+        : maxMeasurements(maxMeasurements)
+        , measurements(maxMeasurements, T(0))
+        , currentIndex(0)
+        , count(0)
+        , sum(0)
+        , average(0) {
     }
 
     void record(T measurement) {
-        while (measurements.size() >= maxMeasurements) {
-            sum -= measurements.front();
-            measurements.pop_front();
+        if (count == maxMeasurements) {
+            sum -= measurements[currentIndex];
+        } else {
+            ++count;
         }
-        measurements.emplace_back(measurement);
+
+        measurements[currentIndex] = measurement;
         sum += measurement;
-        average = sum / measurements.size();
+        average = sum / count;
+
+        currentIndex = (currentIndex + 1) % maxMeasurements;
     }
 
     T getAverage() const {
@@ -26,11 +35,12 @@ public:
     }
 
 private:
-    const size_t maxMeasurements;
-
-    std::deque<T> measurements;
-    T sum = 0;
-    T average = 0;
+    const std::size_t maxMeasurements;
+    std::vector<T> measurements;
+    std::size_t currentIndex;
+    std::size_t count;
+    T sum;
+    T average;
 };
 
 }    // namespace farmhub::kernel
