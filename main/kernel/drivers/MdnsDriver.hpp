@@ -34,7 +34,7 @@ public:
         : wifi(wifi)
         , mdnsReady(mdnsReady) {
         // TODO Add error handling
-        Task::run("mdns", 4096, [&wifi, &mdnsReady, instanceName, hostname, version](Task& task) {
+        Task::run("mdns:init", 4096, [&wifi, &mdnsReady, instanceName, hostname, version](Task& task) {
             Log.info("mDNS: initializing");
             WiFiConnection connection(wifi);
 
