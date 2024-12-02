@@ -417,7 +417,7 @@ private:
                 if (!configServerCert.isEmpty()) {
                     config.broker.address.transport = MQTT_TRANSPORT_OVER_SSL;
                     config.broker.verification.certificate = configServerCert.c_str();
-                    Log.debug("MQTT: Server cert:\n%s",
+                    Log.trace("MQTT: Server cert:\n%s",
                         config.broker.verification.certificate);
 
                     if (!configClientCert.isEmpty() && !configClientKey.isEmpty()) {
@@ -425,7 +425,7 @@ private:
                             .certificate = configClientCert.c_str(),
                             .key = configClientKey.c_str(),
                         };
-                        Log.debug("MQTT: Client cert:\n%s",
+                        Log.trace("MQTT: Client cert:\n%s",
                             config.credentials.authentication.certificate);
                     }
                 } else {
