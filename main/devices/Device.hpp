@@ -162,9 +162,17 @@ public:
         buffer->concat(timeBuffer);
         buffer->concat("\033[0m [\033[0;31m");
         buffer->concat(pcTaskGetName(nullptr));
-        buffer->concat("\033[0m/\033[0;32m");
+        buffer->concat("\033[0m@\033[0;32m");
         buffer->concat(xPortGetCoreID());
-        buffer->concat("\033[0m] ");
+        buffer->concat("\033[0m");
+#ifdef CONFIG_HEAP_TRACING
+        buffer->concat("|S:");
+        buffer->concat(uxTaskGetStackHighWaterMark(nullptr));
+        buffer->concat("B|H:");
+        buffer->concat(((float) ESP.getFreeHeap()) / 1024.0f);
+        buffer->concat("kB");
+#endif
+        buffer->concat("] ");
         switch (level) {
             case Level::Fatal:
                 buffer->concat("\033[0;31mFATAL\033[0m ");
