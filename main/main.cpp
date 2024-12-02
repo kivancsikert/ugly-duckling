@@ -83,10 +83,8 @@ extern "C" void app_main() {
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
     Task::loop("task-heaps", 4096, [](Task& task) {
-        while (true) {
-            dumpPerTaskHeapInfo();
-            Task::delay(ticks(5s));
-        }
+        dumpPerTaskHeapInfo();
+        Task::delay(ticks(5s));
     });
 #endif
 
