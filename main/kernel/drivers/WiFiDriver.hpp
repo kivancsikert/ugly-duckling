@@ -236,6 +236,7 @@ private:
     }
 
     void connect() {
+        networkConnecting.set();
 #ifdef WOKWI
         Log.debug("WiFi: Skipping provisioning on Wokwi");
         wifi_config_t wifiConfig = {
@@ -247,8 +248,6 @@ private:
         };
         startStation(wifiConfig);
 #else
-        networkConnecting.set();
-
         bool provisioned = false;
         ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
         if (provisioned) {
