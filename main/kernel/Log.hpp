@@ -163,16 +163,10 @@ private:
             return;
         }
 
-        if (size < bufferSize) {
-            Lock lock(bufferMutex);
-            vsnprintf(buffer, size + 1, format, args);
-            consumer(buffer);
-        } else {
-            char* localBuffer = new char[size + 1];
-            vsnprintf(localBuffer, size + 1, format, args);
-            consumer(localBuffer);
-            delete[] localBuffer;
-        }
+        auto capacity = std::min(size + 1, bufferSize);
+        Lock lock(bufferMutex);
+        vsnprintf(buffer, capacity, format, args);
+        consumer(buffer);
     }
 
     constexpr static int bufferSize = 128;
