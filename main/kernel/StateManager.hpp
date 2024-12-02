@@ -18,7 +18,7 @@ public:
     }
 
     StateSource createStateSource(const String& name) {
-        Log.debug("Creating state: %s",
+        Log.trace("Creating state: %s",
             name.c_str());
         if (nextEventBit > 31) {
             throw std::runtime_error("Too many states");
