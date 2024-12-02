@@ -350,30 +350,8 @@ public:
             consolePrinter.registerBattery(battery);
 #endif
 
-            Task::loop("battery", 2048, [this](Task& task) {
-                task.delayUntil(LOW_POWER_CHECK_INTERVAL);
-                auto currentVoltage = battery->getVoltage();
-                batteryVoltage.record(currentVoltage);
-                auto voltage = batteryVoltage.getAverage();
-
-                if (voltage != 0.0 && voltage < BATTERY_SHUTDOWN_THRESHOLD) {
-                    Log.info("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
-                        voltage, BATTERY_SHUTDOWN_THRESHOLD, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
-
-                    // TODO Publihs all MQTT messages, then shut down WiFi, and _then_ start shutting down peripherals
-                    //      Doing so would result in less of a power spike, which can be important if the battery is already low
-
-                    // Run in separate task to allocate enough stack
-                    Task::run("shutdown", 8192, [&](Task& task) {
-                        // Notify all shutdown listeners
-                        for (auto& listener : shutdownListeners) {
-                            listener();
-                        }
-                        Log.printlnToSerial("Shutdown process finished");
-                    });
-                    task.delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
-                    enterLowPowerDeepSleep();
-                }
+            Task::loop("battery", 1536, [this](Task& task) {
+                checkBatteryVoltage(task);
             });
         }
 
@@ -399,6 +377,32 @@ public:
     const shared_ptr<BatteryDriver> battery;
 
 private:
+    void checkBatteryVoltage(Task& task) {
+        task.delayUntil(LOW_POWER_CHECK_INTERVAL);
+        auto currentVoltage = battery->getVoltage();
+        batteryVoltage.record(currentVoltage);
+        auto voltage = batteryVoltage.getAverage();
+
+        if (voltage != 0.0 && voltage < BATTERY_SHUTDOWN_THRESHOLD) {
+            Log.info("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
+                voltage, BATTERY_SHUTDOWN_THRESHOLD, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
+
+            // TODO Publihs all MQTT messages, then shut down WiFi, and _then_ start shutting down peripherals
+            //      Doing so would result in less of a power spike, which can be important if the battery is already low
+
+            // Run in separate task to allocate enough stack
+            Task::run("shutdown", 8192, [&](Task& task) {
+                // Notify all shutdown listeners
+                for (auto& listener : shutdownListeners) {
+                    listener();
+                }
+                Log.printlnToSerial("Shutdown process finished");
+            });
+            task.delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
+            enterLowPowerDeepSleep();
+        }
+    }
+
     [[noreturn]] inline void enterLowPowerDeepSleep() {
         Log.printlnToSerial("Entering low power deep sleep");
         ESP.deepSleep(duration_cast<microseconds>(LOW_POWER_SLEEP_CHECK_INTERVAL).count());
