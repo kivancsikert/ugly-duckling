@@ -356,6 +356,12 @@ private:
     void stopMqttClient() {
         if (client != nullptr) {
             ESP_ERROR_CHECK(esp_mqtt_client_stop(client));
+            destroyMqttClient();
+        }
+    }
+
+    void destroyMqttClient() {
+        if (client != nullptr) {
             ESP_ERROR_CHECK(esp_mqtt_client_destroy(client));
             client = nullptr;
         }
@@ -441,7 +447,7 @@ private:
                     Log.error("MQTT: Connection failed, error = 0x%x: %s",
                         err, esp_err_to_name(err));
                     trustMdnsCache = false;
-                    stopMqttClient();
+                    destroyMqttClient();
                     return false;
                 } else {
                     trustMdnsCache = true;
