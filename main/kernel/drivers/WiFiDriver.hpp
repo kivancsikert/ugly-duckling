@@ -20,8 +20,9 @@ namespace farmhub::kernel::drivers {
 
 class WiFiDriver {
 public:
-    WiFiDriver(StateSource& networkRequested, StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode)
+    WiFiDriver(StateSource& networkRequested, StateSource& networkConnecting, StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode)
         : networkRequested(networkRequested)
+        , networkConnecting(networkConnecting)
         , networkReady(networkReady)
         , configPortalRunning(configPortalRunning)
         , hostname(hostname)
@@ -105,11 +106,12 @@ private:
             case WIFI_EVENT_STA_DISCONNECTED: {
                 auto event = static_cast<wifi_event_sta_disconnected_t*>(eventData);
                 networkReady.clear();
-                eventQueue.offer(WiFiEvent::DISCONNECTED);
+                networkConnecting.clear();
                 {
                     Lock lock(metadataMutex);
                     ssid.reset();
                 }
+                eventQueue.offer(WiFiEvent::DISCONNECTED);
                 Log.debug("WiFi: Disconnected from the AP %s, reason: %d",
                     String(event->ssid, event->ssid_len).c_str(), event->reason);
                 break;
@@ -130,21 +132,22 @@ private:
             case IP_EVENT_STA_GOT_IP: {
                 auto* event = static_cast<ip_event_got_ip_t*>(eventData);
                 networkReady.set();
-                eventQueue.offer(WiFiEvent::CONNECTED);
+                networkConnecting.clear();
                 {
                     Lock lock(metadataMutex);
                     ip = event->ip_info.ip;
                 }
+                eventQueue.offer(WiFiEvent::CONNECTED);
                 Log.debug("WiFi: Got IP - " IPSTR, IP2STR(&event->ip_info.ip));
                 break;
             }
             case IP_EVENT_STA_LOST_IP: {
                 networkReady.clear();
-                eventQueue.offer(WiFiEvent::DISCONNECTED);
                 {
                     Lock lock(metadataMutex);
                     ip.reset();
                 }
+                eventQueue.offer(WiFiEvent::DISCONNECTED);
                 Log.debug("WiFi: Lost IP");
                 break;
             }
@@ -182,6 +185,7 @@ private:
                 Log.debug("WiFi: provisioning finished");
                 wifi_prov_mgr_deinit();
                 configPortalRunning.clear();
+                networkConnecting.clear();
                 release();
                 break;
             }
@@ -211,9 +215,15 @@ private:
 
             if (clients > 0) {
                 networkRequested.set();
-                if (!connected && !configPortalRunning.isSet()) {
-                    Log.trace("WiFi: Connecting for first client");
-                    connect();
+                if (!connected) {
+                    if (networkConnecting.isSet()) {
+                        Log.trace("WiFi: Already connecting");
+                    } else if (configPortalRunning.isSet()) {
+                        Log.trace("WiFi: Provisioning already running");
+                    } else {
+                        Log.trace("WiFi: Connecting for first client");
+                        connect();
+                    }
                 }
             } else {
                 networkRequested.clear();
@@ -237,27 +247,27 @@ private:
         };
         startStation(wifiConfig);
 #else
+        networkConnecting.set();
+
         bool provisioned = false;
         ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
         if (provisioned) {
             wifi_config_t wifiConfig;
             ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifiConfig));
-            Log.debug("WiFi: Connecting using stored credentials to %s",
-                wifiConfig.sta.ssid);
+            Log.debug("WiFi: Connecting using stored credentials to %s (password '%s')",
+                wifiConfig.sta.ssid, wifiConfig.sta.password);
             startStation(wifiConfig);
         } else {
-            if (!configPortalRunning.isSet()) {
-                Log.debug("WiFi: No stored credentials, starting provisioning");
-                configPortalRunning.set();
-                startProvisioning();
-            } else {
-                Log.trace("WiFi: Provisioning already running");
-            }
+            Log.debug("WiFi: No stored credentials, starting provisioning");
+            configPortalRunning.set();
+            startProvisioning();
         }
 #endif
     }
 
     void startStation(wifi_config_t& config) {
+        ESP_ERROR_CHECK(esp_wifi_stop());
+
         if (powerSaveMode) {
             auto listenInterval = 50;
             Log.trace("WiFi enabling power save mode, listen interval: %d",
@@ -315,6 +325,7 @@ private:
     }
 
     StateSource& networkRequested;
+    StateSource& networkConnecting;
     StateSource& networkReady;
     StateSource& configPortalRunning;
     const String hostname;
@@ -330,7 +341,7 @@ private:
     CopyQueue<WiFiEvent> eventQueue { "wifi-events", 16 };
 
     static constexpr milliseconds WIFI_QUEUE_TIMEOUT = 1s;
-    static constexpr milliseconds WIFI_CHECK_INTERVAL = 5s;
+    static constexpr milliseconds WIFI_CHECK_INTERVAL = 1min;
 
     Mutex metadataMutex;
     std::optional<String> ssid;

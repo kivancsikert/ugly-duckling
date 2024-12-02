@@ -153,16 +153,13 @@ private:
 
     void updateState() {
         KernelState newState;
-        if (networkRequestedState.isSet() && !networkReadyState.isSet()) {
-            // We don't have network
-            if (configPortalRunningState.isSet()) {
-                // We are waiting for the user to configure the network
-                newState = KernelState::NETWORK_CONFIGURING;
-            } else {
-                // We are waiting for network connection
-                newState = KernelState::NETWORK_CONNECTING;
-            }
-        } else if (!rtcInSyncState.isSet()) {
+        if (configPortalRunningState.isSet()) {
+            // We are waiting for the user to configure the network
+            newState = KernelState::NETWORK_CONFIGURING;
+        } else if (networkConnectingState.isSet()) {
+            // We are waiting for network connection
+            newState = KernelState::NETWORK_CONNECTING;
+        } else if (networkRequestedState.isSet() && !rtcInSyncState.isSet()) {
             newState = KernelState::RTC_SYNCING;
         } else if (networkRequestedState.isSet() && !mqttReadyState.isSet()) {
             // We are waiting for MQTT connection
@@ -170,7 +167,7 @@ private:
         } else if (!kernelReadyState.isSet()) {
             // We are waiting for init to finish
             newState = KernelState::INIT_FINISHING;
-        } else if (networkRequestedState.isSet()) {
+        } else if (networkReadyState.isSet()) {
             newState = KernelState::TRNASMITTING;
         } else {
             newState = KernelState::IDLE;
@@ -315,6 +312,7 @@ private:
     KernelState state = KernelState::BOOTING;
     StateManager stateManager;
     StateSource networkRequestedState = stateManager.createStateSource("network-requested");
+    StateSource networkConnectingState = stateManager.createStateSource("network-connecting");
     StateSource networkReadyState = stateManager.createStateSource("network-ready");
     StateSource configPortalRunningState = stateManager.createStateSource("config-portal-running");
     StateSource rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
@@ -323,7 +321,7 @@ private:
     StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
 public:
-    WiFiDriver wifi { networkRequestedState, networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
+    WiFiDriver wifi { networkRequestedState, networkConnectingState, networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
 
 private:
     MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
