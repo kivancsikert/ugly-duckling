@@ -40,8 +40,8 @@ public:
         ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
         // Register event handlers
-        ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onWiFiEvent, this));
-        ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onIpEvent, this));
+        ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onEvent, this));
+        ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onEvent, this));
 
         // TODO Rewrite provisioning
         // WiFi.onEvent(
@@ -94,9 +94,16 @@ public:
     }
 
 private:
-    // Event handler for WiFi events
-    static void onWiFiEvent(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
+    static void onEvent(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
         auto* driver = static_cast<WiFiDriver*>(arg);
+        if (eventBase == WIFI_EVENT) {
+            driver->onWiFiEvent(eventId, eventData);
+        } else if (eventBase == IP_EVENT) {
+            driver->onIpEvent(eventId, eventData);
+        }
+    }
+
+    void onWiFiEvent(int32_t eventId, void* eventData) {
         switch (eventId) {
             case WIFI_EVENT_STA_START: {
                 Log.debug("WiFi: Started");
@@ -105,22 +112,22 @@ private:
             }
             case WIFI_EVENT_STA_CONNECTED: {
                 auto event = static_cast<wifi_event_sta_connected_t*>(eventData);
-                String ssid(event->ssid, event->ssid_len);
+                String newSsid(event->ssid, event->ssid_len);
                 {
-                    Lock lock(driver->metadataMutex);
-                    driver->ssid = ssid;
+                    Lock lock(metadataMutex);
+                    ssid = newSsid;
                 }
                 Log.debug("WiFi: Connected to the AP %s",
-                    ssid.c_str());
+                    newSsid.c_str());
                 break;
             }
             case WIFI_EVENT_STA_DISCONNECTED: {
                 auto event = static_cast<wifi_event_sta_disconnected_t*>(eventData);
-                driver->networkReady.clear();
-                driver->eventQueue.offer(WiFiEvent::DISCONNECTED);
+                networkReady.clear();
+                eventQueue.offer(WiFiEvent::DISCONNECTED);
                 {
-                    Lock lock(driver->metadataMutex);
-                    driver->ssid.reset();
+                    Lock lock(metadataMutex);
+                    ssid.reset();
                 }
                 Log.debug("WiFi: Disconnected from the AP %s, reason: %d",
                     String(event->ssid, event->ssid_len).c_str(), event->reason);
@@ -129,27 +136,25 @@ private:
         }
     }
 
-    // Event handler for IP events
-    static void onIpEvent(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
-        auto* driver = static_cast<WiFiDriver*>(arg);
+    void onIpEvent(int32_t eventId, void* eventData) {
         switch (eventId) {
             case IP_EVENT_STA_GOT_IP: {
                 auto* event = static_cast<ip_event_got_ip_t*>(eventData);
-                driver->networkReady.set();
-                driver->eventQueue.offer(WiFiEvent::CONNECTED);
+                networkReady.set();
+                eventQueue.offer(WiFiEvent::CONNECTED);
                 {
-                    Lock lock(driver->metadataMutex);
-                    driver->ip = event->ip_info.ip;
+                    Lock lock(metadataMutex);
+                    ip = event->ip_info.ip;
                 }
                 Log.debug("WiFi: Got IP - " IPSTR, IP2STR(&event->ip_info.ip));
                 break;
             }
             case IP_EVENT_STA_LOST_IP: {
-                driver->networkReady.clear();
-                driver->eventQueue.offer(WiFiEvent::DISCONNECTED);
+                networkReady.clear();
+                eventQueue.offer(WiFiEvent::DISCONNECTED);
                 {
-                    Lock lock(driver->metadataMutex);
-                    driver->ip.reset();
+                    Lock lock(metadataMutex);
+                    ip.reset();
                 }
                 Log.debug("WiFi: Lost IP");
                 break;
