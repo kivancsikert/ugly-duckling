@@ -137,7 +137,7 @@ private:
 
         for (uint8_t i = 0; i < SNTP_MAX_SERVERS; ++i) {
             if (esp_sntp_getservername(i)) {
-                Log.info(" - server %d: '%s'", i, esp_sntp_getservername(i));
+                Log.debug(" - server %d: '%s'", i, esp_sntp_getservername(i));
             } else {
                 char buff[48];
                 ip_addr_t const* ip = esp_sntp_getserver(i);
