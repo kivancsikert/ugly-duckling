@@ -346,7 +346,7 @@ public:
             consolePrinter.registerBattery(battery);
 #endif
 
-            Task::loop("battery", 3072, [this](Task& task) {
+            Task::loop("battery", 2048, [this](Task& task) {
                 task.delayUntil(LOW_POWER_CHECK_INTERVAL);
                 auto currentVoltage = battery->getVoltage();
                 batteryVoltage.record(currentVoltage);
