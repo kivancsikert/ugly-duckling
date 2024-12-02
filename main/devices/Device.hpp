@@ -95,56 +95,9 @@ namespace farmhub::devices {
 class ConsolePrinter {
 public:
     ConsolePrinter() {
-        static const String spinner = "|/-\\";
-        static const int spinnerLength = spinner.length();
         status.reserve(256);
         Task::loop("console", 3072, 1, [this](Task& task) {
-            status.clear();
-
-            counter = (counter + 1) % spinnerLength;
-            status.concat("[");
-            status.concat(spinner.substring(counter, counter + 1));
-            status.concat("] ");
-
-            status.concat("\033[33m");
-            status.concat(FARMHUB_VERSION);
-            status.concat("\033[0m");
-
-            status.concat(", WIFI: ");
-            status.concat(wifiStatus());
-
-            status.concat(", uptime: \033[33m");
-            status.concat(String(float(millis()) / 1000.0f, 1));
-            status.concat("\033[0m s");
-
-            status.concat(", RTC: \033[33m");
-            status.concat(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED");
-            status.concat("\033[0m");
-
-            status.concat(", heap: \033[33m");
-            status.concat(String(float(ESP.getFreeHeap()) / 1024.0f, 2));
-            status.concat("\033[0m kB");
-
-            status.concat(", CPU: \033[33m");
-            status.concat(esp_clk_cpu_freq() / 1000000);
-            status.concat("\033[0m MHz");
-
-            {
-                Lock lock(batteryMutex);
-                if (battery != nullptr) {
-                    status.concat(", battery: \033[33m");
-                    status.concat(String(battery->getVoltage(), 2));
-                    status.concat("\033[0m V");
-                }
-            }
-
-            Log.printToSerial("\033[1G\033[0K");
-
-            consoleQueue.drain([](const String& line) {
-                Log.printlnToSerial(line.c_str());
-            });
-
-            Log.printToSerial(status.c_str());
+            printStatus();
             task.delayUntil(100ms);
         });
     }
@@ -155,6 +108,7 @@ public:
     }
 
     void printLog(Level level, const char* message) {
+        static char timeBuffer[12];
         sprintf(timeBuffer, "%8.3f", millis() / 1000.0);
         String* buffer = new String();
         buffer->reserve(256);
@@ -203,7 +157,58 @@ public:
     }
 
 private:
-    static String wifiStatus() {
+    void printStatus() {
+        static const char* spinner = "|/-\\";
+        static const int spinnerLength = strlen(spinner);
+
+        status.clear();
+        counter = (counter + 1) % spinnerLength;
+        status.concat("[");
+        status.concat(spinner[counter]);
+        status.concat("] ");
+
+        status.concat("\033[33m");
+        status.concat(FARMHUB_VERSION);
+        status.concat("\033[0m");
+
+        status.concat(", WIFI: ");
+        status.concat(wifiStatus());
+
+        status.concat(", uptime: \033[33m");
+        status.concat(String(float(millis()) / 1000.0f, 1));
+        status.concat("\033[0m s");
+
+        status.concat(", RTC: \033[33m");
+        status.concat(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED");
+        status.concat("\033[0m");
+
+        status.concat(", heap: \033[33m");
+        status.concat(String(float(ESP.getFreeHeap()) / 1024.0f, 2));
+        status.concat("\033[0m kB");
+
+        status.concat(", CPU: \033[33m");
+        status.concat(esp_clk_cpu_freq() / 1000000);
+        status.concat("\033[0m MHz");
+
+        {
+            Lock lock(batteryMutex);
+            if (battery != nullptr) {
+                status.concat(", battery: \033[33m");
+                status.concat(String(battery->getVoltage(), 2));
+                status.concat("\033[0m V");
+            }
+        }
+
+        Log.printToSerial("\033[1G\033[0K");
+
+        consoleQueue.drain([](const String& line) {
+            Log.printlnToSerial(line.c_str());
+        });
+
+        Log.printToSerial(status.c_str());
+    }
+
+    static const char* wifiStatus() {
         auto netif = esp_netif_get_default_netif();
         if (!netif) {
             return "\033[0;31moff\033[0m";
@@ -240,7 +245,7 @@ private:
             case ESP_ERR_WIFI_NOT_STARTED:
                 return "\033[0;31mWi-Fi not started\033[0m";
             default:
-                return "\033[0;31m" + String(esp_err_to_name(err)) + "\033[0m";
+                return esp_err_to_name(err);
         }
 
         // Check IP address
@@ -256,12 +261,11 @@ private:
     }
 
     int counter;
-    char timeBuffer[12];
     String status;
     Mutex batteryMutex;
     std::shared_ptr<BatteryDriver> battery;
 
-    Queue<String> consoleQueue { "console", 128 };
+    Queue<String> consoleQueue { "console", 16 };
 };
 
 ConsolePrinter consolePrinter;
