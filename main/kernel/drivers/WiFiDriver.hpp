@@ -5,6 +5,8 @@
 
 #include <esp_event.h>
 #include <esp_wifi.h>
+#include <wifi_provisioning/manager.h>
+#include <wifi_provisioning/scheme_softap.h>
 
 #include <kernel/Concurrent.hpp>
 #include <kernel/Log.hpp>
@@ -42,37 +44,7 @@ public:
         // Register event handlers
         ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onEvent, this));
         ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onEvent, this));
-
-        // TODO Rewrite provisioning
-        // WiFi.onEvent(
-        //     [&configPortalRunning](WiFiEvent_t event, WiFiEventInfo_t info) {
-        //         Log.debug("WiFi: provisioning started");
-        //         configPortalRunning.set();
-        //     },
-        //     ARDUINO_EVENT_PROV_START);
-        // WiFi.onEvent(
-        //     [](WiFiEvent_t event, WiFiEventInfo_t info) {
-        //         Log.debug("Received Wi-Fi credentials for SSID '%s'",
-        //             (const char*) info.prov_cred_recv.ssid);
-        //     },
-        //     ARDUINO_EVENT_PROV_CRED_RECV);
-        // WiFi.onEvent(
-        //     [](WiFiEvent_t event, WiFiEventInfo_t info) {
-        //         Log.debug("WiFi: provisioning failed because %s",
-        //             info.prov_fail_reason == NETWORK_PROV_WIFI_STA_AUTH_ERROR ? "authentication failed" : "AP not found");
-        //     },
-        //     ARDUINO_EVENT_PROV_CRED_FAIL);
-        // WiFi.onEvent(
-        //     [](WiFiEvent_t event, WiFiEventInfo_t info) {
-        //         Log.debug("WiFi: provisioning successful");
-        //     },
-        //     ARDUINO_EVENT_PROV_CRED_SUCCESS);
-        // WiFi.onEvent(
-        //     [&configPortalRunning](WiFiEvent_t event, WiFiEventInfo_t info) {
-        //         Log.debug("WiFi: provisioning finished");
-        //         configPortalRunning.clear();
-        //     },
-        //     ARDUINO_EVENT_PROV_END);
+        ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onEvent, this));
 
         Task::run("wifi", 3072, [this](Task&) {
             runLoop();
@@ -100,6 +72,8 @@ private:
             driver->onWiFiEvent(eventId, eventData);
         } else if (eventBase == IP_EVENT) {
             driver->onIpEvent(eventId, eventData);
+        } else if (eventBase == WIFI_PROV_EVENT) {
+            driver->onWiFiProvEvent(eventId, eventData);
         }
     }
 
@@ -107,7 +81,14 @@ private:
         switch (eventId) {
             case WIFI_EVENT_STA_START: {
                 Log.debug("WiFi: Started");
-                ESP_ERROR_CHECK(esp_wifi_connect());
+                esp_err_t err = esp_wifi_connect();
+                if (err != ESP_OK) {
+                    Log.debug("WiFi: Failed to start connecting: %s", esp_err_to_name(err));
+                }
+                break;
+            }
+            case WIFI_EVENT_STA_STOP: {
+                Log.debug("WiFi: Stopped");
                 break;
             }
             case WIFI_EVENT_STA_CONNECTED: {
@@ -131,6 +112,14 @@ private:
                 }
                 Log.debug("WiFi: Disconnected from the AP %s, reason: %d",
                     String(event->ssid, event->ssid_len).c_str(), event->reason);
+                break;
+            }
+            case WIFI_EVENT_AP_STACONNECTED: {
+                Log.info("WiFi: SoftAP transport connected");
+                break;
+            }
+            case WIFI_EVENT_AP_STADISCONNECTED: {
+                Log.info("WiFi: SoftAP transport disconnected");
                 break;
             }
         }
@@ -157,6 +146,39 @@ private:
                     ip.reset();
                 }
                 Log.debug("WiFi: Lost IP");
+                break;
+            }
+        }
+    }
+
+    void onWiFiProvEvent(int32_t eventId, void* eventData) {
+        switch (eventId) {
+            case WIFI_PROV_START: {
+                Log.debug("WiFi: provisioning started");
+                // configPortalRunning.set();
+                break;
+            }
+            case WIFI_PROV_CRED_RECV: {
+                auto wifiConfig = static_cast<wifi_sta_config_t*>(eventData);
+                Log.debug("Received Wi-Fi credentials for SSID '%s'",
+                    (const char*) wifiConfig->ssid);
+                break;
+            }
+            case WIFI_PROV_CRED_FAIL: {
+                auto* reason = static_cast<wifi_prov_sta_fail_reason_t*>(eventData);
+                Log.debug("WiFi: provisioning failed because %s",
+                    *reason == WIFI_PROV_STA_AUTH_ERROR
+                        ? "authentication failed"
+                        : "AP not found");
+                break;
+            }
+            case WIFI_PROV_CRED_SUCCESS: {
+                Log.debug("WiFi: provisioning successful");
+                break;
+            }
+            case WIFI_PROV_END: {
+                Log.debug("WiFi: provisioning finished");
+                configPortalRunning.clear();
                 break;
             }
         }
@@ -211,20 +233,19 @@ private:
         };
         startStation(wifiConfig);
 #else
-        // TODO Maybe use wifi_prov_mgr_is_provisioned() to check if we have been
-        wifi_config_t wifiConfig;
-        ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifiConfig));
-        if (strlen((const char*) wifiConfig.sta.ssid)) {
+        bool provisioned = false;
+        ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
+        if (provisioned) {
+            wifi_config_t wifiConfig;
+            ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifiConfig));
             Log.debug("WiFi: Connecting using stored credentials to %s",
                 wifiConfig.sta.ssid);
             startStation(wifiConfig);
         } else {
-            // TODO Rewrite provisioning
-            // WiFiProv.beginProvision(
-            //     NETWORK_PROV_SCHEME_SOFTAP, NETWORK_PROV_SCHEME_HANDLER_NONE, NETWORK_PROV_SECURITY_1, pop, hostname.c_str(), serviceKey, nullptr, resetProvisioned);
-            // WiFiProv.printQR(hostname.c_str(), pop, "softap", qr);
-            // Log.debug("%s",
-            //     qr.buffer.c_str());
+            if (!configPortalRunning.isSet()) {
+                configPortalRunning.set();
+                startProvisioning();
+            }
         }
 #endif
     }
@@ -241,6 +262,28 @@ private:
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
         ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
         ESP_ERROR_CHECK(esp_wifi_start());
+    }
+
+    void startProvisioning() {
+        // Initialize provisioning manager
+        wifi_prov_mgr_config_t config = {
+            .scheme = wifi_prov_scheme_softap,
+            .scheme_event_handler = WIFI_PROV_EVENT_HANDLER_NONE
+        };
+        ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
+
+        char serviceName[32];
+        uint8_t mac[6];
+        const char* ssid_prefix = "PROV_";
+        esp_wifi_get_mac(WIFI_IF_STA, mac);
+        snprintf(serviceName, sizeof(serviceName), "%s%02X%02X%02X",
+            ssid_prefix, mac[3], mac[4], mac[5]);
+        Log.debug("WiFi: Starting provisioning service '%s'",
+            serviceName);
+
+        ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, pop, serviceName, serviceKey));
+
+        // TODO Maybe print QR code?
     }
 
     static constexpr const char* pop = "abcd1234";
