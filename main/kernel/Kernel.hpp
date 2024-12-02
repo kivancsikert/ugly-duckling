@@ -76,7 +76,7 @@ public:
             getMacAddress().c_str());
 
         // TODO Allocate less memory when FARMHUB_DEBUG is disabled
-        Task::loop("status-update", 3172, [this](Task&) { updateState(); });
+        Task::loop("status-update", 3072, [this](Task&) { updateState(); });
 
         httpUpdateResult = handleHttpUpdate();
         if (!httpUpdateResult.isEmpty()) {
