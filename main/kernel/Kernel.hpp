@@ -147,7 +147,7 @@ private:
         RTC_SYNCING,
         MQTT_CONNECTING,
         INIT_FINISHING,
-        TRNASMITTING,
+        TRANSMITTING,
         IDLE
     };
 
@@ -168,7 +168,7 @@ private:
             // We are waiting for init to finish
             newState = KernelState::INIT_FINISHING;
         } else if (networkReadyState.isSet()) {
-            newState = KernelState::TRNASMITTING;
+            newState = KernelState::TRANSMITTING;
         } else {
             newState = KernelState::IDLE;
         }
@@ -196,7 +196,7 @@ private:
                 case KernelState::INIT_FINISHING:
                     statusLed.blink(1500ms);
                     break;
-                case KernelState::TRNASMITTING:
+                case KernelState::TRANSMITTING:
                     statusLed.turnOn();
                     break;
                 case KernelState::IDLE:
