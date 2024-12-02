@@ -199,10 +199,16 @@ public:
         StateSource& mqttReady)
         : wifi(wifi)
         , mdns(mdns)
-        , config(config)
+        , configHostname(config.host.get())
+        , configPort(config.port.get())
+        , configServerCert(joinStrings(config.serverCert.get()))
+        , configClientCert(joinStrings(config.clientCert.get()))
+        , configClientKey(joinStrings(config.clientKey.get()))
         , clientId(getClientId(config.clientId.get(), instanceName))
         , powerSaveMode(powerSaveMode)
-        , mqttReady(mqttReady) {
+        , mqttReady(mqttReady)
+        , outgoingQueue("mqtt-outgoing", config.queueSize.get())
+        , incomingQueue("mqtt-incoming", config.queueSize.get()) {
 
         Task::run("mqtt", 5120, [this](Task& task) {
             runEventLoop(task);
@@ -366,76 +372,74 @@ private:
             Log.debug("MQTT: Connecting to MQTT server");
 
             if (client == nullptr) {
-                String serverCert;
-                String clientCert;
-                String clientKey;
-
+                String hostname;
+                uint32_t port;
+                if (configHostname.isEmpty()) {
 #ifdef WOKWI
-                esp_mqtt_client_config_t mqttConfig = {
-                    .broker {
-                        .address {
-                            .hostname = "host.wokwi.internal",
-                            .transport = MQTT_TRANSPORT_OVER_TCP,
-                            .port = 1883,
-                        },
-                    }
-                };
+                    hostname = "host.wokwi.internal";
+                    port = 1883;
 #else
-                MdnsRecord mqttServer;
-                if (config.host.get().length() > 0) {
-                    mqttServer.hostname = config.host.get();
-                    mqttServer.port = config.port.get();
-                    if (config.serverCert.hasValue()) {
-                        serverCert = joinStrings(config.serverCert.get());
-                        clientCert = joinStrings(config.clientCert.get());
-                        clientKey = joinStrings(config.clientKey.get());
+                    MdnsRecord mqttServer;
+                    if (!mdns.lookupService("mqtt", "tcp", mqttServer, trustMdnsCache)) {
+                        Log.error("MQTT: Failed to lookup MQTT server");
+                        return false;
                     }
+                    hostname = mqttServer.ip == IPAddress()
+                        ? mqttServer.hostname
+                        : mqttServer.ip.toString();
+                    port = mqttServer.port;
+#endif
                 } else {
-                    // TODO Handle lookup failure
-                    mdns.lookupService("mqtt", "tcp", mqttServer, trustMdnsCache);
+                    hostname = configHostname;
+                    port = configPort;
                 }
 
-                String hostname = mqttServer.ip == IPAddress()
-                    ? mqttServer.hostname
-                    : mqttServer.ip.toString();
-                auto transport = serverCert.isEmpty() ? MQTT_TRANSPORT_OVER_TCP : MQTT_TRANSPORT_OVER_SSL;
-                esp_mqtt_client_config_t mqttConfig = {
+                esp_mqtt_client_config_t config = {
                     .broker {
                         .address {
                             .hostname = hostname.c_str(),
-                            .transport = transport,
-                            .port = static_cast<uint32_t>(mqttServer.port),
+                            .port = port,
                         },
-                    }
+                    },
+                    .credentials {
+                        .client_id = clientId.c_str(),
+                    },
+                    .network {
+                        .timeout_ms = duration_cast<milliseconds>(10s).count(),
+                    },
                 };
-#endif
-                mqttConfig.network.timeout_ms = duration_cast<milliseconds>(10s).count();
-                mqttConfig.credentials.client_id = clientId.c_str();
 
                 Log.debug("MQTT: server: %s:%ld, client ID is '%s'",
-                    mqttConfig.broker.address.hostname, mqttConfig.broker.address.port, clientId.c_str());
+                    config.broker.address.hostname,
+                    config.broker.address.port,
+                    config.credentials.client_id);
 
-                if (!serverCert.isEmpty()) {
-                    // TODO Make TLS work
-                    // Log.debug("MQTT: server: %s:%d, client ID is '%s', using TLS",
-                    //     hostname.c_str(), mqttServer.port, clientId.c_str());
-                    // Log.trace("Server cert: %s", serverCert.c_str());
-                    // Log.trace("Client cert: %s", clientCert.c_str());
-                    // wifiClientSecure.setCACert(serverCert.c_str());
-                    // wifiClientSecure.setCertificate(clientCert.c_str());
-                    // wifiClientSecure.setPrivateKey(clientKey.c_str());
-                    // wifiClientSecure.connect(mqttServer.hostname.c_str(), mqttServer.port);
-                    // mqttClient.begin(wifiClientSecure);
+                if (!configServerCert.isEmpty()) {
+                    config.broker.address.transport = MQTT_TRANSPORT_OVER_SSL;
+                    config.broker.verification.certificate = configServerCert.c_str();
+                    Log.debug("MQTT: Server cert:\n%s",
+                        config.broker.verification.certificate);
+
+                    if (!configClientCert.isEmpty() && !configClientKey.isEmpty()) {
+                        config.credentials.authentication = {
+                            .certificate = configClientCert.c_str(),
+                            .key = configClientKey.c_str(),
+                        };
+                        Log.debug("MQTT: Client cert:\n%s",
+                            config.credentials.authentication.certificate);
+                    }
+                } else {
+                    config.broker.address.transport = MQTT_TRANSPORT_OVER_TCP;
                 }
 
-                client = esp_mqtt_client_init(&mqttConfig);
-                /* The last argument may be used to pass data to the event handler, in this example mqtt_event_handler */
+                client = esp_mqtt_client_init(&config);
+
                 ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, handleMqttEventCallback, this));
 
                 esp_err_t err = esp_mqtt_client_start(client);
-
                 if (err != ESP_OK) {
-                    Log.error("MQTT: Connection failed, error = 0x%x", err);
+                    Log.error("MQTT: Connection failed, error = 0x%x: %s",
+                        err, esp_err_to_name(err));
                     trustMdnsCache = false;
                     stopMqttClient();
                     return false;
@@ -525,7 +529,7 @@ private:
 
     static void logErrorIfNonZero(const char* message, int error) {
         if (error != 0) {
-            Log.error(" - %s: %d", message, error);
+            Log.error(" - %s: 0x%x", message, error);
         }
     }
 
@@ -636,15 +640,21 @@ private:
     std::optional<WiFiConnection> wifiConnection;
     MdnsDriver& mdns;
     bool trustMdnsCache = true;
-    const Config& config;
+
+    const String configHostname;
+    const int configPort;
+    const String configServerCert;
+    const String configClientCert;
+    const String configClientKey;
     const String clientId;
+
     const bool powerSaveMode;
     StateSource& mqttReady;
 
     esp_mqtt_client_handle_t client = nullptr;
 
-    Queue<std::variant<OutgoingMessage, Subscription>> outgoingQueue { "mqtt-outgoing", config.queueSize.get() };
-    Queue<IncomingMessage> incomingQueue { "mqtt-incoming", config.queueSize.get() };
+    Queue<std::variant<OutgoingMessage, Subscription>> outgoingQueue;
+    Queue<IncomingMessage> incomingQueue;
     // TODO Use a map instead
     std::list<Subscription> subscriptions;
 
