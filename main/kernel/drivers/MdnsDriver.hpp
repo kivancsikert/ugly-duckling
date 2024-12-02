@@ -100,8 +100,10 @@ private:
             return false;
         }
 
-        auto& result = results[0];
-        record.hostname = result.hostname;
+        auto& result = *results;
+        if (result.hostname != nullptr) {
+            record.hostname = result.hostname;
+        }
         record.ip = IPAddress(result.addr->addr.u_addr.ip4.addr);
         record.port = result.port;
         mdns_query_results_free(results);
