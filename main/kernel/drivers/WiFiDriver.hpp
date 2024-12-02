@@ -47,7 +47,7 @@ public:
         ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onEvent, this));
         ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onEvent, this));
 
-        Task::run("wifi", 3072, [this](Task&) {
+        Task::run("wifi-driver", 4096, [this](Task&) {
             runLoop();
         });
     }
