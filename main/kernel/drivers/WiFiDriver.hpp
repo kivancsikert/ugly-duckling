@@ -98,6 +98,11 @@ private:
     static void onWiFiEvent(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
         auto* driver = static_cast<WiFiDriver*>(arg);
         switch (eventId) {
+            case WIFI_EVENT_STA_START: {
+                Log.debug("WiFi: Started");
+                ESP_ERROR_CHECK(esp_wifi_connect());
+                break;
+            }
             case WIFI_EVENT_STA_CONNECTED: {
                 auto event = static_cast<wifi_event_sta_connected_t*>(eventData);
                 String ssid(event->ssid, event->ssid_len);
@@ -191,40 +196,46 @@ private:
 
     void connect() {
 #ifdef WOKWI
-        Log.debug("Skipping WiFi provisioning on Wokwi");
-        wifi_config_t wifi_config = {
+        Log.debug("WiFi: Skipping provisioning on Wokwi");
+        wifi_config_t wifiConfig = {
             .sta = {
                 .ssid = "Wokwi-GUEST",
                 .password = "",
                 .channel = 6,
             }
         };
-
-        setWiFiMode(WIFI_MODE_STA, wifi_config);
-        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-        ESP_ERROR_CHECK(esp_wifi_start());
-        ESP_ERROR_CHECK(esp_wifi_connect());
+        startStation(wifiConfig);
 #else
-        // TODO Rewrite provisioning
-        // WiFiProv.beginProvision(
-        //     NETWORK_PROV_SCHEME_SOFTAP, NETWORK_PROV_SCHEME_HANDLER_NONE, NETWORK_PROV_SECURITY_1, pop, hostname.c_str(), serviceKey, nullptr, resetProvisioned);
-        // WiFiProv.printQR(hostname.c_str(), pop, "softap", qr);
-        // Log.debug("%s",
-        //     qr.buffer.c_str());
+        // TODO Maybe use wifi_prov_mgr_is_provisioned() to check if we have been
+        wifi_config_t wifiConfig;
+        ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifiConfig));
+        if (strlen((const char*) wifiConfig.sta.ssid)) {
+            Log.debug("WiFi: Connecting using stored credentials to %s",
+                wifiConfig.sta.ssid);
+            startStation(wifiConfig);
+        } else {
+            // TODO Rewrite provisioning
+            // WiFiProv.beginProvision(
+            //     NETWORK_PROV_SCHEME_SOFTAP, NETWORK_PROV_SCHEME_HANDLER_NONE, NETWORK_PROV_SECURITY_1, pop, hostname.c_str(), serviceKey, nullptr, resetProvisioned);
+            // WiFiProv.printQR(hostname.c_str(), pop, "softap", qr);
+            // Log.debug("%s",
+            //     qr.buffer.c_str());
+        }
 #endif
     }
 
-    // TODO This should probably be about setting STA only
-    void setWiFiMode(wifi_mode_t mode, wifi_config_t& config) {
-        ESP_ERROR_CHECK(esp_wifi_set_mode(mode));
-
+    void startStation(wifi_config_t& config) {
         if (powerSaveMode) {
             auto listenInterval = 50;
-            Log.debug("WiFi enabling power save mode, listen interval: %d",
+            Log.trace("WiFi enabling power save mode, listen interval: %d",
                 listenInterval);
             ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
             config.sta.listen_interval = listenInterval;
         }
+
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
+        ESP_ERROR_CHECK(esp_wifi_start());
     }
 
     static constexpr const char* pop = "abcd1234";
