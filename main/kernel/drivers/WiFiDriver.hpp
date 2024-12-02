@@ -170,6 +170,7 @@ private:
                     *reason == WIFI_PROV_STA_AUTH_ERROR
                         ? "authentication failed"
                         : "AP not found");
+                ESP_ERROR_CHECK(wifi_prov_mgr_reset_sm_state_on_failure());
                 break;
             }
             case WIFI_PROV_CRED_SUCCESS: {
