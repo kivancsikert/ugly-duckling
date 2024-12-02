@@ -2,7 +2,7 @@
 
 #include <atomic>
 #include <chrono>
-#include <list>
+#include <vector>
 
 #include <kernel/Concurrent.hpp>
 #include <kernel/Log.hpp>
@@ -17,7 +17,7 @@ namespace farmhub::kernel::drivers {
 
 class LedDriver {
 public:
-    typedef std::list<milliseconds> BlinkPattern;
+    typedef std::vector<milliseconds> BlinkPattern;
 
     LedDriver(const String& name, PinPtr pin)
         : pin(pin)
@@ -28,11 +28,11 @@ public:
 
         pin->pinMode(OUTPUT);
         Task::loop(name, 2048, [this](Task& task) {
-            if (currentPattern.empty()) {
-                currentPattern = pattern;
+            if (cursor == pattern.end()) {
+                cursor = pattern.begin();
             }
-            milliseconds blinkTime = currentPattern.front();
-            currentPattern.pop_front();
+            milliseconds blinkTime = *cursor;
+            cursor++;
 
             if (blinkTime > milliseconds::zero()) {
                 setLedState(LOW);
@@ -44,7 +44,7 @@ public:
             ticks timeout = blinkTime < milliseconds::zero() ? -blinkTime : blinkTime;
             patternQueue.pollIn(timeout, [this](const BlinkPattern& newPattern) {
                 pattern = newPattern;
-                currentPattern = {};
+                cursor = pattern.cbegin();
             });
         });
     }
@@ -61,7 +61,7 @@ public:
         setPattern({ blinkRate / 2, -blinkRate / 2 });
     }
 
-    void blinkPatternInMs(std::list<int> pattern) {
+    void blinkPatternInMs(std::vector<int> pattern) {
         blinkPattern(BlinkPattern(pattern.begin(), pattern.end()));
     }
 
@@ -86,8 +86,9 @@ private:
     const PinPtr pin;
     Queue<BlinkPattern> patternQueue;
     BlinkPattern pattern;
+    std::vector<milliseconds>::const_iterator cursor = pattern.cbegin();
     std::atomic<bool> ledState;
-    BlinkPattern currentPattern;
+
 };
 
 }    // namespace farmhub::kernel::drivers
