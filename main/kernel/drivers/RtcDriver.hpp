@@ -93,37 +93,39 @@ private:
 #else
         // TODO Check this
         if (ntpConfig.host.get().length() > 0) {
-            Log.info("RTC: using NTP server %s from configuration",
+            Log.debug("RTC: using NTP server %s from configuration",
                 ntpConfig.host.get().c_str());
             esp_sntp_setservername(0, ntpConfig.host.get().c_str());
         } else {
             MdnsRecord ntpServer;
             if (mdns.lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
-                Log.info("RTC: using NTP server %s:%d (%s) from mDNS",
+                Log.debug("RTC: using NTP server %s:%d (%s) from mDNS",
                     ntpServer.hostname.c_str(),
                     ntpServer.port,
                     ntpServer.ip.toString().c_str());
                 auto serverIp = convertIp4(ntpServer.ip);
                 esp_sntp_setserver(0, &serverIp);
             } else {
-                Log.info("RTC: no NTP server configured, using default");
+                Log.debug("RTC: no NTP server configured, using default");
             }
         }
 #endif
-        ESP_ERROR_CHECK(esp_netif_sntp_start());
-
         printServers();
 
         bool success = false;
-        for (int retry = 0; retry < 10; retry++) {
-            auto ret = esp_netif_sntp_sync_wait(ticks(10s).count());
-            if (ret == ESP_OK) {
-                success = true;
-                rtcInSync.set();
-                break;
-            } else {
-                Log.info("RTC: waiting for time sync returned %d, retry #%d", ret, retry);
-            }
+        ESP_ERROR_CHECK(esp_netif_sntp_start());
+
+        auto ret = esp_netif_sntp_sync_wait(ticks(10s).count());
+        // It's okay to assume RTC is _roughly_ in sync even if
+        // we're not yet finished with smooth sync
+        if (ret == ESP_OK || ret == ESP_ERR_NOT_FINISHED) {
+            rtcInSync.set();
+            success = true;
+            Log.debug("RTC: sync finished successfully");
+        } else if (ret == ESP_ERR_TIMEOUT) {
+            Log.debug("RTC: waiting for time sync timed out");
+        } else {
+            Log.debug("RTC: waiting for time sync returned 0x%x", ret);
         }
 
         esp_netif_sntp_deinit();
