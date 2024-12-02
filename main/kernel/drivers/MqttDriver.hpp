@@ -370,37 +370,47 @@ private:
                 String clientCert;
                 String clientKey;
 
-                esp_mqtt_client_config_t mqttConfig = {};
-                mqttConfig.network.timeout_ms = duration_cast<milliseconds>(10s).count();
 #ifdef WOKWI
-                mqttConfig.broker.address.transport = MQTT_TRANSPORT_OVER_TCP;
-                mqttConfig.broker.address.hostname = "host.wokwi.internal";
-                mqttConfig.broker.address.port = 1883;
+                esp_mqtt_client_config_t mqttConfig = {
+                    .broker {
+                        .address {
+                            .hostname = "host.wokwi.internal",
+                            .transport = MQTT_TRANSPORT_OVER_TCP,
+                            .port = 1883,
+                        },
+                    }
+                };
 #else
+                MdnsRecord mqttServer;
                 if (config.host.get().length() > 0) {
-                    mqttConfig.broker.address.hostname = config.host.get().c_str();
-                    mqttConfig.broker.address.port = config.port.get();
+                    mqttServer.hostname = config.host.get();
+                    mqttServer.port = config.port.get();
                     if (config.serverCert.hasValue()) {
-                        mqttConfig.broker.address.transport = MQTT_TRANSPORT_OVER_SSL;
                         serverCert = joinStrings(config.serverCert.get());
                         clientCert = joinStrings(config.clientCert.get());
                         clientKey = joinStrings(config.clientKey.get());
-                    } else {
-                        mqttConfig.broker.address.transport = MQTT_TRANSPORT_OVER_TCP;
                     }
                 } else {
                     // TODO Handle lookup failure
-                    MdnsRecord mqttServer;
                     mdns.lookupService("mqtt", "tcp", mqttServer, trustMdnsCache);
-                    mqttConfig.broker.address.transport = MQTT_TRANSPORT_OVER_TCP;
-                    if (mqttServer.ip == IPAddress()) {
-                        mqttConfig.broker.address.hostname = mqttServer.hostname.c_str();
-                    } else {
-                        mqttConfig.broker.address.hostname = mqttServer.ip.toString().c_str();
-                    }
-                    mqttConfig.broker.address.port = mqttServer.port;
                 }
+
+                String hostname = mqttServer.ip == IPAddress()
+                    ? mqttServer.hostname
+                    : mqttServer.ip.toString();
+                auto transport = serverCert.isEmpty() ? MQTT_TRANSPORT_OVER_TCP : MQTT_TRANSPORT_OVER_SSL;
+                esp_mqtt_client_config_t mqttConfig = {
+                    .broker {
+                        .address {
+                            .hostname = hostname.c_str(),
+                            .transport = transport,
+                            .port = static_cast<uint32_t>(mqttServer.port),
+                        },
+                    }
+                };
 #endif
+                mqttConfig.network.timeout_ms = duration_cast<milliseconds>(10s).count();
+
                 Log.debug("MQTT: server: %s:%ld, client ID is '%s'",
                     mqttConfig.broker.address.hostname, mqttConfig.broker.address.port, clientId.c_str());
 
