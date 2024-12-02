@@ -48,7 +48,7 @@ public:
         blinkPattern(BlinkPattern(pattern.begin(), pattern.end()));
     }
 
-    void blinkPattern(BlinkPattern pattern) {
+    void blinkPattern(const BlinkPattern& pattern) {
         if (pattern.empty()) {
             turnOff();
         } else {
