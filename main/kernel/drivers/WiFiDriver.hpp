@@ -155,7 +155,8 @@ private:
         switch (eventId) {
             case WIFI_PROV_START: {
                 Log.debug("WiFi: provisioning started");
-                // configPortalRunning.set();
+                // Do not turn WiFi off until provisioning finishes
+                acquire();
                 break;
             }
             case WIFI_PROV_CRED_RECV: {
@@ -180,6 +181,7 @@ private:
             case WIFI_PROV_END: {
                 Log.debug("WiFi: provisioning finished");
                 configPortalRunning.clear();
+                release();
                 break;
             }
         }
