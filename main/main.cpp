@@ -58,11 +58,12 @@ static void dumpPerTaskHeapInfo() {
             ? pcTaskGetName(taskInfo.task)
             : "Pre-Scheduler allocs";
         taskName.resize(configMAX_TASK_NAME_LEN, ' ');
-        printf("Task %p: %s CAP_8BIT: %d, CAP_32BIT: %d\n",
+        printf("Task %p: %s CAP_8BIT: %d, CAP_32BIT: %d, STACK LEFT: %ld\n",
             taskInfo.task,
             taskName.c_str(),
             taskInfo.size[0],
-            taskInfo.size[1]);
+            taskInfo.size[1],
+            uxTaskGetStackHighWaterMark2(taskInfo.task));
     }
 
     printf("\n\n");
@@ -84,7 +85,7 @@ extern "C" void app_main() {
     Task::loop("task-heaps", 8192, [](Task& task) {
         while (true) {
             dumpPerTaskHeapInfo();
-            vTaskDelay(ticks(5s).count());
+            Task::delay(ticks(5s));
         }
     });
 #endif
