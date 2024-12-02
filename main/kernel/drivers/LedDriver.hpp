@@ -28,24 +28,7 @@ public:
 
         pin->pinMode(OUTPUT);
         Task::loop(name, 2048, [this](Task& task) {
-            if (cursor == pattern.end()) {
-                cursor = pattern.begin();
-            }
-            milliseconds blinkTime = *cursor;
-            cursor++;
-
-            if (blinkTime > milliseconds::zero()) {
-                setLedState(LOW);
-            } else {
-                setLedState(HIGH);
-            }
-
-            // TOOD Substract processing time from delay
-            ticks timeout = blinkTime < milliseconds::zero() ? -blinkTime : blinkTime;
-            patternQueue.pollIn(timeout, [this](const BlinkPattern& newPattern) {
-                pattern = newPattern;
-                cursor = pattern.cbegin();
-            });
+            handleIteration();
         });
     }
 
@@ -74,6 +57,27 @@ public:
     }
 
 private:
+    void handleIteration() {
+        if (cursor == pattern.end()) {
+            cursor = pattern.begin();
+        }
+        milliseconds blinkTime = *cursor;
+        cursor++;
+
+        if (blinkTime > milliseconds::zero()) {
+            setLedState(LOW);
+        } else {
+            setLedState(HIGH);
+        }
+
+        // TOOD Substract processing time from delay
+        ticks timeout = blinkTime < milliseconds::zero() ? -blinkTime : blinkTime;
+        patternQueue.pollIn(timeout, [this](const BlinkPattern& newPattern) {
+            pattern = newPattern;
+            cursor = pattern.cbegin();
+        });
+    }
+
     void setPattern(const BlinkPattern& pattern) {
         patternQueue.put(pattern);
     }
@@ -88,7 +92,6 @@ private:
     BlinkPattern pattern;
     std::vector<milliseconds>::const_iterator cursor = pattern.cbegin();
     std::atomic<bool> ledState;
-
 };
 
 }    // namespace farmhub::kernel::drivers
