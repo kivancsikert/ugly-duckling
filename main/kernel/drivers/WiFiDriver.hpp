@@ -180,6 +180,7 @@ private:
             }
             case WIFI_PROV_END: {
                 Log.debug("WiFi: provisioning finished");
+                wifi_prov_mgr_deinit();
                 configPortalRunning.clear();
                 release();
                 break;
@@ -246,8 +247,11 @@ private:
             startStation(wifiConfig);
         } else {
             if (!configPortalRunning.isSet()) {
+                Log.debug("WiFi: No stored credentials, starting provisioning");
                 configPortalRunning.set();
                 startProvisioning();
+            } else {
+                Log.trace("WiFi: Provisioning already running");
             }
         }
 #endif
