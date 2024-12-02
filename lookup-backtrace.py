@@ -6,7 +6,7 @@ import sys
 
 # Define regex patterns for the two formats
 PATTERN1 = r"caller ((?:0x[0-9a-fA-F]+:)+0x[0-9a-fA-F]+)"
-PATTERN2 = r"Backtrace: ((?:0x[0-9a-fA-F]+:[0-9a-fA-F]+ ?)+)"
+PATTERN2 = r"Backtrace: ((?:0x[0-9a-fA-F]+:0x[0-9a-fA-F]+ ?)+)"
 
 def parse_and_run_addr2line(line):
     # Print the input line
