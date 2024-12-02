@@ -410,6 +410,7 @@ private:
                 };
 #endif
                 mqttConfig.network.timeout_ms = duration_cast<milliseconds>(10s).count();
+                mqttConfig.credentials.client_id = clientId.c_str();
 
                 Log.debug("MQTT: server: %s:%ld, client ID is '%s'",
                     mqttConfig.broker.address.hostname, mqttConfig.broker.address.port, clientId.c_str());
