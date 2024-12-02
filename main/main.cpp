@@ -89,4 +89,6 @@ extern "C" void app_main() {
         }
     });
 #endif
+
+    vTaskDelete(NULL);
 }
