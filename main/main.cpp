@@ -82,7 +82,7 @@ extern "C" void app_main() {
     new farmhub::devices::Device();
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
-    Task::loop("task-heaps", 8192, [](Task& task) {
+    Task::loop("task-heaps", 4096, [](Task& task) {
         while (true) {
             dumpPerTaskHeapInfo();
             Task::delay(ticks(5s));
