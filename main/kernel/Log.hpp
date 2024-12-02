@@ -1,7 +1,6 @@
 #pragma once
 
 #include <atomic>
-#include <functional>
 #include <memory>
 
 #include <ArduinoJson.h>
@@ -152,12 +151,6 @@ public:
 
 private:
     void logImpl(Level level, const char* format, va_list args) {
-        withFormattedString(format, args, [this, level](const char* message) {
-            consumer.load()->consumeLog(level, message);
-        });
-    }
-
-    void withFormattedString(const char* format, va_list args, std::function<void(const char*)> consumer) {
         int size = vsnprintf(nullptr, 0, format, args);
         if (size <= 0) {
             return;
@@ -166,7 +159,7 @@ private:
         auto capacity = std::min(size + 1, bufferSize);
         Lock lock(bufferMutex);
         vsnprintf(buffer, capacity, format, args);
-        consumer(buffer);
+        consumer.load()->consumeLog(level, buffer);
     }
 
     constexpr static int bufferSize = 128;
