@@ -52,7 +52,7 @@ private:
         Level level = getLevel(format[0]);
         if (level <= recordedLevel) {
             std::lock_guard<std::mutex> lock(bufferMutex);
-            vsnprintf(buffer, sizeof(buffer), format, args);
+            vsnprintf(buffer, BUFFER_SIZE, format, args);
             logRecords.offer(level, buffer);
         }
 
@@ -111,7 +111,8 @@ private:
     Queue<LogRecord>& logRecords;
     const Level recordedLevel;
     std::mutex bufferMutex;
-    char buffer[128];
+    static constexpr size_t BUFFER_SIZE = 128;
+    char buffer[BUFFER_SIZE];
 };
 
 }    // namespace farmhub::kernel
