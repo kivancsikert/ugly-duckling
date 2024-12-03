@@ -33,14 +33,6 @@ public:
         , recordedLevel(recordedLevel) {
         consoleProvider = this;
         originalVprintf = esp_log_set_vprintf(ConsoleProvider::processLogFunc);
-
-#ifndef WOKWI
-        Serial.begin(115200);
-        Serial1.begin(115200, SERIAL_8N1, pins::RXD0->getGpio(), pins::TXD0->getGpio());
-#if Serial != Serial0
-        Serial0.begin(115200);
-#endif
-#endif
     }
 
 private:
