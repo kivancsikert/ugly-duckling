@@ -48,32 +48,37 @@ private:
             logRecords.offer(level, buffer);
         }
 
+        int count = 0;
 #ifdef FARMHUB_DEBUG
         // Erase the current line
-        printf("\033[1G\033[0K");
+        count += printf("\033[1G\033[0K");
         switch (level) {
             case Level::Error:
-                printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_RED));
+                count += printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_RED));
                 break;
             case Level::Warning:
-                printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_BROWN));
+                count += printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_BROWN));
                 break;
             case Level::Info:
-                printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_GREEN));
+                count += printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_GREEN));
                 break;
             default:
                 break;
         }
 #endif
 
-        int count = originalVprintf(format, args);
+        int originalCount = originalVprintf(format, args);
+        if (originalCount < 0) {
+            return originalCount;
+        }
+        count += originalCount;
 
 #ifdef FARMHUB_DEBUG
         switch (level) {
             case Level::Error:
             case Level::Warning:
             case Level::Info:
-                printf(FARMHUB_LOG_RESET_COLOR);
+                count += printf(FARMHUB_LOG_RESET_COLOR);
                 break;
             default:
                 break;
