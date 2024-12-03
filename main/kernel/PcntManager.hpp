@@ -85,7 +85,7 @@ public:
         ESP_ERROR_CHECK(pcnt_unit_clear_count(unit));
         ESP_ERROR_CHECK(pcnt_unit_start(unit));
 
-        Log.debug("Registered PCNT unit on pin %s",
+        LOGD("Registered PCNT unit on pin %s",
             pin->getName().c_str());
         return PcntUnit(unit, pin);
     }

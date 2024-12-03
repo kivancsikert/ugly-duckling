@@ -23,7 +23,7 @@ public:
         : pin(pin)
         , patternQueue(name, 1)
         , pattern({ -milliseconds::max() }) {
-        Log.info("Initializing LED driver on pin %s",
+        LOGI("Initializing LED driver on pin %s",
             pin->getName().c_str());
 
         pin->pinMode(OUTPUT);

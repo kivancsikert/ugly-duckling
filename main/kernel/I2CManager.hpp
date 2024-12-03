@@ -69,34 +69,34 @@ public:
     ~I2CTransmission() {
         auto result = wire().endTransmission();
         if (result != 0) {
-            Log.error("Communication unsuccessful with I2C device %s at address 0x%02x, result: %d",
+            LOGE("Communication unsuccessful with I2C device %s at address 0x%02x, result: %d",
                 device->name.c_str(), device->address, result);
         }
     }
 
     size_t requestFrom(size_t len, bool stopBit = true) {
-        Log.trace("Requesting %d bytes from I2C device %s at address 0x%02x",
+        LOGV("Requesting %d bytes from I2C device %s at address 0x%02x",
             len, device->name.c_str(), device->address);
         auto count = wire().requestFrom(device->address, len, stopBit);
-        Log.trace("Received %d bytes from I2C device %s at address 0x%02x",
+        LOGV("Received %d bytes from I2C device %s at address 0x%02x",
             count, device->name.c_str(), device->address);
         return count;
     }
 
     size_t write(uint8_t data) {
-        Log.trace("Writing 0x%02x to I2C device %s at address 0x%02x",
+        LOGV("Writing 0x%02x to I2C device %s at address 0x%02x",
             data, device->name.c_str(), device->address);
         auto count = wire().write(data);
-        Log.trace("Wrote %d bytes to I2C device %s at address 0x%02x",
+        LOGV("Wrote %d bytes to I2C device %s at address 0x%02x",
             count, device->name.c_str(), device->address);
         return count;
     }
 
     size_t write(const uint8_t* data, size_t quantity) {
-        Log.trace("Writing %d bytes to I2C device %s at address 0x%02x",
+        LOGV("Writing %d bytes to I2C device %s at address 0x%02x",
             quantity, device->name.c_str(), device->address);
         auto count = wire().write(data, quantity);
-        Log.trace("Wrote %d bytes to I2C device %s at address 0x%02x",
+        LOGV("Wrote %d bytes to I2C device %s at address 0x%02x",
             count, device->name.c_str(), device->address);
         return count;
     }
@@ -107,20 +107,20 @@ public:
 
     int read() {
         auto value = wire().read();
-        Log.trace("Read 0x%02x from I2C device %s at address 0x%02x",
+        LOGV("Read 0x%02x from I2C device %s at address 0x%02x",
             value, device->name.c_str(), device->address);
         return value;
     }
 
     int peek() {
         auto value = wire().peek();
-        Log.trace("Peeked 0x%02x from I2C device %s at address 0x%02x",
+        LOGV("Peeked 0x%02x from I2C device %s at address 0x%02x",
             value, device->name.c_str(), device->address);
         return value;
     }
 
     void flush() {
-        Log.trace("Flushing I2C device %s at address 0x%02x",
+        LOGV("Flushing I2C device %s at address 0x%02x",
             device->name.c_str(), device->address);
         wire().flush();
     }
@@ -150,7 +150,7 @@ public:
 
     shared_ptr<I2CDevice> createDevice(const String& name, InternalPinPtr sda, InternalPinPtr scl, uint8_t address) {
         auto device = std::make_shared<I2CDevice>(name, getBusFor(sda, scl), address);
-        Log.info("Created I2C device %s at address 0x%02x",
+        LOGI("Created I2C device %s at address 0x%02x",
             name.c_str(), address);
         // Test if communication is possible
         I2CTransmission tx(device);
@@ -162,11 +162,11 @@ private:
         GpioPair key = std::make_pair(sda, scl);
         auto it = busMap.find(key);
         if (it != busMap.end()) {
-            Log.trace("Reusing already registered I2C bus for SDA: %s, SCL: %s",
+            LOGV("Reusing already registered I2C bus for SDA: %s, SCL: %s",
                 sda->getName().c_str(), scl->getName().c_str());
             return *(it->second);
         } else {
-            Log.debug("Creating new I2C bus for SDA: %s, SCL: %s",
+            LOGD("Creating new I2C bus for SDA: %s, SCL: %s",
                 sda->getName().c_str(), scl->getName().c_str());
             if (nextBus >= 2) {
                 throw std::runtime_error("Maximum number of I2C buses reached");

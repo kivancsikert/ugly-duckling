@@ -61,7 +61,7 @@ public:
             auto duration = schedule.getDuration();
 
 #ifndef GTEST
-            Log.info("Considering schedule starting at %lld (current time: %lld), period %lld, duration %lld",
+            LOGI("Considering schedule starting at %lld (current time: %lld), period %lld, duration %lld",
                 duration_cast<seconds>(start.time_since_epoch()).count(),
                 duration_cast<seconds>(now.time_since_epoch()).count(),
                 duration_cast<seconds>(period).count(),
@@ -82,7 +82,7 @@ public:
                 // Damn you, C++ chrono, for not having a working modulo operator
                 auto periodPosition = nanoseconds(duration_cast<nanoseconds>(diff).count() % duration_cast<nanoseconds>(period).count());
 #ifndef GTEST
-                Log.info("Diff: %lld sec, at: %lld sec, should be open until %lld / %lld sec",
+                LOGI("Diff: %lld sec, at: %lld sec, should be open until %lld / %lld sec",
                     duration_cast<seconds>(diff).count(),
                     duration_cast<seconds>(periodPosition).count(),
                     duration_cast<seconds>(duration).count(),

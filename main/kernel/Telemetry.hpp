@@ -27,7 +27,7 @@ public:
     }
 
     void registerProvider(const String& name, std::shared_ptr<TelemetryProvider> provider) {
-        Log.trace("Registering telemetry provider %s", name.c_str());
+        LOGV("Registering telemetry provider %s", name.c_str());
         // TODO Check for duplicates
         providers.emplace(name, provider);
     }

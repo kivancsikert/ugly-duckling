@@ -18,7 +18,7 @@ public:
     }
 
     StateSource createStateSource(const String& name) {
-        Log.trace("Creating state: %s",
+        LOGV("Creating state: %s",
             name.c_str());
         if (nextEventBit > 31) {
             throw std::runtime_error("Too many states");
@@ -28,7 +28,7 @@ public:
     }
 
     State combineStates(const String& name, const std::list<State>& states) const {
-        Log.debug("Creating combined state: %s",
+        LOGD("Creating combined state: %s",
             name.c_str());
         int eventBits = 0;
         for (auto& state : states) {

@@ -39,17 +39,17 @@ public:
     bool get(const char* key, T& value) {
         return withPreferences(true, [&]() {
             if (!preferences.isKey(key)) {
-                Log.trace("NVS: get(%s) = not found",
+                LOGV("NVS: get(%s) = not found",
                     key);
                 return false;
             }
             String jsonString = preferences.getString(key);
-            Log.trace("NVS: get(%s) = %s",
+            LOGV("NVS: get(%s) = %s",
                 key, jsonString.c_str());
             JsonDocument jsonDocument;
             deserializeJson(jsonDocument, jsonString);
             if (jsonDocument.isNull()) {
-                Log.error("NVS: get(%s) = invalid JSON",
+                LOGE("NVS: get(%s) = invalid JSON",
                     key);
                 return false;
             }
@@ -70,7 +70,7 @@ public:
             jsonDocument.set(value);
             String jsonString;
             serializeJson(jsonDocument, jsonString);
-            Log.trace("NVS: set(%s) = %s",
+            LOGV("NVS: set(%s) = %s",
                 key, jsonString.c_str());
             return preferences.putString(key, jsonString.c_str());
         });
@@ -82,7 +82,7 @@ public:
 
     bool remove(const char* key) {
         return withPreferences(false, [&]() {
-            Log.trace("NVS: remove(%s)",
+            LOGV("NVS: remove(%s)",
                 key);
             if (preferences.isKey(key)) {
                 return preferences.remove(key);
@@ -95,16 +95,16 @@ public:
 private:
     bool withPreferences(bool readOnly, std::function<bool()> action) {
         Lock lock(preferencesMutex);
-        Log.trace("NVS: %s '%s'",
+        LOGV("NVS: %s '%s'",
             readOnly ? "read" : "write", name.c_str());
         if (!preferences.begin(name.c_str(), readOnly)) {
-            Log.error("NVS: failed to %s '%s'",
+            LOGE("NVS: failed to %s '%s'",
                 readOnly ? "read" : "write", name.c_str());
             return false;
         }
         bool result = action();
         preferences.end();
-        Log.trace("NVS: finished %s '%s', result: %s",
+        LOGV("NVS: finished %s '%s', result: %s",
             readOnly ? "read" : "write", name.c_str(), result ? "true" : "false");
         return result;
     }

@@ -33,7 +33,7 @@ public:
         : Component(name, mqttRoot)
         , qFactor(qFactor) {
 
-        Log.info("Initializing flow meter on pin %s with Q = %.2f",
+        LOGI("Initializing flow meter on pin %s with Q = %.2f",
             pin->getName().c_str(), qFactor);
 
         pcntUnit = pcnt.registerUnit(pin);
@@ -54,7 +54,7 @@ public:
                 if (pulses > 0) {
                     Lock lock(updateMutex);
                     double currentVolume = pulses / this->qFactor / 60.0f;
-                    Log.trace("Counted %d pulses, %.2f l/min, %.2f l",
+                    LOGV("Counted %d pulses, %.2f l/min, %.2f l",
                         pulses, currentVolume / (elapsed.count() / 1000.0f / 60.0f), currentVolume);
                     volume += currentVolume;
                     lastSeenFlow = now;

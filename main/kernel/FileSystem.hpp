@@ -71,17 +71,17 @@ public:
 
 static FileSystem* initializeFileSystem() {
     if (!SPIFFS.begin()) {
-        Log.info("File system not initialized");
+        LOGI("File system not initialized");
         return new UninitializedFileSystem();
     }
-    Log.info("File system contents:");
+    LOGI("File system contents:");
     File root = SPIFFS.open("/", FILE_READ);
     while (true) {
         File file = root.openNextFile();
         if (!file) {
             break;
         }
-        Log.info(" - %s (%d bytes)",
+        LOGI(" - %s (%d bytes)",
             file.path(), file.size());
         file.close();
     }

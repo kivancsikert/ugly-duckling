@@ -122,7 +122,7 @@ public:
     // TODO Make this configurable
     {
 
-        Log.info("Initializing chicken door %s, open switch %s, close switch %s",
+        LOGI("Initializing chicken door %s, open switch %s, close switch %s",
             name.c_str(), openSwitch.getPin()->getName().c_str(), closedSwitch.getPin()->getName().c_str());
 
         motor.stop();
@@ -166,7 +166,7 @@ public:
     void configure(const ChickenDoorConfig& config) {
         openLevel = config.openLevel.get();
         closeLevel = config.closeLevel.get();
-        Log.info("Configured chicken door %s to close at %.2f lux, and open at %.2f lux",
+        LOGI("Configured chicken door %s to close at %.2f lux, and open at %.2f lux",
             name.c_str(), closeLevel, openLevel);
     }
 
@@ -182,7 +182,7 @@ private:
 
         if (currentState != targetState) {
             if (currentState != lastState) {
-                Log.trace("Going from state %d to %d (light level %.2f)",
+                LOGV("Going from state %d to %d (light level %.2f)",
                     static_cast<int>(currentState), static_cast<int>(targetState), lightSensor.getCurrentLevel());
                 watchdog.restart();
             }
@@ -199,7 +199,7 @@ private:
             }
         } else {
             if (currentState != lastState) {
-                Log.trace("Reached state %d (light level %.2f)",
+                LOGV("Reached state %d (light level %.2f)",
                     static_cast<int>(currentState), lightSensor.getCurrentLevel());
                 watchdog.cancel();
                 motor.stop();
@@ -235,9 +235,9 @@ private:
                         // State update received
                     } else if constexpr (std::is_same_v<T, StateOverride>) {
                         if (arg.state == DoorState::NONE) {
-                            Log.info("Override cancelled");
+                            LOGI("Override cancelled");
                         } else {
-                            Log.info("Override received: %d duration: %lld sec",
+                            LOGI("Override received: %d duration: %lld sec",
                                 static_cast<int>(arg.state), duration_cast<seconds>(arg.until - system_clock::now()).count());
                         }
                         {
@@ -247,7 +247,7 @@ private:
                         }
                         this->publishTelemetry();
                     } else if constexpr (std::is_same_v<T, WatchdogTimeout>) {
-                        Log.error("Watchdog timeout, stopping operation");
+                        LOGE("Watchdog timeout, stopping operation");
                         operationState = OperationState::WATCHDOG_TIMEOUT;
                         motor.stop();
                         this->publishTelemetry();
@@ -260,15 +260,15 @@ private:
     void handleWatchdogEvent(WatchdogState state) {
         switch (state) {
             case WatchdogState::Started:
-                Log.info("Watchdog started");
+                LOGI("Watchdog started");
                 sleepManager.keepAwake();
                 break;
             case WatchdogState::Cacnelled:
-                Log.info("Watchdog cancelled");
+                LOGI("Watchdog cancelled");
                 sleepManager.allowSleep();
                 break;
             case WatchdogState::TimedOut:
-                Log.error("Watchdog timed out");
+                LOGE("Watchdog timed out");
                 sleepManager.allowSleep();
                 updateQueue.offer(WatchdogTimeout {});
                 break;
@@ -283,7 +283,7 @@ private:
         bool open = openSwitch.isEngaged();
         bool close = closedSwitch.isEngaged();
         if (open && close) {
-            Log.error("Both open and close switches are engaged");
+            LOGE("Both open and close switches are engaged");
             return DoorState::NONE;
         } else if (open) {
             return DoorState::OPEN;
@@ -299,7 +299,7 @@ private:
             return overrideState;
         } else {
             if (overrideState != DoorState::NONE) {
-                Log.info("Override expired, returning to scheduled state");
+                LOGI("Override expired, returning to scheduled state");
                 Lock lock(stateMutex);
                 overrideState = DoorState::NONE;
                 overrideUntil = time_point<system_clock>::min();
@@ -440,8 +440,8 @@ public:
                 throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
             }
         } catch (const PeripheralCreationException& e) {
-            Log.error("Could not initialize light sensor because %s", e.what());
-            Log.warn("Initializing without a light sensor");
+            LOGE("Could not initialize light sensor because %s", e.what());
+            LOGW("Initializing without a light sensor");
             // TODO Do not pass I2C parameters to NoLightSensorComponent
             return std::make_unique<ChickenDoor<NoLightSensorComponent>>(name, mqttRoot, services.i2c, 0x00, services.sleepManager, services.switches, motor, deviceConfig);
         }

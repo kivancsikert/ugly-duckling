@@ -34,7 +34,7 @@ public:
         // TODO Add configuration for fast / slow measurement
         // TODO Add a separate task to do measurements to unblock telemetry collection?
 
-        Log.info("Initializing %s environment sensor with %s",
+        LOGI("Initializing %s environment sensor with %s",
             sensorType.c_str(), config.toString().c_str());
 
         if (!sensor.begin()) {
@@ -47,7 +47,7 @@ public:
 
     void populateTelemetry(JsonObject& json) override {
         if (!sensor.read()) {
-            Log.error("Failed to read SHT3x environment sensor: %d",
+            LOGE("Failed to read SHT3x environment sensor: %d",
                 sensor.getError());
             return;
         }

@@ -43,7 +43,7 @@ public:
         , rtcInSync(rtcInSync) {
 
         if (isTimeSet()) {
-            Log.info("RTC: time is already set");
+            LOGI("RTC: time is already set");
             rtcInSync.set();
         }
 
@@ -55,7 +55,7 @@ public:
                         trustMdnsCache = true;
                     } else {
                         // Attempt a retry, but with mDNS cache disabled
-                        Log.error("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
+                        LOGE("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
                         trustMdnsCache = false;
                         task.delay(10s);
                         continue;
@@ -89,24 +89,24 @@ private:
         ESP_ERROR_CHECK(esp_netif_sntp_init(&config));
 
 #ifdef WOKWI
-        Log.info("RTC: using default NTP server for Wokwi");
+        LOGI("RTC: using default NTP server for Wokwi");
 #else
         // TODO Check this
         if (ntpConfig.host.get().length() > 0) {
-            Log.debug("RTC: using NTP server %s from configuration",
+            LOGD("RTC: using NTP server %s from configuration",
                 ntpConfig.host.get().c_str());
             esp_sntp_setservername(0, ntpConfig.host.get().c_str());
         } else {
             MdnsRecord ntpServer;
             if (mdns.lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
-                Log.debug("RTC: using NTP server %s:%d (%s) from mDNS",
+                LOGD("RTC: using NTP server %s:%d (%s) from mDNS",
                     ntpServer.hostname.c_str(),
                     ntpServer.port,
                     ntpServer.ip.toString().c_str());
                 auto serverIp = convertIp4(ntpServer.ip);
                 esp_sntp_setserver(0, &serverIp);
             } else {
-                Log.debug("RTC: no NTP server configured, using default");
+                LOGD("RTC: no NTP server configured, using default");
             }
         }
 #endif
@@ -121,11 +121,11 @@ private:
         if (ret == ESP_OK || ret == ESP_ERR_NOT_FINISHED) {
             rtcInSync.set();
             success = true;
-            Log.debug("RTC: sync finished successfully");
+            LOGD("RTC: sync finished successfully");
         } else if (ret == ESP_ERR_TIMEOUT) {
-            Log.debug("RTC: waiting for time sync timed out");
+            LOGD("RTC: waiting for time sync timed out");
         } else {
-            Log.debug("RTC: waiting for time sync returned 0x%x", ret);
+            LOGD("RTC: waiting for time sync returned 0x%x", ret);
         }
 
         esp_netif_sntp_deinit();
@@ -133,16 +133,16 @@ private:
     }
 
     static void printServers(void) {
-        Log.debug("List of configured NTP servers:");
+        LOGD("List of configured NTP servers:");
 
         for (uint8_t i = 0; i < SNTP_MAX_SERVERS; ++i) {
             if (esp_sntp_getservername(i)) {
-                Log.debug(" - server %d: '%s'", i, esp_sntp_getservername(i));
+                LOGD(" - server %d: '%s'", i, esp_sntp_getservername(i));
             } else {
                 char buff[48];
                 ip_addr_t const* ip = esp_sntp_getserver(i);
                 if (ipaddr_ntoa_r(ip, buff, 48) != NULL) {
-                    Log.debug(" - server %d: %s", i, buff);
+                    LOGD(" - server %d: %s", i, buff);
                 }
             }
         }

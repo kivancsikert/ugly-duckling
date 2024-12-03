@@ -68,7 +68,7 @@ public:
         , mqttConfig(mqttConfig)
         , statusLed(statusLed) {
 
-        Log.info("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
+        LOGI("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
             version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
@@ -80,7 +80,7 @@ public:
 
         httpUpdateResult = handleHttpUpdate();
         if (!httpUpdateResult.isEmpty()) {
-            Log.error("HTTP update failed because: %s",
+            LOGE("HTTP update failed because: %s",
                 httpUpdateResult.c_str());
         }
     }
@@ -174,7 +174,7 @@ private:
         }
 
         if (newState != state) {
-            Log.debug("Kernel state changed from %d to %d",
+            LOGD("Kernel state changed from %d to %d",
                 static_cast<int>(state), static_cast<int>(newState));
             state = newState;
             switch (newState) {
@@ -226,10 +226,10 @@ private:
             return "Command contains empty url";
         }
 
-        Log.info("Updating from version %s via URL %s",
+        LOGI("Updating from version %s via URL %s",
             FARMHUB_VERSION, url.c_str());
 
-        Log.debug("Waiting for network...");
+        LOGD("Waiting for network...");
         WiFiConnection connection(wifi, WiFiConnection::Mode::NoAwait);
         if (!connection.await(15s)) {
             return "Network not ready, aborting update";
@@ -259,11 +259,11 @@ private:
         };
         esp_err_t ret = esp_https_ota(&otaConfig);
         if (ret == ESP_OK) {
-            Log.info("Update succeeded, rebooting in 5 seconds...");
+            LOGI("Update succeeded, rebooting in 5 seconds...");
             Task::delay(5s);
             esp_restart();
         } else {
-            Log.error("Update failed (err = %d), continuing with regular boot",
+            LOGE("Update failed (err = %d), continuing with regular boot",
                 ret);
             return "Firmware upgrade failed: " + String(ret);
         }
@@ -272,29 +272,29 @@ private:
     static esp_err_t httpEventHandler(esp_http_client_event_t* event) {
         switch (event->event_id) {
             case HTTP_EVENT_ERROR:
-                Log.error("HTTP error, status code: %d",
+                LOGE("HTTP error, status code: %d",
                     esp_http_client_get_status_code(event->client));
                 break;
             case HTTP_EVENT_ON_CONNECTED:
-                Log.debug("HTTP connected");
+                LOGD("HTTP connected");
                 break;
             case HTTP_EVENT_HEADERS_SENT:
-                Log.trace("HTTP headers sent");
+                LOGV("HTTP headers sent");
                 break;
             case HTTP_EVENT_ON_HEADER:
-                Log.trace("HTTP header: %s: %s", event->header_key, event->header_value);
+                LOGV("HTTP header: %s: %s", event->header_key, event->header_value);
                 break;
             case HTTP_EVENT_ON_DATA:
-                Log.debug("HTTP data: %d bytes", event->data_len);
+                LOGD("HTTP data: %d bytes", event->data_len);
                 break;
             case HTTP_EVENT_ON_FINISH:
-                Log.debug("HTTP finished");
+                LOGD("HTTP finished");
                 break;
             case HTTP_EVENT_DISCONNECTED:
-                Log.debug("HTTP disconnected");
+                LOGD("HTTP disconnected");
                 break;
             default:
-                Log.warn("Unknown HTTP event %d", event->event_id);
+                LOGW("Unknown HTTP event %d", event->event_id);
                 break;
         }
         return ESP_OK;

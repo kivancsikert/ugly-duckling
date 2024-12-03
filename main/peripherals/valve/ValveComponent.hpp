@@ -213,18 +213,18 @@ public:
         , strategy(strategy)
         , publishTelemetry(publishTelemetry) {
 
-        Log.info("Creating valve '%s' with strategy %s",
+        LOGI("Creating valve '%s' with strategy %s",
             name.c_str(), strategy.describe().c_str());
 
         ValveState initState;
         switch (strategy.getDefaultState()) {
             case ValveState::OPEN:
-                Log.info("Assuming valve '%s' is open by default",
+                LOGI("Assuming valve '%s' is open by default",
                     name.c_str());
                 initState = ValveState::OPEN;
                 break;
             case ValveState::CLOSED:
-                Log.info("Assuming valve '%s' is closed by default",
+                LOGI("Assuming valve '%s' is closed by default",
                     name.c_str());
                 initState = ValveState::CLOSED;
                 break;
@@ -233,11 +233,11 @@ public:
                 ValveState lastStoredState;
                 if (nvs.get("state", lastStoredState)) {
                     initState = lastStoredState;
-                    Log.info("Restored state for valve '%s' from NVS: %d",
+                    LOGI("Restored state for valve '%s' from NVS: %d",
                         name.c_str(), static_cast<int>(state));
                 } else {
                     initState = ValveState::CLOSED;
-                    Log.info("No stored state for valve '%s', defaulting to closed",
+                    LOGI("No stored state for valve '%s', defaulting to closed",
                         name.c_str());
                 }
                 break;
@@ -261,7 +261,7 @@ public:
         Task::loop(name, 4096, [this, name](Task& task) {
             auto now = system_clock::now();
             if (overrideState != ValveState::NONE && now >= overrideUntil.load()) {
-                Log.info("Valve '%s' override expired", name.c_str());
+                LOGI("Valve '%s' override expired", name.c_str());
                 overrideUntil = time_point<system_clock>();
                 overrideState = ValveState::NONE;
             }
@@ -276,7 +276,7 @@ public:
                     update.state = ValveState::CLOSED;
                 }
             }
-            Log.info("Valve '%s' state is %d, will change after %.2f sec at %lld",
+            LOGI("Valve '%s' state is %d, will change after %.2f sec at %lld",
                 name.c_str(),
                 static_cast<int>(update.state),
                 duration_cast<milliseconds>(update.validFor).count() / 1000.0,
@@ -305,7 +305,7 @@ public:
     }
 
     void setSchedules(const std::list<ValveSchedule>& schedules) {
-        Log.debug("Setting %d schedules for valve %s",
+        LOGD("Setting %d schedules for valve %s",
             schedules.size(), name.c_str());
         updateQueue.put(ScheduleSpec { schedules });
     }
@@ -325,7 +325,7 @@ public:
 
     void closeBeforeShutdown() {
         // TODO Lock the valve to prevent concurrent access
-        Log.info("Shutting down valve '%s', closing it",
+        LOGI("Shutting down valve '%s', closing it",
             name.c_str());
         close();
     }
@@ -333,23 +333,23 @@ public:
 private:
     void override(ValveState state, time_point<system_clock> until) {
         if (state == ValveState::NONE) {
-            Log.info("Clearing override for valve '%s'", name.c_str());
+            LOGI("Clearing override for valve '%s'", name.c_str());
         } else {
-            Log.info("Overriding valve '%s' to state %d until %lld",
+            LOGI("Overriding valve '%s' to state %d until %lld",
                 name.c_str(), static_cast<int>(state), duration_cast<seconds>(until.time_since_epoch()).count());
         }
         updateQueue.put(OverrideSpec { state, until });
     }
 
     void open() {
-        Log.info("Opening valve '%s'", name.c_str());
+        LOGI("Opening valve '%s'", name.c_str());
         KeepAwake keepAwake(sleepManager);
         strategy.open();
         setState(ValveState::OPEN);
     }
 
     void close() {
-        Log.info("Closing valve '%s'", name.c_str());
+        LOGI("Closing valve '%s'", name.c_str());
         KeepAwake keepAwake(sleepManager);
         strategy.close();
         setState(ValveState::CLOSED);
@@ -385,7 +385,7 @@ private:
     void setState(ValveState state) {
         this->state = state;
         if (!nvs.set("state", state)) {
-            Log.error("Failed to store state for valve '%s': %d",
+            LOGE("Failed to store state for valve '%s': %d",
                 name.c_str(), static_cast<int>(state));
         }
     }

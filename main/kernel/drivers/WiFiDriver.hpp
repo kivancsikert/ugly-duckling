@@ -27,7 +27,7 @@ public:
         , configPortalRunning(configPortalRunning)
         , hostname(hostname)
         , powerSaveMode(powerSaveMode) {
-        Log.debug("WiFi: initializing");
+        LOGD("WiFi: initializing");
 
         // Initialize TCP/IP adapter and event loop
         ESP_ERROR_CHECK(esp_netif_init());
@@ -81,15 +81,15 @@ private:
     void onWiFiEvent(int32_t eventId, void* eventData) {
         switch (eventId) {
             case WIFI_EVENT_STA_START: {
-                Log.debug("WiFi: Started");
+                LOGD("WiFi: Started");
                 esp_err_t err = esp_wifi_connect();
                 if (err != ESP_OK) {
-                    Log.debug("WiFi: Failed to start connecting: %s", esp_err_to_name(err));
+                    LOGD("WiFi: Failed to start connecting: %s", esp_err_to_name(err));
                 }
                 break;
             }
             case WIFI_EVENT_STA_STOP: {
-                Log.debug("WiFi: Stopped");
+                LOGD("WiFi: Stopped");
                 break;
             }
             case WIFI_EVENT_STA_CONNECTED: {
@@ -99,7 +99,7 @@ private:
                     Lock lock(metadataMutex);
                     ssid = newSsid;
                 }
-                Log.debug("WiFi: Connected to the AP %s",
+                LOGD("WiFi: Connected to the AP %s",
                     newSsid.c_str());
                 break;
             }
@@ -112,16 +112,16 @@ private:
                     ssid.reset();
                 }
                 eventQueue.offer(WiFiEvent::DISCONNECTED);
-                Log.debug("WiFi: Disconnected from the AP %s, reason: %d",
+                LOGD("WiFi: Disconnected from the AP %s, reason: %d",
                     String(event->ssid, event->ssid_len).c_str(), event->reason);
                 break;
             }
             case WIFI_EVENT_AP_STACONNECTED: {
-                Log.info("WiFi: SoftAP transport connected");
+                LOGI("WiFi: SoftAP transport connected");
                 break;
             }
             case WIFI_EVENT_AP_STADISCONNECTED: {
-                Log.info("WiFi: SoftAP transport disconnected");
+                LOGI("WiFi: SoftAP transport disconnected");
                 break;
             }
         }
@@ -138,7 +138,7 @@ private:
                     ip = event->ip_info.ip;
                 }
                 eventQueue.offer(WiFiEvent::CONNECTED);
-                Log.debug("WiFi: Got IP - " IPSTR, IP2STR(&event->ip_info.ip));
+                LOGD("WiFi: Got IP - " IPSTR, IP2STR(&event->ip_info.ip));
                 break;
             }
             case IP_EVENT_STA_LOST_IP: {
@@ -148,7 +148,7 @@ private:
                     ip.reset();
                 }
                 eventQueue.offer(WiFiEvent::DISCONNECTED);
-                Log.debug("WiFi: Lost IP");
+                LOGD("WiFi: Lost IP");
                 break;
             }
         }
@@ -157,20 +157,20 @@ private:
     void onWiFiProvEvent(int32_t eventId, void* eventData) {
         switch (eventId) {
             case WIFI_PROV_START: {
-                Log.debug("WiFi: provisioning started");
+                LOGD("WiFi: provisioning started");
                 // Do not turn WiFi off until provisioning finishes
                 acquire();
                 break;
             }
             case WIFI_PROV_CRED_RECV: {
                 auto wifiConfig = static_cast<wifi_sta_config_t*>(eventData);
-                Log.debug("Received Wi-Fi credentials for SSID '%s'",
+                LOGD("Received Wi-Fi credentials for SSID '%s'",
                     (const char*) wifiConfig->ssid);
                 break;
             }
             case WIFI_PROV_CRED_FAIL: {
                 auto* reason = static_cast<wifi_prov_sta_fail_reason_t*>(eventData);
-                Log.debug("WiFi: provisioning failed because %s",
+                LOGD("WiFi: provisioning failed because %s",
                     *reason == WIFI_PROV_STA_AUTH_ERROR
                         ? "authentication failed"
                         : "AP not found");
@@ -178,11 +178,11 @@ private:
                 break;
             }
             case WIFI_PROV_CRED_SUCCESS: {
-                Log.debug("WiFi: provisioning successful");
+                LOGD("WiFi: provisioning successful");
                 break;
             }
             case WIFI_PROV_END: {
-                Log.debug("WiFi: provisioning finished");
+                LOGD("WiFi: provisioning finished");
                 wifi_prov_mgr_deinit();
                 configPortalRunning.clear();
                 networkConnecting.clear();
@@ -217,18 +217,18 @@ private:
                 networkRequested.set();
                 if (!connected) {
                     if (networkConnecting.isSet()) {
-                        Log.trace("WiFi: Already connecting");
+                        LOGV("WiFi: Already connecting");
                     } else if (configPortalRunning.isSet()) {
-                        Log.trace("WiFi: Provisioning already running");
+                        LOGV("WiFi: Provisioning already running");
                     } else {
-                        Log.trace("WiFi: Connecting for first client");
+                        LOGV("WiFi: Connecting for first client");
                         connect();
                     }
                 }
             } else {
                 networkRequested.clear();
                 if (connected && powerSaveMode) {
-                    Log.trace("WiFi: No more clients, disconnecting");
+                    LOGV("WiFi: No more clients, disconnecting");
                     disconnect();
                 }
             }
@@ -238,7 +238,7 @@ private:
     void connect() {
         networkConnecting.set();
 #ifdef WOKWI
-        Log.debug("WiFi: Skipping provisioning on Wokwi");
+        LOGD("WiFi: Skipping provisioning on Wokwi");
         wifi_config_t wifiConfig = {
             .sta = {
                 .ssid = "Wokwi-GUEST",
@@ -253,11 +253,11 @@ private:
         if (provisioned) {
             wifi_config_t wifiConfig;
             ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifiConfig));
-            Log.debug("WiFi: Connecting using stored credentials to %s (password '%s')",
+            LOGD("WiFi: Connecting using stored credentials to %s (password '%s')",
                 wifiConfig.sta.ssid, wifiConfig.sta.password);
             startStation(wifiConfig);
         } else {
-            Log.debug("WiFi: No stored credentials, starting provisioning");
+            LOGD("WiFi: No stored credentials, starting provisioning");
             configPortalRunning.set();
             startProvisioning();
         }
@@ -269,7 +269,7 @@ private:
 
         if (powerSaveMode) {
             auto listenInterval = 50;
-            Log.trace("WiFi enabling power save mode, listen interval: %d",
+            LOGV("WiFi enabling power save mode, listen interval: %d",
                 listenInterval);
             ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
             config.sta.listen_interval = listenInterval;
@@ -294,7 +294,7 @@ private:
         esp_wifi_get_mac(WIFI_IF_STA, mac);
         snprintf(serviceName, sizeof(serviceName), "%s%02X%02X%02X",
             ssid_prefix, mac[3], mac[4], mac[5]);
-        Log.debug("WiFi: Starting provisioning service '%s'",
+        LOGD("WiFi: Starting provisioning service '%s'",
             serviceName);
 
         ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, pop, serviceName, serviceKey));
@@ -308,7 +308,7 @@ private:
 
     void disconnect() {
         networkReady.clear();
-        Log.debug("WiFi: Disconnecting");
+        LOGD("WiFi: Disconnecting");
         ESP_ERROR_CHECK(esp_wifi_disconnect());
         ESP_ERROR_CHECK(esp_wifi_stop());
     }

@@ -40,7 +40,7 @@ public:
             SwitchStateChange stateChange = switchStateInterrupts.take();
             auto state = stateChange.switchState;
             auto engaged = stateChange.engaged;
-            Log.trace("Switch %s is %s",
+            LOGV("Switch %s is %s",
                 state->name.c_str(), engaged ? "engaged" : "released");
             if (engaged) {
                 state->engagementStarted = system_clock::now();
@@ -66,7 +66,7 @@ public:
     }
 
     const Switch& registerHandler(const String& name, InternalPinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
-        Log.info("Registering switch %s on pin %s, mode %s",
+        LOGI("Registering switch %s on pin %s, mode %s",
             name.c_str(), pin->getName().c_str(), mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
 
         // Configure PIN_INPUT as input

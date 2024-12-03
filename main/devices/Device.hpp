@@ -355,12 +355,12 @@ public:
             });
         }
 
-        Log.log(Level::Info, F("  ______                   _    _       _"));
-        Log.log(Level::Info, F(" |  ____|                 | |  | |     | |"));
-        Log.log(Level::Info, F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
-        Log.log(Level::Info, F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
-        Log.log(Level::Info, F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
-        Log.log(Level::Info, F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), FARMHUB_VERSION);
+        LOGI("  ______                   _    _       _");
+        LOGI(" |  ____|                 | |  | |     | |");
+        LOGI(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__");
+        LOGI(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\");
+        LOGI(" | | | (_| | |  | | | | | | |  | | |_| | |_) |");
+        LOGI(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ " FARMHUB_VERSION);
     }
 
     void registerShutdownListener(std::function<void()> listener) {
@@ -384,7 +384,7 @@ private:
         auto voltage = batteryVoltage.getAverage();
 
         if (voltage != 0.0 && voltage < BATTERY_SHUTDOWN_THRESHOLD) {
-            Log.info("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
+            LOGI("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
                 voltage, BATTERY_SHUTDOWN_THRESHOLD, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
 
             // TODO Publihs all MQTT messages, then shut down WiFi, and _then_ start shutting down peripherals
@@ -450,10 +450,10 @@ public:
     Device() {
         kernel.switches.onReleased("factory-reset", deviceDefinition.bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 15s) {
-                Log.info("Factory reset triggered after %lld ms", duration.count());
+                LOGI("Factory reset triggered after %lld ms", duration.count());
                 kernel.performFactoryReset(true);
             } else if (duration >= 5s) {
-                Log.info("WiFi reset triggered after %lld ms", duration.count());
+                LOGI("WiFi reset triggered after %lld ms", duration.count());
                 kernel.performFactoryReset(false);
             }
         });
@@ -463,9 +463,9 @@ public:
             configuredKernel.registerShutdownListener([this]() {
                 peripheralManager.shutdown();
             });
-            Log.info("Battery configured");
+            LOGI("Battery configured");
         } else {
-            Log.info("No battery configured");
+            LOGI("No battery configured");
         }
 
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
@@ -508,14 +508,14 @@ public:
         JsonArray peripheralsInitJson = peripheralsInitDoc.to<JsonArray>();
 
         auto builtInPeripheralsCofig = deviceDefinition.getBuiltInPeripherals();
-        Log.debug("Loading configuration for %d built-in peripherals",
+        LOGD("Loading configuration for %d built-in peripherals",
             builtInPeripheralsCofig.size());
         for (auto& perpheralConfig : builtInPeripheralsCofig) {
             peripheralManager.createPeripheral(perpheralConfig, peripheralsInitJson);
         }
 
         auto& peripheralsConfig = deviceConfig.peripherals.get();
-        Log.info("Loading configuration for %d user-configured peripherals",
+        LOGI("Loading configuration for %d user-configured peripherals",
             peripheralsConfig.size());
         bool peripheralError = false;
         for (auto& perpheralConfig : peripheralsConfig) {
@@ -563,7 +563,7 @@ public:
 
         kernel.getKernelReadyState().set();
 
-        Log.info("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
+        LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
             millis() / 1000.0,
             kernel.version.c_str(),
             deviceConfig.model.get().c_str(),

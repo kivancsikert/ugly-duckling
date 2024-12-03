@@ -26,7 +26,7 @@ public:
     AnalogBatteryDriver(InternalPinPtr pin, float voltageDividerRatio)
         : pin(pin)
         , voltageDividerRatio(voltageDividerRatio) {
-        Log.info("Initializing analog battery driver on pin %s",
+        LOGI("Initializing analog battery driver on pin %s",
             pin->getName().c_str());
 
         pin->pinMode(INPUT);
