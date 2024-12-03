@@ -14,6 +14,7 @@
 
 #include <kernel/Command.hpp>
 #include <kernel/Concurrent.hpp>
+#include <kernel/Console.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
@@ -202,114 +203,6 @@ private:
     const std::shared_ptr<BatteryDriver> battery;
 };
 #endif
-
-struct LogRecord {
-    Level level;
-    String message;
-};
-
-#define FARMHUB_LOG_COLOR_BLACK   "30"
-#define FARMHUB_LOG_COLOR_RED     "31"
-#define FARMHUB_LOG_COLOR_GREEN   "32"
-#define FARMHUB_LOG_COLOR_BROWN   "33"
-#define FARMHUB_LOG_COLOR_BLUE    "34"
-#define FARMHUB_LOG_COLOR_PURPLE  "35"
-#define FARMHUB_LOG_COLOR_CYAN    "36"
-#define FARMHUB_LOG_COLOR(COLOR)  "\033[0;" COLOR "m"
-#define FARMHUB_LOG_BOLD(COLOR)   "\033[1;" COLOR "m"
-#define FARMHUB_LOG_RESET_COLOR   "\033[0m"
-
-class ConsoleProvider;
-
-static ConsoleProvider* consoleProvider;
-
-class ConsoleProvider {
-public:
-    ConsoleProvider(Queue<LogRecord>& logRecords, Level recordedLevel)
-        : logRecords(logRecords)
-        , recordedLevel(recordedLevel) {
-        consoleProvider = this;
-        originalVprintf = esp_log_set_vprintf(ConsoleProvider::processLogFunc);
-
-#ifndef WOKWI
-        Serial.begin(115200);
-        Serial1.begin(115200, SERIAL_8N1, pins::RXD0->getGpio(), pins::TXD0->getGpio());
-#if Serial != Serial0
-        Serial0.begin(115200);
-#endif
-#endif
-    }
-
-private:
-    static int processLogFunc(const char* format, va_list args) {
-        return consoleProvider->processLog(format, args);
-    }
-
-    int processLog(const char* format, va_list args) {
-        Level level = getLevel(format[0]);
-        if (level <= recordedLevel) {
-            std::lock_guard<std::mutex> lock(bufferMutex);
-            vsnprintf(buffer, sizeof(buffer), format, args);
-            logRecords.offer(level, buffer);
-        }
-
-#ifdef FARMHUB_DEBUG
-        // Erase the current line
-        printf("\033[1G\033[0K");
-        switch (level) {
-            case Level::Error:
-                printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_RED));
-                break;
-            case Level::Warning:
-                printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_BROWN));
-                break;
-            case Level::Info:
-                printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_GREEN));
-                break;
-            default:
-                break;
-        }
-#endif
-
-        int count = originalVprintf(format, args);
-
-#ifdef FARMHUB_DEBUG
-        switch (level) {
-            case Level::Error:
-            case Level::Warning:
-            case Level::Info:
-                printf(FARMHUB_LOG_RESET_COLOR);
-                break;
-            default:
-                break;
-        }
-#endif
-        return count;
-    }
-
-    static inline Level getLevel(char c) {
-        switch (c) {
-            case 'E':
-                return Level::Error;
-            case 'W':
-                return Level::Warning;
-            case 'I':
-                return Level::Info;
-            case 'D':
-                return Level::Debug;
-            case 'V':
-                return Level::Verbose;
-            default:
-                return Level::Info;
-        }
-    }
-
-    vprintf_like_t originalVprintf;
-    Queue<LogRecord>& logRecords;
-    const Level recordedLevel;
-    std::mutex bufferMutex;
-    char buffer[128];
-};
 
 class MemoryTelemetryProvider : public TelemetryProvider {
 public:
