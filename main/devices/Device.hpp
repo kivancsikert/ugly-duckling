@@ -391,7 +391,7 @@ private:
             LOGI("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
                 voltage, BATTERY_SHUTDOWN_THRESHOLD, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
 
-            // TODO Publihs all MQTT messages, then shut down WiFi, and _then_ start shutting down peripherals
+            // TODO Publish all MQTT messages, then shut down WiFi, and _then_ start shutting down peripherals
             //      Doing so would result in less of a power spike, which can be important if the battery is already low
 
             // Run in separate task to allocate enough stack
@@ -511,19 +511,19 @@ public:
         JsonDocument peripheralsInitDoc;
         JsonArray peripheralsInitJson = peripheralsInitDoc.to<JsonArray>();
 
-        auto builtInPeripheralsCofig = deviceDefinition.getBuiltInPeripherals();
+        auto builtInPeripheralsConfig = deviceDefinition.getBuiltInPeripherals();
         LOGD("Loading configuration for %d built-in peripherals",
-            builtInPeripheralsCofig.size());
-        for (auto& perpheralConfig : builtInPeripheralsCofig) {
-            peripheralManager.createPeripheral(perpheralConfig, peripheralsInitJson);
+            builtInPeripheralsConfig.size());
+        for (auto& peripheralConfig : builtInPeripheralsConfig) {
+            peripheralManager.createPeripheral(peripheralConfig, peripheralsInitJson);
         }
 
         auto& peripheralsConfig = deviceConfig.peripherals.get();
         LOGI("Loading configuration for %d user-configured peripherals",
             peripheralsConfig.size());
         bool peripheralError = false;
-        for (auto& perpheralConfig : peripheralsConfig) {
-            if (!peripheralManager.createPeripheral(perpheralConfig.get(), peripheralsInitJson)) {
+        for (auto& peripheralConfig : peripheralsConfig) {
+            if (!peripheralManager.createPeripheral(peripheralConfig.get(), peripheralsInitJson)) {
                 peripheralError = true;
             }
         }
