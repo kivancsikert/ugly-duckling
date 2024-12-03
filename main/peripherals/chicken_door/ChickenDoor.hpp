@@ -9,7 +9,6 @@
 
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/Watchdog.hpp>

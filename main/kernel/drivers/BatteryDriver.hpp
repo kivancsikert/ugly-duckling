@@ -2,7 +2,6 @@
 
 #include <Arduino.h>
 
-#include <kernel/Log.hpp>
 #include <kernel/Pin.hpp>
 #include <kernel/Telemetry.hpp>
 

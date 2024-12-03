@@ -2,8 +2,6 @@
 
 #include <Arduino.h>
 
-#include <kernel/Log.hpp>
-
 namespace farmhub::kernel {
 
 // TODO Figure out what to do with low/high speed modes

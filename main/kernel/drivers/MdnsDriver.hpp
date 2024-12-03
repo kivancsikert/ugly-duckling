@@ -5,7 +5,6 @@
 #include <mdns.h>
 
 #include <kernel/Concurrent.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/NvsStore.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>

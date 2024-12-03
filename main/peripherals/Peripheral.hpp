@@ -5,7 +5,6 @@
 
 #include <kernel/Configuration.hpp>
 #include <kernel/I2CManager.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/Named.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/PwmManager.hpp>
@@ -247,7 +246,7 @@ public:
         state = State::Stopped;
         PeripheralBase::ShutdownParameters parameters;
         for (auto& peripheral : peripherals) {
-            Log.printfToSerial("Shutting down peripheral '%s'\n",
+            LOGI("Shutting down peripheral '%s'",
                 peripheral->name.c_str());
             peripheral->shutdown(parameters);
         }

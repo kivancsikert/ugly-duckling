@@ -9,7 +9,6 @@
 #include <wifi_provisioning/scheme_softap.h>
 
 #include <kernel/Concurrent.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 

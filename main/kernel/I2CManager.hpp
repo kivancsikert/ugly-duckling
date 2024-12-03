@@ -8,7 +8,6 @@
 #include <Arduino.h>
 #include <Wire.h>
 
-#include <kernel/Log.hpp>
 #include <kernel/Pin.hpp>
 
 namespace farmhub::kernel {

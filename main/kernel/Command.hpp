@@ -9,7 +9,6 @@
 #include <esp_sleep.h>
 
 #include <kernel/FileSystem.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/Named.hpp>
 #include <kernel/Task.hpp>
 
@@ -65,7 +64,7 @@ public:
         : Command("restart") {
     }
     void handle(const JsonObject& request, JsonObject& response) override {
-        Log.printlnToSerial("Restarting...");
+        printf("Restarting...\n");
         Serial.flush();
         ESP.restart();
     }

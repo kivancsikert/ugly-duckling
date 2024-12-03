@@ -5,7 +5,6 @@
 #include <vector>
 
 #include <kernel/Concurrent.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/Pin.hpp>
 #include <kernel/Task.hpp>
 

@@ -13,7 +13,6 @@
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/I2CManager.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/Telemetry.hpp>
 
 #include <peripherals/I2CConfig.hpp>

@@ -8,7 +8,6 @@
 
 #include <Arduino.h>
 
-#include <kernel/Log.hpp>
 #include <kernel/Time.hpp>
 
 using namespace std::chrono;
@@ -142,7 +141,7 @@ public:
             return true;
         }
         auto newWakeTime = xTaskGetTickCount();
-        Log.printfToSerial("Task '%s' missed deadline by %lld ms\n",
+        printf("Task '%s' missed deadline by %lld ms\n",
             pcTaskGetName(nullptr), duration_cast<milliseconds>(ticks(newWakeTime - lastWakeTime)).count());
         lastWakeTime = newWakeTime;
         return false;
@@ -164,7 +163,7 @@ public:
             return time - (currentTime - ticks(lastWakeTime));
         } else {
             // 'currentTime' has surpassed our target time, indicating the delay has expired.
-            Log.printfToSerial("Task '%s' is already past deadline by %lld ms\n",
+            printf("Task '%s' is already past deadline by %lld ms\n",
                 pcTaskGetName(nullptr), duration_cast<milliseconds>(currentTime - ticks(lastWakeTime)).count());
             return ticks::zero();
         }

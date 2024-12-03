@@ -15,7 +15,6 @@
 #include <kernel/Command.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/Kernel.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
 
@@ -94,66 +93,13 @@ namespace farmhub::devices {
 #ifdef FARMHUB_DEBUG
 class ConsolePrinter {
 public:
-    ConsolePrinter() {
+    ConsolePrinter(const shared_ptr<BatteryDriver> battery)
+        : battery(battery) {
         status.reserve(256);
         Task::loop("console", 3072, 1, [this](Task& task) {
             printStatus();
             task.delayUntil(100ms);
         });
-    }
-
-    void registerBattery(std::shared_ptr<BatteryDriver> battery) {
-        Lock lock(batteryMutex);
-        this->battery = battery;
-    }
-
-    void printLog(Level level, const char* message) {
-        static char timeBuffer[12];
-        sprintf(timeBuffer, "%8.3f", millis() / 1000.0);
-        String* buffer = new String();
-        buffer->reserve(256);
-        buffer->concat("\033[0;90m");
-        buffer->concat(timeBuffer);
-        buffer->concat("\033[0m [\033[0;31m");
-        buffer->concat(pcTaskGetName(nullptr));
-        buffer->concat("\033[0m@\033[0;32m");
-        buffer->concat(xPortGetCoreID());
-        buffer->concat("\033[0m");
-#ifdef CONFIG_HEAP_TRACING
-        buffer->concat("|S:");
-        buffer->concat(uxTaskGetStackHighWaterMark(nullptr));
-        buffer->concat("B|H:");
-        buffer->concat(((float) ESP.getFreeHeap()) / 1024.0f);
-        buffer->concat("kB");
-#endif
-        buffer->concat("] ");
-        switch (level) {
-            case Level::Fatal:
-                buffer->concat("\033[0;31mFATAL\033[0m ");
-                break;
-            case Level::Error:
-                buffer->concat("\033[0;31mERROR\033[0m ");
-                break;
-            case Level::Warning:
-                buffer->concat("\033[0;33mWARNING\033[0m ");
-                break;
-            case Level::Info:
-                buffer->concat("\033[0;32mINFO\033[0m ");
-                break;
-            case Level::Debug:
-                buffer->concat("\033[0;34mDEBUG\033[0m ");
-                break;
-            case Level::Trace:
-                buffer->concat("\033[0;36mTRACE\033[0m ");
-                break;
-            default:
-                break;
-        }
-        buffer->concat(message);
-        if (!consoleQueue.offer(*buffer)) {
-            Log.printlnToSerial(buffer->c_str());
-        }
-        delete buffer;
     }
 
 private:
@@ -190,22 +136,13 @@ private:
         status.concat(esp_clk_cpu_freq() / 1000000);
         status.concat("\033[0m MHz");
 
-        {
-            Lock lock(batteryMutex);
-            if (battery != nullptr) {
-                status.concat(", battery: \033[33m");
-                status.concat(String(battery->getVoltage(), 2));
-                status.concat("\033[0m V");
-            }
+        if (battery != nullptr) {
+            status.concat(", battery: \033[33m");
+            status.concat(String(battery->getVoltage(), 2));
+            status.concat("\033[0m V");
         }
 
-        Log.printToSerial("\033[1G\033[0K");
-
-        consoleQueue.drain([](const String& line) {
-            Log.printlnToSerial(line.c_str());
-        });
-
-        Log.printToSerial(status.c_str());
+        printf("\033[1G\033[0K%s", status.c_str());
     }
 
     static const char* wifiStatus() {
@@ -262,13 +199,8 @@ private:
 
     int counter;
     String status;
-    Mutex batteryMutex;
-    std::shared_ptr<BatteryDriver> battery;
-
-    Queue<String> consoleQueue { "console", 16 };
+    const std::shared_ptr<BatteryDriver> battery;
 };
-
-ConsolePrinter consolePrinter;
 #endif
 
 struct LogRecord {
@@ -276,11 +208,29 @@ struct LogRecord {
     String message;
 };
 
-class ConsoleProvider : public LogConsumer {
+#define FARMHUB_LOG_COLOR_BLACK   "30"
+#define FARMHUB_LOG_COLOR_RED     "31"
+#define FARMHUB_LOG_COLOR_GREEN   "32"
+#define FARMHUB_LOG_COLOR_BROWN   "33"
+#define FARMHUB_LOG_COLOR_BLUE    "34"
+#define FARMHUB_LOG_COLOR_PURPLE  "35"
+#define FARMHUB_LOG_COLOR_CYAN    "36"
+#define FARMHUB_LOG_COLOR(COLOR)  "\033[0;" COLOR "m"
+#define FARMHUB_LOG_BOLD(COLOR)   "\033[1;" COLOR "m"
+#define FARMHUB_LOG_RESET_COLOR   "\033[0m"
+
+class ConsoleProvider;
+
+static ConsoleProvider* consoleProvider;
+
+class ConsoleProvider {
 public:
     ConsoleProvider(Queue<LogRecord>& logRecords, Level recordedLevel)
         : logRecords(logRecords)
         , recordedLevel(recordedLevel) {
+        consoleProvider = this;
+        originalVprintf = esp_log_set_vprintf(ConsoleProvider::processLogFunc);
+
 #ifndef WOKWI
         Serial.begin(115200);
         Serial1.begin(115200, SERIAL_8N1, pins::RXD0->getGpio(), pins::TXD0->getGpio());
@@ -288,23 +238,77 @@ public:
         Serial0.begin(115200);
 #endif
 #endif
-        Log.setConsumer(this);
-    }
-
-    void consumeLog(Level level, const char* message) override {
-        if (level <= recordedLevel) {
-            logRecords.offer(level, message);
-        }
-#ifdef FARMHUB_DEBUG
-        consolePrinter.printLog(level, message);
-#else
-        Log.printlnToSerial(message);
-#endif
     }
 
 private:
+    static int processLogFunc(const char* format, va_list args) {
+        return consoleProvider->processLog(format, args);
+    }
+
+    int processLog(const char* format, va_list args) {
+        Level level = getLevel(format[0]);
+        if (level <= recordedLevel) {
+            std::lock_guard<std::mutex> lock(bufferMutex);
+            vsnprintf(buffer, sizeof(buffer), format, args);
+            logRecords.offer(level, buffer);
+        }
+
+#ifdef FARMHUB_DEBUG
+        // Erase the current line
+        printf("\033[1G\033[0K");
+        switch (level) {
+            case Level::Error:
+                printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_RED));
+                break;
+            case Level::Warning:
+                printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_BROWN));
+                break;
+            case Level::Info:
+                printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_GREEN));
+                break;
+            default:
+                break;
+        }
+#endif
+
+        int count = originalVprintf(format, args);
+
+#ifdef FARMHUB_DEBUG
+        switch (level) {
+            case Level::Error:
+            case Level::Warning:
+            case Level::Info:
+                printf(FARMHUB_LOG_RESET_COLOR);
+                break;
+            default:
+                break;
+        }
+#endif
+        return count;
+    }
+
+    static inline Level getLevel(char c) {
+        switch (c) {
+            case 'E':
+                return Level::Error;
+            case 'W':
+                return Level::Warning;
+            case 'I':
+                return Level::Info;
+            case 'D':
+                return Level::Debug;
+            case 'V':
+                return Level::Verbose;
+            default:
+                return Level::Info;
+        }
+    }
+
+    vprintf_like_t originalVprintf;
     Queue<LogRecord>& logRecords;
     const Level recordedLevel;
+    std::mutex bufferMutex;
+    char buffer[128];
 };
 
 class MemoryTelemetryProvider : public TelemetryProvider {
@@ -341,14 +345,10 @@ public:
             // due to the high current draw of the boot process.
             auto voltage = battery->getVoltage();
             if (voltage != 0.0 && voltage < BATTERY_BOOT_THRESHOLD) {
-                Log.printfToSerial("Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
+                ESP_LOGW("battery", "Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
                     voltage, BATTERY_BOOT_THRESHOLD);
                 enterLowPowerDeepSleep();
             }
-
-#ifdef FARMHUB_DEBUG
-            consolePrinter.registerBattery(battery);
-#endif
 
             Task::loop("battery", 1536, [this](Task& task) {
                 checkBatteryVoltage(task);
@@ -377,6 +377,10 @@ public:
     const shared_ptr<BatteryDriver> battery;
 
 private:
+#ifdef FARMHUB_DEBUG
+    ConsolePrinter consolePrinter { battery };
+#endif
+
     void checkBatteryVoltage(Task& task) {
         task.delayUntil(LOW_POWER_CHECK_INTERVAL);
         auto currentVoltage = battery->getVoltage();
@@ -396,7 +400,7 @@ private:
                 for (auto& listener : shutdownListeners) {
                     listener();
                 }
-                Log.printlnToSerial("Shutdown process finished");
+                printf("Shutdown process finished\n");
             });
             task.delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
             enterLowPowerDeepSleep();
@@ -404,7 +408,7 @@ private:
     }
 
     [[noreturn]] inline void enterLowPowerDeepSleep() {
-        Log.printlnToSerial("Entering low power deep sleep");
+        printf("Entering low power deep sleep\n");
         ESP.deepSleep(duration_cast<microseconds>(LOW_POWER_SLEEP_CHECK_INTERVAL).count());
         // Signal to the compiler that we are not returning for real
         abort();

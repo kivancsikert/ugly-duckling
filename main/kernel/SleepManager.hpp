@@ -5,7 +5,6 @@
 #include <Arduino.h>
 
 #include <kernel/Concurrent.hpp>
-#include <kernel/Log.hpp>
 
 // FIXME Why do we need to define these manually?
 #if CONFIG_IDF_TARGET_ESP32

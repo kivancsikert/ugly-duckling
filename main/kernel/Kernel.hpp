@@ -15,7 +15,6 @@
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/I2CManager.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/StateManager.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -110,7 +109,7 @@ public:
     }
 
     void performFactoryReset(bool completeReset) {
-        Log.printlnToSerial("Performing factory reset");
+        LOGI("Performing factory reset");
 
         statusLed.turnOn();
         delay(1000);
@@ -124,14 +123,14 @@ public:
             delay(1000);
             statusLed.turnOn();
 
-            Log.printlnToSerial(" - Deleting the file system...");
+            LOGI(" - Deleting the file system...");
             fs.reset();
         }
 
-        Log.printlnToSerial(" - Clearing NVS...");
+        LOGI(" - Clearing NVS...");
         nvs_flash_erase();
 
-        Log.printlnToSerial(" - Restarting...");
+        LOGI(" - Restarting...");
         ESP.restart();
     }
 

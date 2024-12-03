@@ -4,7 +4,6 @@
 
 #include <kernel/Configuration.hpp>
 #include <kernel/I2CManager.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/drivers/MqttDriver.hpp>
 
 #include <peripherals/I2CConfig.hpp>

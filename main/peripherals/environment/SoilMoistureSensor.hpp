@@ -6,7 +6,6 @@
 #include <Wire.h>
 
 #include <kernel/Component.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/Telemetry.hpp>
 
 #include <peripherals/Peripheral.hpp>

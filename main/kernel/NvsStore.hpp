@@ -7,7 +7,6 @@
 #include <ArduinoJson.h>
 
 #include <kernel/Concurrent.hpp>
-#include <kernel/Log.hpp>
 
 namespace farmhub::kernel {
 

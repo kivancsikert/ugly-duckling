@@ -7,7 +7,6 @@
 #include "esp_netif_sntp.h"
 #include "esp_sntp.h"
 
-#include <kernel/Log.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 

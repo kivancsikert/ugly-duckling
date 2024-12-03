@@ -3,7 +3,6 @@
 #include <Arduino.h>
 
 #include <kernel/I2CManager.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 
 using namespace farmhub::kernel;

@@ -6,16 +6,7 @@
 #include <chrono>
 #include <string>
 
-#include <esp_log.h>
-
-#define FARMHUB_LOG(level, format, ...) \
-    ESP_LOG_LEVEL_LOCAL(level, "farmhub", format, ##__VA_ARGS__)
-
-#define LOGE(format, ...) FARMHUB_LOG(ESP_LOG_ERROR, format, ##__VA_ARGS__)
-#define LOGW(format, ...) FARMHUB_LOG(ESP_LOG_WARN, format, ##__VA_ARGS__)
-#define LOGI(format, ...) FARMHUB_LOG(ESP_LOG_INFO, format, ##__VA_ARGS__)
-#define LOGD(format, ...) FARMHUB_LOG(ESP_LOG_DEBUG, format, ##__VA_ARGS__)
-#define LOGV(format, ...) FARMHUB_LOG(ESP_LOG_VERBOSE, format, ##__VA_ARGS__)
+#include <kernel/Log.hpp>
 
 #ifdef CONFIG_HEAP_TRACING
 #include <esp_heap_trace.h>
@@ -86,11 +77,7 @@ static void dumpPerTaskHeapInfo() {
 extern "C" void app_main() {
     initArduino();
 
-#ifdef FARMHUB_DEBUG
-    esp_log_level_set("farmhub", ESP_LOG_DEBUG);
-#else
-    esp_log_level_set("farmhub", ESP_LOG_INFO);
-#endif
+    initLogging();
 
 #ifdef CONFIG_HEAP_TRACING
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));

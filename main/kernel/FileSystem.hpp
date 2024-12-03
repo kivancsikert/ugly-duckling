@@ -2,8 +2,6 @@
 
 #include <SPIFFS.h>
 
-#include <kernel/Log.hpp>
-
 namespace farmhub::kernel {
 
 class FileSystem;

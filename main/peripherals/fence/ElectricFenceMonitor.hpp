@@ -7,7 +7,6 @@
 
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/Telemetry.hpp>
 
