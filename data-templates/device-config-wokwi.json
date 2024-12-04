@@ -1,0 +1,8 @@
+{
+  "id": "wokwi",
+  "instance": "wokwi",
+  "location": "local",
+  "peripherals": [
+  ],
+  "sleepWhenIdle": true
+}

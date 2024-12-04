@@ -279,7 +279,7 @@ public:
     ConfigurationFile(const FileSystem& fs, const String& path)
         : path(path) {
         if (!fs.exists(path)) {
-            Log.debug("The configuration file '%s' was not found, falling back to defaults",
+            LOGD("The configuration file '%s' was not found, falling back to defaults",
                 path.c_str());
         } else {
             File file = fs.open(path, FILE_READ);
@@ -294,14 +294,14 @@ public:
                 case DeserializationError::Code::Ok:
                     break;
                 case DeserializationError::Code::EmptyInput:
-                    Log.debug("The configuration file '%s' is empty, falling back to defaults",
+                    LOGD("The configuration file '%s' is empty, falling back to defaults",
                         path.c_str());
                     break;
                 default:
                     throw ConfigurationException("Cannot open config file " + path + " (" + String(error.c_str()) + ")");
             }
             update(json.as<JsonObject>());
-            Log.info("Effective configuration for '%s': %s",
+            LOGI("Effective configuration for '%s': %s",
                 path.c_str(), toString().c_str());
         }
         onUpdate([&fs, path](const JsonObject& json) {

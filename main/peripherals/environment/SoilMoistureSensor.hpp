@@ -6,7 +6,6 @@
 #include <Wire.h>
 
 #include <kernel/Component.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/Telemetry.hpp>
 
 #include <peripherals/Peripheral.hpp>
@@ -38,7 +37,7 @@ public:
         , waterValue(config.water.get())
         , pin(config.pin.get()) {
 
-        Log.info("Initializing soil moisture sensor on pin %s; air value: %d; water value: %d",
+        LOGI("Initializing soil moisture sensor on pin %s; air value: %d; water value: %d",
             pin->getName().c_str(), airValue, waterValue);
 
         pin->pinMode(INPUT);
@@ -46,7 +45,7 @@ public:
 
     void populateTelemetry(JsonObject& json) override {
         uint16_t soilMoistureValue = pin->analogRead();
-        Log.trace("Soil moisture value: %d",
+        LOGV("Soil moisture value: %d",
             soilMoistureValue);
 
         const double run = waterValue - airValue;

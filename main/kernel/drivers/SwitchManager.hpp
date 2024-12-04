@@ -9,7 +9,6 @@
 #include <Arduino.h>
 
 #include <kernel/Concurrent.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/Pin.hpp>
 #include <kernel/Task.hpp>
 
@@ -36,11 +35,11 @@ static void handleSwitchInterrupt(void* arg);
 class SwitchManager {
 public:
     SwitchManager() {
-        Task::loop("switch-manager", 3172, [this](Task& task) {
+        Task::loop("switch-manager", 1536, [this](Task& task) {
             SwitchStateChange stateChange = switchStateInterrupts.take();
             auto state = stateChange.switchState;
             auto engaged = stateChange.engaged;
-            Log.trace("Switch %s is %s",
+            LOGV("Switch %s is %s",
                 state->name.c_str(), engaged ? "engaged" : "released");
             if (engaged) {
                 state->engagementStarted = system_clock::now();
@@ -66,7 +65,7 @@ public:
     }
 
     const Switch& registerHandler(const String& name, InternalPinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
-        Log.info("Registering switch %s on pin %s, mode %s",
+        LOGI("Registering switch %s on pin %s, mode %s",
             name.c_str(), pin->getName().c_str(), mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
 
         // Configure PIN_INPUT as input

@@ -7,7 +7,6 @@
 
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/Telemetry.hpp>
 
@@ -58,7 +57,7 @@ public:
                 pinsDescription += ", ";
             pinsDescription += pinConfig.pin->getName() + "=" + String(pinConfig.voltage) + "V";
         }
-        Log.info("Initializing electric fence with pins %s", pinsDescription.c_str());
+        LOGI("Initializing electric fence with pins %s", pinsDescription.c_str());
 
         for (auto& pinConfig : config.pins.get()) {
             auto unit = pcnt.registerUnit(pinConfig.pin);
@@ -74,7 +73,7 @@ public:
 
                 if (count > 0) {
                     lastVoltage = max(pin.voltage, lastVoltage);
-                    Log.trace("Counted %d pulses on pin %s (voltage: %dV)",
+                    LOGV("Counted %d pulses on pin %s (voltage: %dV)",
                         count, pin.pcntUnit.getPin()->getName().c_str(), pin.voltage);
                 }
             }
@@ -82,7 +81,7 @@ public:
                 Lock lock(updateMutex);
                 this->lastVoltage = lastVoltage;
             }
-            Log.trace("Last voltage: %d",
+            LOGV("Last voltage: %d",
                 lastVoltage);
             task.delayUntil(measurementFrequency);
         });

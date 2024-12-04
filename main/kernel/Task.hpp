@@ -8,7 +8,6 @@
 
 #include <Arduino.h>
 
-#include <kernel/Log.hpp>
 #include <kernel/Time.hpp>
 
 using namespace std::chrono;
@@ -81,12 +80,12 @@ public:
     }
     static TaskHandle run(const String& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
         TaskFunction* taskFunction = new TaskFunction(runFunction);
-        Log.debug("Creating task %s with priority %d and stack size %ld",
+        LOGD("Creating task %s with priority %d and stack size %ld",
             name.c_str(), priority, stackSize);
         TaskHandle_t handle = nullptr;
         auto result = xTaskCreate(executeTask, name.c_str(), stackSize, taskFunction, priority, &handle);
         if (result != pdPASS) {
-            Log.error("Failed to create task %s: %d", name.c_str(), result);
+            LOGE("Failed to create task %s: %d", name.c_str(), result);
             delete taskFunction;
             return TaskHandle();
         }
@@ -112,7 +111,7 @@ public:
             return RunResult::OK;
         } else {
             callee.abort();
-            Log.trace("Task '%s' timed out",
+            LOGV("Task '%s' timed out",
                 name.c_str());
             return RunResult::TIMEOUT;
         }
@@ -129,20 +128,20 @@ public:
         });
     }
 
-    void delay(ticks time) {
-        // Log.trace("Task '%s' delaying for %lld ms",
+    static inline void delay(ticks time) {
+        // LOGV("Task '%s' delaying for %lld ms",
         //     pcTaskGetName(nullptr), duration_cast<milliseconds>(time).count());
         vTaskDelay(time.count());
     }
 
     bool delayUntil(ticks time) {
-        // Log.trace("Task '%s' delaying until %lld ms",
+        // LOGV("Task '%s' delaying until %lld ms",
         //     pcTaskGetName(nullptr), duration_cast<milliseconds>(time).count());
         if (xTaskDelayUntil(&lastWakeTime, time.count())) {
             return true;
         }
         auto newWakeTime = xTaskGetTickCount();
-        Log.printfToSerial("Task '%s' missed deadline by %lld ms\n",
+        printf("Task '%s' missed deadline by %lld ms\n",
             pcTaskGetName(nullptr), duration_cast<milliseconds>(ticks(newWakeTime - lastWakeTime)).count());
         lastWakeTime = newWakeTime;
         return false;
@@ -164,7 +163,7 @@ public:
             return time - (currentTime - ticks(lastWakeTime));
         } else {
             // 'currentTime' has surpassed our target time, indicating the delay has expired.
-            Log.printfToSerial("Task '%s' is already past deadline by %lld ms\n",
+            printf("Task '%s' is already past deadline by %lld ms\n",
                 pcTaskGetName(nullptr), duration_cast<milliseconds>(currentTime - ticks(lastWakeTime)).count());
             return ticks::zero();
         }
@@ -180,7 +179,7 @@ public:
 
 private:
     ~Task() {
-        Log.trace("Finished task %s\n",
+        LOGV("Finished task %s\n",
             pcTaskGetName(nullptr));
         vTaskDelete(nullptr);
     }

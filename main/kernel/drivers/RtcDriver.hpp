@@ -1,13 +1,12 @@
 #pragma once
 
-#include <WiFiUdp.h>
 #include <chrono>
 #include <optional>
 #include <time.h>
 
-#include <NTPClient.h>
+#include "esp_netif_sntp.h"
+#include "esp_sntp.h"
 
-#include <kernel/Log.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 
@@ -41,32 +40,25 @@ public:
         , mdns(mdns)
         , ntpConfig(ntpConfig)
         , rtcInSync(rtcInSync) {
-        // TODO We should not need two separate tasks here
-        Task::run("rtc-check", 3172, [this](Task& task) {
-            while (true) {
-                if (isTimeSet()) {
-                    Log.info("RTC: time is set");
-                    this->rtcInSync.set();
-                    break;
-                }
-                task.delayUntil(1s);
-            }
-        });
+
+        if (isTimeSet()) {
+            LOGI("RTC: time is already set");
+            rtcInSync.set();
+        }
+
         Task::run("ntp-sync", 4096, [this, &wifi](Task& task) {
             while (true) {
                 {
                     WiFiConnection connection(wifi);
-                    ensureConfigured();
-                    if (!ntpClient->forceUpdate()) {
+                    if (updateTime()) {
+                        trustMdnsCache = true;
+                    } else {
                         // Attempt a retry, but with mDNS cache disabled
-                        Log.error("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
-                        ntpClient.reset();
+                        LOGE("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
                         trustMdnsCache = false;
                         task.delay(10s);
                         continue;
                     }
-                    trustMdnsCache = true;
-                    setOrAdjustTime(system_clock::from_time_t(ntpClient->getEpochTime()));
                 }
 
                 // We are good for a while now
@@ -85,68 +77,82 @@ public:
     }
 
 private:
-    void ensureConfigured() {
-        if (ntpClient.has_value()) {
-            return;
-        }
+    bool updateTime() {
+        esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+        config.start = false;
+        config.smooth_sync = true;
+        config.server_from_dhcp = true;
+        config.renew_servers_after_new_IP = true;
+        config.wait_for_sync = true;
+        config.ip_event_to_renew = IP_EVENT_STA_GOT_IP;
+        ESP_ERROR_CHECK(esp_netif_sntp_init(&config));
 
 #ifdef WOKWI
-        Log.debug("RTC: using default NTP server for Wokwi");
-        ntpClient.emplace(udp);
+        LOGI("RTC: using default NTP server for Wokwi");
 #else
+        // TODO Check this
         if (ntpConfig.host.get().length() > 0) {
-            Log.info("RTC: using NTP server %s from configuration",
+            LOGD("RTC: using NTP server %s from configuration",
                 ntpConfig.host.get().c_str());
-            ntpClient.emplace(udp, ntpConfig.host.get().c_str());
+            esp_sntp_setservername(0, ntpConfig.host.get().c_str());
         } else {
             MdnsRecord ntpServer;
             if (mdns.lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
-                Log.info("RTC: using NTP server %s:%d (%s) from mDNS",
+                LOGD("RTC: using NTP server %s:%d (%s) from mDNS",
                     ntpServer.hostname.c_str(),
                     ntpServer.port,
                     ntpServer.ip.toString().c_str());
-                ntpClient.emplace(udp, ntpServer.ip);
+                auto serverIp = convertIp4(ntpServer.ip);
+                esp_sntp_setserver(0, &serverIp);
             } else {
-                Log.info("RTC: no NTP server configured, using default");
-                ntpClient.emplace(udp);
+                LOGD("RTC: no NTP server configured, using default");
             }
         }
 #endif
+        printServers();
 
-        // TODO Use built in configTime() instead
-        //      We are using the external NTP client library, because the built in configTime() does not
-        //      reliably update the time for some reason.
-        ntpClient->begin();
+        bool success = false;
+        ESP_ERROR_CHECK(esp_netif_sntp_start());
+
+        auto ret = esp_netif_sntp_sync_wait(ticks(10s).count());
+        // It's okay to assume RTC is _roughly_ in sync even if
+        // we're not yet finished with smooth sync
+        if (ret == ESP_OK || ret == ESP_ERR_NOT_FINISHED) {
+            rtcInSync.set();
+            success = true;
+            LOGD("RTC: sync finished successfully");
+        } else if (ret == ESP_ERR_TIMEOUT) {
+            LOGD("RTC: waiting for time sync timed out");
+        } else {
+            LOGD("RTC: waiting for time sync returned 0x%x", ret);
+        }
+
+        esp_netif_sntp_deinit();
+        return success;
     }
 
-    static void setOrAdjustTime(time_point<system_clock> newEpochTime) {
-        // Threshold for deciding between settimeofday and adjtime
-        const auto threshold = 30s;
+    static void printServers(void) {
+        LOGD("List of configured NTP servers:");
 
-        // Get current time
-        auto now = system_clock::now();
-
-        // Calculate the difference
-        auto difference = newEpochTime - now;
-
-        if (difference.count() == 0) {
-            Log.debug("RTC: Time is already correct at %lld",
-                duration_cast<seconds>(newEpochTime.time_since_epoch()).count());
-        } else if (abs(difference) < threshold) {
-            // If the difference is smaller, adjust the time gradually
-            struct timeval adj = { .tv_sec = (time_t) duration_cast<seconds>(difference).count(), .tv_usec = 0 };
-            adjtime(&adj, NULL);
-            Log.debug("RTC: Adjusted time by %lld ms to %lld",
-                duration_cast<milliseconds>(difference).count(),
-                duration_cast<seconds>(newEpochTime.time_since_epoch()).count());
-        } else {
-            // If the difference is larger than the threshold, set the time directly
-            struct timeval tv = { .tv_sec = (time_t) duration_cast<seconds>(newEpochTime.time_since_epoch()).count(), .tv_usec = 0 };
-            settimeofday(&tv, NULL);
-            Log.debug("RTC: Set time from %lld to %lld",
-                duration_cast<seconds>(now.time_since_epoch()).count(),
-                duration_cast<seconds>(newEpochTime.time_since_epoch()).count());
+        for (uint8_t i = 0; i < SNTP_MAX_SERVERS; ++i) {
+            if (esp_sntp_getservername(i)) {
+                LOGD(" - server %d: '%s'", i, esp_sntp_getservername(i));
+            } else {
+                char buff[48];
+                ip_addr_t const* ip = esp_sntp_getserver(i);
+                if (ipaddr_ntoa_r(ip, buff, 48) != NULL) {
+                    LOGD(" - server %d: %s", i, buff);
+                }
+            }
         }
+    }
+
+    // TODO Use ESP-IDF's ip4_addr_t
+    static ip_addr_t convertIp4(const IPAddress& ip) {
+        ip_addr_t espIP;
+        IP4_ADDR(&espIP.u_addr.ip4, ip[0], ip[1], ip[2], ip[3]);
+        espIP.type = IPADDR_TYPE_V4;
+        return espIP;
     }
 
     WiFiDriver& wifi;
@@ -154,8 +160,6 @@ private:
     const Config& ntpConfig;
     StateSource& rtcInSync;
 
-    WiFiUDP udp;
-    std::optional<NTPClient> ntpClient;
     bool trustMdnsCache = true;
 };
 

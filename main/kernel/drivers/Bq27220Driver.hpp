@@ -3,7 +3,6 @@
 #include <Arduino.h>
 
 #include <kernel/I2CManager.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 
 using namespace farmhub::kernel;
@@ -14,22 +13,22 @@ class Bq27220Driver : public BatteryDriver {
 public:
     Bq27220Driver(I2CManager& i2c, InternalPinPtr sda, InternalPinPtr scl, const uint8_t address = 0x55)
         : device(i2c.createDevice("battery:bq27220", sda, scl, address)) {
-        Log.info("Initializing BQ27220 driver on SDA %s, SCL %s",
+        LOGI("Initializing BQ27220 driver on SDA %s, SCL %s",
             sda->getName().c_str(), scl->getName().c_str());
 
         auto deviceType = readControlWord(0x0001);
         if (deviceType != 0x0220) {
-            Log.error("BQ27220 at address 0x%02x is not a BQ27220 (0x%04x)",
+            LOGE("BQ27220 at address 0x%02x is not a BQ27220 (0x%04x)",
                 address, deviceType);
             return;
         }
 
-        Log.info("Found BQ27220 at address 0x%02x, FW version 0x%04x, HW version 0x%04x",
+        LOGI("Found BQ27220 at address 0x%02x, FW version 0x%04x, HW version 0x%04x",
             address, readControlWord(0x0002), readControlWord(0x0003));
     }
 
     float getVoltage() override {
-        // Log.trace("Capacityt: %d/%d", readWord(0x10), readWord(0x12));
+        // LOGV("Capacityt: %d/%d", readWord(0x10), readWord(0x12));
         return readWord(0x08) / 1000.0;
     }
 
@@ -61,7 +60,7 @@ private:
             I2CTransmission tx(device);
             auto rxResult = tx.requestFrom((uint8_t) length);
             if (rxResult != length) {
-                Log.error("Failed to read from 0x%02x: %d", reg, rxResult);
+                LOGE("Failed to read from 0x%02x: %d", reg, rxResult);
                 return false;
             }
             for (size_t i = 0; i < length; i++) {

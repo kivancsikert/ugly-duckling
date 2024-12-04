@@ -2,10 +2,9 @@
 
 #include <atomic>
 #include <chrono>
-#include <list>
+#include <vector>
 
 #include <kernel/Concurrent.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/Pin.hpp>
 #include <kernel/Task.hpp>
 
@@ -17,35 +16,18 @@ namespace farmhub::kernel::drivers {
 
 class LedDriver {
 public:
-    typedef std::list<milliseconds> BlinkPattern;
+    typedef std::vector<milliseconds> BlinkPattern;
 
     LedDriver(const String& name, PinPtr pin)
         : pin(pin)
         , patternQueue(name, 1)
         , pattern({ -milliseconds::max() }) {
-        Log.info("Initializing LED driver on pin %s",
+        LOGI("Initializing LED driver on pin %s",
             pin->getName().c_str());
 
         pin->pinMode(OUTPUT);
         Task::loop(name, 2048, [this](Task& task) {
-            if (currentPattern.empty()) {
-                currentPattern = pattern;
-            }
-            milliseconds blinkTime = currentPattern.front();
-            currentPattern.pop_front();
-
-            if (blinkTime > milliseconds::zero()) {
-                setLedState(LOW);
-            } else {
-                setLedState(HIGH);
-            }
-
-            // TOOD Substract processing time from delay
-            ticks timeout = blinkTime < milliseconds::zero() ? -blinkTime : blinkTime;
-            patternQueue.pollIn(timeout, [this](const BlinkPattern& newPattern) {
-                pattern = newPattern;
-                currentPattern = {};
-            });
+            handleIteration();
         });
     }
 
@@ -61,11 +43,11 @@ public:
         setPattern({ blinkRate / 2, -blinkRate / 2 });
     }
 
-    void blinkPatternInMs(std::list<int> pattern) {
+    void blinkPatternInMs(std::vector<int> pattern) {
         blinkPattern(BlinkPattern(pattern.begin(), pattern.end()));
     }
 
-    void blinkPattern(BlinkPattern pattern) {
+    void blinkPattern(const BlinkPattern& pattern) {
         if (pattern.empty()) {
             turnOff();
         } else {
@@ -74,6 +56,27 @@ public:
     }
 
 private:
+    void handleIteration() {
+        if (cursor == pattern.end()) {
+            cursor = pattern.begin();
+        }
+        milliseconds blinkTime = *cursor;
+        cursor++;
+
+        if (blinkTime > milliseconds::zero()) {
+            setLedState(LOW);
+        } else {
+            setLedState(HIGH);
+        }
+
+        // TOOD Substract processing time from delay
+        ticks timeout = blinkTime < milliseconds::zero() ? -blinkTime : blinkTime;
+        patternQueue.pollIn(timeout, [this](const BlinkPattern& newPattern) {
+            pattern = newPattern;
+            cursor = pattern.cbegin();
+        });
+    }
+
     void setPattern(const BlinkPattern& pattern) {
         patternQueue.put(pattern);
     }
@@ -86,8 +89,8 @@ private:
     const PinPtr pin;
     Queue<BlinkPattern> patternQueue;
     BlinkPattern pattern;
+    std::vector<milliseconds>::const_iterator cursor = pattern.cbegin();
     std::atomic<bool> ledState;
-    BlinkPattern currentPattern;
 };
 
 }    // namespace farmhub::kernel::drivers

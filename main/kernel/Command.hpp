@@ -9,7 +9,6 @@
 #include <esp_sleep.h>
 
 #include <kernel/FileSystem.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/Named.hpp>
 #include <kernel/Task.hpp>
 
@@ -48,9 +47,9 @@ public:
         try {
             pingResponse();
         } catch (const std::exception& e) {
-            Log.error("Failed to send ping response: %s", e.what());
+            LOGE("Failed to send ping response: %s", e.what());
         } catch (...) {
-            Log.error("Failed to send ping response");
+            LOGE("Failed to send ping response");
         }
         response["pong"] = millis();
     }
@@ -65,7 +64,7 @@ public:
         : Command("restart") {
     }
     void handle(const JsonObject& request, JsonObject& response) override {
-        Log.printlnToSerial("Restarting...");
+        printf("Restarting...\n");
         Serial.flush();
         ESP.restart();
     }
@@ -79,7 +78,7 @@ public:
     void handle(const JsonObject& request, JsonObject& response) override {
         seconds duration = seconds(request["duration"].as<long>());
         esp_sleep_enable_timer_wakeup(((microseconds) duration).count());
-        Log.info("Sleeping for %lld seconds in light sleep mode",
+        LOGI("Sleeping for %lld seconds in light sleep mode",
             duration.count());
         esp_deep_sleep_start();
     }
@@ -132,7 +131,7 @@ public:
         if (!path.startsWith("/")) {
             path = "/" + path;
         }
-        Log.info("Reading %s",
+        LOGI("Reading %s",
             path.c_str());
         response["path"] = path;
         File file = fs.open(path, FILE_READ);
@@ -156,7 +155,7 @@ public:
         if (!path.startsWith("/")) {
             path = "/" + path;
         }
-        Log.info("Writing %s",
+        LOGI("Writing %s",
             path.c_str());
         String contents = request["contents"];
         response["path"] = path;
@@ -183,7 +182,7 @@ public:
         if (!path.startsWith("/")) {
             path = "/" + path;
         }
-        Log.info("Removing %s",
+        LOGI("Removing %s",
             path.c_str());
         response["path"] = path;
         if (fs.remove(path)) {
@@ -214,7 +213,7 @@ public:
         prepareUpdate(url);
         response["success"] = true;
         Task::run("update", 3072, [](Task& task) {
-            Log.info("Restarting in 5 seconds to apply update");
+            LOGI("Restarting in 5 seconds to apply update");
             delay(5000);
             ESP.restart();
         });

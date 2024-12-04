@@ -12,8 +12,9 @@ if(NOT DEFINED WOKWI)
     set(WOKWI "$ENV{WOKWI}")
 endif()
 
-# Make sure we reconfigure if UD_DEBUG changes
+# Make sure we reconfigure if parameters change
 set_property(DIRECTORY PROPERTY UD_DEBUG_TRACKER "${UD_DEBUG}")
+set_property(DIRECTORY PROPERTY WOKWI_TRACKER "${WOKWI}")
 
 idf_component_register(
     SRCS ${app_sources}

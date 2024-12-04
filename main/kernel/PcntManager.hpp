@@ -6,8 +6,6 @@
 
 #include <Arduino.h>
 
-#include <kernel/Log.hpp>
-
 namespace farmhub::kernel {
 
 // TODO Figure out what to do with low/high speed modes
@@ -64,7 +62,6 @@ public:
             .low_limit = std::numeric_limits<int16_t>::min(),
             .high_limit = std::numeric_limits<int16_t>::max(),
             .intr_priority = 0,
-            .flags = {},
         };
         pcnt_unit_handle_t unit = nullptr;
         ESP_ERROR_CHECK(pcnt_new_unit(&unitConfig, &unit));
@@ -77,7 +74,6 @@ public:
         pcnt_chan_config_t channelConfig = {
             .edge_gpio_num = pin->getGpio(),
             .level_gpio_num = -1,
-            .flags = {},
         };
         pcnt_channel_handle_t channel = nullptr;
         ESP_ERROR_CHECK(pcnt_new_channel(unit, &channelConfig, &channel));
@@ -87,7 +83,7 @@ public:
         ESP_ERROR_CHECK(pcnt_unit_clear_count(unit));
         ESP_ERROR_CHECK(pcnt_unit_start(unit));
 
-        Log.debug("Registered PCNT unit on pin %s",
+        LOGD("Registered PCNT unit on pin %s",
             pin->getName().c_str());
         return PcntUnit(unit, pin);
     }

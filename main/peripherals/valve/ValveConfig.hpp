@@ -5,7 +5,6 @@
 #include <ArduinoJson.h>
 
 #include <kernel/Configuration.hpp>
-#include <kernel/Log.hpp>
 
 #include <peripherals/valve/ValveComponent.hpp>
 #include <peripherals/valve/ValveSchedule.hpp>
@@ -107,7 +106,7 @@ bool convertToJson(const ValveControlStrategyType& src, JsonVariant dst) {
         case ValveControlStrategyType::Latching:
             return dst.set("latching");
         default:
-            Log.error("Unknown strategy: %d",
+            LOGE("Unknown strategy: %d",
                 static_cast<int>(src));
             return dst.set("NC");
     }
@@ -121,7 +120,7 @@ void convertFromJson(JsonVariantConst src, ValveControlStrategyType& dst) {
     } else if (strategy == "latching") {
         dst = ValveControlStrategyType::Latching;
     } else {
-        Log.error("Unknown strategy: %s",
+        LOGE("Unknown strategy: %s",
             strategy.c_str());
         dst = ValveControlStrategyType::NormallyClosed;
     }

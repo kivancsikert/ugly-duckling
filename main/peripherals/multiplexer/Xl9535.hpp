@@ -24,7 +24,7 @@ public:
         I2CConfig config)
         : Component(name, mqttRoot)
         , device(i2c.createDevice(name, config)) {
-        Log.info("Initializing XL9535 multiplexer with %s",
+        LOGI("Initializing XL9535 multiplexer with %s",
             config.toString().c_str());
     }
 
@@ -129,7 +129,7 @@ public:
         // Create a pin for each bit in the pins mask
         for (int i = 0; i < 16; i++) {
             String pinName = name + ":" + String(i);
-            Log.trace("Registering external pin %s",
+            LOGV("Registering external pin %s",
                 pinName.c_str());
             auto pin = std::make_shared<Xl9535Pin>(pinName, component, i);
             Pin::registerPin(pinName, pin);

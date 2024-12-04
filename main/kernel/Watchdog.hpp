@@ -33,7 +33,7 @@ public:
             callback(WatchdogState::TimedOut);
         });
         callback(WatchdogState::Started);
-        Log.debug("Watchdog started with a timeout of %.2f seconds",
+        LOGD("Watchdog started with a timeout of %.2f seconds",
             duration_cast<milliseconds>(timeout).count() / 1000.0);
     }
 
@@ -43,7 +43,7 @@ public:
             handle.abort();
             callback(WatchdogState::Cacnelled);
             handle = TaskHandle();
-            Log.debug("Watchdog cancelled");
+            LOGD("Watchdog cancelled");
         }
     }
 

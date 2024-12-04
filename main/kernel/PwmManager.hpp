@@ -2,8 +2,6 @@
 
 #include <Arduino.h>
 
-#include <kernel/Log.hpp>
-
 namespace farmhub::kernel {
 
 // TODO Figure out what to do with low/high speed modes
@@ -38,7 +36,7 @@ class PwmManager {
 public:
     PwmPin registerPin(InternalPinPtr pin, uint32_t freq, uint8_t resolutionBits = 8) {
         ledcAttach(pin->getGpio(), freq, resolutionBits);
-        Log.debug("Registered PWM channel on pin %s with freq %ld and resolution %d",
+        LOGD("Registered PWM channel on pin %s with freq %ld and resolution %d",
             pin->getName().c_str(), freq, resolutionBits);
         return PwmPin(pin, freq, resolutionBits);
     }

@@ -6,10 +6,8 @@
 #include <optional>
 #include <variant>
 
-#include <WiFi.h>
-#include <WiFiClientSecure.h>
-
-#include <MQTTPubSubClient.h>
+#include <esp_event.h>
+#include <mqtt_client.h>
 
 #include <kernel/Command.hpp>
 #include <kernel/Concurrent.hpp>
@@ -93,7 +91,7 @@ public:
                 // Clear topic and wait for it to be cleared
                 auto clearStatus = mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, std::chrono::seconds { 5 }, MQTT_ALERT_AFTER_INCOMING);
                 if (clearStatus != PublishStatus::Success) {
-                    Log.error("MQTT: Failed to clear retained command topic '%s', status: %d",
+                    LOGE("MQTT: Failed to clear retained command topic '%s', status: %d",
                         suffix.c_str(), static_cast<int>(clearStatus));
                 }
 
@@ -201,19 +199,23 @@ public:
         StateSource& mqttReady)
         : wifi(wifi)
         , mdns(mdns)
-        , config(config)
+        , configHostname(config.host.get())
+        , configPort(config.port.get())
+        , configServerCert(joinStrings(config.serverCert.get()))
+        , configClientCert(joinStrings(config.clientCert.get()))
+        , configClientKey(joinStrings(config.clientKey.get()))
         , clientId(getClientId(config.clientId.get(), instanceName))
         , powerSaveMode(powerSaveMode)
-        , mqttReady(mqttReady) {
-        Task::run("mqtt:init", 4096, [this](Task& task) {
-            setup();
-            Task::run("mqtt", 5120, [this](Task& task) {
-                runEventLoop(task);
-            });
-            Task::loop("mqtt:incoming", 4096, [this](Task& task) {
-                incomingQueue.take([&](const IncomingMessage& message) {
-                    processIncomingMessage(message);
-                });
+        , mqttReady(mqttReady)
+        , outgoingQueue("mqtt-outgoing", config.queueSize.get())
+        , incomingQueue("mqtt-incoming", config.queueSize.get()) {
+
+        Task::run("mqtt", 5120, [this](Task& task) {
+            runEventLoop(task);
+        });
+        Task::loop("mqtt:incoming", 4096, [this](Task& task) {
+            incomingQueue.take([&](const IncomingMessage& message) {
+                processIncomingMessage(message);
             });
         });
     }
@@ -228,7 +230,7 @@ private:
         if (log == LogPublish::Log) {
             String serializedJson;
             serializeJsonPretty(json, serializedJson);
-            Log.debug("MQTT: Queuing topic '%s'%s (qos = %d): %s",
+            LOGD("MQTT: Queuing topic '%s'%s (qos = %d): %s",
                 topic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), static_cast<int>(qos), serializedJson.c_str());
         }
 #endif
@@ -240,7 +242,7 @@ private:
     }
 
     PublishStatus clear(const String& topic, Retention retain, QoS qos, ticks timeout = ticks::zero(), milliseconds extendAlert = MQTT_ALERT_AFTER_OUTGOING) {
-        Log.debug("MQTT: Clearing topic '%s'",
+        LOGD("MQTT: Clearing topic '%s'",
             topic.c_str());
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
             return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, "", retain, qos, waitingTask, LogPublish::Log, extendAlert });
@@ -278,14 +280,6 @@ private:
         return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, Subscription { topic, qos, handler });
     }
 
-    void setup() {
-        // TODO Figure out the right keep alive value
-        mqttClient.setKeepAliveTimeout(180);
-        mqttClient.subscribe([this](const String& topic, const String& payload, const size_t size) {
-            incomingQueue.offerIn(MQTT_QUEUE_TIMEOUT, topic, payload);
-        });
-    }
-
     String joinStrings(std::list<String> strings) {
         if (strings.empty()) {
             return "";
@@ -302,17 +296,15 @@ private:
         time_point<system_clock> alertUntil = system_clock::now() + 5s;
 
         while (true) {
-            auto timeout = alertUntil - system_clock::now();
+            auto timeout = duration_cast<milliseconds>(alertUntil - system_clock::now());
             if (timeout > 0ns) {
-                Log.trace("MQTT: Alert for another %lld seconds, checking for incoming messages",
+                LOGV("MQTT: Alert for another %lld seconds, checking for incoming messages",
                     duration_cast<seconds>(timeout).count());
                 ensureConnected(task);
-                // Process incoming network traffic
-                mqttClient.update();
                 timeout = std::min(timeout, MQTT_LOOP_INTERVAL);
             } else {
                 if (powerSaveMode) {
-                    Log.trace("MQTT: Not alert anymore, disconnecting");
+                    LOGV("MQTT: Not alert anymore, disconnecting");
                     disconnect();
                     timeout = MQTT_MAX_TIMEOUT_POWER_SAVE;
                 } else {
@@ -320,21 +312,21 @@ private:
                 }
             }
 
-            // Log.trace("MQTT: Waiting for outgoing event for %lld ms", duration_cast<milliseconds>(timeout).count());
+            // LOGV("MQTT: Waiting for outgoing event for %lld ms", duration_cast<milliseconds>(timeout).count());
             outgoingQueue.pollIn(duration_cast<ticks>(timeout), [&](const auto& event) {
-                Log.trace("MQTT: Processing outgoing event");
+                LOGV("MQTT: Processing outgoing event");
                 ensureConnected(task);
 
                 std::visit(
                     [&](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
                         if constexpr (std::is_same_v<T, OutgoingMessage>) {
-                            Log.trace("MQTT: Processing outgoing message: %s",
+                            LOGV("MQTT: Processing outgoing message: %s",
                                 arg.topic.c_str());
                             processOutgoingMessage(arg);
                             alertUntil = std::max(alertUntil, system_clock::now() + arg.extendAlert);
                         } else if constexpr (std::is_same_v<T, Subscription>) {
-                            Log.trace("MQTT: Processing subscription");
+                            LOGV("MQTT: Processing subscription");
                             processSubscription(arg);
                             alertUntil = std::max(alertUntil, system_clock::now() + MQTT_ALERT_AFTER_OUTGOING);
                         }
@@ -352,76 +344,123 @@ private:
     }
 
     void disconnect() {
-        mqttClient.disconnect();
-        wifiConnection.reset();
+        if (client != nullptr) {
+            LOGD("Disconnecting from MQTT server");
+            mqttReady.clear();
+            ESP_ERROR_CHECK(esp_mqtt_client_disconnect(client));
+            stopMqttClient();
+            wifiConnection.reset();
+        }
+    }
+
+    void stopMqttClient() {
+        if (client != nullptr) {
+            ESP_ERROR_CHECK(esp_mqtt_client_stop(client));
+            destroyMqttClient();
+        }
+    }
+
+    void destroyMqttClient() {
+        if (client != nullptr) {
+            ESP_ERROR_CHECK(esp_mqtt_client_destroy(client));
+            client = nullptr;
+        }
     }
 
     bool connectIfNecessary() {
         if (!wifiConnection.has_value()) {
-            Log.trace("MQTT: Connecting to WiFi...");
+            LOGV("MQTT: Connecting to WiFi...");
             wifiConnection.emplace(wifi);
-            Log.trace("MQTT: Connected to WiFi");
+            LOGV("MQTT: Connected to WiFi");
         }
 
-        if (!mqttClient.isConnected()) {
-            Log.debug("MQTT: Connecting to MQTT server");
-            mqttReady.clear();
+        if (!mqttReady.isSet()) {
+            LOGD("MQTT: Connecting to MQTT server");
 
-            String serverCert;
-            String clientCert;
-            String clientKey;
-
-            MdnsRecord mqttServer;
+            if (client == nullptr) {
+                String hostname;
+                uint32_t port;
+                if (configHostname.isEmpty()) {
 #ifdef WOKWI
-            Log.debug("MQTT: Using MQTT server on Wokwi host");
-            mqttServer.hostname = "host.wokwi.internal";
-            mqttServer.port = 1883;
+                    hostname = "host.wokwi.internal";
+                    port = 1883;
 #else
-            if (config.host.get().length() > 0) {
-                mqttServer.hostname = config.host.get();
-                mqttServer.port = config.port.get();
-                if (config.serverCert.hasValue()) {
-                    serverCert = joinStrings(config.serverCert.get());
-                    clientCert = joinStrings(config.clientCert.get());
-                    clientKey = joinStrings(config.clientKey.get());
+                    MdnsRecord mqttServer;
+                    if (!mdns.lookupService("mqtt", "tcp", mqttServer, trustMdnsCache)) {
+                        LOGE("MQTT: Failed to lookup MQTT server");
+                        return false;
+                    }
+                    hostname = mqttServer.ip == IPAddress()
+                        ? mqttServer.hostname
+                        : mqttServer.ip.toString();
+                    port = mqttServer.port;
+#endif
+                } else {
+                    hostname = configHostname;
+                    port = configPort;
+                }
+
+                esp_mqtt_client_config_t config = {
+                    .broker {
+                        .address {
+                            .hostname = hostname.c_str(),
+                            .port = port,
+                        },
+                    },
+                    .credentials {
+                        .client_id = clientId.c_str(),
+                    },
+                    .network {
+                        .timeout_ms = duration_cast<milliseconds>(10s).count(),
+                    },
+                };
+
+                LOGD("MQTT: server: %s:%ld, client ID is '%s'",
+                    config.broker.address.hostname,
+                    config.broker.address.port,
+                    config.credentials.client_id);
+
+                if (!configServerCert.isEmpty()) {
+                    config.broker.address.transport = MQTT_TRANSPORT_OVER_SSL;
+                    config.broker.verification.certificate = configServerCert.c_str();
+                    LOGV("MQTT: Server cert:\n%s",
+                        config.broker.verification.certificate);
+
+                    if (!configClientCert.isEmpty() && !configClientKey.isEmpty()) {
+                        config.credentials.authentication = {
+                            .certificate = configClientCert.c_str(),
+                            .key = configClientKey.c_str(),
+                        };
+                        LOGV("MQTT: Client cert:\n%s",
+                            config.credentials.authentication.certificate);
+                    }
+                } else {
+                    config.broker.address.transport = MQTT_TRANSPORT_OVER_TCP;
+                }
+
+                client = esp_mqtt_client_init(&config);
+
+                ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, handleMqttEventCallback, this));
+
+                esp_err_t err = esp_mqtt_client_start(client);
+                if (err != ESP_OK) {
+                    LOGE("MQTT: Connection failed, error = 0x%x: %s",
+                        err, esp_err_to_name(err));
+                    trustMdnsCache = false;
+                    destroyMqttClient();
+                    return false;
+                } else {
+                    trustMdnsCache = true;
                 }
             } else {
-                // TODO Handle lookup failure
-                mdns.lookupService("mqtt", "tcp", mqttServer, trustMdnsCache);
+                // TODO Reconnection probably doesn't work like this?
+                LOGD("MQTT: Reconnecting to MQTT server");
+                ESP_ERROR_CHECK(esp_mqtt_client_reconnect(client));
             }
-#endif
-
-            String hostname;
-            if (mqttServer.ip == IPAddress()) {
-                hostname = mqttServer.hostname;
-            } else {
-                hostname = mqttServer.ip.toString();
-            }
-
-            if (serverCert.isEmpty()) {
-                Log.debug("MQTT: server: %s:%d, client ID is '%s'",
-                    hostname.c_str(), mqttServer.port, clientId.c_str());
-                wifiClient.connect(hostname.c_str(), mqttServer.port);
-                mqttClient.begin(wifiClient);
-            } else {
-                Log.debug("MQTT: server: %s:%d, client ID is '%s', using TLS",
-                    hostname.c_str(), mqttServer.port, clientId.c_str());
-                Log.trace("Server cert: %s", serverCert.c_str());
-                Log.trace("Client cert: %s", clientCert.c_str());
-                wifiClientSecure.setCACert(serverCert.c_str());
-                wifiClientSecure.setCertificate(clientCert.c_str());
-                wifiClientSecure.setPrivateKey(clientKey.c_str());
-                wifiClientSecure.connect(mqttServer.hostname.c_str(), mqttServer.port);
-                mqttClient.begin(wifiClientSecure);
-            }
-
-            if (!mqttClient.connect(clientId.c_str())) {
-                Log.error("MQTT: Connection failed, error = %d",
-                    mqttClient.getLastError());
-                trustMdnsCache = false;
+            if (!mqttReady.awaitSet(MQTT_CONNECTION_TIMEOUT)) {
+                LOGD("MQTT: Connecting to MQTT server timed out");
+                stopMqttClient();
                 return false;
-            } else {
-                trustMdnsCache = true;
             }
 
             // Re-subscribe to existing subscriptions
@@ -429,23 +468,106 @@ private:
                 registerSubscriptionWithMqtt(subscription);
             }
 
-            Log.debug("MQTT: Connected");
-            mqttReady.set();
+            LOGD("MQTT: Connected");
         }
         return true;
     }
 
+    static void handleMqttEventCallback(void* userData, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
+        auto event = static_cast<esp_mqtt_event_handle_t>(eventData);
+        // LOGV("MQTT: Event dispatched from event loop: base=%s, event_id=%d, client=%p, data=%p, data_len=%d, topic=%p, topic_len=%d, msg_id=%d",
+        //     eventBase, event->event_id, event->client, event->data, event->data_len, event->topic, event->topic_len, event->msg_id);
+        auto* driver = static_cast<MqttDriver*>(userData);
+        driver->handleMqttEvent(eventId, event);
+    }
+
+    void handleMqttEvent(int eventId, esp_mqtt_event_handle_t event) {
+        switch (eventId) {
+            case MQTT_EVENT_BEFORE_CONNECT: {
+                LOGV("MQTT: Connecting to MQTT server");
+                break;
+            }
+            case MQTT_EVENT_CONNECTED: {
+                LOGV("MQTT: Connected to MQTT server");
+                mqttReady.set();
+                break;
+            }
+            case MQTT_EVENT_DISCONNECTED: {
+                LOGV("MQTT: Disconnected from MQTT server");
+                mqttReady.clear();
+                break;
+            }
+            case MQTT_EVENT_SUBSCRIBED: {
+                LOGV("MQTT: Subscribed, message ID: %d", event->msg_id);
+                break;
+            }
+            case MQTT_EVENT_UNSUBSCRIBED: {
+                LOGV("MQTT: Unsubscribed, message ID: %d", event->msg_id);
+                break;
+            }
+            case MQTT_EVENT_PUBLISHED: {
+                LOGV("MQTT: Published, message ID %d", event->msg_id);
+                break;
+            }
+            case MQTT_EVENT_DATA: {
+                String topic(event->topic, event->topic_len);
+                String payload(event->data, event->data_len);
+                LOGV("MQTT: Received message on topic '%s'",
+                    topic.c_str());
+                incomingQueue.offerIn(MQTT_QUEUE_TIMEOUT, IncomingMessage { topic, payload });
+                break;
+            }
+            case MQTT_EVENT_ERROR: {
+                if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
+                    LOGE("Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
+                    logErrorIfNonZero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
+                    logErrorIfNonZero("reported from tls stack", event->error_handle->esp_tls_stack_err);
+                    logErrorIfNonZero("captured as transport's socket errno", event->error_handle->esp_transport_sock_errno);
+                }
+                break;
+            }
+            default: {
+                LOGW("MQTT: Unknown event %d", eventId);
+                break;
+            }
+        }
+    }
+
+    static void logErrorIfNonZero(const char* message, int error) {
+        if (error != 0) {
+            LOGE(" - %s: 0x%x", message, error);
+        }
+    }
+
     void processOutgoingMessage(const OutgoingMessage message) {
-        bool success = mqttClient.publish(message.topic, message.payload, message.retain == Retention::Retain, static_cast<int>(message.qos));
+        int ret = esp_mqtt_client_publish(
+            client,
+            message.topic.c_str(),
+            message.payload.c_str(),
+            message.payload.length(),
+            static_cast<int>(message.qos),
+            message.retain == Retention::Retain);
 #ifdef DUMP_MQTT
         if (message.log == LogPublish::Log) {
-            Log.trace("MQTT: Published to '%s' (size: %d)",
-                message.topic.c_str(), message.payload.length());
+            LOGV("MQTT: Published to '%s' (size: %d), result: %d",
+                message.topic.c_str(), message.payload.length(), ret);
         }
 #endif
-        if (!success) {
-            Log.trace("MQTT: Error publishing to '%s', error = %d",
-                message.topic.c_str(), mqttClient.getLastError());
+        bool success;
+        switch (ret) {
+            case -1:
+                LOGD("MQTT: Error publishing to '%s'",
+                    message.topic.c_str());
+                success = false;
+                break;
+            case -2:
+                LOGD("MQTT: Outbox full, message to '%s' dropped",
+                    message.topic.c_str());
+                success = false;
+                break;
+            default:
+                success = true;
+                break;
         }
         if (message.waitingTask != nullptr) {
             uint32_t status = success ? OutgoingMessage::PUBLISH_SUCCESS : OutgoingMessage::PUBLISH_FAILED;
@@ -464,15 +586,15 @@ private:
         const String& payload = message.payload;
 
         if (payload.isEmpty()) {
-            Log.trace("MQTT: Ignoring empty payload");
+            LOGV("MQTT: Ignoring empty payload");
             return;
         }
 
 #ifdef DUMP_MQTT
-        Log.debug("MQTT: Received '%s' (size: %d): %s",
+        LOGD("MQTT: Received '%s' (size: %d): %s",
             topic.c_str(), payload.length(), payload.c_str());
 #else
-        Log.debug("MQTT: Received '%s' (size: %d)",
+        LOGD("MQTT: Received '%s' (size: %d)",
             topic.c_str(), payload.length());
 #endif
         for (auto subscription : subscriptions) {
@@ -484,28 +606,33 @@ private:
                     subscription.handle(topic, json.as<JsonObject>());
                 });
                 if (result != Task::RunResult::OK) {
-                    Log.error("MQTT: Incoming handler for topic '%s' timed out",
+                    LOGE("MQTT: Incoming handler for topic '%s' timed out",
                         topic.c_str());
                 }
                 return;
             }
         }
-        Log.warn("MQTT: No handler for topic '%s'",
+        LOGW("MQTT: No handler for topic '%s'",
             topic.c_str());
     }
 
     // Actually subscribe to the given topic
     bool registerSubscriptionWithMqtt(const Subscription& subscription) {
-        Log.trace("MQTT: Subscribing to topic '%s' (qos = %d)",
+        LOGV("MQTT: Subscribing to topic '%s' (qos = %d)",
             subscription.topic.c_str(), static_cast<int>(subscription.qos));
-        bool success = mqttClient.subscribe(subscription.topic, static_cast<int>(subscription.qos), [](const String& payload, const size_t size) {
-            // Global handler will take care of putting the received message on the incoming queue
-        });
-        if (!success) {
-            Log.error("MQTT: Error subscribing to topic '%s', error = %d\n",
-                subscription.topic.c_str(), mqttClient.getLastError());
+        int ret = esp_mqtt_client_subscribe(client, subscription.topic.c_str(), static_cast<int>(subscription.qos));
+        switch (ret) {
+            case -1:
+                LOGE("MQTT: Error subscribing to topic '%s'",
+                    subscription.topic.c_str());
+                return false;
+            case -2:
+                LOGE("MQTT: Subscription to topic '%s' failed, outbox full",
+                    subscription.topic.c_str());
+                return false;
+            default:
+                return true;
         }
-        return success;
     }
 
     static String getClientId(const String& clientId, const String& instanceName) {
@@ -517,25 +644,29 @@ private:
 
     WiFiDriver& wifi;
     std::optional<WiFiConnection> wifiConnection;
-    WiFiClient wifiClient;
-    WiFiClientSecure wifiClientSecure;
     MdnsDriver& mdns;
     bool trustMdnsCache = true;
-    const Config& config;
+
+    const String configHostname;
+    const int configPort;
+    const String configServerCert;
+    const String configClientCert;
+    const String configClientKey;
     const String clientId;
+
     const bool powerSaveMode;
     StateSource& mqttReady;
 
-    static constexpr int MQTT_BUFFER_SIZE = 2048;
-    MQTTPubSub::PubSubClient<MQTT_BUFFER_SIZE> mqttClient;
+    esp_mqtt_client_handle_t client = nullptr;
 
-    Queue<std::variant<OutgoingMessage, Subscription>> outgoingQueue { "mqtt-outgoing", config.queueSize.get() };
-    Queue<IncomingMessage> incomingQueue { "mqtt-incoming", config.queueSize.get() };
+    Queue<std::variant<OutgoingMessage, Subscription>> outgoingQueue;
+    Queue<IncomingMessage> incomingQueue;
     // TODO Use a map instead
     std::list<Subscription> subscriptions;
 
     // TODO Review these values
-    static constexpr nanoseconds MQTT_LOOP_INTERVAL = 1s;
+    static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = 10s;
+    static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
     static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = 5s;
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
     static constexpr milliseconds MQTT_ALERT_AFTER_OUTGOING = 1s;

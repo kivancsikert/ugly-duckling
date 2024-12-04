@@ -6,6 +6,8 @@
 #include <chrono>
 #include <string>
 
+#include <kernel/Log.hpp>
+
 #ifdef CONFIG_HEAP_TRACING
 #include <esp_heap_trace.h>
 #include <esp_system.h>
@@ -47,7 +49,7 @@ static void dumpPerTaskHeapInfo() {
         .num_totals = &s_prepopulated_num,
         .max_totals = MAX_TASK_NUM,
         .blocks = s_block_arr,
-        .max_blocks = MAX_BLOCK_NUM
+        .max_blocks = MAX_BLOCK_NUM,
     };
 
     heap_caps_get_per_task_info(&heapInfo);
@@ -58,11 +60,12 @@ static void dumpPerTaskHeapInfo() {
             ? pcTaskGetName(taskInfo.task)
             : "Pre-Scheduler allocs";
         taskName.resize(configMAX_TASK_NAME_LEN, ' ');
-        printf("Task %p: %s CAP_8BIT: %d, CAP_32BIT: %d\n",
+        printf("Task %p: %s CAP_8BIT: %d, CAP_32BIT: %d, STACK LEFT: %ld\n",
             taskInfo.task,
             taskName.c_str(),
             taskInfo.size[0],
-            taskInfo.size[1]);
+            taskInfo.size[1],
+            uxTaskGetStackHighWaterMark2(taskInfo.task));
     }
 
     printf("\n\n");
@@ -74,6 +77,8 @@ static void dumpPerTaskHeapInfo() {
 extern "C" void app_main() {
     initArduino();
 
+    initLogging();
+
 #ifdef CONFIG_HEAP_TRACING
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
@@ -81,11 +86,11 @@ extern "C" void app_main() {
     new farmhub::devices::Device();
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
-    Task::loop("task-heaps", 8192, [](Task& task) {
-        while (true) {
-            dumpPerTaskHeapInfo();
-            vTaskDelay(ticks(5s).count());
-        }
+    Task::loop("task-heaps", 4096, [](Task& task) {
+        dumpPerTaskHeapInfo();
+        Task::delay(ticks(5s));
     });
 #endif
+
+    vTaskDelete(NULL);
 }

@@ -5,6 +5,8 @@
 
 #include <Arduino.h>
 
+#include "esp_netif.h"
+#include "esp_wifi.h"
 #include <esp_pm.h>
 #include <esp_private/esp_clk.h>
 
@@ -12,8 +14,8 @@
 
 #include <kernel/Command.hpp>
 #include <kernel/Concurrent.hpp>
+#include <kernel/Console.hpp>
 #include <kernel/Kernel.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
 
@@ -92,177 +94,115 @@ namespace farmhub::devices {
 #ifdef FARMHUB_DEBUG
 class ConsolePrinter {
 public:
-    ConsolePrinter() {
-        static const String spinner = "|/-\\";
-        static const int spinnerLength = spinner.length();
+    ConsolePrinter(const shared_ptr<BatteryDriver> battery)
+        : battery(battery) {
         status.reserve(256);
         Task::loop("console", 3072, 1, [this](Task& task) {
-            status.clear();
-
-            counter = (counter + 1) % spinnerLength;
-            status.concat("[");
-            status.concat(spinner.substring(counter, counter + 1));
-            status.concat("] ");
-
-            status.concat("\033[33m");
-            status.concat(FARMHUB_VERSION);
-            status.concat("\033[0m");
-
-            status.concat(", WIFI: ");
-            status.concat(wifiStatus());
-
-            status.concat(", uptime: \033[33m");
-            status.concat(String(float(millis()) / 1000.0f, 1));
-            status.concat("\033[0m s");
-
-            status.concat(", RTC: \033[33m");
-            status.concat(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED");
-            status.concat("\033[0m");
-
-            status.concat(", heap: \033[33m");
-            status.concat(String(float(ESP.getFreeHeap()) / 1024.0f, 2));
-            status.concat("\033[0m kB");
-
-            status.concat(", CPU: \033[33m");
-            status.concat(esp_clk_cpu_freq() / 1000000);
-            status.concat("\033[0m MHz");
-
-            {
-                Lock lock(batteryMutex);
-                if (battery != nullptr) {
-                    status.concat(", battery: \033[33m");
-                    status.concat(String(battery->getVoltage(), 2));
-                    status.concat("\033[0m V");
-                }
-            }
-
-            Log.printToSerial("\033[1G\033[0K");
-
-            consoleQueue.drain([](const String& line) {
-                Log.printlnToSerial(line.c_str());
-            });
-
-            Log.printToSerial(status.c_str());
+            printStatus();
             task.delayUntil(100ms);
         });
     }
 
-    void registerBattery(std::shared_ptr<BatteryDriver> battery) {
-        Lock lock(batteryMutex);
-        this->battery = battery;
-    }
-
-    void printLog(Level level, const char* message) {
-        sprintf(timeBuffer, "%8.3f", millis() / 1000.0);
-        String* buffer = new String();
-        buffer->reserve(256);
-        buffer->concat("\033[0;90m");
-        buffer->concat(timeBuffer);
-        buffer->concat("\033[0m [\033[0;31m");
-        buffer->concat(pcTaskGetName(nullptr));
-        buffer->concat("\033[0m/\033[0;32m");
-        buffer->concat(xPortGetCoreID());
-        buffer->concat("\033[0m] ");
-        switch (level) {
-            case Level::Fatal:
-                buffer->concat("\033[0;31mFATAL\033[0m ");
-                break;
-            case Level::Error:
-                buffer->concat("\033[0;31mERROR\033[0m ");
-                break;
-            case Level::Warning:
-                buffer->concat("\033[0;33mWARNING\033[0m ");
-                break;
-            case Level::Info:
-                buffer->concat("\033[0;32mINFO\033[0m ");
-                break;
-            case Level::Debug:
-                buffer->concat("\033[0;34mDEBUG\033[0m ");
-                break;
-            case Level::Trace:
-                buffer->concat("\033[0;36mTRACE\033[0m ");
-                break;
-            default:
-                break;
-        }
-        buffer->concat(message);
-        if (!consoleQueue.offer(*buffer)) {
-            Log.printlnToSerial(buffer->c_str());
-        }
-        delete buffer;
-    }
-
 private:
-    static String wifiStatus() {
-        switch (WiFi.status()) {
-            case WL_NO_SHIELD:
-                return "\033[0;31moff\033[0m";
-            case WL_IDLE_STATUS:
-                return "\033[0;31midle\033[0m";
-            case WL_NO_SSID_AVAIL:
-                return "\033[0;31mno SSID\033[0m";
-            case WL_SCAN_COMPLETED:
-                return "\033[0;33mscan completed\033[0m";
-            case WL_CONNECTED:
-                return "\033[0;33m" + WiFi.localIP().toString() + "\033[0m";
-            case WL_CONNECT_FAILED:
-                return "\033[0;31mfailed\033[0m";
-            case WL_CONNECTION_LOST:
-                return "\033[0;31mconnection lost\033[0m";
-            case WL_DISCONNECTED:
-                return "\033[0;33mdisconnected\033[0m";
-            default:
-                return "\033[0;31munknown\033[0m";
+    void printStatus() {
+        static const char* spinner = "|/-\\";
+        static const int spinnerLength = strlen(spinner);
+
+        status.clear();
+        counter = (counter + 1) % spinnerLength;
+        status.concat("[");
+        status.concat(spinner[counter]);
+        status.concat("] ");
+
+        status.concat("\033[33m");
+        status.concat(FARMHUB_VERSION);
+        status.concat("\033[0m");
+
+        status.concat(", WIFI: ");
+        status.concat(wifiStatus());
+
+        status.concat(", uptime: \033[33m");
+        status.concat(String(float(millis()) / 1000.0f, 1));
+        status.concat("\033[0m s");
+
+        status.concat(", RTC: \033[33m");
+        status.concat(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED");
+        status.concat("\033[0m");
+
+        status.concat(", heap: \033[33m");
+        status.concat(String(float(ESP.getFreeHeap()) / 1024.0f, 2));
+        status.concat("\033[0m kB");
+
+        status.concat(", CPU: \033[33m");
+        status.concat(esp_clk_cpu_freq() / 1000000);
+        status.concat("\033[0m MHz");
+
+        if (battery != nullptr) {
+            status.concat(", battery: \033[33m");
+            status.concat(String(battery->getVoltage(), 2));
+            status.concat("\033[0m V");
         }
+
+        printf("\033[1G\033[0K%s", status.c_str());
+    }
+
+    static const char* wifiStatus() {
+        auto netif = esp_netif_get_default_netif();
+        if (!netif) {
+            return "\033[0;31moff\033[0m";
+        }
+
+        wifi_mode_t mode;
+        ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
+
+        switch (mode) {
+            case WIFI_MODE_STA:
+                break;
+            case WIFI_MODE_NULL:
+                return "\033[0;31moff\033[0m";
+            case WIFI_MODE_AP:
+                return "\033[0;32mAP\033[0m";
+            case WIFI_MODE_APSTA:
+                return "\033[0;32mAPSTA\033[0m";
+            default:
+                return "\033[0;31munknown mode\033[0m";
+        }
+
+        // Retrieve the current Wi-Fi station connection status
+        wifi_ap_record_t ap_info;
+        esp_err_t err = esp_wifi_sta_get_ap_info(&ap_info);
+
+        // TODO Handle ESP_ERR_WIFI_CONN, or better yet, use `WiFiDriver` directly
+        switch (err) {
+            case ESP_OK:
+                break;
+            case ESP_ERR_WIFI_CONN:
+                return "\033[0;32mconnection-error\033[0m";
+            case ESP_ERR_WIFI_NOT_CONNECT:
+                return "\033[0;33mdisconnected\033[0m";
+            case ESP_ERR_WIFI_NOT_STARTED:
+                return "\033[0;31mWi-Fi not started\033[0m";
+            default:
+                return esp_err_to_name(err);
+        }
+
+        // Check IP address
+        esp_netif_ip_info_t ip_info;
+        err = esp_netif_get_ip_info(netif, &ip_info);
+        if (err == ESP_OK && ip_info.ip.addr != 0) {
+            static char ip_str[32];
+            snprintf(ip_str, sizeof(ip_str), "\033[0;33m" IPSTR "\033[0m", IP2STR(&ip_info.ip));
+            return ip_str;
+        }
+
+        return "\033[0;31midle\033[0m";
     }
 
     int counter;
-    char timeBuffer[12];
     String status;
-    Mutex batteryMutex;
-    std::shared_ptr<BatteryDriver> battery;
-
-    Queue<String> consoleQueue { "console", 128 };
+    const std::shared_ptr<BatteryDriver> battery;
 };
-
-ConsolePrinter consolePrinter;
 #endif
-
-struct LogRecord {
-    Level level;
-    String message;
-};
-
-class ConsoleProvider : public LogConsumer {
-public:
-    ConsoleProvider(Queue<LogRecord>& logRecords, Level recordedLevel)
-        : logRecords(logRecords)
-        , recordedLevel(recordedLevel) {
-#ifndef WOKWI
-        Serial.begin(115200);
-        Serial1.begin(115200, SERIAL_8N1, pins::RXD0->getGpio(), pins::TXD0->getGpio());
-#if Serial != Serial0
-        Serial0.begin(115200);
-#endif
-#endif
-        Log.setConsumer(this);
-    }
-
-    void consumeLog(Level level, const char* message) override {
-        if (level <= recordedLevel) {
-            logRecords.offer(level, message);
-        }
-#ifdef FARMHUB_DEBUG
-        consolePrinter.printLog(level, message);
-#else
-        Log.printlnToSerial(message);
-#endif
-    }
-
-private:
-    Queue<LogRecord>& logRecords;
-    const Level recordedLevel;
-};
 
 class MemoryTelemetryProvider : public TelemetryProvider {
 public:
@@ -298,48 +238,22 @@ public:
             // due to the high current draw of the boot process.
             auto voltage = battery->getVoltage();
             if (voltage != 0.0 && voltage < BATTERY_BOOT_THRESHOLD) {
-                Log.printfToSerial("Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
+                ESP_LOGW("battery", "Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
                     voltage, BATTERY_BOOT_THRESHOLD);
                 enterLowPowerDeepSleep();
             }
 
-#ifdef FARMHUB_DEBUG
-            consolePrinter.registerBattery(battery);
-#endif
-
-            Task::loop("battery", 3072, [this](Task& task) {
-                task.delayUntil(LOW_POWER_CHECK_INTERVAL);
-                auto currentVoltage = battery->getVoltage();
-                batteryVoltage.record(currentVoltage);
-                auto voltage = batteryVoltage.getAverage();
-
-                if (voltage != 0.0 && voltage < BATTERY_SHUTDOWN_THRESHOLD) {
-                    Log.info("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
-                        voltage, BATTERY_SHUTDOWN_THRESHOLD, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
-
-                    // TODO Publihs all MQTT messages, then shut down WiFi, and _then_ start shutting down peripherals
-                    //      Doing so would result in less of a power spike, which can be important if the battery is already low
-
-                    // Run in separate task to allocate enough stack
-                    Task::run("shutdown", 8192, [&](Task& task) {
-                        // Notify all shutdown listeners
-                        for (auto& listener : shutdownListeners) {
-                            listener();
-                        }
-                        Log.printlnToSerial("Shutdown process finished");
-                    });
-                    task.delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
-                    enterLowPowerDeepSleep();
-                }
+            Task::loop("battery", 1536, [this](Task& task) {
+                checkBatteryVoltage(task);
             });
         }
 
-        Log.log(Level::Info, F("  ______                   _    _       _"));
-        Log.log(Level::Info, F(" |  ____|                 | |  | |     | |"));
-        Log.log(Level::Info, F(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__"));
-        Log.log(Level::Info, F(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\"));
-        Log.log(Level::Info, F(" | | | (_| | |  | | | | | | |  | | |_| | |_) |"));
-        Log.log(Level::Info, F(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s"), FARMHUB_VERSION);
+        LOGI("  ______                   _    _       _");
+        LOGI(" |  ____|                 | |  | |     | |");
+        LOGI(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__");
+        LOGI(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\");
+        LOGI(" | | | (_| | |  | | | | | | |  | | |_| | |_) |");
+        LOGI(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ " FARMHUB_VERSION);
     }
 
     void registerShutdownListener(std::function<void()> listener) {
@@ -356,8 +270,38 @@ public:
     const shared_ptr<BatteryDriver> battery;
 
 private:
+#ifdef FARMHUB_DEBUG
+    ConsolePrinter consolePrinter { battery };
+#endif
+
+    void checkBatteryVoltage(Task& task) {
+        task.delayUntil(LOW_POWER_CHECK_INTERVAL);
+        auto currentVoltage = battery->getVoltage();
+        batteryVoltage.record(currentVoltage);
+        auto voltage = batteryVoltage.getAverage();
+
+        if (voltage != 0.0 && voltage < BATTERY_SHUTDOWN_THRESHOLD) {
+            LOGI("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
+                voltage, BATTERY_SHUTDOWN_THRESHOLD, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
+
+            // TODO Publish all MQTT messages, then shut down WiFi, and _then_ start shutting down peripherals
+            //      Doing so would result in less of a power spike, which can be important if the battery is already low
+
+            // Run in separate task to allocate enough stack
+            Task::run("shutdown", 8192, [&](Task& task) {
+                // Notify all shutdown listeners
+                for (auto& listener : shutdownListeners) {
+                    listener();
+                }
+                printf("Shutdown process finished\n");
+            });
+            task.delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
+            enterLowPowerDeepSleep();
+        }
+    }
+
     [[noreturn]] inline void enterLowPowerDeepSleep() {
-        Log.printlnToSerial("Entering low power deep sleep");
+        printf("Entering low power deep sleep\n");
         ESP.deepSleep(duration_cast<microseconds>(LOW_POWER_SLEEP_CHECK_INTERVAL).count());
         // Signal to the compiler that we are not returning for real
         abort();
@@ -403,10 +347,10 @@ public:
     Device() {
         kernel.switches.onReleased("factory-reset", deviceDefinition.bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 15s) {
-                Log.info("Factory reset triggered after %lld ms", duration.count());
+                LOGI("Factory reset triggered after %lld ms", duration.count());
                 kernel.performFactoryReset(true);
             } else if (duration >= 5s) {
-                Log.info("WiFi reset triggered after %lld ms", duration.count());
+                LOGI("WiFi reset triggered after %lld ms", duration.count());
                 kernel.performFactoryReset(false);
             }
         });
@@ -416,9 +360,9 @@ public:
             configuredKernel.registerShutdownListener([this]() {
                 peripheralManager.shutdown();
             });
-            Log.info("Battery configured");
+            LOGI("Battery configured");
         } else {
-            Log.info("No battery configured");
+            LOGI("No battery configured");
         }
 
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
@@ -460,19 +404,19 @@ public:
         JsonDocument peripheralsInitDoc;
         JsonArray peripheralsInitJson = peripheralsInitDoc.to<JsonArray>();
 
-        auto builtInPeripheralsCofig = deviceDefinition.getBuiltInPeripherals();
-        Log.debug("Loading configuration for %d built-in peripherals",
-            builtInPeripheralsCofig.size());
-        for (auto& perpheralConfig : builtInPeripheralsCofig) {
-            peripheralManager.createPeripheral(perpheralConfig, peripheralsInitJson);
+        auto builtInPeripheralsConfig = deviceDefinition.getBuiltInPeripherals();
+        LOGD("Loading configuration for %d built-in peripherals",
+            builtInPeripheralsConfig.size());
+        for (auto& peripheralConfig : builtInPeripheralsConfig) {
+            peripheralManager.createPeripheral(peripheralConfig, peripheralsInitJson);
         }
 
         auto& peripheralsConfig = deviceConfig.peripherals.get();
-        Log.info("Loading configuration for %d user-configured peripherals",
+        LOGI("Loading configuration for %d user-configured peripherals",
             peripheralsConfig.size());
         bool peripheralError = false;
-        for (auto& perpheralConfig : peripheralsConfig) {
-            if (!peripheralManager.createPeripheral(perpheralConfig.get(), peripheralsInitJson)) {
+        for (auto& peripheralConfig : peripheralsConfig) {
+            if (!peripheralManager.createPeripheral(peripheralConfig.get(), peripheralsInitJson)) {
                 peripheralError = true;
             }
         }
@@ -516,14 +460,14 @@ public:
 
         kernel.getKernelReadyState().set();
 
-        Log.info("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
+        LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
             millis() / 1000.0,
             kernel.version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
             deviceConfig.getHostname().c_str(),
-            WiFi.localIP().toString().c_str(),
-            WiFi.SSID().c_str(),
+            kernel.wifi.getIp().value_or("<no-ip>").c_str(),
+            kernel.wifi.getSsid().value_or("<no-ssid>").c_str(),
             duration_cast<seconds>(system_clock::now().time_since_epoch()).count());
     }
 

@@ -3,15 +3,13 @@
 #include <chrono>
 #include <list>
 
-#include <WiFi.h>
-#include <WiFiProv.h>
-
+#include <esp_event.h>
 #include <esp_wifi.h>
+#include <wifi_provisioning/manager.h>
+#include <wifi_provisioning/scheme_softap.h>
 
 #include <kernel/Concurrent.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/State.hpp>
-#include <kernel/Strings.hpp>
 #include <kernel/Task.hpp>
 
 using namespace std::chrono_literals;
@@ -21,103 +19,189 @@ namespace farmhub::kernel::drivers {
 
 class WiFiDriver {
 public:
-    WiFiDriver(StateSource& networkRequested, StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode)
+    WiFiDriver(StateSource& networkRequested, StateSource& networkConnecting, StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode)
         : networkRequested(networkRequested)
+        , networkConnecting(networkConnecting)
         , networkReady(networkReady)
         , configPortalRunning(configPortalRunning)
         , hostname(hostname)
         , powerSaveMode(powerSaveMode) {
-        Log.debug("WiFi: initializing");
+        LOGD("WiFi: initializing");
 
-        WiFi.begin();
-        if (powerSaveMode) {
-            auto listenInterval = 50;
-            Log.debug("WiFi enabling power save mode, listen interval: %d",
-                listenInterval);
-            esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
-            wifi_config_t conf;
-            ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &conf));
-            conf.sta.listen_interval = listenInterval;
-            ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &conf));
-        }
+        // Initialize TCP/IP adapter and event loop
+        ESP_ERROR_CHECK(esp_netif_init());
+        ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-        WiFi.onEvent(
-            [](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: connected to %s",
-                    String(info.wifi_sta_connected.ssid, info.wifi_sta_connected.ssid_len).c_str());
-            },
-            ARDUINO_EVENT_WIFI_STA_CONNECTED);
-        WiFi.onEvent(
-            [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: got IP %s, netmask %s, gateway %s",
-                    IPAddress(info.got_ip.ip_info.ip.addr).toString().c_str(),
-                    IPAddress(info.got_ip.ip_info.netmask.addr).toString().c_str(),
-                    IPAddress(info.got_ip.ip_info.gw.addr).toString().c_str());
-                networkReady.set();
-                eventQueue.offer(WiFiEvent::CONNECTED);
-            },
-            ARDUINO_EVENT_WIFI_STA_GOT_IP);
-        WiFi.onEvent(
-            [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: lost IP address");
-                networkReady.clear();
-                eventQueue.offer(WiFiEvent::DISCONNECTED);
-            },
-            ARDUINO_EVENT_WIFI_STA_LOST_IP);
-        WiFi.onEvent(
-            [this, &networkReady](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: disconnected from %s, reason: %s",
-                    String(info.wifi_sta_disconnected.ssid, info.wifi_sta_disconnected.ssid_len).c_str(),
-                    WiFi.disconnectReasonName(static_cast<wifi_err_reason_t>(info.wifi_sta_disconnected.reason)));
-                networkReady.clear();
-                eventQueue.offer(WiFiEvent::DISCONNECTED);
-            },
-            ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
-        WiFi.onEvent(
-            [&configPortalRunning](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: provisioning started");
-                configPortalRunning.set();
-            },
-            ARDUINO_EVENT_PROV_START);
-        WiFi.onEvent(
-            [](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("Received Wi-Fi credentials for SSID '%s'",
-                    (const char*) info.prov_cred_recv.ssid);
-            },
-            ARDUINO_EVENT_PROV_CRED_RECV);
-        WiFi.onEvent(
-            [](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: provisioning failed because %s",
-                    info.prov_fail_reason == NETWORK_PROV_WIFI_STA_AUTH_ERROR ? "authentication failed" : "AP not found");
-            },
-            ARDUINO_EVENT_PROV_CRED_FAIL);
-        WiFi.onEvent(
-            [](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: provisioning successful");
-            },
-            ARDUINO_EVENT_PROV_CRED_SUCCESS);
-        WiFi.onEvent(
-            [&configPortalRunning](WiFiEvent_t event, WiFiEventInfo_t info) {
-                Log.debug("WiFi: provisioning finished");
-                configPortalRunning.clear();
-            },
-            ARDUINO_EVENT_PROV_END);
+        // Create default WiFi station interface
+        esp_netif_create_default_wifi_sta();
+        esp_netif_create_default_wifi_ap();
 
-        Task::run("wifi", 3072, [this](Task&) {
+        // Initialize WiFi
+        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+        ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+        ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+
+        // Register event handlers
+        ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onEvent, this));
+        ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onEvent, this));
+        ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onEvent, this));
+
+        Task::run("wifi-driver", 4096, [this](Task&) {
             runLoop();
         });
     }
 
+    std::optional<String> getSsid() {
+        Lock lock(metadataMutex);
+        return ssid;
+    }
+
+    std::optional<String> getIp() {
+        Lock lock(metadataMutex);
+        return ip.transform([](const esp_ip4_addr_t& ip) {
+            char ipString[16];
+            esp_ip4addr_ntoa(&ip, ipString, sizeof(ipString));
+            return String(ipString);
+        });
+    }
+
 private:
+    static void onEvent(void* arg, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
+        auto* driver = static_cast<WiFiDriver*>(arg);
+        if (eventBase == WIFI_EVENT) {
+            driver->onWiFiEvent(eventId, eventData);
+        } else if (eventBase == IP_EVENT) {
+            driver->onIpEvent(eventId, eventData);
+        } else if (eventBase == WIFI_PROV_EVENT) {
+            driver->onWiFiProvEvent(eventId, eventData);
+        }
+    }
+
+    void onWiFiEvent(int32_t eventId, void* eventData) {
+        switch (eventId) {
+            case WIFI_EVENT_STA_START: {
+                LOGD("WiFi: Started");
+                esp_err_t err = esp_wifi_connect();
+                if (err != ESP_OK) {
+                    LOGD("WiFi: Failed to start connecting: %s", esp_err_to_name(err));
+                }
+                break;
+            }
+            case WIFI_EVENT_STA_STOP: {
+                LOGD("WiFi: Stopped");
+                break;
+            }
+            case WIFI_EVENT_STA_CONNECTED: {
+                auto event = static_cast<wifi_event_sta_connected_t*>(eventData);
+                String newSsid(event->ssid, event->ssid_len);
+                {
+                    Lock lock(metadataMutex);
+                    ssid = newSsid;
+                }
+                LOGD("WiFi: Connected to the AP %s",
+                    newSsid.c_str());
+                break;
+            }
+            case WIFI_EVENT_STA_DISCONNECTED: {
+                auto event = static_cast<wifi_event_sta_disconnected_t*>(eventData);
+                networkReady.clear();
+                networkConnecting.clear();
+                {
+                    Lock lock(metadataMutex);
+                    ssid.reset();
+                }
+                eventQueue.offer(WiFiEvent::DISCONNECTED);
+                LOGD("WiFi: Disconnected from the AP %s, reason: %d",
+                    String(event->ssid, event->ssid_len).c_str(), event->reason);
+                break;
+            }
+            case WIFI_EVENT_AP_STACONNECTED: {
+                LOGI("WiFi: SoftAP transport connected");
+                break;
+            }
+            case WIFI_EVENT_AP_STADISCONNECTED: {
+                LOGI("WiFi: SoftAP transport disconnected");
+                break;
+            }
+        }
+    }
+
+    void onIpEvent(int32_t eventId, void* eventData) {
+        switch (eventId) {
+            case IP_EVENT_STA_GOT_IP: {
+                auto* event = static_cast<ip_event_got_ip_t*>(eventData);
+                networkReady.set();
+                networkConnecting.clear();
+                {
+                    Lock lock(metadataMutex);
+                    ip = event->ip_info.ip;
+                }
+                eventQueue.offer(WiFiEvent::CONNECTED);
+                LOGD("WiFi: Got IP - " IPSTR, IP2STR(&event->ip_info.ip));
+                break;
+            }
+            case IP_EVENT_STA_LOST_IP: {
+                networkReady.clear();
+                {
+                    Lock lock(metadataMutex);
+                    ip.reset();
+                }
+                eventQueue.offer(WiFiEvent::DISCONNECTED);
+                LOGD("WiFi: Lost IP");
+                break;
+            }
+        }
+    }
+
+    void onWiFiProvEvent(int32_t eventId, void* eventData) {
+        switch (eventId) {
+            case WIFI_PROV_START: {
+                LOGD("WiFi: provisioning started");
+                // Do not turn WiFi off until provisioning finishes
+                acquire();
+                break;
+            }
+            case WIFI_PROV_CRED_RECV: {
+                auto wifiConfig = static_cast<wifi_sta_config_t*>(eventData);
+                LOGD("Received Wi-Fi credentials for SSID '%s'",
+                    (const char*) wifiConfig->ssid);
+                break;
+            }
+            case WIFI_PROV_CRED_FAIL: {
+                auto* reason = static_cast<wifi_prov_sta_fail_reason_t*>(eventData);
+                LOGD("WiFi: provisioning failed because %s",
+                    *reason == WIFI_PROV_STA_AUTH_ERROR
+                        ? "authentication failed"
+                        : "AP not found");
+                ESP_ERROR_CHECK(wifi_prov_mgr_reset_sm_state_on_failure());
+                break;
+            }
+            case WIFI_PROV_CRED_SUCCESS: {
+                LOGD("WiFi: provisioning successful");
+                break;
+            }
+            case WIFI_PROV_END: {
+                LOGD("WiFi: provisioning finished");
+                wifi_prov_mgr_deinit();
+                configPortalRunning.clear();
+                networkConnecting.clear();
+                release();
+                break;
+            }
+        }
+    }
+
     inline void runLoop() {
         int clients = 0;
+        bool connected = false;
         while (true) {
-            auto event = eventQueue.pollIn(WIFI_CHECK_INTERVAL);
-            if (event.has_value()) {
+            for (auto event = eventQueue.pollIn(WIFI_CHECK_INTERVAL); event.has_value(); event = eventQueue.poll()) {
                 switch (event.value()) {
                     case WiFiEvent::CONNECTED:
+                        connected = true;
                         break;
                     case WiFiEvent::DISCONNECTED:
+                        connected = false;
                         break;
                     case WiFiEvent::WANTS_CONNECT:
                         clients++;
@@ -128,17 +212,22 @@ private:
                 }
             }
 
-            bool connected = WiFi.isConnected();
             if (clients > 0) {
                 networkRequested.set();
-                if (!connected && !configPortalRunning.isSet()) {
-                    Log.trace("WiFi: Connecting for first client");
-                    connect();
+                if (!connected) {
+                    if (networkConnecting.isSet()) {
+                        LOGV("WiFi: Already connecting");
+                    } else if (configPortalRunning.isSet()) {
+                        LOGV("WiFi: Provisioning already running");
+                    } else {
+                        LOGV("WiFi: Connecting for first client");
+                        connect();
+                    }
                 }
             } else {
                 networkRequested.clear();
                 if (connected && powerSaveMode) {
-                    Log.trace("WiFi: No more clients, disconnecting");
+                    LOGV("WiFi: No more clients, disconnecting");
                     disconnect();
                 }
             }
@@ -146,32 +235,70 @@ private:
     }
 
     void connect() {
-        // Print wifi status
-        Log.debug("WiFi status: %d",
-            WiFi.status());
+        networkConnecting.set();
 #ifdef WOKWI
-        Log.debug("Skipping WiFi provisioning on Wokwi");
-        // Use Wokwi WiFi network
-        WiFi.begin("Wokwi-GUEST", "", 6);
+        LOGD("WiFi: Skipping provisioning on Wokwi");
+        wifi_config_t wifiConfig = {
+            .sta = {
+                .ssid = "Wokwi-GUEST",
+                .password = "",
+                .channel = 6,
+            }
+        };
+        startStation(wifiConfig);
 #else
-        StringPrint qr;
-// BLE Provisioning using the ESP SoftAP Prov works fine for any BLE SoC, including ESP32, ESP32S3 and ESP32C3.
-#if CONFIG_BLUEDROID_ENABLED && !defined(USE_SOFT_AP)
-        Log.debug("Begin Provisioning using BLE");
-        // Sample uuid that user can pass during provisioning using BLE
-        uint8_t uuid[16] = { 0xb4, 0xdf, 0x5a, 0x1c, 0x3f, 0x6b, 0xf4, 0xbf, 0xea, 0x4a, 0x82, 0x03, 0x04, 0x90, 0x1a, 0x02 };
-        WiFiProv.beginProvision(
-            NETWORK_PROV_SCHEME_BLE, NETWORK_PROV_SCHEME_HANDLER_FREE_BLE, NETWORK_PROV_SECURITY_1, pop, hostname.c_str(), serviceKey, uuid, resetProvisioned);
-        WiFiProv.printQR(hostname.c_str(), pop, "ble", qr);
-#else
-        Log.debug("Begin Provisioning using Soft AP");
-        WiFiProv.beginProvision(
-            NETWORK_PROV_SCHEME_SOFTAP, NETWORK_PROV_SCHEME_HANDLER_NONE, NETWORK_PROV_SECURITY_1, pop, hostname.c_str(), serviceKey, nullptr, resetProvisioned);
-        WiFiProv.printQR(hostname.c_str(), pop, "softap", qr);
+        bool provisioned = false;
+        ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
+        if (provisioned) {
+            wifi_config_t wifiConfig;
+            ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifiConfig));
+            LOGD("WiFi: Connecting using stored credentials to %s (password '%s')",
+                wifiConfig.sta.ssid, wifiConfig.sta.password);
+            startStation(wifiConfig);
+        } else {
+            LOGD("WiFi: No stored credentials, starting provisioning");
+            configPortalRunning.set();
+            startProvisioning();
+        }
 #endif
-        Log.debug("%s",
-            qr.buffer.c_str());
-#endif
+    }
+
+    void startStation(wifi_config_t& config) {
+        ESP_ERROR_CHECK(esp_wifi_stop());
+
+        if (powerSaveMode) {
+            auto listenInterval = 50;
+            LOGV("WiFi enabling power save mode, listen interval: %d",
+                listenInterval);
+            ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
+            config.sta.listen_interval = listenInterval;
+        }
+
+        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
+        ESP_ERROR_CHECK(esp_wifi_start());
+    }
+
+    void startProvisioning() {
+        // Initialize provisioning manager
+        wifi_prov_mgr_config_t config = {
+            .scheme = wifi_prov_scheme_softap,
+            .scheme_event_handler = WIFI_PROV_EVENT_HANDLER_NONE
+        };
+        ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
+
+        char serviceName[32];
+        uint8_t mac[6];
+        const char* ssid_prefix = "PROV_";
+        esp_wifi_get_mac(WIFI_IF_STA, mac);
+        snprintf(serviceName, sizeof(serviceName), "%s%02X%02X%02X",
+            ssid_prefix, mac[3], mac[4], mac[5]);
+        LOGD("WiFi: Starting provisioning service '%s'",
+            serviceName);
+
+        ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, pop, serviceName, serviceKey));
+
+        // TODO Maybe print QR code?
     }
 
     static constexpr const char* pop = "abcd1234";
@@ -180,9 +307,9 @@ private:
 
     void disconnect() {
         networkReady.clear();
-        if (!WiFi.disconnect(true)) {
-            Log.error("WiFi: failed to shut down");
-        }
+        LOGD("WiFi: Disconnecting");
+        ESP_ERROR_CHECK(esp_wifi_disconnect());
+        ESP_ERROR_CHECK(esp_wifi_stop());
     }
 
     StateSource& acquire() {
@@ -196,6 +323,7 @@ private:
     }
 
     StateSource& networkRequested;
+    StateSource& networkConnecting;
     StateSource& networkReady;
     StateSource& configPortalRunning;
     const String hostname;
@@ -211,7 +339,11 @@ private:
     CopyQueue<WiFiEvent> eventQueue { "wifi-events", 16 };
 
     static constexpr milliseconds WIFI_QUEUE_TIMEOUT = 1s;
-    static constexpr milliseconds WIFI_CHECK_INTERVAL = 5s;
+    static constexpr milliseconds WIFI_CHECK_INTERVAL = 1min;
+
+    Mutex metadataMutex;
+    std::optional<String> ssid;
+    std::optional<esp_ip4_addr_t> ip;
 
     friend class WiFiConnection;
 };

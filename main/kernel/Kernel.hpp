@@ -4,9 +4,10 @@
 #include <functional>
 #include <optional>
 
+#include <esp_crt_bundle.h>
+#include <esp_http_client.h>
+#include <esp_https_ota.h>
 #include <esp_mac.h>
-
-#include <HTTPUpdate.h>
 
 #include <nvs_flash.h>
 
@@ -14,7 +15,6 @@
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/I2CManager.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/StateManager.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -67,7 +67,7 @@ public:
         , mqttConfig(mqttConfig)
         , statusLed(statusLed) {
 
-        Log.info("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
+        LOGI("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
             version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
@@ -75,11 +75,11 @@ public:
             getMacAddress().c_str());
 
         // TODO Allocate less memory when FARMHUB_DEBUG is disabled
-        Task::loop("status-update", 3172, [this](Task&) { updateState(); });
+        Task::loop("status-update", 3072, [this](Task&) { updateState(); });
 
         httpUpdateResult = handleHttpUpdate();
         if (!httpUpdateResult.isEmpty()) {
-            Log.error("HTTP update failed because: %s",
+            LOGE("HTTP update failed because: %s",
                 httpUpdateResult.c_str());
         }
     }
@@ -109,7 +109,7 @@ public:
     }
 
     void performFactoryReset(bool completeReset) {
-        Log.printlnToSerial("Performing factory reset");
+        LOGI("Performing factory reset");
 
         statusLed.turnOn();
         delay(1000);
@@ -123,14 +123,14 @@ public:
             delay(1000);
             statusLed.turnOn();
 
-            Log.printlnToSerial(" - Deleting the file system...");
+            LOGI(" - Deleting the file system...");
             fs.reset();
         }
 
-        Log.printlnToSerial(" - Clearing NVS...");
+        LOGI(" - Clearing NVS...");
         nvs_flash_erase();
 
-        Log.printlnToSerial(" - Restarting...");
+        LOGI(" - Restarting...");
         ESP.restart();
     }
 
@@ -146,22 +146,19 @@ private:
         RTC_SYNCING,
         MQTT_CONNECTING,
         INIT_FINISHING,
-        TRNASMITTING,
+        TRANSMITTING,
         IDLE
     };
 
     void updateState() {
         KernelState newState;
-        if (networkRequestedState.isSet() && !networkReadyState.isSet()) {
-            // We don't have network
-            if (configPortalRunningState.isSet()) {
-                // We are waiting for the user to configure the network
-                newState = KernelState::NETWORK_CONFIGURING;
-            } else {
-                // We are waiting for network connection
-                newState = KernelState::NETWORK_CONNECTING;
-            }
-        } else if (!rtcInSyncState.isSet()) {
+        if (configPortalRunningState.isSet()) {
+            // We are waiting for the user to configure the network
+            newState = KernelState::NETWORK_CONFIGURING;
+        } else if (networkConnectingState.isSet()) {
+            // We are waiting for network connection
+            newState = KernelState::NETWORK_CONNECTING;
+        } else if (networkRequestedState.isSet() && !rtcInSyncState.isSet()) {
             newState = KernelState::RTC_SYNCING;
         } else if (networkRequestedState.isSet() && !mqttReadyState.isSet()) {
             // We are waiting for MQTT connection
@@ -169,14 +166,14 @@ private:
         } else if (!kernelReadyState.isSet()) {
             // We are waiting for init to finish
             newState = KernelState::INIT_FINISHING;
-        } else if (networkRequestedState.isSet()) {
-            newState = KernelState::TRNASMITTING;
+        } else if (networkReadyState.isSet()) {
+            newState = KernelState::TRANSMITTING;
         } else {
             newState = KernelState::IDLE;
         }
 
         if (newState != state) {
-            Log.debug("Kernel state changed from %d to %d",
+            LOGD("Kernel state changed from %d to %d",
                 static_cast<int>(state), static_cast<int>(newState));
             state = newState;
             switch (newState) {
@@ -198,7 +195,7 @@ private:
                 case KernelState::INIT_FINISHING:
                     statusLed.blink(1500ms);
                     break;
-                case KernelState::TRNASMITTING:
+                case KernelState::TRANSMITTING:
                     statusLed.turnOn();
                     break;
                 case KernelState::IDLE:
@@ -214,7 +211,6 @@ private:
             return "";
         }
 
-        Log.info("Starting update...");
         auto fUpdate = fs.open(UPDATE_FILE, FILE_READ);
         JsonDocument doc;
         auto error = deserializeJson(doc, fUpdate);
@@ -229,39 +225,78 @@ private:
             return "Command contains empty url";
         }
 
-        Log.debug("Waiting for network...");
+        LOGI("Updating from version %s via URL %s",
+            FARMHUB_VERSION, url.c_str());
+
+        LOGD("Waiting for network...");
         WiFiConnection connection(wifi, WiFiConnection::Mode::NoAwait);
         if (!connection.await(15s)) {
             return "Network not ready, aborting update";
         }
 
-        httpUpdate.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
-        Log.info("Updating from version %s via URL %s",
-            FARMHUB_VERSION, url.c_str());
+        // TODO Disable power save mode for WiFi
 
-        HTTPUpdateResult result = HTTP_UPDATE_NO_UPDATES;
-        // Run in separate task to allocate enough stack
-        SemaphoreHandle_t completionSemaphore = xSemaphoreCreateBinary();
-        Task::run("http-update", 16 * 1024, [&](Task& task) {
-            // Allocate on heap to avoid wasting stack
-            std::unique_ptr<WiFiClientSecure> client = std::make_unique<WiFiClientSecure>();
-            // Allow insecure connections for testing
-            client->setInsecure();
-            result = httpUpdate.update(*client, url, FARMHUB_VERSION);
-            xSemaphoreGive(completionSemaphore);
-        });
-        xSemaphoreTake(completionSemaphore, portMAX_DELAY);
-
-        switch (result) {
-            case HTTP_UPDATE_FAILED:
-                return httpUpdate.getLastErrorString() + " (" + String(httpUpdate.getLastError()) + ")";
-            case HTTP_UPDATE_NO_UPDATES:
-                return "No updates available";
-            case HTTP_UPDATE_OK:
-                return "Update OK";
-            default:
-                return "Unknown response";
+        esp_http_client_config_t httpConfig = {
+            .url = url.c_str(),
+            .timeout_ms = duration_cast<milliseconds>(2min).count(),
+            .max_redirection_count = 5,
+            .event_handler = httpEventHandler,
+            .buffer_size = 8192,
+            .buffer_size_tx = 8192,
+            .user_data = this,
+            // TODO Do we need this?
+            .skip_cert_common_name_check = true,
+            .crt_bundle_attach = esp_crt_bundle_attach,
+            .keep_alive_enable = true,
+        };
+        esp_https_ota_config_t otaConfig = {
+            .http_config = &httpConfig,
+            // TODO Make it work without partial downloads
+            // With this we seem to be able to install a new firmware, even if very slowly;
+            // without it we get the error upon download completion: 'no more processes'.
+            .partial_http_download = true,
+        };
+        esp_err_t ret = esp_https_ota(&otaConfig);
+        if (ret == ESP_OK) {
+            LOGI("Update succeeded, rebooting in 5 seconds...");
+            Task::delay(5s);
+            esp_restart();
+        } else {
+            LOGE("Update failed (err = %d), continuing with regular boot",
+                ret);
+            return "Firmware upgrade failed: " + String(ret);
         }
+    }    // namespace farmhub::kernel
+
+    static esp_err_t httpEventHandler(esp_http_client_event_t* event) {
+        switch (event->event_id) {
+            case HTTP_EVENT_ERROR:
+                LOGE("HTTP error, status code: %d",
+                    esp_http_client_get_status_code(event->client));
+                break;
+            case HTTP_EVENT_ON_CONNECTED:
+                LOGD("HTTP connected");
+                break;
+            case HTTP_EVENT_HEADERS_SENT:
+                LOGV("HTTP headers sent");
+                break;
+            case HTTP_EVENT_ON_HEADER:
+                LOGV("HTTP header: %s: %s", event->header_key, event->header_value);
+                break;
+            case HTTP_EVENT_ON_DATA:
+                LOGD("HTTP data: %d bytes", event->data_len);
+                break;
+            case HTTP_EVENT_ON_FINISH:
+                LOGD("HTTP finished");
+                break;
+            case HTTP_EVENT_DISCONNECTED:
+                LOGD("HTTP disconnected");
+                break;
+            default:
+                LOGW("Unknown HTTP event %d", event->event_id);
+                break;
+        }
+        return ESP_OK;
     }
 
     TDeviceConfiguration& deviceConfig;
@@ -276,6 +311,7 @@ private:
     KernelState state = KernelState::BOOTING;
     StateManager stateManager;
     StateSource networkRequestedState = stateManager.createStateSource("network-requested");
+    StateSource networkConnectingState = stateManager.createStateSource("network-connecting");
     StateSource networkReadyState = stateManager.createStateSource("network-ready");
     StateSource configPortalRunningState = stateManager.createStateSource("config-portal-running");
     StateSource rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
@@ -283,7 +319,10 @@ private:
     StateSource mqttReadyState = stateManager.createStateSource("mqtt-ready");
     StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
-    WiFiDriver wifi { networkRequestedState, networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
+public:
+    WiFiDriver wifi { networkRequestedState, networkConnectingState, networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
+
+private:
     MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
     RtcDriver rtc { wifi, mdns, deviceConfig.ntp.get(), rtcInSyncState };
 

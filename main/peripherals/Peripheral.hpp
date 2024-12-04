@@ -5,7 +5,6 @@
 
 #include <kernel/Configuration.hpp>
 #include <kernel/I2CManager.hpp>
-#include <kernel/Log.hpp>
 #include <kernel/Named.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/PwmManager.hpp>
@@ -34,7 +33,7 @@ public:
         , mqttRoot(mqttRoot)
         , telemetrySize(telemetrySize) {
         mqttRoot->registerCommand("ping", [this](const JsonObject& request, JsonObject& response) {
-            Log.trace("Received ping request");
+            LOGV("Received ping request");
             publishTelemetry();
             response["pong"] = millis();
         });
@@ -48,7 +47,7 @@ public:
         populateTelemetry(telemetryJson);
         if (telemetryJson.begin() == telemetryJson.end()) {
             // No telemetry added
-            Log.trace("No telemetry to publish for peripheral: %s", name.c_str());
+            LOGV("No telemetry to publish for peripheral: %s", name.c_str());
             return;
         }
         mqttRoot->publish("telemetry", telemetryDoc);
@@ -80,7 +79,7 @@ public:
     }
 
     virtual void configure(const TConfig& config) {
-        Log.trace("No configuration to apply for peripheral: %s", name.c_str());
+        LOGV("No configuration to apply for peripheral: %s", name.c_str());
     }
 };
 
@@ -138,7 +137,7 @@ public:
         // Use short prefix because SPIFFS has a 32 character limit
         ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/p/" + name);
         mqttRoot->subscribe("config", [name, configFile](const String&, const JsonObject& configJson) {
-            Log.debug("Received configuration update for peripheral: %s", name.c_str());
+            LOGD("Received configuration update for peripheral: %s", name.c_str());
             configFile->update(configJson);
         });
 
@@ -178,19 +177,19 @@ public:
     }
 
     void registerFactory(PeripheralFactoryBase& factory) {
-        Log.debug("Registering peripheral factory: %s",
+        LOGD("Registering peripheral factory: %s",
             factory.factoryType.c_str());
         factories.insert(std::make_pair(factory.factoryType, std::reference_wrapper<PeripheralFactoryBase>(factory)));
     }
 
     bool createPeripheral(const String& peripheralConfig, JsonArray peripheralsInitJson) {
-        Log.info("Creating peripheral with config: %s",
+        LOGI("Creating peripheral with config: %s",
             peripheralConfig.c_str());
         PeripheralDeviceConfiguration deviceConfig;
         try {
             deviceConfig.loadFromString(peripheralConfig);
         } catch (const std::exception& e) {
-            Log.error("Failed to parse peripheral config because %s:\n%s",
+            LOGE("Failed to parse peripheral config because %s:\n%s",
                 e.what(), peripheralConfig.c_str());
             return false;
         }
@@ -202,7 +201,7 @@ public:
         try {
             Lock lock(stateMutex);
             if (state == State::Stopped) {
-                Log.error("Not creating peripheral '%s' because the peripheral manager is stopped",
+                LOGE("Not creating peripheral '%s' because the peripheral manager is stopped",
                     name.c_str());
                 return false;
             }
@@ -214,12 +213,12 @@ public:
 
             return true;
         } catch (const std::exception& e) {
-            Log.error("Failed to create '%s' peripheral '%s' because %s",
+            LOGE("Failed to create '%s' peripheral '%s' because %s",
                 type.c_str(), name.c_str(), e.what());
             initJson["error"] = String(e.what());
             return false;
         } catch (...) {
-            Log.error("Failed to create '%s' peripheral '%s' because of an unknown exception",
+            LOGE("Failed to create '%s' peripheral '%s' because of an unknown exception",
                 type.c_str(), name.c_str());
             initJson["error"] = "unknown exception";
             return false;
@@ -229,7 +228,7 @@ public:
     void publishTelemetry() override {
         Lock lock(stateMutex);
         if (state == State::Stopped) {
-            Log.debug("Not publishing telemetry because the peripheral manager is stopped");
+            LOGD("Not publishing telemetry because the peripheral manager is stopped");
             return;
         }
         for (auto& peripheral : peripherals) {
@@ -240,14 +239,14 @@ public:
     void shutdown() {
         Lock lock(stateMutex);
         if (state == State::Stopped) {
-            Log.debug("Peripheral manager is already stopped");
+            LOGD("Peripheral manager is already stopped");
             return;
         }
-        Log.info("Shutting down peripheral manager");
+        LOGI("Shutting down peripheral manager");
         state = State::Stopped;
         PeripheralBase::ShutdownParameters parameters;
         for (auto& peripheral : peripherals) {
-            Log.printfToSerial("Shutting down peripheral '%s'\n",
+            LOGI("Shutting down peripheral '%s'",
                 peripheral->name.c_str());
             peripheral->shutdown(parameters);
         }
@@ -262,7 +261,7 @@ private:
     };
 
     unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& factoryType, const String& configJson, JsonObject& initConfigJson) {
-        Log.debug("Creating peripheral '%s' with factory '%s'",
+        LOGD("Creating peripheral '%s' with factory '%s'",
             name.c_str(), factoryType.c_str());
         auto it = factories.find(factoryType);
         if (it == factories.end()) {

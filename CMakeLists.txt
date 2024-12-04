@@ -44,6 +44,12 @@ if(UD_GEN STREQUAL MK4)
     add_compile_definitions(HWCDCSerial=Serial0)
 endif()
 
+# Keep struct initializers simple
+add_compile_options("-Wno-missing-field-initializers")
+
+# TODO Make this depend on some flag
+set(CMAKE_BUILD_TYPE Debug)
+
 project(ugly-duckling)
 
 # Use `idf.py -DFSUPLOAD=1 flash` to upload the data partition

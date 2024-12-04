@@ -16,12 +16,6 @@ idf_component_register(
     SRCS "DallasTemperature/DallasTemperature.cpp"
     INCLUDE_DIRS "DallasTemperature"
 
-    SRCS ${mqtt_sources}
-    INCLUDE_DIRS "MQTTPubSubClient/src" "ArxTypeTraits" "ArxContainer"
-
-    SRCS "NTPClient/NTPClient.cpp"
-    INCLUDE_DIRS "NTPClient"
-
     SRCS "OneWire/OneWire.cpp"
     INCLUDE_DIRS "OneWire"
 
@@ -30,10 +24,6 @@ idf_component_register(
 
     SRCS "SHT2x/SHT2x.cpp"
     INCLUDE_DIRS "SHT2x"
-
-    SRCS "../managed_components/espressif__arduino-esp32/libraries/HTTPUpdate/src/HTTPUpdate.cpp"
-    INCLUDE_DIRS "../managed_components/espressif__arduino-esp32/libraries/HTTPUpdate/src"
-    REQUIRES app_update
 
     REQUIRES "arduino-esp32"
 )

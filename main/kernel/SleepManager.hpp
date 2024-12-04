@@ -5,7 +5,6 @@
 #include <Arduino.h>
 
 #include <kernel/Concurrent.hpp>
-#include <kernel/Log.hpp>
 
 // FIXME Why do we need to define these manually?
 #if CONFIG_IDF_TARGET_ESP32
@@ -35,24 +34,24 @@ public:
     static bool shouldSleepWhenIdle(bool requestedSleepWhenIdle) {
         if (requestedSleepWhenIdle) {
 #if FARMHUB_DEBUG
-            Log.warn("Light sleep is disabled in debug mode");
+            LOGW("Light sleep is disabled in debug mode");
             return false;
 #elif WOKWI
             // See https://github.com/wokwi/wokwi-features/issues/922
-            Log.warn("Light sleep is disabled when running under Wokwi");
+            LOGW("Light sleep is disabled when running under Wokwi");
             return false;
 #elif not(CONFIG_PM_ENABLE)
-            Log.info("Power management is disabled because CONFIG_PM_ENABLE is not set");
+            LOGI("Power management is disabled because CONFIG_PM_ENABLE is not set");
             return false;
 #elif not(CONFIG_FREERTOS_USE_TICKLESS_IDLE)
-            Log.info("Light sleep is disabled because CONFIG_FREERTOS_USE_TICKLESS_IDLE is not set");
+            LOGI("Light sleep is disabled because CONFIG_FREERTOS_USE_TICKLESS_IDLE is not set");
             return false;
 #else
-            Log.info("Light sleep is enabled");
+            LOGI("Light sleep is enabled");
             return true;
 #endif
         } else {
-            Log.info("Light sleep is disabled");
+            LOGI("Light sleep is disabled");
             return false;
         }
     }
@@ -62,7 +61,7 @@ public:
     void keepAwake() {
         Lock lock(requestCountMutex);
         requestCount++;
-        Log.debug("Task %s requested the device to keep awake, counter at %d",
+        LOGD("Task %s requested the device to keep awake, counter at %d",
             pcTaskGetName(nullptr), requestCount);
         if (requestCount == 1) {
             configurePowerManagement(false);
@@ -72,7 +71,7 @@ public:
     void allowSleep() {
         Lock lock(requestCountMutex);
         requestCount--;
-        Log.debug("Task %s finished with insomniac activity, counter at %d",
+        LOGD("Task %s finished with insomniac activity, counter at %d",
             pcTaskGetName(nullptr), requestCount);
         if (requestCount == 0) {
             configurePowerManagement(true);
@@ -81,7 +80,7 @@ public:
 
 private:
     void configurePowerManagement(bool enableLightSleep) {
-        Log.trace("Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
+        LOGV("Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
             MAX_CPU_FREQ_MHZ, MIN_CPU_FREQ_MHZ, enableLightSleep ? "enabled" : "disabled");
         // Configure dynamic frequency scaling:
         // maximum and minimum frequencies are set in sdkconfig,
@@ -89,7 +88,7 @@ private:
         esp_pm_config_t pm_config = {
             .max_freq_mhz = MAX_CPU_FREQ_MHZ,
             .min_freq_mhz = MIN_CPU_FREQ_MHZ,
-            .light_sleep_enable = enableLightSleep
+            .light_sleep_enable = enableLightSleep,
         };
         ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
     }
