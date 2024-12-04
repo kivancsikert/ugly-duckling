@@ -69,42 +69,17 @@ private:
 
         static const uint32_t PUBLISH_SUCCESS = 1;
         static const uint32_t PUBLISH_FAILED = 2;
-
-        OutgoingMessage(const String& topic, const String& payload, Retention retention, QoS qos, TaskHandle_t waitingTask, LogPublish log, milliseconds extendAlert)
-            : topic(topic)
-            , payload(payload)
-            , retain(retention)
-            , qos(qos)
-            , waitingTask(waitingTask)
-            , log(log)
-            , extendAlert(extendAlert) {
-        }
     };
 
     struct IncomingMessage {
         String topic;
         String payload;
-
-        IncomingMessage(const String& topic, const String& payload)
-            : topic(topic)
-            , payload(payload) {
-        }
     };
 
     struct Subscription {
         const String topic;
         const QoS qos;
         const SubscriptionHandler handle;
-
-        Subscription(const String& topic, QoS qos, SubscriptionHandler handle)
-            : topic(topic)
-            , qos(qos)
-            , handle(handle) {
-        }
-
-        Subscription(const Subscription& other)
-            : Subscription(other.topic, other.qos, other.handle) {
-        }
     };
 
 public:
