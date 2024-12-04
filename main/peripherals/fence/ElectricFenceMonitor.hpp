@@ -46,7 +46,7 @@ class ElectricFenceMonitorComponent
 public:
     ElectricFenceMonitorComponent(
         const String& name,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        shared_ptr<MqttRoot> mqttRoot,
         PcntManager& pcnt,
         const ElectricFenceMonitorDeviceConfig& config)
         : Component(name, mqttRoot) {
@@ -107,7 +107,7 @@ private:
 class ElectricFenceMonitor
     : public Peripheral<EmptyConfiguration> {
 public:
-    ElectricFenceMonitor(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PcntManager& pcnt, const ElectricFenceMonitorDeviceConfig& config)
+    ElectricFenceMonitor(const String& name, shared_ptr<MqttRoot> mqttRoot, PcntManager& pcnt, const ElectricFenceMonitorDeviceConfig& config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , monitor(name, mqttRoot, pcnt, config) {
     }
@@ -127,7 +127,7 @@ public:
         : PeripheralFactory<ElectricFenceMonitorDeviceConfig, EmptyConfiguration>("electric-fence") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const ElectricFenceMonitorDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const ElectricFenceMonitorDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         return std::make_unique<ElectricFenceMonitor>(name, mqttRoot, services.pcntManager, deviceConfig);
     }
 };

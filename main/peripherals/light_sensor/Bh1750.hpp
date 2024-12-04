@@ -38,7 +38,7 @@ class Bh1750Component
 public:
     Bh1750Component(
         const String& name,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         I2CConfig config,
         seconds measurementFrequency,
@@ -75,7 +75,7 @@ class Bh1750
 public:
     Bh1750(
         const String& name,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         const I2CConfig& config,
         seconds measurementFrequency,
@@ -99,7 +99,7 @@ public:
         : PeripheralFactory<Bh1750DeviceConfig, EmptyConfiguration>("light-sensor:bh1750", "light-sensor") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const Bh1750DeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const Bh1750DeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         I2CConfig i2cConfig = deviceConfig.parse(0x23);
         return std::make_unique<Bh1750>(name, mqttRoot, services.i2c, i2cConfig, deviceConfig.measurementFrequency.get(), deviceConfig.latencyInterval.get());
     }

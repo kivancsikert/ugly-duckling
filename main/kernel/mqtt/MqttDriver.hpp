@@ -54,82 +54,9 @@ typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
 
 typedef std::function<void(const String&, const JsonObject&)> SubscriptionHandler;
 
+class MqttRoot;
+
 class MqttDriver {
-public:
-    class MqttRoot {
-    public:
-        MqttRoot(MqttDriver& mqtt, const String& rootTopic)
-            : mqtt(mqtt)
-            , rootTopic(rootTopic) {
-        }
-
-        shared_ptr<MqttRoot> forSuffix(const String& suffix) {
-            return make_shared<MqttRoot>(mqtt, rootTopic + "/" + suffix);
-        }
-
-        PublishStatus publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log) {
-            return mqtt.publish(fullTopic(suffix), json, retain, qos, timeout, log);
-        }
-
-        PublishStatus publish(const String& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log) {
-            JsonDocument doc;
-            JsonObject root = doc.to<JsonObject>();
-            populate(root);
-            return publish(suffix, doc, retain, qos, timeout, log);
-        }
-
-        PublishStatus clear(const String& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero()) {
-            return mqtt.clear(fullTopic(suffix), retain, qos, timeout);
-        }
-
-        bool subscribe(const String& suffix, SubscriptionHandler handler) {
-            return subscribe(suffix, QoS::ExactlyOnce, handler);
-        }
-
-        bool registerCommand(const String& name, CommandHandler handler) {
-            String suffix = "commands/" + name;
-            return subscribe(suffix, QoS::ExactlyOnce, [this, name, suffix, handler](const String&, const JsonObject& request) {
-                // TODO Do exponential backoff when clear cannot be finished
-                // Clear topic and wait for it to be cleared
-                auto clearStatus = mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, std::chrono::seconds { 5 }, MQTT_ALERT_AFTER_INCOMING);
-                if (clearStatus != PublishStatus::Success) {
-                    LOGE("MQTT: Failed to clear retained command topic '%s', status: %d",
-                        suffix.c_str(), static_cast<int>(clearStatus));
-                }
-
-                JsonDocument responseDoc;
-                auto response = responseDoc.to<JsonObject>();
-                handler(request, response);
-                if (response.size() > 0) {
-                    publish("responses/" + name, responseDoc, Retention::NoRetain, QoS::ExactlyOnce);
-                }
-            });
-        }
-
-        void registerCommand(Command& command) {
-            registerCommand(command.name, [&](const JsonObject& request, JsonObject& response) {
-                command.handle(request, response);
-            });
-        }
-
-        /**
-         * @brief Subscribes to the given topic under the topic prefix.
-         *
-         * Note that subscription does not support wildcards.
-         */
-        bool subscribe(const String& suffix, QoS qos, SubscriptionHandler handler) {
-            return mqtt.subscribe(fullTopic(suffix), qos, handler);
-        }
-
-    private:
-        String fullTopic(const String& suffix) const {
-            return rootTopic + "/" + suffix;
-        }
-
-        MqttDriver& mqtt;
-        const String rootTopic;
-    };
-
 private:
     struct OutgoingMessage {
         String topic;
@@ -672,9 +599,85 @@ private:
     static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = 5s;
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
     static constexpr milliseconds MQTT_ALERT_AFTER_OUTGOING = 1s;
-    static constexpr milliseconds MQTT_ALERT_AFTER_INCOMING = 30s;
-
     static constexpr milliseconds MQTT_MAX_TIMEOUT_POWER_SAVE = 1h;
+
+    friend class MqttRoot;
+};
+
+class MqttRoot {
+public:
+    MqttRoot(MqttDriver& mqtt, const String& rootTopic)
+        : mqtt(mqtt)
+        , rootTopic(rootTopic) {
+    }
+
+    shared_ptr<MqttRoot> forSuffix(const String& suffix) {
+        return make_shared<MqttRoot>(mqtt, rootTopic + "/" + suffix);
+    }
+
+    PublishStatus publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log) {
+        return mqtt.publish(fullTopic(suffix), json, retain, qos, timeout, log);
+    }
+
+    PublishStatus publish(const String& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log) {
+        JsonDocument doc;
+        JsonObject root = doc.to<JsonObject>();
+        populate(root);
+        return publish(suffix, doc, retain, qos, timeout, log);
+    }
+
+    PublishStatus clear(const String& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero()) {
+        return mqtt.clear(fullTopic(suffix), retain, qos, timeout);
+    }
+
+    bool subscribe(const String& suffix, SubscriptionHandler handler) {
+        return subscribe(suffix, QoS::ExactlyOnce, handler);
+    }
+
+    bool registerCommand(const String& name, CommandHandler handler) {
+        String suffix = "commands/" + name;
+        return subscribe(suffix, QoS::ExactlyOnce, [this, name, suffix, handler](const String&, const JsonObject& request) {
+            // TODO Do exponential backoff when clear cannot be finished
+            // Clear topic and wait for it to be cleared
+            auto clearStatus = mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, std::chrono::seconds { 5 }, MQTT_ALERT_AFTER_INCOMING);
+            if (clearStatus != PublishStatus::Success) {
+                LOGE("MQTT: Failed to clear retained command topic '%s', status: %d",
+                    suffix.c_str(), static_cast<int>(clearStatus));
+            }
+
+            JsonDocument responseDoc;
+            auto response = responseDoc.to<JsonObject>();
+            handler(request, response);
+            if (response.size() > 0) {
+                publish("responses/" + name, responseDoc, Retention::NoRetain, QoS::ExactlyOnce);
+            }
+        });
+    }
+
+    void registerCommand(Command& command) {
+        registerCommand(command.name, [&](const JsonObject& request, JsonObject& response) {
+            command.handle(request, response);
+        });
+    }
+
+    /**
+     * @brief Subscribes to the given topic under the topic prefix.
+     *
+     * Note that subscription does not support wildcards.
+     */
+    bool subscribe(const String& suffix, QoS qos, SubscriptionHandler handler) {
+        return mqtt.subscribe(fullTopic(suffix), qos, handler);
+    }
+
+private:
+    String fullTopic(const String& suffix) const {
+        return rootTopic + "/" + suffix;
+    }
+
+    MqttDriver& mqtt;
+    const String rootTopic;
+
+    static constexpr milliseconds MQTT_ALERT_AFTER_INCOMING = 30s;
 };
 
 }    // namespace farmhub::kernel::mqtt

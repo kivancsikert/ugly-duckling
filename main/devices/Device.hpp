@@ -215,7 +215,7 @@ public:
 
 class MqttTelemetryPublisher : public TelemetryPublisher {
 public:
-    MqttTelemetryPublisher(shared_ptr<MqttDriver::MqttRoot> mqttRoot, TelemetryCollector& telemetryCollector)
+    MqttTelemetryPublisher(shared_ptr<MqttRoot> mqttRoot, TelemetryCollector& telemetryCollector)
         : mqttRoot(mqttRoot)
         , telemetryCollector(telemetryCollector) {
     }
@@ -225,7 +225,7 @@ public:
     }
 
 private:
-    shared_ptr<MqttDriver::MqttRoot> mqttRoot;
+    shared_ptr<MqttRoot> mqttRoot;
     TelemetryCollector& telemetryCollector;
 };
 
@@ -507,7 +507,7 @@ private:
     TDeviceDefinition& deviceDefinition = configuredKernel.deviceDefinition;
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;
 
-    shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig.instance.get());
+    shared_ptr<MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig.instance.get());
     PeripheralManager peripheralManager { kernel.i2c, deviceDefinition.pcnt, deviceDefinition.pwm, kernel.sleepManager, kernel.switches, mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;

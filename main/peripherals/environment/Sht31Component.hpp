@@ -23,7 +23,7 @@ public:
     Sht31Component(
         const String& name,
         const String& sensorType,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         I2CConfig config)
         : Component(name, mqttRoot)

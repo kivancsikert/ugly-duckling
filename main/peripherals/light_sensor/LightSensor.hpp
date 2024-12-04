@@ -32,7 +32,7 @@ class LightSensorComponent
 public:
     LightSensorComponent(
         const String& name,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        shared_ptr<MqttRoot> mqttRoot,
         seconds measurementFrequency,
         seconds latencyInterval)
         : Component(name, mqttRoot)

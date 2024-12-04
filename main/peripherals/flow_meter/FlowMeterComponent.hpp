@@ -23,7 +23,7 @@ class FlowMeterComponent
 public:
     FlowMeterComponent(
         const String& name,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        shared_ptr<MqttRoot> mqttRoot,
         PcntManager& pcnt,
         InternalPinPtr pin,
         double qFactor,

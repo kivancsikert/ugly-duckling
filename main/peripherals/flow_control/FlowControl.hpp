@@ -31,7 +31,7 @@ class FlowControl : public Peripheral<FlowControlConfig> {
 public:
     FlowControl(
         const String& name,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        shared_ptr<MqttRoot> mqttRoot,
         PcntManager& pcnt,
         SleepManager& sleepManager,
         ValveControlStrategy& strategy,
@@ -86,7 +86,7 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         auto strategy = deviceConfig.valve.get().createValveControlStrategy(this);
 
         auto flowMeterConfig = deviceConfig.flowMeter.get();

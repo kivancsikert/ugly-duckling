@@ -37,7 +37,7 @@ public:
         const String& name,
         SleepManager& sleepManager,
         ValveControlStrategy& strategy,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot)
+        shared_ptr<MqttRoot> mqttRoot)
         : Peripheral<ValveConfig>(name, mqttRoot)
         , valve(name, sleepManager, strategy, mqttRoot, [this]() {
             publishTelemetry();
@@ -71,7 +71,7 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<ValveConfig>> createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<ValveConfig>> createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         auto strategy = deviceConfig.createValveControlStrategy(this);
         return make_unique<Valve>(name, services.sleepManager, *strategy, mqttRoot);
     }
