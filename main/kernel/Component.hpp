@@ -1,7 +1,7 @@
 #pragma once
 
 #include <kernel/Named.hpp>
-#include <kernel/mqtt/MqttDriver.hpp>
+#include <kernel/mqtt/MqttRoot.hpp>
 
 using namespace farmhub::kernel::mqtt;
 

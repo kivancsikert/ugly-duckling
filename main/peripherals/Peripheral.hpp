@@ -11,7 +11,7 @@
 #include <kernel/SleepManager.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/SwitchManager.hpp>
-#include <kernel/mqtt/MqttDriver.hpp>
+#include <kernel/mqtt/MqttRoot.hpp>
 
 using std::move;
 using std::shared_ptr;

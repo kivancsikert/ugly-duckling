@@ -19,6 +19,7 @@
 #include <kernel/Task.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
 #include <kernel/mqtt/MqttDriver.hpp>
+#include <kernel/mqtt/MqttRoot.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
