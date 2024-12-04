@@ -59,21 +59,21 @@ class MqttRoot;
 class MqttDriver {
 private:
     struct OutgoingMessage {
-        String topic;
-        String payload;
-        Retention retain;
-        QoS qos;
-        TaskHandle_t waitingTask;
-        LogPublish log;
-        milliseconds extendAlert;
+        const String topic;
+        const String payload;
+        const Retention retain;
+        const QoS qos;
+        const TaskHandle_t waitingTask;
+        const LogPublish log;
+        const milliseconds extendAlert;
 
         static const uint32_t PUBLISH_SUCCESS = 1;
         static const uint32_t PUBLISH_FAILED = 2;
     };
 
     struct IncomingMessage {
-        String topic;
-        String payload;
+        const String topic;
+        const String payload;
     };
 
     struct Subscription {
