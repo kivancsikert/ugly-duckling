@@ -388,11 +388,19 @@ public:
                 if (record.level > deviceConfig.publishLogs.get()) {
                     return;
                 }
+                auto length = record.message.length();
+                // Remove the level prefix
+                auto messageStart = 2;
+                // Remove trailing newline
+                auto messageEnd = record.message.charAt(length - 1) == '\n'
+                    ? length - 1
+                    : length;
+                String message = record.message.substring(messageStart, messageEnd);
 
                 mqttDeviceRoot->publish(
                     "log", [&](JsonObject& json) {
                         json["level"] = record.level;
-                        json["message"] = record.message;
+                        json["message"] = message;
                     },
                     MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::zero(), MqttDriver::LogPublish::Silent);
             });
