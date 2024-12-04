@@ -19,14 +19,15 @@
 #include <kernel/StateManager.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
-#include <kernel/drivers/MqttDriver.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
 #include <kernel/drivers/SwitchManager.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
+#include <kernel/mqtt/MqttDriver.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::kernel {
 

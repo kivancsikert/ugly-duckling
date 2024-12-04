@@ -10,8 +10,8 @@
 #include <kernel/PwmManager.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/Telemetry.hpp>
-#include <kernel/drivers/MqttDriver.hpp>
 #include <kernel/drivers/SwitchManager.hpp>
+#include <kernel/mqtt/MqttDriver.hpp>
 
 using std::move;
 using std::shared_ptr;
@@ -19,6 +19,7 @@ using std::unique_ptr;
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::peripherals {
 

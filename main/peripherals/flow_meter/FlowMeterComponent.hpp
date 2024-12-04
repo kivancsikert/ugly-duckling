@@ -11,10 +11,9 @@
 #include <kernel/PcntManager.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
+#include <kernel/mqtt/MqttDriver.hpp>
 
-#include <kernel/drivers/MqttDriver.hpp>
-
-using namespace farmhub::kernel::drivers;
+using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::peripherals::flow_meter {
 

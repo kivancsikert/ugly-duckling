@@ -1,9 +1,9 @@
 #pragma once
 
 #include <kernel/Named.hpp>
-#include <kernel/drivers/MqttDriver.hpp>
+#include <kernel/mqtt/MqttDriver.hpp>
 
-using namespace farmhub::kernel::drivers;
+using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::kernel {
 

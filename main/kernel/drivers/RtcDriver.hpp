@@ -7,10 +7,11 @@
 #include "esp_netif_sntp.h"
 #include "esp_sntp.h"
 
+#include <kernel/Configuration.hpp>
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
-
 #include <kernel/drivers/MdnsDriver.hpp>
+#include <kernel/drivers/WiFiDriver.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;

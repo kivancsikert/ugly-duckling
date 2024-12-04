@@ -10,11 +10,11 @@
 #include <peripherals/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/Component.hpp>
-#include <kernel/drivers/MqttDriver.hpp>
+#include <kernel/mqtt/MqttDriver.hpp>
 #include <peripherals/SinglePinDeviceConfig.hpp>
 
 using namespace farmhub::kernel;
-using namespace farmhub::kernel::drivers;
+using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
 using std::make_unique;
 using std::unique_ptr;

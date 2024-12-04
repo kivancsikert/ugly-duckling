@@ -5,12 +5,12 @@
 #include <peripherals/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/PcntManager.hpp>
-#include <kernel/drivers/MqttDriver.hpp>
+#include <kernel/mqtt/MqttDriver.hpp>
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>
 #include <peripherals/flow_meter/FlowMeterConfig.hpp>
 
 using namespace farmhub::kernel;
-using namespace farmhub::kernel::drivers;
+using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
 using std::make_unique;
 using std::unique_ptr;
