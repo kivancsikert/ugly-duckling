@@ -18,12 +18,14 @@
 #include <kernel/Kernel.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
+#include <kernel/mqtt/MqttDriver.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using std::shared_ptr;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::kernel::mqtt;
 
 #if defined(MK4)
 #include <devices/UglyDucklingMk4.hpp>
@@ -403,7 +405,7 @@ public:
                         json["level"] = record.level;
                         json["message"] = message;
                     },
-                    MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::zero(), MqttDriver::LogPublish::Silent);
+                    Retention::NoRetain, QoS::AtLeastOnce, ticks::zero(), LogPublish::Silent);
             });
         });
 
@@ -453,7 +455,7 @@ public:
                 json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
                 json["sleepWhenIdle"] = kernel.sleepManager.sleepWhenIdle;
             },
-            MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::max());
+            Retention::NoRetain, QoS::AtLeastOnce, ticks::max());
 
         Task::loop("telemetry", 8192, [this](Task& task) {
             publishTelemetry();

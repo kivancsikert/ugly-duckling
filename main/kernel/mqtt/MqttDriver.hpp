@@ -26,36 +26,36 @@ using namespace farmhub::kernel::drivers;
 
 namespace farmhub::kernel::mqtt {
 
+enum class Retention {
+    NoRetain,
+    Retain
+};
+
+enum class QoS {
+    AtMostOnce = 0,
+    AtLeastOnce = 1,
+    ExactlyOnce = 2
+};
+
+enum class LogPublish {
+    Log,
+    Silent
+};
+
+enum class PublishStatus {
+    TimeOut = 0,
+    Success = 1,
+    Failed = 2,
+    Pending = 3,
+    QueueFull = 4
+};
+
+typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
+
+typedef std::function<void(const String&, const JsonObject&)> SubscriptionHandler;
+
 class MqttDriver {
 public:
-    enum class Retention {
-        NoRetain,
-        Retain
-    };
-
-    enum class QoS {
-        AtMostOnce = 0,
-        AtLeastOnce = 1,
-        ExactlyOnce = 2
-    };
-
-    enum class LogPublish {
-        Log,
-        Silent
-    };
-
-    enum class PublishStatus {
-        TimeOut = 0,
-        Success = 1,
-        Failed = 2,
-        Pending = 3,
-        QueueFull = 4
-    };
-
-    typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
-
-    typedef std::function<void(const String&, const JsonObject&)> SubscriptionHandler;
-
     class MqttRoot {
     public:
         MqttRoot(MqttDriver& mqtt, const String& rootTopic)
