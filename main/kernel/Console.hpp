@@ -42,11 +42,7 @@ private:
 
     int processLog(const char* format, va_list args) {
         Level level = getLevel(format[0]);
-        if (level <= recordedLevel) {
-            std::lock_guard<std::mutex> lock(bufferMutex);
-            vsnprintf(buffer, BUFFER_SIZE, format, args);
-            logRecords.offer(level, buffer);
-        }
+        recordLog(level, format, args);
 
         int count = 0;
 #ifdef FARMHUB_DEBUG
@@ -85,6 +81,31 @@ private:
         }
 #endif
         return count;
+    }
+
+    void recordLog(Level level, const char* format, va_list args) {
+        if (level > recordedLevel) {
+            return;
+        }
+
+        int length;
+        {
+            std::lock_guard<std::mutex> lock(bufferMutex);
+            length = vsnprintf(buffer, BUFFER_SIZE, format, args);
+            if (length < 0) {
+                printf("Encountered an encoding error");
+            } else if (length < BUFFER_SIZE) {
+                logRecords.offer(level, buffer);
+                return;
+            }
+        }
+
+        // The buffer was too small, try again with a heap-allocated buffer instead, but still limit length
+        length = std::min(length, 2048);
+        char* heapBuffer = new char[length + 1];
+        vsnprintf(heapBuffer, length + 1, format, args);
+        logRecords.offer(level, String(heapBuffer, length));
+        delete[] heapBuffer;
     }
 
     static inline Level getLevel(char c) {
