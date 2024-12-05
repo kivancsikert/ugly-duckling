@@ -102,7 +102,7 @@ public:
         status.reserve(256);
         Task::loop("console", 3072, 1, [this](Task& task) {
             printStatus();
-            task.delayUntil(100ms);
+            task.delayUntil(250ms);
         });
     }
 
