@@ -151,8 +151,6 @@ private:
     PublishStatus clear(const String& topic, Retention retain, QoS qos, ticks timeout = ticks::zero(), milliseconds extendAlert = MQTT_ALERT_AFTER_OUTGOING) {
         LOGTD("mqtt", "Clearing topic '%s'",
             topic.c_str());
-        // Stay alert until the message is sent
-        extendAlert = std::max(duration_cast<milliseconds>(timeout), extendAlert);
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
             return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, "", retain, qos, waitingTask, LogPublish::Log, extendAlert });
         });
@@ -212,20 +210,27 @@ private:
         time_point<system_clock> alertUntil = system_clock::now() + 5s;
 
         while (true) {
-            milliseconds timeout = duration_cast<milliseconds>(alertUntil - system_clock::now());
-            if (timeout > milliseconds::zero()) {
-                LOGTV("mqtt", "Alert for another %lld ms, checking for incoming messages",
-                    timeout.count());
-                ensureConnected(task);
-                timeout = std::min(timeout, MQTT_LOOP_INTERVAL);
-            } else {
-                if (powerSaveMode) {
+            milliseconds timeout;
+            if (powerSaveMode) {
+                timeout = duration_cast<milliseconds>(alertUntil - system_clock::now());
+                if (timeout > milliseconds::zero()) {
+                    LOGTV("mqtt", "Alert for another %lld ms, checking for incoming messages",
+                        timeout.count());
+                    ensureConnected(task);
+                    timeout = std::min(timeout, MQTT_LOOP_INTERVAL);
+                } else if (!pendingMessages.empty()) {
+                    LOGTV("mqtt", "Alert expired, but there are pending messages, staying connected");
+                    ensureConnected(task);
+                    timeout = MQTT_LOOP_INTERVAL;
+                } else if (powerSaveMode) {
                     LOGTV("mqtt", "Not alert anymore, disconnecting");
                     disconnect();
                     timeout = MQTT_MAX_TIMEOUT_POWER_SAVE;
-                } else {
-                    timeout = MQTT_LOOP_INTERVAL;
                 }
+            } else {
+                LOGTV("mqtt", "Power save mode not enabled, staying connected");
+                ensureConnected(task);
+                timeout = MQTT_LOOP_INTERVAL;
             }
 
             // LOGTV("mqtt", "Waiting for outgoing event for %lld ms", duration_cast<milliseconds>(timeout).count());
@@ -261,7 +266,7 @@ private:
 
     void disconnect() {
         if (client != nullptr) {
-            LOGD("Disconnecting from MQTT server");
+            LOGTD("mqtt", "Disconnecting from MQTT server");
             mqttReady.clear();
             ESP_ERROR_CHECK(esp_mqtt_client_disconnect(client));
             stopMqttClient();
@@ -437,7 +442,7 @@ private:
             }
             case MQTT_EVENT_ERROR: {
                 if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
-                    LOGE("Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
+                    LOGTE("mqtt", "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
                     logErrorIfNonZero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
                     logErrorIfNonZero("reported from tls stack", event->error_handle->esp_tls_stack_err);
                     logErrorIfNonZero("captured as transport's socket errno", event->error_handle->esp_transport_sock_errno);
@@ -473,7 +478,7 @@ private:
 
     static void logErrorIfNonZero(const char* message, int error) {
         if (error != 0) {
-            LOGE(" - %s: 0x%x", message, error);
+            LOGTE("mqtt", " - %s: 0x%x", message, error);
         }
     }
 
