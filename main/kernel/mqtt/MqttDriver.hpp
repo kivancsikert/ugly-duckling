@@ -4,6 +4,7 @@
 #include <list>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <variant>
 
 #include <esp_event.h>
@@ -140,6 +141,8 @@ private:
 #endif
         String payload;
         serializeJson(json, payload);
+        // Stay alert until the message is sent
+        extendAlert = std::max(duration_cast<milliseconds>(timeout), extendAlert);
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
             return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, payload, retain, qos, waitingTask, log, extendAlert });
         });
@@ -148,6 +151,8 @@ private:
     PublishStatus clear(const String& topic, Retention retain, QoS qos, ticks timeout = ticks::zero(), milliseconds extendAlert = MQTT_ALERT_AFTER_OUTGOING) {
         LOGD("MQTT: Clearing topic '%s'",
             topic.c_str());
+        // Stay alert until the message is sent
+        extendAlert = std::max(duration_cast<milliseconds>(timeout), extendAlert);
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
             return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, "", retain, qos, waitingTask, LogPublish::Log, extendAlert });
         });
@@ -164,13 +169,20 @@ private:
         }
         uint32_t status = ulTaskNotifyTake(pdTRUE, timeout.count());
         switch (status) {
-            case 0:
+            case 0: {
+                Lock lock(pendingMessagesMutex);
+                pendingMessages.remove_if([waitingTask](const auto& message) {
+                    return message.waitingTask == waitingTask;
+                });
                 return PublishStatus::TimeOut;
-            case OutgoingMessage::PUBLISH_SUCCESS:
+            }
+            case OutgoingMessage::PUBLISH_SUCCESS: {
                 return PublishStatus::Success;
+            }
             case OutgoingMessage::PUBLISH_FAILED:
-            default:
+            default: {
                 return PublishStatus::Failed;
+            }
         }
     }
 
@@ -399,6 +411,8 @@ private:
             case MQTT_EVENT_DISCONNECTED: {
                 LOGV("MQTT: Disconnected from MQTT server");
                 mqttReady.clear();
+                Lock lock(pendingMessagesMutex);
+                pendingMessages.clear();
                 break;
             }
             case MQTT_EVENT_SUBSCRIBED: {
@@ -411,6 +425,7 @@ private:
             }
             case MQTT_EVENT_PUBLISHED: {
                 LOGV("MQTT: Published, message ID %d", event->msg_id);
+                notifyPendingTask(event, true);
                 break;
             }
             case MQTT_EVENT_DATA: {
@@ -428,12 +443,32 @@ private:
                     logErrorIfNonZero("reported from tls stack", event->error_handle->esp_tls_stack_err);
                     logErrorIfNonZero("captured as transport's socket errno", event->error_handle->esp_transport_sock_errno);
                 }
+                notifyPendingTask(event, false);
                 break;
             }
             default: {
                 LOGW("MQTT: Unknown event %d", eventId);
                 break;
             }
+        }
+    }
+
+    void notifyPendingTask(esp_mqtt_event_handle_t event, bool success) {
+        Lock lock(pendingMessagesMutex);
+        pendingMessages.remove_if([&](const auto& message) {
+            if (message.messageId == event->msg_id) {
+                notifyWaitingTask(message.waitingTask, success);
+                return true;
+            } else {
+                return false;
+            }
+        });
+    }
+
+    void notifyWaitingTask(TaskHandle_t task, bool success) {
+        if (task != nullptr) {
+            uint32_t status = success ? OutgoingMessage::PUBLISH_SUCCESS : OutgoingMessage::PUBLISH_FAILED;
+            xTaskNotify(task, status, eSetValueWithOverwrite);
         }
     }
 
@@ -444,38 +479,47 @@ private:
     }
 
     void processOutgoingMessage(const OutgoingMessage message) {
-        int ret = esp_mqtt_client_publish(
+        Lock lock(pendingMessagesMutex);
+        int ret = esp_mqtt_client_enqueue(
             client,
             message.topic.c_str(),
             message.payload.c_str(),
             message.payload.length(),
             static_cast<int>(message.qos),
-            message.retain == Retention::Retain);
+            message.retain == Retention::Retain,
+            true);
 #ifdef DUMP_MQTT
         if (message.log == LogPublish::Log) {
             LOGV("MQTT: Published to '%s' (size: %d), result: %d",
                 message.topic.c_str(), message.payload.length(), ret);
         }
 #endif
-        bool success;
         switch (ret) {
-            case -1:
+            case -1: {
                 LOGD("MQTT: Error publishing to '%s'",
                     message.topic.c_str());
-                success = false;
+                notifyWaitingTask(message.waitingTask, false);
                 break;
-            case -2:
+            }
+            case -2: {
                 LOGD("MQTT: Outbox full, message to '%s' dropped",
                     message.topic.c_str());
-                success = false;
+                notifyWaitingTask(message.waitingTask, false);
                 break;
-            default:
-                success = true;
-                break;
-        }
-        if (message.waitingTask != nullptr) {
-            uint32_t status = success ? OutgoingMessage::PUBLISH_SUCCESS : OutgoingMessage::PUBLISH_FAILED;
-            xTaskNotify(message.waitingTask, status, eSetValueWithOverwrite);
+            }
+            default: {
+                auto messageId = ret;
+                if (message.waitingTask != nullptr) {
+                    if (messageId == 0) {
+                        // Notify tasks waiting on QoS 0 messages immediately
+                        notifyWaitingTask(message.waitingTask, true);
+                    } else {
+                        // Record
+                        pendingMessages.push_back({ messageId, message.waitingTask });
+                    }
+                    break;
+                }
+            }
         }
     }
 
@@ -567,6 +611,13 @@ private:
     Queue<IncomingMessage> incomingQueue;
     // TODO Use a map instead
     std::list<Subscription> subscriptions;
+
+    struct PendingMessage {
+        const int messageId;
+        const TaskHandle_t waitingTask;
+    };
+    Mutex pendingMessagesMutex;
+    std::list<PendingMessage> pendingMessages;
 
     // TODO Review these values
     static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = 10s;
