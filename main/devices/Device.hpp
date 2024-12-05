@@ -456,7 +456,7 @@ public:
                 json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
                 json["sleepWhenIdle"] = kernel.sleepManager.sleepWhenIdle;
             },
-            Retention::NoRetain, QoS::AtLeastOnce, ticks::max());
+            Retention::NoRetain, QoS::AtLeastOnce, 5s);
 
         Task::loop("telemetry", 8192, [this](Task& task) {
             publishTelemetry();
