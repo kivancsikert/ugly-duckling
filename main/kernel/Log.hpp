@@ -9,12 +9,13 @@
 namespace farmhub::kernel {
 
 enum class Level {
-    None = ESP_LOG_NONE,
-    Error = ESP_LOG_ERROR,
-    Warning = ESP_LOG_WARN,
-    Info = ESP_LOG_INFO,
-    Debug = ESP_LOG_DEBUG,
-    Verbose = ESP_LOG_VERBOSE,
+    None = 0,
+    // Fatal = 1,
+    Error = 2,
+    Warning = 3,
+    Info = 4,
+    Debug = 5,
+    Verbose = 6,
 };
 
 #define FARMHUB_LOG(level, format, ...) \

@@ -204,7 +204,7 @@ public:
         const String& name,
         SleepManager& sleepManager,
         ValveControlStrategy& strategy,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        shared_ptr<MqttRoot> mqttRoot,
         std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
         , sleepManager(sleepManager)

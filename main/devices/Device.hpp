@@ -18,12 +18,15 @@
 #include <kernel/Kernel.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
+#include <kernel/mqtt/MqttDriver.hpp>
+#include <kernel/mqtt/MqttRoot.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using std::shared_ptr;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::kernel::mqtt;
 
 #if defined(MK4)
 #include <devices/UglyDucklingMk4.hpp>
@@ -213,7 +216,7 @@ public:
 
 class MqttTelemetryPublisher : public TelemetryPublisher {
 public:
-    MqttTelemetryPublisher(shared_ptr<MqttDriver::MqttRoot> mqttRoot, TelemetryCollector& telemetryCollector)
+    MqttTelemetryPublisher(shared_ptr<MqttRoot> mqttRoot, TelemetryCollector& telemetryCollector)
         : mqttRoot(mqttRoot)
         , telemetryCollector(telemetryCollector) {
     }
@@ -223,7 +226,7 @@ public:
     }
 
 private:
-    shared_ptr<MqttDriver::MqttRoot> mqttRoot;
+    shared_ptr<MqttRoot> mqttRoot;
     TelemetryCollector& telemetryCollector;
 };
 
@@ -248,12 +251,13 @@ public:
             });
         }
 
-        LOGI("  ______                   _    _       _");
-        LOGI(" |  ____|                 | |  | |     | |");
-        LOGI(" | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__");
-        LOGI(" |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\");
-        LOGI(" | | | (_| | |  | | | | | | |  | | |_| | |_) |");
-        LOGI(" |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ " FARMHUB_VERSION);
+        LOGD("   ______                   _    _       _");
+        LOGD("  |  ____|                 | |  | |     | |");
+        LOGD("  | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__");
+        LOGD("  |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\");
+        LOGD("  | | | (_| | |  | | | | | | |  | | |_| | |_) |");
+        LOGD("  |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ " FARMHUB_VERSION);
+        LOGD("  ");
     }
 
     void registerShutdownListener(std::function<void()> listener) {
@@ -388,13 +392,21 @@ public:
                 if (record.level > deviceConfig.publishLogs.get()) {
                     return;
                 }
+                auto length = record.message.length();
+                // Remove the level prefix
+                auto messageStart = 2;
+                // Remove trailing newline
+                auto messageEnd = record.message.charAt(length - 1) == '\n'
+                    ? length - 1
+                    : length;
+                String message = record.message.substring(messageStart, messageEnd);
 
                 mqttDeviceRoot->publish(
                     "log", [&](JsonObject& json) {
                         json["level"] = record.level;
-                        json["message"] = record.message;
+                        json["message"] = message;
                     },
-                    MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::zero(), MqttDriver::LogPublish::Silent);
+                    Retention::NoRetain, QoS::AtLeastOnce, 2s, LogPublish::Silent);
             });
         });
 
@@ -444,7 +456,7 @@ public:
                 json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
                 json["sleepWhenIdle"] = kernel.sleepManager.sleepWhenIdle;
             },
-            MqttDriver::Retention::NoRetain, MqttDriver::QoS::AtLeastOnce, ticks::max());
+            Retention::NoRetain, QoS::AtLeastOnce, ticks::max());
 
         Task::loop("telemetry", 8192, [this](Task& task) {
             publishTelemetry();
@@ -496,7 +508,7 @@ private:
     TDeviceDefinition& deviceDefinition = configuredKernel.deviceDefinition;
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;
 
-    shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig.instance.get());
+    shared_ptr<MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig.instance.get());
     PeripheralManager peripheralManager { kernel.i2c, deviceDefinition.pcnt, deviceDefinition.pwm, kernel.sleepManager, kernel.switches, mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;

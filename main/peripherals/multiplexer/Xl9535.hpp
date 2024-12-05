@@ -19,7 +19,7 @@ class Xl9535Component
 public:
     Xl9535Component(
         const String& name,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         I2CConfig config)
         : Component(name, mqttRoot)
@@ -122,7 +122,7 @@ private:
 class Xl9535
     : public Peripheral<EmptyConfiguration> {
 public:
-    Xl9535(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot, I2CManager& i2c, I2CConfig config)
+    Xl9535(const String& name, shared_ptr<MqttRoot> mqttRoot, I2CManager& i2c, I2CConfig config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , component(name, mqttRoot, i2c, config) {
 
@@ -147,7 +147,7 @@ public:
         : PeripheralFactory<Xl9535DeviceConfig, EmptyConfiguration>("multiplexer:xl9535") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const Xl9535DeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const Xl9535DeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         return make_unique<Xl9535>(name, mqttRoot, services.i2c, deviceConfig.parse());
     }
 };

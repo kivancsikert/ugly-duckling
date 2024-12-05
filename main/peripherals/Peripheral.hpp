@@ -10,8 +10,8 @@
 #include <kernel/PwmManager.hpp>
 #include <kernel/SleepManager.hpp>
 #include <kernel/Telemetry.hpp>
-#include <kernel/drivers/MqttDriver.hpp>
 #include <kernel/drivers/SwitchManager.hpp>
+#include <kernel/mqtt/MqttRoot.hpp>
 
 using std::move;
 using std::shared_ptr;
@@ -19,6 +19,7 @@ using std::unique_ptr;
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::peripherals {
 
@@ -28,7 +29,7 @@ class PeripheralBase
     : public TelemetryProvider,
       public Named {
 public:
-    PeripheralBase(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot, size_t telemetrySize = 2048)
+    PeripheralBase(const String& name, shared_ptr<MqttRoot> mqttRoot, size_t telemetrySize = 2048)
         : Named(name)
         , mqttRoot(mqttRoot)
         , telemetrySize(telemetrySize) {
@@ -64,7 +65,7 @@ public:
     }
 
 protected:
-    shared_ptr<MqttDriver::MqttRoot> mqttRoot;
+    shared_ptr<MqttRoot> mqttRoot;
 
 private:
     const size_t telemetrySize;
@@ -74,7 +75,7 @@ template <typename TConfig>
 class Peripheral
     : public PeripheralBase {
 public:
-    Peripheral(const String& name, shared_ptr<MqttDriver::MqttRoot> mqttRoot)
+    Peripheral(const String& name, shared_ptr<MqttRoot> mqttRoot)
         : PeripheralBase(name, mqttRoot) {
     }
 
@@ -114,7 +115,7 @@ public:
         , peripheralType(peripheralType) {
     }
 
-    virtual unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) = 0;
+    virtual unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) = 0;
 
     const String factoryType;
     const String peripheralType;
@@ -133,7 +134,7 @@ public:
         , deviceConfigArgs(std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
-    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) override {
+    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) override {
         // Use short prefix because SPIFFS has a 32 character limit
         ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/p/" + name);
         mqttRoot->subscribe("config", [name, configFile](const String&, const JsonObject& configJson) {
@@ -154,7 +155,7 @@ public:
         return peripheral;
     }
 
-    virtual unique_ptr<Peripheral<TConfig>> createPeripheral(const String& name, const TDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) = 0;
+    virtual unique_ptr<Peripheral<TConfig>> createPeripheral(const String& name, const TDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) = 0;
 
 private:
     std::tuple<TDeviceConfigArgs...> deviceConfigArgs;
@@ -171,7 +172,7 @@ public:
         PwmManager& pwmManager,
         SleepManager& sleepManager,
         SwitchManager& switchManager,
-        const shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot)
+        const shared_ptr<MqttRoot> mqttDeviceRoot)
         : services({ i2c, pcntManager, pwmManager, sleepManager, switchManager })
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
@@ -268,7 +269,7 @@ private:
             throw PeripheralCreationException("Factory not found: '" + factoryType + "'");
         }
         const String& peripheralType = it->second.get().peripheralType;
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
+        shared_ptr<MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
         PeripheralFactoryBase& factory = it->second.get();
         return factory.createPeripheral(name, configJson, mqttRoot, services, initConfigJson);
     }
@@ -281,7 +282,7 @@ private:
     // TODO Make this immutable somehow
     PeripheralServices services;
 
-    const shared_ptr<MqttDriver::MqttRoot> mqttDeviceRoot;
+    const shared_ptr<MqttRoot> mqttDeviceRoot;
 
     // TODO Use an unordered_map?
     std::map<String, std::reference_wrapper<PeripheralFactoryBase>> factories;

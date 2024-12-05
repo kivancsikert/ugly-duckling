@@ -89,7 +89,7 @@ class ChickenDoorComponent
 public:
     ChickenDoorComponent(
         const String& name,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        shared_ptr<MqttRoot> mqttRoot,
         SleepManager& sleepManager,
         SwitchManager& switches,
         PwmMotorDriver& motor,
@@ -355,7 +355,7 @@ class ChickenDoor
 public:
     ChickenDoor(
         const String& name,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         uint8_t lightSensorAddress,
         SleepManager& sleepManager,
@@ -403,7 +403,7 @@ class NoLightSensorComponent : public LightSensorComponent {
 public:
     NoLightSensorComponent(
         const String& name,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         I2CConfig config,
         seconds measurementFrequency,
@@ -427,7 +427,7 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const String& name, const ChickenDoorDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const String& name, const ChickenDoorDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         PwmMotorDriver& motor = findMotor(deviceConfig.motor.get());
         auto lightSensorType = deviceConfig.lightSensor.get().type.get();
         try {

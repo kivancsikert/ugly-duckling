@@ -5,7 +5,7 @@
 #include <kernel/Configuration.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/SleepManager.hpp>
-#include <kernel/drivers/MqttDriver.hpp>
+#include <kernel/mqtt/MqttDriver.hpp>
 #include <peripherals/Motorized.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>
@@ -14,7 +14,7 @@
 #include <peripherals/valve/ValveComponent.hpp>
 #include <peripherals/valve/ValveConfig.hpp>
 
-using namespace farmhub::kernel::drivers;
+using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
@@ -31,7 +31,7 @@ class FlowControl : public Peripheral<FlowControlConfig> {
 public:
     FlowControl(
         const String& name,
-        shared_ptr<MqttDriver::MqttRoot> mqttRoot,
+        shared_ptr<MqttRoot> mqttRoot,
         PcntManager& pcnt,
         SleepManager& sleepManager,
         ValveControlStrategy& strategy,
@@ -86,7 +86,7 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttDriver::MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         auto strategy = deviceConfig.valve.get().createValveControlStrategy(this);
 
         auto flowMeterConfig = deviceConfig.flowMeter.get();
