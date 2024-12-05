@@ -38,17 +38,17 @@ public:
     bool get(const char* key, T& value) {
         return withPreferences(true, [&]() {
             if (!preferences.isKey(key)) {
-                LOGV("NVS: get(%s) = not found",
+                LOGTV("nvs", "get(%s) = not found",
                     key);
                 return false;
             }
             String jsonString = preferences.getString(key);
-            LOGV("NVS: get(%s) = %s",
+            LOGTV("nvs", "get(%s) = %s",
                 key, jsonString.c_str());
             JsonDocument jsonDocument;
             deserializeJson(jsonDocument, jsonString);
             if (jsonDocument.isNull()) {
-                LOGE("NVS: get(%s) = invalid JSON",
+                LOGTE("nvs", "get(%s) = invalid JSON",
                     key);
                 return false;
             }
@@ -69,7 +69,7 @@ public:
             jsonDocument.set(value);
             String jsonString;
             serializeJson(jsonDocument, jsonString);
-            LOGV("NVS: set(%s) = %s",
+            LOGTV("nvs", "set(%s) = %s",
                 key, jsonString.c_str());
             return preferences.putString(key, jsonString.c_str());
         });
@@ -81,7 +81,7 @@ public:
 
     bool remove(const char* key) {
         return withPreferences(false, [&]() {
-            LOGV("NVS: remove(%s)",
+            LOGTV("nvs", "remove(%s)",
                 key);
             if (preferences.isKey(key)) {
                 return preferences.remove(key);
@@ -94,16 +94,16 @@ public:
 private:
     bool withPreferences(bool readOnly, std::function<bool()> action) {
         Lock lock(preferencesMutex);
-        LOGV("NVS: %s '%s'",
+        LOGTV("nvs", "%s '%s'",
             readOnly ? "read" : "write", name.c_str());
         if (!preferences.begin(name.c_str(), readOnly)) {
-            LOGE("NVS: failed to %s '%s'",
+            LOGTE("nvs", "failed to %s '%s'",
                 readOnly ? "read" : "write", name.c_str());
             return false;
         }
         bool result = action();
         preferences.end();
-        LOGV("NVS: finished %s '%s', result: %s",
+        LOGTV("nvs", "finished %s '%s', result: %s",
             readOnly ? "read" : "write", name.c_str(), result ? "true" : "false");
         return result;
     }

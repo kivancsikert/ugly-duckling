@@ -43,7 +43,7 @@ public:
             // Clear topic and wait for it to be cleared
             auto clearStatus = mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, std::chrono::seconds { 5 }, MQTT_ALERT_AFTER_INCOMING);
             if (clearStatus != PublishStatus::Success) {
-                LOGE("MQTT: Failed to clear retained command topic '%s', status: %d",
+                LOGTE("mqtt", "Failed to clear retained command topic '%s', status: %d",
                     suffix.c_str(), static_cast<int>(clearStatus));
             }
 
