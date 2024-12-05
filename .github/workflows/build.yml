@@ -31,6 +31,10 @@ jobs:
             ud_gen: MK7
             ud_debug: 1
             target: esp32s3
+          - environment: mk8-release
+            ud_gen: MK8
+            ud_debug: 0
+            target: esp32c6
 
     steps:
       - uses: actions/checkout@v4

@@ -87,6 +87,21 @@ static constexpr double BATTERY_BOOT_THRESHOLD = 3.7;
  */
 static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 3.0;
 
+#elif defined(MK8)
+#include <devices/UglyDucklingMk8.hpp>
+typedef farmhub::devices::UglyDucklingMk8 TDeviceDefinition;
+typedef farmhub::devices::Mk8Config TDeviceConfiguration;
+
+/**
+ * @brief Do not boot if battery is below this threshold.
+ */
+static constexpr double BATTERY_BOOT_THRESHOLD = 3.2;
+
+/**
+ * @brief Shutdown if battery drops below this threshold.
+ */
+static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 3.0;
+
 #else
 #error "No device defined"
 #endif
