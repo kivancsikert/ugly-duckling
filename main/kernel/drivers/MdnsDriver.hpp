@@ -34,21 +34,21 @@ public:
         , mdnsReady(mdnsReady) {
         // TODO Add error handling
         Task::run("mdns:init", 4096, [&wifi, &mdnsReady, instanceName, hostname, version](Task& task) {
-            LOGI("mDNS: initializing");
+            LOGTI("mdns", "initializing");
             WiFiConnection connection(wifi);
 
             ESP_ERROR_CHECK(mdns_init());
 
             mdns_hostname_set(hostname.c_str());
             mdns_instance_name_set(instanceName.c_str());
-            LOGD("mDNS: Advertising service %s on %s.local, version: %s",
+            LOGTD("mdns", "Advertising service %s on %s.local, version: %s",
                 instanceName.c_str(), hostname.c_str(), version.c_str());
             mdns_service_add(instanceName.c_str(), "_farmhub", "_tcp", 80, nullptr, 0);
             mdns_txt_item_t txt[] = {
                 { "version", version.c_str() },
             };
             mdns_service_txt_set("_farmhub", "_tcp", txt, 1);
-            LOGI("mDNS: configured");
+            LOGTI("mdns", "configured");
 
             mdnsReady.set();
         });
@@ -68,17 +68,17 @@ private:
         if (loadFromCache) {
             if (nvs.get(cacheKey, record)) {
                 if (record.validate()) {
-                    LOGD("mDNS: found %s in NVS cache: %s",
+                    LOGTD("mdns", "found %s in NVS cache: %s",
                         cacheKey.c_str(), record.hostname.c_str());
                     return true;
                 } else {
-                    LOGD("mDNS: invalid record in NVS cache for %s, removing",
+                    LOGTD("mdns", "invalid record in NVS cache for %s, removing",
                         cacheKey.c_str());
                     nvs.remove(cacheKey);
                 }
             }
         } else {
-            LOGD("mDNS: removing untrusted record for %s from NVS cache",
+            LOGTD("mdns", "removing untrusted record for %s from NVS cache",
                 cacheKey.c_str());
             nvs.remove(cacheKey);
         }
@@ -89,12 +89,12 @@ private:
         mdns_result_t* results = nullptr;
         esp_err_t err = mdns_query_ptr(String("_" + serviceName).c_str(), String("_" + port).c_str(), timeout.count(), 1, &results);
         if (err) {
-            LOGE("mDNS: query failed for %s.%s: %d",
+            LOGTE("mdns", "query failed for %s.%s: %d",
                 serviceName.c_str(), port.c_str(), err);
             return false;
         }
         if (results == nullptr) {
-            LOGI("mDNS: no results found for %s.%s",
+            LOGTI("mdns", "no results found for %s.%s",
                 serviceName.c_str(), port.c_str());
             return false;
         }

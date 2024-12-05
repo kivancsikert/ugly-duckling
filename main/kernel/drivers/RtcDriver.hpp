@@ -43,7 +43,7 @@ public:
         , rtcInSync(rtcInSync) {
 
         if (isTimeSet()) {
-            LOGI("RTC: time is already set");
+            LOGTI("rtc", "time is already set");
             rtcInSync.set();
         }
 
@@ -55,7 +55,7 @@ public:
                         trustMdnsCache = true;
                     } else {
                         // Attempt a retry, but with mDNS cache disabled
-                        LOGE("RTC: NTP update failed, retrying in 10 seconds with mDNS cache disabled");
+                        LOGTE("rtc", "NTP update failed, retrying in 10 seconds with mDNS cache disabled");
                         trustMdnsCache = false;
                         task.delay(10s);
                         continue;
@@ -89,24 +89,24 @@ private:
         ESP_ERROR_CHECK(esp_netif_sntp_init(&config));
 
 #ifdef WOKWI
-        LOGI("RTC: using default NTP server for Wokwi");
+        LOGTI("rtc", "using default NTP server for Wokwi");
 #else
         // TODO Check this
         if (ntpConfig.host.get().length() > 0) {
-            LOGD("RTC: using NTP server %s from configuration",
+            LOGTD("rtc", "using NTP server %s from configuration",
                 ntpConfig.host.get().c_str());
             esp_sntp_setservername(0, ntpConfig.host.get().c_str());
         } else {
             MdnsRecord ntpServer;
             if (mdns.lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
-                LOGD("RTC: using NTP server %s:%d (%s) from mDNS",
+                LOGTD("rtc", "using NTP server %s:%d (%s) from mDNS",
                     ntpServer.hostname.c_str(),
                     ntpServer.port,
                     ntpServer.ip.toString().c_str());
                 auto serverIp = convertIp4(ntpServer.ip);
                 esp_sntp_setserver(0, &serverIp);
             } else {
-                LOGD("RTC: no NTP server configured, using default");
+                LOGTD("rtc", "no NTP server configured, using default");
             }
         }
 #endif
@@ -121,11 +121,11 @@ private:
         if (ret == ESP_OK || ret == ESP_ERR_NOT_FINISHED) {
             rtcInSync.set();
             success = true;
-            LOGD("RTC: sync finished successfully");
+            LOGTD("rtc", "sync finished successfully");
         } else if (ret == ESP_ERR_TIMEOUT) {
-            LOGD("RTC: waiting for time sync timed out");
+            LOGTD("rtc", "waiting for time sync timed out");
         } else {
-            LOGD("RTC: waiting for time sync returned 0x%x", ret);
+            LOGTD("rtc", "waiting for time sync returned 0x%x", ret);
         }
 
         esp_netif_sntp_deinit();

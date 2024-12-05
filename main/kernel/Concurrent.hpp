@@ -60,7 +60,7 @@ public:
         TMessage* copy = new TMessage(std::forward<Args>(args)...);
         bool sentWithoutDropping = xQueueSend(this->queue, &copy, timeout.count()) == pdTRUE;
         if (!sentWithoutDropping) {
-            LOGW("Overflow in queue '%s', dropping message\n",
+            printf("Overflow in queue '%s', dropping message\n",
                 this->name.c_str());
             delete copy;
         }
@@ -137,7 +137,7 @@ public:
     bool offerIn(ticks timeout, const TMessage message) {
         bool sentWithoutDropping = xQueueSend(this->queue, &message, timeout.count()) == pdTRUE;
         if (!sentWithoutDropping) {
-            LOGW("Overflow in queue '%s', dropping message",
+            printf("Overflow in queue '%s', dropping message",
                 this->name.c_str());
         }
         return sentWithoutDropping;

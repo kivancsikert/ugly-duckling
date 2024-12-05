@@ -18,14 +18,17 @@ enum class Level {
     Verbose = 6,
 };
 
-#define FARMHUB_LOG(level, format, ...) \
-    ESP_LOG_LEVEL_LOCAL(level, "farmhub", format, ##__VA_ARGS__)
+#define LOGE(format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_ERROR, "farmhub", format, ##__VA_ARGS__)
+#define LOGW(format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_WARN, "farmhub", format, ##__VA_ARGS__)
+#define LOGI(format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_INFO, "farmhub", format, ##__VA_ARGS__)
+#define LOGD(format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_DEBUG, "farmhub", format, ##__VA_ARGS__)
+#define LOGV(format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_VERBOSE, "farmhub", format, ##__VA_ARGS__)
 
-#define LOGE(format, ...) FARMHUB_LOG(ESP_LOG_ERROR, format, ##__VA_ARGS__)
-#define LOGW(format, ...) FARMHUB_LOG(ESP_LOG_WARN, format, ##__VA_ARGS__)
-#define LOGI(format, ...) FARMHUB_LOG(ESP_LOG_INFO, format, ##__VA_ARGS__)
-#define LOGD(format, ...) FARMHUB_LOG(ESP_LOG_DEBUG, format, ##__VA_ARGS__)
-#define LOGV(format, ...) FARMHUB_LOG(ESP_LOG_VERBOSE, format, ##__VA_ARGS__)
+#define LOGTE(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_ERROR, "farmhub:" tag, format, ##__VA_ARGS__)
+#define LOGTW(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_WARN, "farmhub:" tag, format, ##__VA_ARGS__)
+#define LOGTI(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_INFO, "farmhub:" tag, format, ##__VA_ARGS__)
+#define LOGTD(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_DEBUG, "farmhub:" tag, format, ##__VA_ARGS__)
+#define LOGTV(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_VERBOSE, "farmhub:" tag, format, ##__VA_ARGS__)
 
 #ifndef FARMHUB_LOG_LEVEL
 #ifdef FARMHUB_DEBUG
@@ -43,11 +46,21 @@ void convertFromJson(JsonVariantConst src, Level& dst) {
 }
 
 static void initLogging() {
+    const char* logTags[] = {
+        "farmhub",
+        "farmhub:mqtt",
+        "farmhub:wifi",
+        "farmhub:rtc",
+        "farmhub:mdns",
+        "farmhub:nvs",
+    };
+    for (const char* tag : logTags) {
 #ifdef FARMHUB_DEBUG
-    esp_log_level_set("farmhub", ESP_LOG_DEBUG);
+        esp_log_level_set(tag, ESP_LOG_DEBUG);
 #else
-    esp_log_level_set("farmhub", ESP_LOG_INFO);
+        esp_log_level_set(tag, ESP_LOG_INFO);
 #endif
+    }
 }
 
 }    // namespace farmhub::kernel

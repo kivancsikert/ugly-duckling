@@ -37,12 +37,35 @@ public:
 
 private:
     static int processLogFunc(const char* format, va_list args) {
-        return consoleProvider->processLog(format, args);
+        String message = consoleProvider->renderMessage(format, args);
+        return consoleProvider->processLog(message);
     }
 
-    int processLog(const char* format, va_list args) {
-        Level level = getLevel(format[0]);
-        recordLog(level, format, args);
+    int processLog(const String& message) {
+        if (message.isEmpty()) {
+            return 0;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(partialMessageMutex);
+            if (message.charAt(message.length() - 1) != '\n') {
+                partialMessage += message;
+                return 0;
+            } else if (!partialMessage.isEmpty()) {
+                String fullMessage = partialMessage + message;
+                partialMessage.clear();
+                return processLogLine(fullMessage);
+            } else {
+                return processLogLine(message);
+            }
+        }
+    }
+
+    int processLogLine(const String& message) {
+        Level level = getLevel(message);
+        if (level <= recordedLevel) {
+            logRecords.offer(level, message);
+        }
 
         int count = 0;
 #ifdef FARMHUB_DEBUG
@@ -63,11 +86,7 @@ private:
         }
 #endif
 
-        int originalCount = originalVprintf(format, args);
-        if (originalCount < 0) {
-            return originalCount;
-        }
-        count += originalCount;
+        count += printf("%s", message.c_str());
 
 #ifdef FARMHUB_DEBUG
         switch (level) {
@@ -83,20 +102,15 @@ private:
         return count;
     }
 
-    void recordLog(Level level, const char* format, va_list args) {
-        if (level > recordedLevel) {
-            return;
-        }
-
+    String renderMessage(const char* format, va_list args) {
         int length;
         {
             std::lock_guard<std::mutex> lock(bufferMutex);
             length = vsnprintf(buffer, BUFFER_SIZE, format, args);
             if (length < 0) {
-                printf("Encountered an encoding error");
+                return "<Encoding error>";
             } else if (length < BUFFER_SIZE) {
-                logRecords.offer(level, buffer);
-                return;
+                return String(buffer, length);
             }
         }
 
@@ -104,12 +118,17 @@ private:
         length = std::min(length, 2048);
         char* heapBuffer = new char[length + 1];
         vsnprintf(heapBuffer, length + 1, format, args);
-        logRecords.offer(level, String(heapBuffer, length));
+        String result(heapBuffer, length);
         delete[] heapBuffer;
+        return result;
     }
 
-    static inline Level getLevel(char c) {
-        switch (c) {
+    static Level getLevel(const String& message) {
+        // Anything that doesn't look like 'X ...' is a debug message
+        if (message.length() < 2 || message.charAt(1) != ' ') {
+            return Level::Debug;
+        }
+        switch (message.charAt(0)) {
             case 'E':
                 return Level::Error;
             case 'W':
@@ -121,7 +140,8 @@ private:
             case 'V':
                 return Level::Verbose;
             default:
-                return Level::Info;
+                // Anything with an unknown level is a debug message
+                return Level::Debug;
         }
     }
 
@@ -131,6 +151,9 @@ private:
     std::mutex bufferMutex;
     static constexpr size_t BUFFER_SIZE = 128;
     char buffer[BUFFER_SIZE];
+
+    std::mutex partialMessageMutex;
+    String partialMessage;
 };
 
 }    // namespace farmhub::kernel
