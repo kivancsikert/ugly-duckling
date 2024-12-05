@@ -406,7 +406,7 @@ public:
                         json["level"] = record.level;
                         json["message"] = message;
                     },
-                    Retention::NoRetain, QoS::AtLeastOnce, ticks::zero(), LogPublish::Silent);
+                    Retention::NoRetain, QoS::AtLeastOnce, 2s, LogPublish::Silent);
             });
         });
 
