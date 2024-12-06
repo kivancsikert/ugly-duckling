@@ -216,6 +216,20 @@ public:
     }
 };
 
+class WiFiTelemetryProvider : public TelemetryProvider {
+public:
+    WiFiTelemetryProvider(WiFiDriver& wifi)
+        : wifi(wifi) {
+    }
+
+    void populateTelemetry(JsonObject& json) override {
+        json["uptime"] = wifi.getUptime().count();
+    }
+
+private:
+    WiFiDriver& wifi;
+};
+
 class MqttTelemetryPublisher : public TelemetryPublisher {
 public:
     MqttTelemetryPublisher(shared_ptr<MqttRoot> mqttRoot, TelemetryCollector& telemetryCollector)
@@ -370,6 +384,8 @@ public:
         } else {
             LOGI("No battery configured");
         }
+
+        deviceTelemetryCollector.registerProvider("wifi", std::make_shared<WiFiTelemetryProvider>(kernel.wifi));
 
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
         deviceTelemetryCollector.registerProvider("memory", std::make_shared<MemoryTelemetryProvider>());
