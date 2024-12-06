@@ -175,22 +175,23 @@ private:
         if (waitingTask == nullptr) {
             return PublishStatus::Pending;
         }
+
+        // Wait for task notification
         uint32_t status = ulTaskNotifyTake(pdTRUE, timeout.count());
+        {
+            Lock lock(pendingMessagesMutex);
+            pendingMessages.remove_if([waitingTask](const auto& message) {
+                return message.waitingTask == waitingTask;
+            });
+        }
         switch (status) {
-            case 0: {
-                Lock lock(pendingMessagesMutex);
-                pendingMessages.remove_if([waitingTask](const auto& message) {
-                    return message.waitingTask == waitingTask;
-                });
+            case 0:
                 return PublishStatus::TimeOut;
-            }
-            case OutgoingMessage::PUBLISH_SUCCESS: {
+            case OutgoingMessage::PUBLISH_SUCCESS:
                 return PublishStatus::Success;
-            }
             case OutgoingMessage::PUBLISH_FAILED:
-            default: {
+            default:
                 return PublishStatus::Failed;
-            }
         }
     }
 
@@ -426,7 +427,9 @@ private:
                 LOGTV("mqtt", "Disconnected from MQTT server");
                 mqttReady.clear();
                 Lock lock(pendingMessagesMutex);
-                pendingMessages.clear();
+                for (auto& message : pendingMessages) {
+                    notifyWaitingTask(message.waitingTask, false);
+                }
                 break;
             }
             case MQTT_EVENT_SUBSCRIBED: {
@@ -469,14 +472,12 @@ private:
 
     void notifyPendingTask(esp_mqtt_event_handle_t event, bool success) {
         Lock lock(pendingMessagesMutex);
-        pendingMessages.remove_if([&](const auto& message) {
+        for (auto& message : pendingMessages) {
             if (message.messageId == event->msg_id) {
                 notifyWaitingTask(message.waitingTask, success);
-                return true;
-            } else {
-                return false;
+                break;
             }
-        });
+        }
     }
 
     void notifyWaitingTask(TaskHandle_t task, bool success) {
