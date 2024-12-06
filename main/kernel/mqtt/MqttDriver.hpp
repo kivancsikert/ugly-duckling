@@ -253,7 +253,7 @@ private:
                     [&](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
                         if constexpr (std::is_same_v<T, OutgoingMessage>) {
-                            LOGTV("mqtt", "Processing outgoing message: %s",
+                            LOGTV("mqtt", "Processing outgoing message to %s",
                                 arg.topic.c_str());
                             processOutgoingMessage(arg);
                             alertUntil = std::max(alertUntil, system_clock::now() + arg.extendAlert);
