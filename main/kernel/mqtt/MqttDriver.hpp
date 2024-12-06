@@ -131,14 +131,24 @@ public:
 
 private:
     PublishStatus publish(const String& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log, milliseconds extendAlert = MQTT_ALERT_AFTER_OUTGOING) {
-#ifdef DUMP_MQTT
         if (log == LogPublish::Log) {
+#ifdef DUMP_MQTT
             String serializedJson;
             serializeJsonPretty(json, serializedJson);
-            LOGTD("mqtt", "Queuing topic '%s'%s (qos = %d): %s",
-                topic.c_str(), (retain == Retention::Retain ? " (retain)" : ""), static_cast<int>(qos), serializedJson.c_str());
-        }
+            LOGTD("mqtt", "Queuing topic '%s'%s (qos = %d, timeout = %lld ms): %s",
+                topic.c_str(),
+                (retain == Retention::Retain ? " (retain)" : ""),
+                static_cast<int>(qos),
+                duration_cast<milliseconds>(timeout).count(),
+                serializedJson.c_str());
+#else
+            LOGTV("mqtt", "Queuing topic '%s'%s (qos = %d, timeout = %lld ms)",
+                topic.c_str(),
+                (retain == Retention::Retain ? " (retain)" : ""),
+                static_cast<int>(qos),
+                duration_cast<milliseconds>(timeout).count());
 #endif
+        }
         String payload;
         serializeJson(json, payload);
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
@@ -147,8 +157,10 @@ private:
     }
 
     PublishStatus clear(const String& topic, Retention retain, QoS qos, ticks timeout = ticks::zero(), milliseconds extendAlert = MQTT_ALERT_AFTER_OUTGOING) {
-        LOGTD("mqtt", "Clearing topic '%s'",
-            topic.c_str());
+        LOGTD("mqtt", "Clearing topic '%s' (qos = %d, timeout = %lld ms)",
+            topic.c_str(),
+            static_cast<int>(qos),
+            duration_cast<milliseconds>(timeout).count());
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
             return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, "", retain, qos, waitingTask, LogPublish::Log, extendAlert });
         });
