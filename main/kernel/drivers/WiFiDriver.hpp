@@ -27,7 +27,7 @@ public:
         , configPortalRunning(configPortalRunning)
         , hostname(hostname)
         , powerSaveMode(powerSaveMode) {
-        LOGTD("wifi", "initializing");
+        LOGTD("wifi", "Registering WiFi handlers");
 
         // Initialize TCP/IP adapter and event loop
         ESP_ERROR_CHECK(esp_netif_init());
@@ -235,6 +235,8 @@ private:
 
     void connect() {
         networkConnecting.set();
+        ensureWifiInitialized();
+
 #ifdef WOKWI
         LOGTD("wifi", "Skipping provisioning on Wokwi");
         wifi_config_t wifiConfig = {
@@ -277,7 +279,7 @@ private:
             LOGTD("wifi", "Initializing");
             wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
             ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-            ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+            ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
             wifiInitialized = true;
         }
     }
@@ -379,7 +381,7 @@ private:
     const bool powerSaveMode;
 
     StateManager internalStates;
-    bool wifiInitialized;
+    bool wifiInitialized = false;
     StateSource stationStarted = internalStates.createStateSource("wifi:station-started");
 
     enum class WiFiEvent {
