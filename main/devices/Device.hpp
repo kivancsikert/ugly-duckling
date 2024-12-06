@@ -97,8 +97,9 @@ namespace farmhub::devices {
 #ifdef FARMHUB_DEBUG
 class ConsolePrinter {
 public:
-    ConsolePrinter(const shared_ptr<BatteryDriver> battery)
-        : battery(battery) {
+    ConsolePrinter(const shared_ptr<BatteryDriver> battery, WiFiDriver& wifi)
+        : battery(battery)
+        , wifi(wifi) {
         status.reserve(256);
         Task::loop("console", 3072, 1, [this](Task& task) {
             printStatus();
@@ -123,6 +124,9 @@ private:
 
         status.concat(", WIFI: ");
         status.concat(wifiStatus());
+        status.concat(" (up \033[33m");
+        status.concat(String(float(wifi.getUptime().count()) / 1000.0f, 1));
+        status.concat("\033[0m s)");
 
         status.concat(", uptime: \033[33m");
         status.concat(String(float(millis()) / 1000.0f, 1));
@@ -201,6 +205,7 @@ private:
     int counter;
     String status;
     const std::shared_ptr<BatteryDriver> battery;
+    WiFiDriver& wifi;
 };
 #endif
 
@@ -272,7 +277,7 @@ public:
 
 private:
 #ifdef FARMHUB_DEBUG
-    ConsolePrinter consolePrinter { battery };
+    ConsolePrinter consolePrinter { battery, kernel.wifi };
 #endif
 
     void checkBatteryVoltage(Task& task) {
