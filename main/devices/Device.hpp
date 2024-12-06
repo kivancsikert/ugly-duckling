@@ -147,6 +147,8 @@ private:
         }
 
         printf("\033[1G\033[0K%s", status.c_str());
+        fflush(stdout);
+        fsync(fileno(stdout));
     }
 
     static const char* wifiStatus() {
