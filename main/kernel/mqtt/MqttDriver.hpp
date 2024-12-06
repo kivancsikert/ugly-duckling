@@ -141,8 +141,6 @@ private:
 #endif
         String payload;
         serializeJson(json, payload);
-        // Stay alert until the message is sent
-        extendAlert = std::max(duration_cast<milliseconds>(timeout), extendAlert);
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
             return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, payload, retain, qos, waitingTask, log, extendAlert });
         });
