@@ -309,7 +309,7 @@ private:
     }
 
     MovingAverage<double> batteryVoltage { 5 };
-    std::list<function<void()>> shutdownListeners;
+    std::list<std::function<void()>> shutdownListeners;
 
     /**
      * @brief Time to wait between battery checks.
