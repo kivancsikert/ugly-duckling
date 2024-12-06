@@ -10,6 +10,7 @@
 
 #include <kernel/Concurrent.hpp>
 #include <kernel/State.hpp>
+#include <kernel/StateManager.hpp>
 #include <kernel/Task.hpp>
 
 using namespace std::chrono_literals;
@@ -26,7 +27,7 @@ public:
         , configPortalRunning(configPortalRunning)
         , hostname(hostname)
         , powerSaveMode(powerSaveMode) {
-        LOGTD("wifi", "initializing");
+        LOGTD("wifi", "Registering WiFi handlers");
 
         // Initialize TCP/IP adapter and event loop
         ESP_ERROR_CHECK(esp_netif_init());
@@ -35,11 +36,6 @@ public:
         // Create default WiFi station interface
         esp_netif_create_default_wifi_sta();
         esp_netif_create_default_wifi_ap();
-
-        // Initialize WiFi
-        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-        ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-        ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
         // Register event handlers
         ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onEvent, this));
@@ -81,14 +77,18 @@ private:
         switch (eventId) {
             case WIFI_EVENT_STA_START: {
                 LOGTD("wifi", "Started");
-                esp_err_t err = esp_wifi_connect();
-                if (err != ESP_OK) {
-                    LOGTD("wifi", "Failed to start connecting: %s", esp_err_to_name(err));
+                stationStarted.set();
+                if (networkRequested.isSet()) {
+                    esp_err_t err = esp_wifi_connect();
+                    if (err != ESP_OK) {
+                        LOGTD("wifi", "Failed to start connecting: %s", esp_err_to_name(err));
+                    }
                 }
                 break;
             }
             case WIFI_EVENT_STA_STOP: {
                 LOGTD("wifi", "Stopped");
+                stationStarted.clear();
                 break;
             }
             case WIFI_EVENT_STA_CONNECTED: {
@@ -226,8 +226,7 @@ private:
                 }
             } else {
                 networkRequested.clear();
-                if (connected && powerSaveMode) {
-                    LOGTV("wifi", "No more clients, disconnecting");
+                if (connected) {
                     disconnect();
                 }
             }
@@ -236,6 +235,8 @@ private:
 
     void connect() {
         networkConnecting.set();
+        ensureWifiInitialized();
+
 #ifdef WOKWI
         LOGTD("wifi", "Skipping provisioning on Wokwi");
         wifi_config_t wifiConfig = {
@@ -245,7 +246,7 @@ private:
                 .channel = 6,
             }
         };
-        startStation(wifiConfig);
+        connectToStation(wifiConfig);
 #else
         bool provisioned = false;
         ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
@@ -254,7 +255,7 @@ private:
             ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifiConfig));
             LOGTD("wifi", "Connecting using stored credentials to %s (password '%s')",
                 wifiConfig.sta.ssid, wifiConfig.sta.password);
-            startStation(wifiConfig);
+            connectToStation(wifiConfig);
         } else {
             LOGTD("wifi", "No stored credentials, starting provisioning");
             configPortalRunning.set();
@@ -263,23 +264,80 @@ private:
 #endif
     }
 
-    void startStation(wifi_config_t& config) {
-        ESP_ERROR_CHECK(esp_wifi_stop());
-
+    void disconnect() {
         if (powerSaveMode) {
-            auto listenInterval = 50;
-            LOGV("WiFi enabling power save mode, listen interval: %d",
-                listenInterval);
-            ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
-            config.sta.listen_interval = listenInterval;
+            LOGTV("wifi", "No more clients, shutting down radio to conserve power");
+            ensureWifiDeinitialized();
+        } else {
+            LOGTV("wifi", "No more clients, but staying online because not saving power");
         }
+    }
 
-        ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-        ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
-        ESP_ERROR_CHECK(esp_wifi_start());
+    void ensureWifiInitialized() {
+        if (!wifiInitialized) {
+            // Initialize WiFi
+            LOGTD("wifi", "Initializing");
+            wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+            ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+            ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
+            wifiInitialized = true;
+        }
+    }
+
+    void ensureWifiDeinitialized() {
+        if (wifiInitialized) {
+            ensureWifiStopped();
+            LOGTD("wifi", "De-initializing");
+            ESP_ERROR_CHECK(esp_wifi_deinit());
+            wifiInitialized = false;
+        }
+    }
+
+    void ensureWifiStationStarted(wifi_config_t& config) {
+        ensureWifiInitialized();
+        if (!stationStarted.isSet()) {
+            if (powerSaveMode) {
+                auto listenInterval = 50;
+                LOGV("WiFi enabling power save mode, listen interval: %d",
+                    listenInterval);
+                ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
+                config.sta.listen_interval = listenInterval;
+            }
+
+            LOGTD("wifi", "Starting station");
+            ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+            ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
+            ESP_ERROR_CHECK(esp_wifi_start());
+            stationStarted.awaitSet();
+        }
+    }
+
+    void ensureWifiStopped() {
+        if (stationStarted.isSet()) {
+            if (networkReady.isSet()) {
+                ensureWifiDisconnected();
+            }
+            LOGTD("wifi", "Stopping");
+            ESP_ERROR_CHECK(esp_wifi_stop());
+        }
+    }
+
+    void ensureWifiDisconnected() {
+        networkReady.clear();
+        if (stationStarted.isSet()) {
+            LOGTD("wifi", "Disconnecting");
+            ESP_ERROR_CHECK(esp_wifi_disconnect());
+        }
+    }
+
+    void connectToStation(wifi_config_t& config) {
+        ensureWifiStopped();
+        ensureWifiStationStarted(config);
     }
 
     void startProvisioning() {
+        ensureWifiInitialized();
+
         // Initialize provisioning manager
         wifi_prov_mgr_config_t config = {
             .scheme = wifi_prov_scheme_softap,
@@ -305,13 +363,6 @@ private:
     static constexpr const char* serviceKey = nullptr;
     static constexpr const bool resetProvisioned = false;
 
-    void disconnect() {
-        networkReady.clear();
-        LOGTD("wifi", "Disconnecting");
-        ESP_ERROR_CHECK(esp_wifi_disconnect());
-        ESP_ERROR_CHECK(esp_wifi_stop());
-    }
-
     StateSource& acquire() {
         eventQueue.offerIn(WIFI_QUEUE_TIMEOUT, WiFiEvent::WANTS_CONNECT);
         return networkReady;
@@ -328,6 +379,10 @@ private:
     StateSource& configPortalRunning;
     const String hostname;
     const bool powerSaveMode;
+
+    StateManager internalStates;
+    bool wifiInitialized = false;
+    StateSource stationStarted = internalStates.createStateSource("wifi:station-started");
 
     enum class WiFiEvent {
         CONNECTED,

@@ -152,7 +152,7 @@ private:
     static const char* wifiStatus() {
         auto netif = esp_netif_get_default_netif();
         if (!netif) {
-            return "\033[0;31moff\033[0m";
+            return "\033[0;33moff\033[0m";
         }
 
         wifi_mode_t mode;
@@ -162,43 +162,38 @@ private:
             case WIFI_MODE_STA:
                 break;
             case WIFI_MODE_NULL:
-                return "\033[0;31moff\033[0m";
+                return "\033[0;33mNULL\033[0m";
             case WIFI_MODE_AP:
                 return "\033[0;32mAP\033[0m";
             case WIFI_MODE_APSTA:
                 return "\033[0;32mAPSTA\033[0m";
+            case WIFI_MODE_NAN:
+                return "\033[0;32mNAN\033[0m";
             default:
-                return "\033[0;31munknown mode\033[0m";
+                return "\033[0;31m???\033[0m";
         }
 
         // Retrieve the current Wi-Fi station connection status
         wifi_ap_record_t ap_info;
         esp_err_t err = esp_wifi_sta_get_ap_info(&ap_info);
-
-        // TODO Handle ESP_ERR_WIFI_CONN, or better yet, use `WiFiDriver` directly
-        switch (err) {
-            case ESP_OK:
-                break;
-            case ESP_ERR_WIFI_CONN:
-                return "\033[0;32mconnection-error\033[0m";
-            case ESP_ERR_WIFI_NOT_CONNECT:
-                return "\033[0;33mdisconnected\033[0m";
-            case ESP_ERR_WIFI_NOT_STARTED:
-                return "\033[0;31mWi-Fi not started\033[0m";
-            default:
-                return esp_err_to_name(err);
+        if (err != ESP_OK) {
+            return esp_err_to_name(err);
         }
 
         // Check IP address
         esp_netif_ip_info_t ip_info;
         err = esp_netif_get_ip_info(netif, &ip_info);
-        if (err == ESP_OK && ip_info.ip.addr != 0) {
+        if (err != ESP_OK) {
+            return esp_err_to_name(err);
+        }
+
+        if (ip_info.ip.addr != 0) {
             static char ip_str[32];
             snprintf(ip_str, sizeof(ip_str), "\033[0;33m" IPSTR "\033[0m", IP2STR(&ip_info.ip));
             return ip_str;
+        } else {
+            return "\033[0;33mIP?\033[0m";
         }
-
-        return "\033[0;31midle\033[0m";
     }
 
     int counter;
