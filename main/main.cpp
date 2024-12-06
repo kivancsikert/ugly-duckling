@@ -6,6 +6,10 @@
 #include <chrono>
 #include <string>
 
+#include <esp_app_desc.h>
+
+static const char* const farmhubVersion = esp_app_get_description()->version;
+
 #include <kernel/Log.hpp>
 
 #ifdef CONFIG_HEAP_TRACING
