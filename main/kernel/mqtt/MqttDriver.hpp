@@ -245,8 +245,7 @@ private:
             }
 
             // LOGTV("mqtt", "Waiting for outgoing event for %lld ms", duration_cast<milliseconds>(timeout).count());
-            outgoingQueue.pollIn(duration_cast<ticks>(timeout), [&](const auto& event) {
-                LOGTV("mqtt", "Processing outgoing event");
+            outgoingQueue.drainIn(duration_cast<ticks>(timeout), [&](const auto& event) {
                 ensureConnected(task);
 
                 std::visit(
