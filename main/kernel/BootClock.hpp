@@ -3,8 +3,6 @@
 #include <chrono>
 #include <esp_timer.h>
 
-using namespace std;
-
 namespace farmhub::kernel {
 
 /**
@@ -13,10 +11,10 @@ namespace farmhub::kernel {
  *  Time returned has the property of only increasing at a uniform rate.
  */
 struct boot_clock {
-    typedef chrono::microseconds duration;
+    typedef std::chrono::microseconds duration;
     typedef duration::rep rep;
     typedef duration::period period;
-    typedef chrono::time_point<boot_clock, duration> time_point;
+    typedef std::chrono::time_point<boot_clock, duration> time_point;
 
     static constexpr bool is_steady = true;
 

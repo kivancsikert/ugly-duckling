@@ -8,6 +8,7 @@
 #include <wifi_provisioning/manager.h>
 #include <wifi_provisioning/scheme_softap.h>
 
+#include <kernel/BootClock.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/State.hpp>
 #include <kernel/StateManager.hpp>
@@ -59,6 +60,10 @@ public:
             esp_ip4addr_ntoa(&ip, ipString, sizeof(ipString));
             return String(ipString);
         });
+    }
+
+    milliseconds getUptime() {
+        return wifiUptimeBefore + currentWifiUptime();
     }
 
 private:
@@ -275,11 +280,11 @@ private:
 
     void ensureWifiInitialized() {
         if (!wifiInitialized) {
-            // Initialize WiFi
-            LOGTD("wifi", "Initializing");
+            LOGTD("wifi", "Initializing WiFi");
             wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
             ESP_ERROR_CHECK(esp_wifi_init(&cfg));
             ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
+            wifiUpSince = boot_clock::now();
             wifiInitialized = true;
         }
     }
@@ -287,10 +292,20 @@ private:
     void ensureWifiDeinitialized() {
         if (wifiInitialized) {
             ensureWifiStopped();
-            LOGTD("wifi", "De-initializing");
+            auto currentUptime = currentWifiUptime();
+            wifiUptimeBefore += currentUptime;
+            wifiUpSince.reset();
+            LOGTD("wifi", "De-initializing WiFi (spent %lld ms initialized)", currentUptime.count());
             ESP_ERROR_CHECK(esp_wifi_deinit());
             wifiInitialized = false;
         }
+    }
+
+    milliseconds currentWifiUptime() {
+        if (!wifiUpSince.has_value()) {
+            return milliseconds::zero();
+        }
+        return duration_cast<milliseconds>(boot_clock::now() - wifiUpSince.value());
     }
 
     void ensureWifiStationStarted(wifi_config_t& config) {
@@ -298,7 +313,7 @@ private:
         if (!stationStarted.isSet()) {
             if (powerSaveMode) {
                 auto listenInterval = 50;
-                LOGV("WiFi enabling power save mode, listen interval: %d",
+                LOGTV("wifi", "Enabling power save mode, listen interval: %d",
                     listenInterval);
                 ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
                 config.sta.listen_interval = listenInterval;
@@ -399,6 +414,9 @@ private:
     Mutex metadataMutex;
     std::optional<String> ssid;
     std::optional<esp_ip4_addr_t> ip;
+
+    std::optional<time_point<boot_clock>> wifiUpSince;
+    milliseconds wifiUptimeBefore = milliseconds::zero();
 
     friend class WiFiConnection;
 };

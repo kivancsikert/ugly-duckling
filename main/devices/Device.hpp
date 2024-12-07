@@ -97,8 +97,9 @@ namespace farmhub::devices {
 #ifdef FARMHUB_DEBUG
 class ConsolePrinter {
 public:
-    ConsolePrinter(const shared_ptr<BatteryDriver> battery)
-        : battery(battery) {
+    ConsolePrinter(const shared_ptr<BatteryDriver> battery, WiFiDriver& wifi)
+        : battery(battery)
+        , wifi(wifi) {
         status.reserve(256);
         Task::loop("console", 3072, 1, [this](Task& task) {
             printStatus();
@@ -123,6 +124,9 @@ private:
 
         status.concat(", WIFI: ");
         status.concat(wifiStatus());
+        status.concat(" (up \033[33m");
+        status.concat(String(float(wifi.getUptime().count()) / 1000.0f, 1));
+        status.concat("\033[0m s)");
 
         status.concat(", uptime: \033[33m");
         status.concat(String(float(millis()) / 1000.0f, 1));
@@ -147,6 +151,8 @@ private:
         }
 
         printf("\033[1G\033[0K%s", status.c_str());
+        fflush(stdout);
+        fsync(fileno(stdout));
     }
 
     static const char* wifiStatus() {
@@ -199,6 +205,7 @@ private:
     int counter;
     String status;
     const std::shared_ptr<BatteryDriver> battery;
+    WiFiDriver& wifi;
 };
 #endif
 
@@ -207,6 +214,20 @@ public:
     void populateTelemetry(JsonObject& json) override {
         json["free-heap"] = ESP.getFreeHeap();
     }
+};
+
+class WiFiTelemetryProvider : public TelemetryProvider {
+public:
+    WiFiTelemetryProvider(WiFiDriver& wifi)
+        : wifi(wifi) {
+    }
+
+    void populateTelemetry(JsonObject& json) override {
+        json["uptime"] = wifi.getUptime().count();
+    }
+
+private:
+    WiFiDriver& wifi;
 };
 
 class MqttTelemetryPublisher : public TelemetryPublisher {
@@ -270,7 +291,7 @@ public:
 
 private:
 #ifdef FARMHUB_DEBUG
-    ConsolePrinter consolePrinter { battery };
+    ConsolePrinter consolePrinter { battery, kernel.wifi };
 #endif
 
     void checkBatteryVoltage(Task& task) {
@@ -307,7 +328,7 @@ private:
     }
 
     MovingAverage<double> batteryVoltage { 5 };
-    std::list<function<void()>> shutdownListeners;
+    std::list<std::function<void()>> shutdownListeners;
 
     /**
      * @brief Time to wait between battery checks.
@@ -363,6 +384,8 @@ public:
         } else {
             LOGI("No battery configured");
         }
+
+        deviceTelemetryCollector.registerProvider("wifi", std::make_shared<WiFiTelemetryProvider>(kernel.wifi));
 
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
         deviceTelemetryCollector.registerProvider("memory", std::make_shared<MemoryTelemetryProvider>());
