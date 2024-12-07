@@ -119,7 +119,7 @@ private:
         status.concat("] ");
 
         status.concat("\033[33m");
-        status.concat(FARMHUB_VERSION);
+        status.concat(farmhubVersion);
         status.concat("\033[0m");
 
         status.concat(", WIFI: ");
@@ -272,7 +272,7 @@ public:
         LOGD("  | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__");
         LOGD("  |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\");
         LOGD("  | | | (_| | |  | | | | | | |  | | |_| | |_) |");
-        LOGD("  |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ " FARMHUB_VERSION);
+        LOGD("  |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s", farmhubVersion);
         LOGD("  ");
     }
 

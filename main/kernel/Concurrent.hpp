@@ -9,6 +9,7 @@
 #include <freertos/FreeRTOS.h>
 
 #include <kernel/Time.hpp>
+#include <kernel/BootClock.hpp>
 
 using namespace std::chrono;
 
@@ -80,6 +81,34 @@ public:
                 break;
             }
             count++;
+        }
+        return count;
+    }
+
+    /**
+     * @brief Wait for the first item to appear within the given timeout,
+     * then drain any items remaining in the queue.
+     */
+    size_t drainIn(ticks timeout, MessageHandler handler) {
+        return drainIn(SIZE_MAX, timeout, handler);
+    }
+
+    /**
+     * @brief Wait for the first item to appear within the given timeout,
+     * then drain no more than `maxItems` items remaining in the queue.
+     */
+    size_t drainIn(size_t maxItems, ticks timeout, MessageHandler handler) {
+        size_t count = 0;
+        ticks nextTimeout = timeout;
+        while (true) {
+            if (count >= maxItems) {
+                break;
+            }
+            if (!pollIn(nextTimeout, handler)) {
+                break;
+            }
+            count++;
+            nextTimeout = ticks::zero();
         }
         return count;
     }

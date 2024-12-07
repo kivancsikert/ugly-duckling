@@ -46,18 +46,21 @@ private:
             return 0;
         }
 
+        String assembledMessage;
         {
             std::lock_guard<std::mutex> lock(partialMessageMutex);
             if (message.charAt(message.length() - 1) != '\n') {
                 partialMessage += message;
                 return 0;
             } else if (!partialMessage.isEmpty()) {
-                String fullMessage = partialMessage + message;
+                assembledMessage = partialMessage + message;
                 partialMessage.clear();
-                return processLogLine(fullMessage);
-            } else {
-                return processLogLine(message);
             }
+        }
+        if (assembledMessage.isEmpty()) {
+            return processLogLine(message);
+        } else {
+            return processLogLine(assembledMessage);
         }
     }
 

@@ -63,7 +63,7 @@ template <typename TDeviceConfiguration>
 class Kernel {
 public:
     Kernel(TDeviceConfiguration& deviceConfig, MqttDriver::Config& mqttConfig, LedDriver& statusLed)
-        : version(FARMHUB_VERSION)
+        : version(farmhubVersion)
         , deviceConfig(deviceConfig)
         , mqttConfig(mqttConfig)
         , statusLed(statusLed) {
@@ -227,7 +227,7 @@ private:
         }
 
         LOGI("Updating from version %s via URL %s",
-            FARMHUB_VERSION, url.c_str());
+            farmhubVersion, url.c_str());
 
         LOGD("Waiting for network...");
         WiFiConnection connection(wifi, WiFiConnection::Mode::NoAwait);
