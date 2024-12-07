@@ -83,6 +83,13 @@ private:
         const SubscriptionHandler handle;
     };
 
+    struct MessagePublished {
+        const int messageId;
+        const bool success;
+    };
+
+    struct Disconnected { };
+
 public:
     class Config : public ConfigurationSection {
     public:
@@ -112,7 +119,7 @@ public:
         , clientId(getClientId(config.clientId.get(), instanceName))
         , powerSaveMode(powerSaveMode)
         , mqttReady(mqttReady)
-        , outgoingQueue("mqtt-outgoing", config.queueSize.get())
+        , eventQueue("mqtt-outgoing", config.queueSize.get())
         , incomingQueue("mqtt-incoming", config.queueSize.get()) {
 
         Task::run("mqtt", 5120, [this](Task& task) {
@@ -152,7 +159,7 @@ private:
         String payload;
         serializeJson(json, payload);
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
-            return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, payload, retain, qos, waitingTask, log, extendAlert });
+            return eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, payload, retain, qos, waitingTask, log, extendAlert });
         });
     }
 
@@ -162,7 +169,7 @@ private:
             static_cast<int>(qos),
             duration_cast<milliseconds>(timeout).count());
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
-            return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, "", retain, qos, waitingTask, LogPublish::Log, extendAlert });
+            return eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, "", retain, qos, waitingTask, LogPublish::Log, extendAlert });
         });
     }
 
@@ -178,12 +185,6 @@ private:
 
         // Wait for task notification
         uint32_t status = ulTaskNotifyTake(pdTRUE, timeout.count());
-        {
-            Lock lock(pendingMessagesMutex);
-            pendingMessages.remove_if([waitingTask](const auto& message) {
-                return message.waitingTask == waitingTask;
-            });
-        }
         switch (status) {
             case 0:
                 return PublishStatus::TimeOut;
@@ -202,10 +203,10 @@ private:
      */
     bool subscribe(const String& topic, QoS qos, SubscriptionHandler handler) {
         // Allow some time for the queue to empty
-        return outgoingQueue.offerIn(MQTT_QUEUE_TIMEOUT, Subscription { topic, qos, handler });
+        return eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Subscription { topic, qos, handler });
     }
 
-    String joinStrings(std::list<String> strings) {
+    static String joinStrings(std::list<String> strings) {
         if (strings.empty()) {
             return "";
         }
@@ -227,11 +228,11 @@ private:
                 if (timeout > milliseconds::zero()) {
                     LOGTV("mqtt", "Alert for another %lld ms, checking for incoming messages",
                         timeout.count());
-                    ensureConnected(task);
+                    ensureConnected();
                     timeout = std::min(timeout, MQTT_LOOP_INTERVAL);
                 } else if (!pendingMessages.empty()) {
                     LOGTV("mqtt", "Alert expired, but there are pending messages, staying connected");
-                    ensureConnected(task);
+                    ensureConnected();
                     timeout = MQTT_LOOP_INTERVAL;
                 } else if (powerSaveMode) {
                     LOGTV("mqtt", "Not alert anymore, disconnecting");
@@ -240,26 +241,32 @@ private:
                 }
             } else {
                 LOGTV("mqtt", "Power save mode not enabled, staying connected");
-                ensureConnected(task);
+                ensureConnected();
                 timeout = MQTT_LOOP_INTERVAL;
             }
 
-            // LOGTV("mqtt", "Waiting for outgoing event for %lld ms", duration_cast<milliseconds>(timeout).count());
-            outgoingQueue.drainIn(duration_cast<ticks>(timeout), [&](const auto& event) {
-                ensureConnected(task);
-
+            // LOGTV("mqtt", "Waiting for event for %lld ms", duration_cast<milliseconds>(timeout).count());
+            eventQueue.drainIn(duration_cast<ticks>(timeout), [&](const auto& event) {
                 std::visit(
                     [&](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
                         if constexpr (std::is_same_v<T, OutgoingMessage>) {
                             LOGTV("mqtt", "Processing outgoing message to %s",
                                 arg.topic.c_str());
+                            ensureConnected();
                             processOutgoingMessage(arg);
                             alertUntil = std::max(alertUntil, system_clock::now() + arg.extendAlert);
                         } else if constexpr (std::is_same_v<T, Subscription>) {
                             LOGTV("mqtt", "Processing subscription");
+                            ensureConnected();
                             processSubscription(arg);
                             alertUntil = std::max(alertUntil, system_clock::now() + MQTT_ALERT_AFTER_OUTGOING);
+                        } else if constexpr (std::is_same_v<T, MessagePublished>) {
+                            LOGTV("mqtt", "Processing message published");
+                            processMessagePublished(arg);
+                        } else if constexpr (std::is_same_v<T, Disconnected>) {
+                            LOGTV("mqtt", "Processing disconnected event");
+                            processDisconnected();
                         }
                     },
                     event);
@@ -267,10 +274,10 @@ private:
         }
     }
 
-    void ensureConnected(Task& task) {
+    void ensureConnected() {
         while (!connectIfNecessary()) {
             // Do exponential backoff
-            task.delayUntil(MQTT_DISCONNECTED_CHECK_INTERVAL);
+            Task::delay(MQTT_DISCONNECTED_CHECK_INTERVAL);
         }
     }
 
@@ -425,10 +432,7 @@ private:
             case MQTT_EVENT_DISCONNECTED: {
                 LOGTV("mqtt", "Disconnected from MQTT server");
                 mqttReady.clear();
-                Lock lock(pendingMessagesMutex);
-                for (auto& message : pendingMessages) {
-                    notifyWaitingTask(message.waitingTask, false);
-                }
+                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Disconnected {});
                 break;
             }
             case MQTT_EVENT_SUBSCRIBED: {
@@ -441,7 +445,7 @@ private:
             }
             case MQTT_EVENT_PUBLISHED: {
                 LOGTV("mqtt", "Published, message ID %d", event->msg_id);
-                notifyPendingTask(event, true);
+                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, MessagePublished { event->msg_id, true });
                 break;
             }
             case MQTT_EVENT_DATA: {
@@ -459,21 +463,11 @@ private:
                     logErrorIfNonZero("reported from tls stack", event->error_handle->esp_tls_stack_err);
                     logErrorIfNonZero("captured as transport's socket errno", event->error_handle->esp_transport_sock_errno);
                 }
-                notifyPendingTask(event, false);
+                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, MessagePublished { event->msg_id, false });
                 break;
             }
             default: {
                 LOGTW("mqtt", "Unknown event %d", eventId);
-                break;
-            }
-        }
-    }
-
-    void notifyPendingTask(esp_mqtt_event_handle_t event, bool success) {
-        Lock lock(pendingMessagesMutex);
-        for (auto& message : pendingMessages) {
-            if (message.messageId == event->msg_id) {
-                notifyWaitingTask(message.waitingTask, success);
                 break;
             }
         }
@@ -493,7 +487,6 @@ private:
     }
 
     void processOutgoingMessage(const OutgoingMessage message) {
-        Lock lock(pendingMessagesMutex);
         int ret = esp_mqtt_client_enqueue(
             client,
             message.topic.c_str(),
@@ -537,10 +530,29 @@ private:
         }
     }
 
+    void processMessagePublished(const MessagePublished& event) {
+        pendingMessages.remove_if([this, event](const auto& pendingMessage) {
+            if (pendingMessage.messageId == event.messageId) {
+                notifyWaitingTask(pendingMessage.waitingTask, event.success);
+                return true;
+            } else {
+                return false;
+            }
+        });
+    }
+
     void processSubscription(const Subscription& subscription) {
         if (registerSubscriptionWithMqtt(subscription)) {
             subscriptions.push_back(subscription);
         }
+    }
+
+    void processDisconnected() {
+        mqttReady.clear();
+        for (auto& message : pendingMessages) {
+            notifyWaitingTask(message.waitingTask, false);
+        }
+        pendingMessages.clear();
     }
 
     void processIncomingMessage(const IncomingMessage& message) {
@@ -621,7 +633,7 @@ private:
 
     esp_mqtt_client_handle_t client = nullptr;
 
-    Queue<std::variant<OutgoingMessage, Subscription>> outgoingQueue;
+    Queue<std::variant<OutgoingMessage, Subscription, MessagePublished, Disconnected>> eventQueue;
     Queue<IncomingMessage> incomingQueue;
     // TODO Use a map instead
     std::list<Subscription> subscriptions;
@@ -630,7 +642,6 @@ private:
         const int messageId;
         const TaskHandle_t waitingTask;
     };
-    Mutex pendingMessagesMutex;
     std::list<PendingMessage> pendingMessages;
 
     // TODO Review these values
@@ -638,7 +649,7 @@ private:
     static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
     static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = 5s;
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
-    static constexpr milliseconds MQTT_ALERT_AFTER_OUTGOING = 1s;
+    static constexpr milliseconds MQTT_ALERT_AFTER_OUTGOING = 1500ms;
     static constexpr milliseconds MQTT_MAX_TIMEOUT_POWER_SAVE = 1h;
 
     friend class MqttRoot;
