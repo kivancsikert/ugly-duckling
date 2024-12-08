@@ -27,11 +27,9 @@ public:
             allowSleep();
         }
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
-        // Register light sleep callbacks
         esp_pm_sleep_cbs_register_config_t cbs_conf = {
             .enter_cb = nullptr,
             .exit_cb = [](int64_t timeSleptInUs, void* arg) {
-                LOGTV("pm", "Light sleep for %lld us", timeSleptInUs);
                 auto self = static_cast<PowerManager*>(arg);
                 self->lightSleepTime += microseconds(timeSleptInUs);
                 self->lightSleepCount++;
@@ -44,6 +42,19 @@ public:
         };
         ESP_ERROR_CHECK(esp_pm_light_sleep_register_cbs(&cbs_conf));
 #endif
+
+//         Task::loop("power-manager", 4096, [this](Task& task) {
+//             esp_pm_dump_locks(stdout);
+
+// #ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+//             static char buffer[2048];
+//             vTaskGetRunTimeStats(buffer);
+//             printf("Task Name\tState\tPrio\tStack\tNum\n");
+//             printf("%s\n", buffer);
+// #endif
+
+//             task.delay(10s);
+//         });
     }
 
     static bool shouldSleepWhenIdle(bool requestedSleepWhenIdle) {
