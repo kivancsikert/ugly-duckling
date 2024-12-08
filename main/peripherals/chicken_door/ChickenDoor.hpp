@@ -90,7 +90,6 @@ public:
     ChickenDoorComponent(
         const String& name,
         shared_ptr<MqttRoot> mqttRoot,
-        PowerManager& powerManager,
         SwitchManager& switches,
         PwmMotorDriver& motor,
         TLightSensorComponent& lightSensor,
@@ -99,7 +98,6 @@ public:
         ticks movementTimeout,
         std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
-        , powerManager(powerManager)
         , motor(motor)
         , lightSensor(lightSensor)
         , openSwitch(switches.registerHandler(
@@ -260,15 +258,15 @@ private:
         switch (state) {
             case WatchdogState::Started:
                 LOGI("Watchdog started");
-                powerManager.keepAwake();
+                sleepLock.emplace(preventLightSleep);
                 break;
             case WatchdogState::Cacnelled:
                 LOGI("Watchdog cancelled");
-                powerManager.allowSleep();
+                sleepLock.reset();
                 break;
             case WatchdogState::TimedOut:
                 LOGE("Watchdog timed out");
-                powerManager.allowSleep();
+                sleepLock.reset();
                 updateQueue.offer(WatchdogTimeout {});
                 break;
         }
@@ -315,7 +313,6 @@ private:
         }
     }
 
-    PowerManager& powerManager;
     PwmMotorDriver& motor;
     TLightSensorComponent& lightSensor;
 
@@ -347,6 +344,9 @@ private:
     DoorState lastTargetState = DoorState::INITIALIZED;
     DoorState overrideState = DoorState::NONE;
     time_point<system_clock> overrideUntil = time_point<system_clock>::min();
+
+    PowerManagementLock preventLightSleep { name, ESP_PM_NO_LIGHT_SLEEP };
+    std::optional<PowerManagementLockGuard> sleepLock;
 };
 
 template <typename TLightSensorComponent>
@@ -358,7 +358,6 @@ public:
         shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         uint8_t lightSensorAddress,
-        PowerManager& powerManager,
         SwitchManager& switches,
         PwmMotorDriver& motor,
         const ChickenDoorDeviceConfig& config)
@@ -373,7 +372,6 @@ public:
         , doorComponent(
               name,
               mqttRoot,
-              powerManager,
               switches,
               motor,
               lightSensor,
@@ -432,9 +430,9 @@ public:
         auto lightSensorType = deviceConfig.lightSensor.get().type.get();
         try {
             if (lightSensorType == "bh1750") {
-                return std::make_unique<ChickenDoor<Bh1750Component>>(name, mqttRoot, services.i2c, 0x23, services.powerManager, services.switches, motor, deviceConfig);
+                return std::make_unique<ChickenDoor<Bh1750Component>>(name, mqttRoot, services.i2c, 0x23, services.switches, motor, deviceConfig);
             } else if (lightSensorType == "tsl2591") {
-                return std::make_unique<ChickenDoor<Tsl2591Component>>(name, mqttRoot, services.i2c, TSL2591_ADDR, services.powerManager, services.switches, motor, deviceConfig);
+                return std::make_unique<ChickenDoor<Tsl2591Component>>(name, mqttRoot, services.i2c, TSL2591_ADDR, services.switches, motor, deviceConfig);
             } else {
                 throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
             }
@@ -442,7 +440,7 @@ public:
             LOGE("Could not initialize light sensor because %s", e.what());
             LOGW("Initializing without a light sensor");
             // TODO Do not pass I2C parameters to NoLightSensorComponent
-            return std::make_unique<ChickenDoor<NoLightSensorComponent>>(name, mqttRoot, services.i2c, 0x00, services.powerManager, services.switches, motor, deviceConfig);
+            return std::make_unique<ChickenDoor<NoLightSensorComponent>>(name, mqttRoot, services.i2c, 0x00, services.switches, motor, deviceConfig);
         }
     }
 };

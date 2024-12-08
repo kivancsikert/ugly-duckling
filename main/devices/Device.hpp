@@ -238,10 +238,9 @@ public:
     }
 
     void populateTelemetry(JsonObject& json) override {
-        json["keep-awake-time"] = powerManager.getKeepAwakeTime().count();
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
-        json["light-sleep-time"] = powerManager.getLightSleepTime().count();
-        json["light-sleep-count"] = powerManager.getLightSleepCount();
+        json["sleep-time"] = powerManager.getLightSleepTime().count();
+        json["sleep-count"] = powerManager.getLightSleepCount();
 #endif
     }
 
@@ -547,7 +546,7 @@ private:
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;
 
     shared_ptr<MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig.instance.get());
-    PeripheralManager peripheralManager { kernel.i2c, deviceDefinition.pcnt, deviceDefinition.pwm, kernel.powerManager, kernel.switches, mqttDeviceRoot };
+    PeripheralManager peripheralManager { kernel.i2c, deviceDefinition.pcnt, deviceDefinition.pwm, kernel.switches, mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };

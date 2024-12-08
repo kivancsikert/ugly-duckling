@@ -19,13 +19,22 @@
 
 namespace farmhub::kernel {
 
+class PowerManagementLockGuard;
+
 class PowerManager {
 public:
     PowerManager(bool requestedSleepWhenIdle)
         : sleepWhenIdle(shouldSleepWhenIdle(requestedSleepWhenIdle)) {
-        if (sleepWhenIdle) {
-            allowSleep();
-        }
+
+        LOGV("Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
+            MAX_CPU_FREQ_MHZ, MIN_CPU_FREQ_MHZ, sleepWhenIdle ? "enabled" : "disabled");
+        esp_pm_config_t pm_config = {
+            .max_freq_mhz = MAX_CPU_FREQ_MHZ,
+            .min_freq_mhz = MIN_CPU_FREQ_MHZ,
+            .light_sleep_enable = sleepWhenIdle,
+        };
+        ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
+
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
         esp_pm_sleep_cbs_register_config_t cbs_conf = {
             .enter_cb = nullptr,
@@ -43,20 +52,30 @@ public:
         ESP_ERROR_CHECK(esp_pm_light_sleep_register_cbs(&cbs_conf));
 #endif
 
-//         Task::loop("power-manager", 4096, [this](Task& task) {
-//             esp_pm_dump_locks(stdout);
+        //         Task::loop("power-manager", 4096, [this](Task& task) {
+        //             esp_pm_dump_locks(stdout);
+        // #ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+        //             static char buffer[2048];
+        //             vTaskGetRunTimeStats(buffer);
+        //             printf("Task Name\tState\tPrio\tStack\tNum\n");
+        //             printf("%s\n", buffer);
+        // #endif
+        //             task.delay(10s);
+        //         });
+    }
+    const bool sleepWhenIdle;
 
-// #ifdef CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
-//             static char buffer[2048];
-//             vTaskGetRunTimeStats(buffer);
-//             printf("Task Name\tState\tPrio\tStack\tNum\n");
-//             printf("%s\n", buffer);
-// #endif
-
-//             task.delay(10s);
-//         });
+#ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
+    milliseconds getLightSleepTime() {
+        return duration_cast<milliseconds>(lightSleepTime);
     }
 
+    int getLightSleepCount() {
+        return lightSleepCount;
+    }
+#endif
+
+private:
     static bool shouldSleepWhenIdle(bool requestedSleepWhenIdle) {
         if (requestedSleepWhenIdle) {
 #if FARMHUB_DEBUG
@@ -82,95 +101,50 @@ public:
         }
     }
 
-    const bool sleepWhenIdle;
-
-    void keepAwake() {
-        Lock lock(requestCountMutex);
-        requestCount++;
-        LOGD("Task %s requested the device to keep awake, counter at %d",
-            pcTaskGetName(nullptr), requestCount);
-        if (requestCount == 1) {
-            configurePowerManagement(false);
-            keepAwakeSince = boot_clock::now();
-        }
-    }
-
-    void allowSleep() {
-        Lock lock(requestCountMutex);
-        requestCount--;
-        LOGD("Task %s finished with insomniac activity, counter at %d",
-            pcTaskGetName(nullptr), requestCount);
-        if (requestCount == 0) {
-            configurePowerManagement(true);
-            keepAwakeBefore += currentKeepAwakeTime();
-            keepAwakeSince.reset();
-        }
-    }
-
-    milliseconds getKeepAwakeTime() {
-        return keepAwakeBefore + currentKeepAwakeTime();
-    }
-
-#ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
-    milliseconds getLightSleepTime() {
-        return duration_cast<milliseconds>(lightSleepTime);
-    }
-
-    int getLightSleepCount() {
-        return lightSleepCount;
-    }
-#endif
-
-private:
-    void configurePowerManagement(bool enableLightSleep) {
-        LOGV("Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
-            MAX_CPU_FREQ_MHZ, MIN_CPU_FREQ_MHZ, enableLightSleep ? "enabled" : "disabled");
-        // Configure dynamic frequency scaling:
-        // maximum and minimum frequencies are set in sdkconfig,
-        // automatic light sleep is enabled if tickless idle support is enabled.
-        esp_pm_config_t pm_config = {
-            .max_freq_mhz = MAX_CPU_FREQ_MHZ,
-            .min_freq_mhz = MIN_CPU_FREQ_MHZ,
-            .light_sleep_enable = enableLightSleep,
-        };
-        ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
-    }
-
-    milliseconds currentKeepAwakeTime() {
-        if (!keepAwakeSince.has_value()) {
-            return milliseconds::zero();
-        }
-        return duration_cast<milliseconds>(boot_clock::now() - keepAwakeSince.value());
-    }
-
-    Mutex requestCountMutex;
-    int requestCount = 1;
-
-    std::optional<time_point<boot_clock>> keepAwakeSince = boot_clock::boot_time();
-    milliseconds keepAwakeBefore = milliseconds::zero();
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
     microseconds lightSleepTime = microseconds::zero();
     int lightSleepCount = 0;
 #endif
 };
 
-class KeepAwake {
+class PowerManagementLock {
 public:
-    KeepAwake(PowerManager& manager)
-        : manager(manager) {
-        manager.keepAwake();
+    PowerManagementLock(const String& name, esp_pm_lock_type_t type) : name(name) {
+        ESP_ERROR_CHECK(esp_pm_lock_create(type, 0, name.c_str(), &lock));
     }
 
-    ~KeepAwake() {
-        manager.allowSleep();
+    ~PowerManagementLock() {
+        ESP_ERROR_CHECK(esp_pm_lock_delete(lock));
     }
 
     // Delete copy constructor and assignment operator to prevent copying
-    KeepAwake(const KeepAwake&) = delete;
-    KeepAwake& operator=(const KeepAwake&) = delete;
+    PowerManagementLock(const PowerManagementLock&) = delete;
+    PowerManagementLock& operator=(const PowerManagementLock&) = delete;
 
 private:
-    PowerManager& manager;
+    const String name;
+    esp_pm_lock_handle_t lock;
+
+    friend class PowerManagementLockGuard;
+};
+
+class PowerManagementLockGuard {
+public:
+    PowerManagementLockGuard(PowerManagementLock& lock)
+        : lock(lock) {
+        ESP_ERROR_CHECK(esp_pm_lock_acquire(lock.lock));
+    }
+
+    ~PowerManagementLockGuard() {
+        ESP_ERROR_CHECK(esp_pm_lock_release(lock.lock));
+    }
+
+    // Delete copy constructor and assignment operator to prevent copying
+    PowerManagementLockGuard(const PowerManagementLockGuard&) = delete;
+    PowerManagementLockGuard& operator=(const PowerManagementLockGuard&) = delete;
+
+private:
+    PowerManagementLock& lock;
 };
 
 }    // namespace farmhub::kernel
