@@ -230,6 +230,21 @@ private:
     WiFiDriver& wifi;
 };
 
+
+class PowerManagementTelemetryProvider : public TelemetryProvider {
+public:
+    PowerManagementTelemetryProvider(SleepManager& sleepManager)
+        : sleepManager(sleepManager) {
+    }
+
+    void populateTelemetry(JsonObject& json) override {
+        json["awake-time"] = sleepManager.getAwakeTime().count();
+    }
+
+private:
+    SleepManager& sleepManager;
+};
+
 class MqttTelemetryPublisher : public TelemetryPublisher {
 public:
     MqttTelemetryPublisher(shared_ptr<MqttRoot> mqttRoot, TelemetryCollector& telemetryCollector)
@@ -390,6 +405,7 @@ public:
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
         deviceTelemetryCollector.registerProvider("memory", std::make_shared<MemoryTelemetryProvider>());
 #endif
+        deviceTelemetryCollector.registerProvider("pm", std::make_shared<PowerManagementTelemetryProvider>(kernel.sleepManager));
 
         deviceDefinition.registerPeripheralFactories(peripheralManager);
 

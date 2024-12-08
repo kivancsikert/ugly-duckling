@@ -24,10 +24,7 @@ public:
     SleepManager(bool requestedSleepWhenIdle)
         : sleepWhenIdle(shouldSleepWhenIdle(requestedSleepWhenIdle)) {
         if (sleepWhenIdle) {
-            configurePowerManagement(true);
-        } else {
-            // We keep awake forever
-            keepAwake();
+            allowSleep();
         }
     }
 
@@ -65,6 +62,7 @@ public:
             pcTaskGetName(nullptr), requestCount);
         if (requestCount == 1) {
             configurePowerManagement(false);
+            awakeSince = boot_clock::now();
         }
     }
 
@@ -75,7 +73,13 @@ public:
             pcTaskGetName(nullptr), requestCount);
         if (requestCount == 0) {
             configurePowerManagement(true);
+            awakeBefore += currentAwakeTime();
+            awakeSince.reset();
         }
+    }
+
+    milliseconds getAwakeTime() {
+        return awakeBefore + currentAwakeTime();
     }
 
 private:
@@ -93,8 +97,18 @@ private:
         ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
     }
 
+    milliseconds currentAwakeTime() {
+        if (!awakeSince.has_value()) {
+            return milliseconds::zero();
+        }
+        return duration_cast<milliseconds>(boot_clock::now() - awakeSince.value());
+    }
+
     Mutex requestCountMutex;
-    int requestCount = 0;
+    int requestCount = 1;
+
+    std::optional<time_point<boot_clock>> awakeSince = boot_clock::boot_time();
+    milliseconds awakeBefore = milliseconds::zero();
 };
 
 class KeepAwake {
