@@ -48,11 +48,12 @@ void convertFromJson(JsonVariantConst src, Level& dst) {
 static void initLogging() {
     const char* logTags[] = {
         "farmhub",
-        "farmhub:mqtt",
-        "farmhub:wifi",
-        "farmhub:rtc",
         "farmhub:mdns",
+        "farmhub:mqtt",
+        "farmhub:pm",
         "farmhub:nvs",
+        "farmhub:rtc",
+        "farmhub:wifi",
     };
     for (const char* tag : logTags) {
 #ifdef FARMHUB_DEBUG

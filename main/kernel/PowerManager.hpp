@@ -19,13 +19,31 @@
 
 namespace farmhub::kernel {
 
-class SleepManager {
+class PowerManager {
 public:
-    SleepManager(bool requestedSleepWhenIdle)
+    PowerManager(bool requestedSleepWhenIdle)
         : sleepWhenIdle(shouldSleepWhenIdle(requestedSleepWhenIdle)) {
         if (sleepWhenIdle) {
             allowSleep();
         }
+#ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
+        // Register light sleep callbacks
+        esp_pm_sleep_cbs_register_config_t cbs_conf = {
+            .enter_cb = nullptr,
+            .exit_cb = [](int64_t timeSleptInUs, void* arg) {
+                LOGTV("pm", "Light sleep for %lld us", timeSleptInUs);
+                auto self = static_cast<PowerManager*>(arg);
+                self->lightSleepTime += microseconds(timeSleptInUs);
+                self->lightSleepCount++;
+                return ESP_OK;
+            },
+            .enter_cb_user_arg = nullptr,
+            .exit_cb_user_arg = this,
+            .enter_cb_prior = 0,
+            .exit_cb_prior = 0,
+        };
+        ESP_ERROR_CHECK(esp_pm_light_sleep_register_cbs(&cbs_conf));
+#endif
     }
 
     static bool shouldSleepWhenIdle(bool requestedSleepWhenIdle) {
@@ -62,7 +80,7 @@ public:
             pcTaskGetName(nullptr), requestCount);
         if (requestCount == 1) {
             configurePowerManagement(false);
-            awakeSince = boot_clock::now();
+            keepAwakeSince = boot_clock::now();
         }
     }
 
@@ -73,14 +91,24 @@ public:
             pcTaskGetName(nullptr), requestCount);
         if (requestCount == 0) {
             configurePowerManagement(true);
-            awakeBefore += currentAwakeTime();
-            awakeSince.reset();
+            keepAwakeBefore += currentKeepAwakeTime();
+            keepAwakeSince.reset();
         }
     }
 
-    milliseconds getAwakeTime() {
-        return awakeBefore + currentAwakeTime();
+    milliseconds getKeepAwakeTime() {
+        return keepAwakeBefore + currentKeepAwakeTime();
     }
+
+#ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
+    milliseconds getLightSleepTime() {
+        return duration_cast<milliseconds>(lightSleepTime);
+    }
+
+    int getLightSleepCount() {
+        return lightSleepCount;
+    }
+#endif
 
 private:
     void configurePowerManagement(bool enableLightSleep) {
@@ -97,23 +125,27 @@ private:
         ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
     }
 
-    milliseconds currentAwakeTime() {
-        if (!awakeSince.has_value()) {
+    milliseconds currentKeepAwakeTime() {
+        if (!keepAwakeSince.has_value()) {
             return milliseconds::zero();
         }
-        return duration_cast<milliseconds>(boot_clock::now() - awakeSince.value());
+        return duration_cast<milliseconds>(boot_clock::now() - keepAwakeSince.value());
     }
 
     Mutex requestCountMutex;
     int requestCount = 1;
 
-    std::optional<time_point<boot_clock>> awakeSince = boot_clock::boot_time();
-    milliseconds awakeBefore = milliseconds::zero();
+    std::optional<time_point<boot_clock>> keepAwakeSince = boot_clock::boot_time();
+    milliseconds keepAwakeBefore = milliseconds::zero();
+#ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
+    microseconds lightSleepTime = microseconds::zero();
+    int lightSleepCount = 0;
+#endif
 };
 
 class KeepAwake {
 public:
-    KeepAwake(SleepManager& manager)
+    KeepAwake(PowerManager& manager)
         : manager(manager) {
         manager.keepAwake();
     }
@@ -127,7 +159,7 @@ public:
     KeepAwake& operator=(const KeepAwake&) = delete;
 
 private:
-    SleepManager& manager;
+    PowerManager& manager;
 };
 
 }    // namespace farmhub::kernel
