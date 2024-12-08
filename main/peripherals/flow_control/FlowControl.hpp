@@ -4,7 +4,6 @@
 
 #include <kernel/Configuration.hpp>
 #include <kernel/PcntManager.hpp>
-#include <kernel/SleepManager.hpp>
 #include <kernel/mqtt/MqttDriver.hpp>
 #include <peripherals/Motorized.hpp>
 #include <peripherals/Peripheral.hpp>
@@ -33,13 +32,12 @@ public:
         const String& name,
         shared_ptr<MqttRoot> mqttRoot,
         PcntManager& pcnt,
-        SleepManager& sleepManager,
         ValveControlStrategy& strategy,
         InternalPinPtr pin,
         double qFactor,
         milliseconds measurementFrequency)
         : Peripheral<FlowControlConfig>(name, mqttRoot)
-        , valve(name, sleepManager, strategy, mqttRoot, [this]() {
+        , valve(name, strategy, mqttRoot, [this]() {
             publishTelemetry();
         })
         , flowMeter(name, mqttRoot, pcnt, pin, qFactor, measurementFrequency) {
@@ -95,7 +93,6 @@ public:
             mqttRoot,
 
             services.pcntManager,
-            services.sleepManager,
             *strategy,
 
             flowMeterConfig.pin.get(),

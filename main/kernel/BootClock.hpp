@@ -21,6 +21,10 @@ struct boot_clock {
     static time_point now() noexcept {
         return time_point(duration(esp_timer_get_time()));
     }
+
+    static time_point boot_time() noexcept {
+        return time_point(duration(0));
+    }
 };
 
 }    // namespace farmhub::kernel

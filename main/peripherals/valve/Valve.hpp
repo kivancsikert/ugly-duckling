@@ -9,7 +9,6 @@
 #include <ArduinoJson.h>
 
 #include <kernel/Service.hpp>
-#include <kernel/SleepManager.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
@@ -35,11 +34,10 @@ class Valve
 public:
     Valve(
         const String& name,
-        SleepManager& sleepManager,
         ValveControlStrategy& strategy,
         shared_ptr<MqttRoot> mqttRoot)
         : Peripheral<ValveConfig>(name, mqttRoot)
-        , valve(name, sleepManager, strategy, mqttRoot, [this]() {
+        , valve(name, strategy, mqttRoot, [this]() {
             publishTelemetry();
         }) {
     }
@@ -73,7 +71,7 @@ public:
 
     unique_ptr<Peripheral<ValveConfig>> createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         auto strategy = deviceConfig.createValveControlStrategy(this);
-        return make_unique<Valve>(name, services.sleepManager, *strategy, mqttRoot);
+        return make_unique<Valve>(name, *strategy, mqttRoot);
     }
 };
 

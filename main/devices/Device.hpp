@@ -230,6 +230,24 @@ private:
     WiFiDriver& wifi;
 };
 
+
+class PowerManagementTelemetryProvider : public TelemetryProvider {
+public:
+    PowerManagementTelemetryProvider(PowerManager& powerManager)
+        : powerManager(powerManager) {
+    }
+
+    void populateTelemetry(JsonObject& json) override {
+#ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
+        json["sleep-time"] = powerManager.getLightSleepTime().count();
+        json["sleep-count"] = powerManager.getLightSleepCount();
+#endif
+    }
+
+private:
+    PowerManager& powerManager;
+};
+
 class MqttTelemetryPublisher : public TelemetryPublisher {
 public:
     MqttTelemetryPublisher(shared_ptr<MqttRoot> mqttRoot, TelemetryCollector& telemetryCollector)
@@ -390,6 +408,7 @@ public:
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
         deviceTelemetryCollector.registerProvider("memory", std::make_shared<MemoryTelemetryProvider>());
 #endif
+        deviceTelemetryCollector.registerProvider("pm", std::make_shared<PowerManagementTelemetryProvider>(kernel.powerManager));
 
         deviceDefinition.registerPeripheralFactories(peripheralManager);
 
@@ -472,7 +491,7 @@ public:
                 json["time"] = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
                 json["state"] = static_cast<int>(initState);
                 json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
-                json["sleepWhenIdle"] = kernel.sleepManager.sleepWhenIdle;
+                json["sleepWhenIdle"] = kernel.powerManager.sleepWhenIdle;
             },
             Retention::NoRetain, QoS::AtLeastOnce, 5s);
 
@@ -527,7 +546,7 @@ private:
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;
 
     shared_ptr<MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig.instance.get());
-    PeripheralManager peripheralManager { kernel.i2c, deviceDefinition.pcnt, deviceDefinition.pwm, kernel.sleepManager, kernel.switches, mqttDeviceRoot };
+    PeripheralManager peripheralManager { kernel.i2c, deviceDefinition.pcnt, deviceDefinition.pwm, kernel.switches, mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };

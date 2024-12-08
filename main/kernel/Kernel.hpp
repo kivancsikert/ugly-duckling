@@ -15,7 +15,7 @@
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/I2CManager.hpp>
-#include <kernel/SleepManager.hpp>
+#include <kernel/PowerManager.hpp>
 #include <kernel/StateManager.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
@@ -303,7 +303,7 @@ private:
     TDeviceConfiguration& deviceConfig;
 
 public:
-    SleepManager sleepManager { deviceConfig.sleepWhenIdle.get() };
+    PowerManager powerManager { deviceConfig.sleepWhenIdle.get() };
 
 private:
     MqttDriver::Config& mqttConfig;

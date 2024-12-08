@@ -202,12 +202,10 @@ class ValveComponent : public Component {
 public:
     ValveComponent(
         const String& name,
-        SleepManager& sleepManager,
         ValveControlStrategy& strategy,
         shared_ptr<MqttRoot> mqttRoot,
         std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
-        , sleepManager(sleepManager)
         , nvs(name)
         , strategy(strategy)
         , publishTelemetry(publishTelemetry) {
@@ -342,15 +340,19 @@ private:
 
     void open() {
         LOGI("Opening valve '%s'", name.c_str());
-        KeepAwake keepAwake(sleepManager);
-        strategy.open();
+        {
+            PowerManagementLockGuard noSleep(preventLightSleep);
+            strategy.open();
+        }
         setState(ValveState::OPEN);
     }
 
     void close() {
         LOGI("Closing valve '%s'", name.c_str());
-        KeepAwake keepAwake(sleepManager);
-        strategy.close();
+        {
+            PowerManagementLockGuard noSleep(preventLightSleep);
+            strategy.close();
+        }
         setState(ValveState::CLOSED);
     }
 
@@ -389,7 +391,8 @@ private:
         }
     }
 
-    SleepManager& sleepManager;
+    PowerManagementLock preventLightSleep { name, ESP_PM_NO_LIGHT_SLEEP };
+
     NvsStore nvs;
     ValveControlStrategy& strategy;
     std::function<void()> publishTelemetry;
