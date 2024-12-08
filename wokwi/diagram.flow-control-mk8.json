@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "author": "Lóránt Pintér",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-c6-devkitc-1", "id": "esp", "top": -0.18, "left": 4.57, "attrs": {} },
+    {
+      "type": "wokwi-led",
+      "id": "statusLed",
+      "top": 63.6,
+      "left": -159.4,
+      "attrs": { "color": "white", "label": "Status" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 119.15,
+      "left": -124.8,
+      "attrs": { "value": "22" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn1",
+      "top": -61,
+      "left": 19.2,
+      "attrs": { "color": "green", "label": "Flash", "bounce": "0" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "r1:1", "esp:3V3.2", "green", [ "v0" ] ],
+    [ "statusLed:C", "esp:26", "green", [ "v0" ] ],
+    [ "btn1:1.l", "esp:0", "green", [ "h-86.4", "v148.13" ] ],
+    [ "statusLed:C", "r1:1", "green", [ "v0" ] ],
+    [ "esp:8", "statusLed:A", "green", [ "h0" ] ],
+    [ "esp:GND.1", "r1:2", "black", [ "h0" ] ],
+    [ "esp:GND.4", "btn1:2.r", "black", [ "h17.65", "v-61.93" ] ]
+  ],
+  "dependencies": {}
+}
