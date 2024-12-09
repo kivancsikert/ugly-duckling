@@ -52,6 +52,7 @@ jobs:
 
       - name: Test with Wokwi
         uses: wokwi/wokwi-ci-action@v1
+        if: matrix.wokwi == 1
         with:
           token: ${{ secrets.WOKWI_CLI_TOKEN }}
           path: /wokwi
@@ -59,10 +60,12 @@ jobs:
           expect_text: "Device ready"
 
       - name: Rename firmware artifact
+        if: matrix.wokwi != 1
         run: cp ${{ github.workspace }}/build/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
+        if: matrix.wokwi != 1
         with:
           name: firmware-${{ matrix.environment }}
           path: ugly-duckling-${{ matrix.environment }}.bin
