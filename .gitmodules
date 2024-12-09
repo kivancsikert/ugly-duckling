@@ -4,12 +4,6 @@
 [submodule "components/SHT2x"]
 	path = components/SHT2x
 	url = https://github.com/RobTillaart/SHT2x
-[submodule "components/OneWire"]
-	path = components/OneWire
-	url = https://github.com/PaulStoffregen/OneWire
-[submodule "components/DallasTemperature"]
-	path = components/DallasTemperature
-	url = https://github.com/milesburton/Arduino-Temperature-Control-Library
 [submodule "components/BH1750"]
 	path = components/BH1750
 	url = https://github.com/claws/BH1750
