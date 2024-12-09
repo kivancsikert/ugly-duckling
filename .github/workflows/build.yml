@@ -23,6 +23,11 @@ jobs:
             ud_gen: MK6
             ud_debug: 0
             target: esp32s3
+          - environment: mk6-wokwi
+            ud_gen: MK6
+            ud_debug: 0
+            target: esp32s3
+            wokwi: 1
           - environment: mk7-release
             ud_gen: MK7
             ud_debug: 0
@@ -43,7 +48,15 @@ jobs:
         with:
           esp_idf_version: v5.3.1
           target: ${{ matrix.target }}
-          command: idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }}
+          command: idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }} -DWOKWI=${{ matrix.wokwi }}
+
+      - name: Test with Wokwi
+        uses: wokwi/wokwi-ci-action@v1
+        with:
+          token: ${{ secrets.WOKWI_CLI_TOKEN }}
+          path: /wokwi
+          timeout: 20000
+          expect_text: "Device ready"
 
       - name: Rename firmware artifact
         run: cp ${{ github.workspace }}/build/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
