@@ -15,22 +15,32 @@ jobs:
             ud_gen: MK4
             ud_debug: 0
             target: esp32s2
+            wokwi: 0
           - environment: mk5-release
             ud_gen: MK5
             ud_debug: 0
             target: esp32s3
+            wokwi: 0
           - environment: mk6-release
             ud_gen: MK6
             ud_debug: 0
             target: esp32s3
+            wokwi: 0
+          - environment: mk6-wokwi
+            ud_gen: MK6
+            ud_debug: 0
+            target: esp32s3
+            wokwi: 1
           - environment: mk7-release
             ud_gen: MK7
             ud_debug: 0
             target: esp32s3
+            wokwi: 0
           - environment: mk7-debug
             ud_gen: MK7
             ud_debug: 1
             target: esp32s3
+            wokwi: 0
 
     steps:
       - uses: actions/checkout@v4
@@ -43,13 +53,27 @@ jobs:
         with:
           esp_idf_version: v5.3.1
           target: ${{ matrix.target }}
-          command: idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }}
+          command: idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }} -DWOKWI=${{ matrix.wokwi }}
+
+      - if: matrix.wokwi == 1
+        run: ln -s diagram.flow-control-mk6.json wokwi/diagram.json
+
+      - name: Test with Wokwi
+        uses: wokwi/wokwi-ci-action@v1
+        if: matrix.wokwi == 1
+        with:
+          token: ${{ secrets.WOKWI_CLI_TOKEN }}
+          path: /wokwi
+          timeout: 20000
+          expect_text: "Device ready"
 
       - name: Rename firmware artifact
+        if: matrix.wokwi != 1
         run: cp ${{ github.workspace }}/build/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
+        if: matrix.wokwi != 1
         with:
           name: firmware-${{ matrix.environment }}
           path: ugly-duckling-${{ matrix.environment }}.bin
