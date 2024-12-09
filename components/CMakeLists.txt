@@ -13,12 +13,6 @@ idf_component_register(
     SRCS "BH1750/src/BH1750.cpp"
     INCLUDE_DIRS "BH1750/src"
 
-    SRCS "DallasTemperature/DallasTemperature.cpp"
-    INCLUDE_DIRS "DallasTemperature"
-
-    SRCS "OneWire/OneWire.cpp"
-    INCLUDE_DIRS "OneWire"
-
     SRCS "SHT31/SHT31.cpp"
     INCLUDE_DIRS "SHT31"
 
