@@ -280,7 +280,7 @@ public:
                 enterLowPowerDeepSleep();
             }
 
-            Task::loop("battery", 1536, [this](Task& task) {
+            Task::loop("battery", 2048, [this](Task& task) {
                 checkBatteryVoltage(task);
             });
         }
