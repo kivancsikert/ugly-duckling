@@ -4,12 +4,12 @@
 
 #include <Arduino.h>
 
-#include <DallasTemperature.h>
-#include <OneWire.h>
+#include <ds18b20.h>
+#include <onewire_bus.h>
 
-#include <peripherals/Peripheral.hpp>
-#include <kernel/Configuration.hpp>
 #include <kernel/Component.hpp>
+#include <kernel/Configuration.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <peripherals/SinglePinDeviceConfig.hpp>
 
 using namespace farmhub::kernel;
@@ -37,53 +37,58 @@ public:
         LOGI("Initializing DS18B20 soil temperature sensor on pin %s",
             pin->getName().c_str());
 
-        oneWire.begin(pin->getGpio());
+        onewire_bus_handle_t bus;
+        onewire_bus_config_t busConfig = {
+            .bus_gpio_num = pin->getGpio(),
+        };
+        onewire_bus_rmt_config_t rmtConfig = {
+            .max_rx_bytes = 10,    // 1byte ROM command + 8byte ROM number + 1byte device command
+        };
+        ESP_ERROR_CHECK(onewire_new_bus_rmt(&busConfig, &rmtConfig, &bus));
 
-        // locate devices on the bus
-        LOGV("Locating devices...");
-        sensors.begin();
-        LOGD("Found %d devices, parasitic power is %s",
-            sensors.getDeviceCount(),
-            sensors.isParasitePowerMode() ? "ON" : "OFF");
+        LOGV("Locating DS18B20 sensors on bus...");
+        int sensorCount = 0;
+        // TODO How many slots do we need here actually?
+        int maxSensors = 1;
+        ds18b20_device_handle_t sensors[maxSensors];
+        onewire_device_iter_handle_t iter = NULL;
+        onewire_device_t nextOnewireDevice;
+        ESP_ERROR_CHECK(onewire_new_device_iter(bus, &iter));
 
-        DeviceAddress thermometer;
-        if (!sensors.getAddress(thermometer, 0)) {
-            throw PeripheralCreationException("unable to find address for device");
+        while (sensorCount < maxSensors) {
+            esp_err_t searchResult = onewire_device_iter_get_next(iter, &nextOnewireDevice);
+            if (searchResult == ESP_OK) {
+                ds18b20_config_t sensorConfig = {};
+                // Check if the device is a DS18B20, if so, return its handle
+                if (ds18b20_new_device(&nextOnewireDevice, &sensorConfig, &sensors[sensorCount]) == ESP_OK) {
+                    LOGD("Found a DS18B20[%d], address: %016llX", sensorCount, nextOnewireDevice.address);
+                    sensorCount++;
+                } else {
+                    LOGD("Found an unknown device, address: %016llX", nextOnewireDevice.address);
+                }
+            } else {
+                throw PeripheralCreationException("Error searching for DS18B20 devices: " + String(esp_err_to_name(searchResult)));
+            }
+        }
+        ESP_ERROR_CHECK(onewire_del_device_iter(iter));
+
+        if (sensorCount == 0) {
+            throw PeripheralCreationException("No DS18B20 sensors found on bus");
         }
 
-        // show the addresses we found on the bus
-        LOGD("Device 0 Address: %s",
-            toStringAddress(thermometer).c_str());
+        sensor = sensors[0];
     }
 
     void populateTelemetry(JsonObject& json) override {
-        if (!sensors.requestTemperaturesByIndex(0)) {
-            LOGE("Failed to get temperature from DS18B20 sensor");
-            return;
-        }
-        float temperature = sensors.getTempCByIndex(0);
-        if (temperature == DEVICE_DISCONNECTED_C) {
-            LOGE("Failed to get temperature from DS18B20 sensor");
-            return;
-        }
+        // TODO Get temperature in a task to avoid delaying reporting
+        float temperature;
+        ESP_ERROR_CHECK(ds18b20_trigger_temperature_conversion(sensor));
+        ESP_ERROR_CHECK(ds18b20_get_temperature(sensor, &temperature));
         json["temperature"] = temperature;
     }
 
 private:
-
-    OneWire oneWire;
-
-    // Pass our oneWire reference to Dallas Temperature.
-    DallasTemperature sensors { &oneWire };
-
-    String toStringAddress(DeviceAddress address) {
-        char result[17];
-        for (int i = 0; i < 8; i++) {
-            sprintf(&result[i * 2], "%02X", address[i]);
-        }
-        result[16] = '\0';
-        return result;
-    }
+    ds18b20_device_handle_t sensor;
 };
 
 class Ds18B20SoilSensor
