@@ -83,12 +83,7 @@ private:
             case WIFI_EVENT_STA_START: {
                 LOGTD("wifi", "Started");
                 stationStarted.set();
-                if (networkRequested.isSet()) {
-                    esp_err_t err = esp_wifi_connect();
-                    if (err != ESP_OK) {
-                        LOGTD("wifi", "Failed to start connecting: %s", esp_err_to_name(err));
-                    }
-                }
+                eventQueue.offer(WiFiEvent::STARTED);
                 break;
             }
             case WIFI_EVENT_STA_STOP: {
@@ -199,11 +194,22 @@ private:
     inline void runLoop() {
         int clients = 0;
         bool connected = false;
+        std::optional<time_point<boot_clock>> connectingSince;
         while (true) {
             for (auto event = eventQueue.pollIn(WIFI_CHECK_INTERVAL); event.has_value(); event = eventQueue.poll()) {
                 switch (event.value()) {
+                    case WiFiEvent::STARTED:
+                        if (networkRequested.isSet()) {
+                            esp_err_t err = esp_wifi_connect();
+                            if (err != ESP_OK) {
+                                LOGTD("wifi", "Failed to start connecting: %s", esp_err_to_name(err));
+                                ensureWifiDeinitialized();
+                            }
+                        }
+                        break;
                     case WiFiEvent::CONNECTED:
                         connected = true;
+                        connectingSince.reset();
                         break;
                     case WiFiEvent::DISCONNECTED:
                         connected = false;
@@ -221,13 +227,23 @@ private:
                 networkRequested.set();
                 if (!connected) {
                     if (networkConnecting.isSet()) {
-                        LOGTV("wifi", "Already connecting");
+                        if (boot_clock::now() - connectingSince.value() < WIFI_CONNECTION_TIMEOUT) {
+                            LOGTV("wifi", "Already connecting");
+                            continue;
+                        }
+
+                        LOGTI("wifi", "Connection timed out, retrying");
+                        networkConnecting.clear();
+                        ensureWifiDeinitialized();
+                        connectingSince.reset();
                     } else if (configPortalRunning.isSet()) {
+                        // TODO Add some sort of timeout here
                         LOGTV("wifi", "Provisioning already running");
-                    } else {
-                        LOGTV("wifi", "Connecting for first client");
-                        connect();
+                        continue;
                     }
+                    LOGTV("wifi", "Connecting for first client");
+                    connectingSince = boot_clock::now();
+                    connect();
                 }
             } else {
                 networkRequested.clear();
@@ -400,6 +416,7 @@ private:
     StateSource stationStarted = internalStates.createStateSource("wifi:station-started");
 
     enum class WiFiEvent {
+        STARTED,
         CONNECTED,
         DISCONNECTED,
         WANTS_CONNECT,
@@ -409,6 +426,7 @@ private:
     CopyQueue<WiFiEvent> eventQueue { "wifi-events", 16 };
 
     static constexpr milliseconds WIFI_QUEUE_TIMEOUT = 1s;
+    static constexpr milliseconds WIFI_CONNECTION_TIMEOUT = 1min;
     static constexpr milliseconds WIFI_CHECK_INTERVAL = 1min;
 
     Mutex metadataMutex;
