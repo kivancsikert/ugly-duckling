@@ -274,8 +274,8 @@ private:
         if (provisioned) {
             wifi_config_t wifiConfig;
             ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifiConfig));
-            LOGTD("wifi", "Connecting using stored credentials to %s (password '%s')",
-                wifiConfig.sta.ssid, wifiConfig.sta.password);
+            LOGTD("wifi", "Connecting using stored credentials to %s",
+                wifiConfig.sta.ssid);
             connectToStation(wifiConfig);
         } else {
             LOGTD("wifi", "No stored credentials, starting provisioning");
