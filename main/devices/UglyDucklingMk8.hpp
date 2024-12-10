@@ -15,8 +15,8 @@ using namespace farmhub::kernel;
 namespace farmhub::devices {
 
 namespace pins {
-static InternalPinPtr BOOT = InternalPin::registerPin("BOOT", GPIO_NUM_0);
-static InternalPinPtr STATUS = InternalPin::registerPin("STATUS", GPIO_NUM_8);
+static InternalPinPtr BOOT = InternalPin::registerPin("BOOT", GPIO_NUM_9);
+static InternalPinPtr STATUS = InternalPin::registerPin("STATUS", GPIO_NUM_1);
 }    // namespace pins
 
 class Mk8Config
