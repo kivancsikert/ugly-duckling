@@ -148,7 +148,7 @@ See `FileCommands` for more information.
 
 ### Prerequisites
 
-- ESP-IDF v5.3.1 (see [installation instructions](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/index.html))
+- ESP-IDF v5.3.2 (see [installation instructions](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/index.html))
 
 We are using this version because it is the latest version that is compatible with Arduino-ESP32 3.1.0-rc-1.
 
