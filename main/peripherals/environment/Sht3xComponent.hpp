@@ -1,8 +1,10 @@
 #pragma once
 
+#include <limits>
+
 #include <Arduino.h>
 
-#include <SHT31.h>
+#include <sht3x.h>
 
 #include <kernel/Component.hpp>
 #include <kernel/I2CManager.hpp>
@@ -16,18 +18,18 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::environment {
 
-class Sht31Component
+class Sht3xComponent
     : public Component,
       public TelemetryProvider {
 public:
-    Sht31Component(
+    Sht3xComponent(
         const String& name,
         const String& sensorType,
         shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         I2CConfig config)
         : Component(name, mqttRoot)
-        , sensor(config.address, &i2c.getWireFor(config)) {
+        , bus(i2c.getBusFor(config)) {
 
         // TODO Add commands to soft/hard reset the sensor
         // TODO Add configuration for fast / slow measurement
@@ -36,26 +38,27 @@ public:
         LOGI("Initializing %s environment sensor with %s",
             sensorType.c_str(), config.toString().c_str());
 
-        if (!sensor.begin()) {
-            throw PeripheralCreationException("Failed to initialize environment sensor: " + String(sensor.getError()));
-        }
-        if (!sensor.isConnected()) {
-            throw PeripheralCreationException("Environment sensor is not connected: " + String(sensor.getError()));
-        }
+        ESP_ERROR_CHECK(sht3x_init_desc(&sensor, config.address, bus->port, bus->sda->getGpio(), bus->scl->getGpio()));
+        ESP_ERROR_CHECK(sht3x_init(&sensor));
     }
 
     void populateTelemetry(JsonObject& json) override {
-        if (!sensor.read()) {
-            LOGE("Failed to read SHT3x environment sensor: %d",
-                sensor.getError());
-            return;
+        float temperature;
+        float humidity;
+        esp_err_t res = sht3x_measure(&sensor, &temperature, &humidity);
+        if (res != ESP_OK) {
+            LOGD("Could not measure temperature: %s", esp_err_to_name(res));
+            temperature = std::numeric_limits<float>::quiet_NaN();
+            humidity = std::numeric_limits<float>::quiet_NaN();
         }
-        json["temperature"] = sensor.getTemperature();
-        json["humidity"] = sensor.getHumidity();
+
+        json["temperature"] = temperature;
+        json["humidity"] = humidity;
     }
 
 private:
-    SHT31 sensor;
+    shared_ptr<I2CBus> bus;
+    sht3x_t sensor;
 };
 
 }    // namespace farmhub::peripherals::environment

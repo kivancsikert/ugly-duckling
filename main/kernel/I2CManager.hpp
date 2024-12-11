@@ -1,12 +1,11 @@
 #pragma once
 
 #include <exception>
-#include <map>
 #include <memory>
-#include <utility>
 
 #include <Arduino.h>
-#include <Wire.h>
+
+#include <i2cdev.h>
 
 #include <kernel/Pin.hpp>
 
@@ -31,116 +30,88 @@ public:
 
 class I2CBus {
 public:
-    I2CBus(TwoWire& wire)
-        : wire(wire) {
-    }
-
-    TwoWire& wire;
-    Mutex mutex;
+    const i2c_port_t port;
+    const InternalPinPtr sda;
+    const InternalPinPtr scl;
 };
-
-class I2CTransmission;
 
 class I2CDevice {
 public:
-    I2CDevice(const String& name, I2CBus& bus, uint8_t address)
+    I2CDevice(const String& name, shared_ptr<I2CBus> bus, uint8_t address)
         : name(name)
         , bus(bus)
-        , address(address) {
+        , address(address)
+        , device({
+              .port = bus->port,
+              .cfg = {
+                  .sda_io_num = bus->sda->getGpio(),
+                  .scl_io_num = bus->scl->getGpio(),
+                  // TODO Allow this to be configred
+                  .sda_pullup_en = false,
+                  .scl_pullup_en = false,
+                  .master {
+                      // TODO Allow clock speed to be configured
+                      .clk_speed = 400000,
+                  },
+              },
+              .addr = address,
+          }) {
+        // TODO Do we need a mutex here?
+        i2c_dev_create_mutex(&device);
+    }
+
+    ~I2CDevice() {
+        i2c_dev_delete_mutex(&device);
+    }
+
+    esp_err_t probeRead() {
+        return i2c_dev_probe(&device, I2C_DEV_READ);
+    }
+
+    uint8_t readRegByte(uint8_t reg) {
+        uint8_t value;
+        ESP_ERROR_CHECK(i2c_dev_read(&device, &reg, 1, &value, 1));
+        return value;
+    }
+
+    uint16_t readRegWord(uint8_t reg) {
+        uint16_t value;
+        ESP_ERROR_CHECK(i2c_dev_read(&device, &reg, 1, &value, 2));
+        return value;
+    }
+
+    void readReg(uint8_t reg, uint8_t* buffer, size_t length) {
+        ESP_ERROR_CHECK(i2c_dev_read(&device, &reg, 1, buffer, length));
+    }
+
+    void writeRegByte(uint8_t reg, uint8_t value) {
+        ESP_ERROR_CHECK(i2c_dev_write(&device, &reg, 1, &value, 1));
+    }
+
+    void writeRegWord(uint8_t reg, uint16_t value) {
+        ESP_ERROR_CHECK(i2c_dev_write(&device, &reg, 1, &value, 2));
+    }
+
+    void writeReg(uint8_t reg, uint8_t* buffer, size_t length) {
+        ESP_ERROR_CHECK(i2c_dev_write(&device, &reg, 1, buffer, length));
     }
 
 private:
     const String name;
-    I2CBus& bus;
+    const shared_ptr<I2CBus> bus;
     const uint8_t address;
-
-    friend class I2CTransmission;
-};
-
-class I2CTransmission {
-public:
-    I2CTransmission(shared_ptr<I2CDevice> device)
-        : device(device)
-        , lock(device->bus.mutex) {
-        wire().beginTransmission(device->address);
-    }
-
-    ~I2CTransmission() {
-        auto result = wire().endTransmission();
-        if (result != 0) {
-            LOGE("Communication unsuccessful with I2C device %s at address 0x%02x, result: %d",
-                device->name.c_str(), device->address, result);
-        }
-    }
-
-    size_t requestFrom(size_t len, bool stopBit = true) {
-        LOGV("Requesting %d bytes from I2C device %s at address 0x%02x",
-            len, device->name.c_str(), device->address);
-        auto count = wire().requestFrom(device->address, len, stopBit);
-        LOGV("Received %d bytes from I2C device %s at address 0x%02x",
-            count, device->name.c_str(), device->address);
-        return count;
-    }
-
-    size_t write(uint8_t data) {
-        LOGV("Writing 0x%02x to I2C device %s at address 0x%02x",
-            data, device->name.c_str(), device->address);
-        auto count = wire().write(data);
-        LOGV("Wrote %d bytes to I2C device %s at address 0x%02x",
-            count, device->name.c_str(), device->address);
-        return count;
-    }
-
-    size_t write(const uint8_t* data, size_t quantity) {
-        LOGV("Writing %d bytes to I2C device %s at address 0x%02x",
-            quantity, device->name.c_str(), device->address);
-        auto count = wire().write(data, quantity);
-        LOGV("Wrote %d bytes to I2C device %s at address 0x%02x",
-            count, device->name.c_str(), device->address);
-        return count;
-    }
-
-    int available() {
-        return wire().available();
-    }
-
-    int read() {
-        auto value = wire().read();
-        LOGV("Read 0x%02x from I2C device %s at address 0x%02x",
-            value, device->name.c_str(), device->address);
-        return value;
-    }
-
-    int peek() {
-        auto value = wire().peek();
-        LOGV("Peeked 0x%02x from I2C device %s at address 0x%02x",
-            value, device->name.c_str(), device->address);
-        return value;
-    }
-
-    void flush() {
-        LOGV("Flushing I2C device %s at address 0x%02x",
-            device->name.c_str(), device->address);
-        wire().flush();
-    }
-
-private:
-    inline TwoWire& wire() const {
-        return device->bus.wire;
-    }
-
-    shared_ptr<I2CDevice> device;
-    Lock lock;
+    i2c_dev_t device;
 };
 
 class I2CManager {
 public:
-    TwoWire& getWireFor(const I2CConfig& config) {
-        return getWireFor(config.sda, config.scl);
+    I2CManager() {
+        ESP_ERROR_CHECK(i2cdev_init());
+        buses.reserve(BUS_COUNT);
     }
 
-    TwoWire& getWireFor(InternalPinPtr sda, InternalPinPtr scl) {
-        return getBusFor(sda, scl).wire;
+    ~I2CManager() {
+        ESP_ERROR_CHECK(i2cdev_done());
     }
 
     shared_ptr<I2CDevice> createDevice(const String& name, const I2CConfig& config) {
@@ -152,38 +123,43 @@ public:
         LOGI("Created I2C device %s at address 0x%02x",
             name.c_str(), address);
         // Test if communication is possible
-        I2CTransmission tx(device);
+        // esp_err_t err = device->probeRead();
+        // if (err != ESP_OK) {
+        //     throw std::runtime_error(
+        //         String("Failed to communicate with I2C device " + name + " at address 0x" + String(address, HEX) + ": " + esp_err_to_name(err)).c_str());
+        // }
         return device;
     }
 
-private:
-    I2CBus& getBusFor(InternalPinPtr sda, InternalPinPtr scl) {
-        GpioPair key = std::make_pair(sda, scl);
-        auto it = busMap.find(key);
-        if (it != busMap.end()) {
-            LOGV("Reusing already registered I2C bus for SDA: %s, SCL: %s",
-                sda->getName().c_str(), scl->getName().c_str());
-            return *(it->second);
-        } else {
-            LOGD("Creating new I2C bus for SDA: %s, SCL: %s",
-                sda->getName().c_str(), scl->getName().c_str());
-            if (nextBus >= 2) {
-                throw std::runtime_error("Maximum number of I2C buses reached");
-            }
-            TwoWire* wire = new TwoWire(nextBus++);
-            if (!wire->begin(sda->getGpio(), scl->getGpio())) {
-                throw std::runtime_error(
-                    String("Failed to initialize I2C bus for SDA: " + sda->getName() + ", SCL: " + scl->getName()).c_str());
-            }
-            I2CBus* bus = new I2CBus(*wire);
-            busMap[key] = bus;
-            return *bus;
-        }
+    shared_ptr<I2CBus> getBusFor(const I2CConfig& config) {
+        return getBusFor(config.sda, config.scl);
     }
 
-    uint8_t nextBus = 0;
+    shared_ptr<I2CBus> getBusFor(InternalPinPtr sda, InternalPinPtr scl) {
+        Lock lock(mutex);
+        for (auto bus : buses) {
+            if (bus->sda == sda && bus->scl == scl) {
+                LOGV("Reusing already registered I2C bus for SDA: %s, SCL: %s",
+                    sda->getName().c_str(), scl->getName().c_str());
+                return bus;
+            }
+        }
+        if (buses.size() < BUS_COUNT) {
+            LOGD("Creating new I2C bus for SDA: %s, SCL: %s",
+                sda->getName().c_str(), scl->getName().c_str());
+            auto bus = std::make_shared<I2CBus>(I2CBus { .port = static_cast<i2c_port_t>(buses.size()), .sda = sda, .scl = scl });
+            buses.push_back(bus);
+            return bus;
+        }
 
-    std::map<GpioPair, I2CBus*> busMap;
+        throw std::runtime_error("Maximum number of I2C buses reached");
+    }
+
+private:
+    static constexpr size_t BUS_COUNT = 2;
+
+    Mutex mutex;
+    std::vector<shared_ptr<I2CBus>> buses;
 };
 
 }    // namespace farmhub::kernel
