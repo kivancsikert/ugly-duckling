@@ -5,9 +5,10 @@
 #include <memory>
 
 #include <Arduino.h>
-#include <Wire.h>
 
-#include <BH1750.h>
+#include <esp_system.h>
+
+#include <bh1750.h>
 
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>
@@ -43,30 +44,31 @@ public:
         I2CConfig config,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval)
-        , sensor(config.address) {
+        : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval) {
 
         LOGI("Initializing BH1750 light sensor with %s",
             config.toString().c_str());
 
-        // TODO Make mode configurable
-        // TODO What's the difference between one-time and continuous mode here?
-        //      Can we save some battery by using one-time mode? Are we losing anything by doing so?
-        TwoWire& wire = i2c.getWireFor(config);
-        if (!sensor.begin(BH1750::CONTINUOUS_LOW_RES_MODE, config.address, &wire)) {
-            throw PeripheralCreationException("Failed to initialize BH1750 light sensor");
-        }
+        memset(&sensor, 0, sizeof(i2c_dev_t));    // Zero descriptor
+
+        // TODO Use I2CManager to create device
+        ESP_ERROR_CHECK(bh1750_init_desc(&sensor, config.address, I2C_NUM_0, config.sda->getGpio(), config.scl->getGpio()));
+        ESP_ERROR_CHECK(bh1750_setup(&sensor, BH1750_MODE_CONTINUOUS, BH1750_RES_LOW));
 
         runLoop();
     }
 
 protected:
     double readLightLevel() override {
-        return sensor.readLightLevel();
+        uint16_t lightLevel;
+        if (bh1750_read(&sensor, &lightLevel) != ESP_OK) {
+            LOGE("Could not read light level");
+        }
+        return lightLevel;
     }
 
 private:
-    BH1750 sensor;
+    i2c_dev_t sensor;
 };
 
 class Bh1750

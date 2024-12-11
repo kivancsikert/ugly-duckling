@@ -1,5 +1,17 @@
 cmake_minimum_required(VERSION 3.16.0)
 
+
+# Add esp-idf-lib components
+include(FetchContent)
+FetchContent_Declare(
+  espidflib
+  GIT_REPOSITORY https://github.com/UncleRus/esp-idf-lib.git
+  GIT_TAG "0.9.4"
+)
+FetchContent_MakeAvailable(espidflib)
+set(EXTRA_COMPONENT_DIRS ${espidflib_SOURCE_DIR}/components)
+
+
 if(NOT DEFINED UD_GEN)
     set(UD_GEN "$ENV{UD_GEN}")
 endif()
@@ -51,7 +63,6 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 idf_build_set_property(DEPENDENCIES_LOCK "dependencies.lock")
 
 # list(APPEND EXTRA_COMPONENT_DIRS $ENV{IDF_PATH}/components)
-list(APPEND EXTRA_COMPONENT_DIRS components)
 
 # Adds necessary definitions for compiling it using Serial symbol attached to the HW USB CDC port
 add_compile_definitions(ARDUINO_USB_CDC_ON_BOOT=1)
