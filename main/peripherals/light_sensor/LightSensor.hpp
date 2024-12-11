@@ -5,9 +5,6 @@
 #include <memory>
 
 #include <Arduino.h>
-#include <Wire.h>
-
-#include <BH1750.h>
 
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>

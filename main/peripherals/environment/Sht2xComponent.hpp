@@ -1,8 +1,10 @@
 #pragma once
 
+#include <limits>
+
 #include <Arduino.h>
 
-#include <SHT2x.h>
+#include <si7021.h>
 
 #include <kernel/Component.hpp>
 #include <kernel/I2CManager.hpp>
@@ -17,9 +19,8 @@ using namespace farmhub::peripherals;
 namespace farmhub::peripherals::environment {
 
 /**
- * @tparam TSensor Works with SHT2x or HTU2x
+ * @brief Works with SHT2x or HTU2x.
  */
-template <typename TSensor>
 class Sht2xComponent
     : public Component,
       public TelemetryProvider {
@@ -31,7 +32,7 @@ public:
         I2CManager& i2c,
         I2CConfig config)
         : Component(name, mqttRoot)
-        , sensor(&i2c.getWireFor(config)) {
+        , bus(i2c.getBusFor(config)) {
 
         // TODO Add commands to soft/hard reset the sensor
         // TODO Add configuration for fast / slow measurement
@@ -40,26 +41,40 @@ public:
         LOGI("Initializing %s environment sensor with %s",
             sensorType.c_str(), config.toString().c_str());
 
-        if (!sensor.begin()) {
-            throw PeripheralCreationException("failed to initialize environment sensor: 0x" + String(sensor.getError(), HEX));
-        }
-        if (!sensor.isConnected()) {
-            throw PeripheralCreationException("environment sensor is not connected: 0x" + String(sensor.getError(), HEX));
-        }
+        memset(&sensor, 0, sizeof(i2c_dev_t));
+        ESP_ERROR_CHECK(si7021_init_desc(&sensor, bus->port, bus->sda->getGpio(), bus->scl->getGpio()));
     }
 
     void populateTelemetry(JsonObject& json) override {
-        if (!sensor.read()) {
-            LOGE("Failed to read environment sensor: %d",
-                sensor.getError());
-            return;
-        }
-        json["temperature"] = sensor.getTemperature();
-        json["humidity"] = sensor.getHumidity();
+        json["temperature"] = getTemperature();
+        json["humidity"] = getHumidity();
     }
 
 private:
-    TSensor sensor;
+    float getTemperature() {
+        float value;
+        esp_err_t res = si7021_measure_temperature(&sensor, &value);
+        if (res != ESP_OK) {
+            LOGD("Could not measure temperature: %s", esp_err_to_name(res));
+            return std::numeric_limits<float>::quiet_NaN();
+        } else {
+            return value;
+        }
+    }
+
+    float getHumidity() {
+        float value;
+        esp_err_t res = si7021_measure_humidity(&sensor, &value);
+        if (res != ESP_OK) {
+            LOGD("Could not measure humidity: %s", esp_err_to_name(res));
+            return std::numeric_limits<float>::quiet_NaN();
+        } else {
+            return value;
+        }
+    }
+
+    shared_ptr<I2CBus> bus;
+    i2c_dev_t sensor;
 };
 
 }    // namespace farmhub::peripherals::environment

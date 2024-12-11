@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Arduino.h>
-#include <Wire.h>
 
 #include <kernel/Pin.hpp>
 #include <kernel/Component.hpp>
@@ -55,36 +54,25 @@ public:
     }
 
     int digitalRead(uint8_t pin) {
-        I2CTransmission tx(device);
-        tx.write(pin < 8 ? 0x00 : 0x01);
-        tx.requestFrom(1);
-        uint8_t data = tx.read();
+        uint8_t data = device->readRegByte(pin < 8 ? 0x00 : 0x01);
         return (data >> (pin % 8)) & 1;
     }
 
 private:
     void updateDirection1() {
-        I2CTransmission tx(device);
-        tx.write(0x06);
-        tx.write(direction & 0xFF);
+        device->writeRegByte(0x06, direction & 0xFF);
     }
 
     void updateDirection2() {
-        I2CTransmission tx(device);
-        tx.write(0x07);
-        tx.write(direction >> 8);
+        device->writeRegByte(0x07, direction >> 8);
     }
 
     void updateOutput1() {
-        I2CTransmission tx(device);
-        tx.write(0x02);
-        tx.write(output & 0xFF);
+        device->writeRegByte(0x02, output & 0xFF);
     }
 
     void updateOutput2() {
-        I2CTransmission tx(device);
-        tx.write(0x03);
-        tx.write(output >> 8);
+        device->writeRegByte(0x03, output >> 8);
     }
 
     shared_ptr<I2CDevice> device;

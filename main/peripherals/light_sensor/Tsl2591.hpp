@@ -5,10 +5,8 @@
 #include <memory>
 
 #include <Arduino.h>
-#include <Wire.h>
 
-#include <Adafruit_Sensor.h>
-#include <Adafruit_TSL2591.h>
+#include <tsl2591.h>
 
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>
@@ -27,6 +25,8 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::light_sensor {
 
+static constexpr uint8_t TSL2591_ADDR = 0x29;
+
 class Tsl2591DeviceConfig
     : public I2CDeviceConfig {
 public:
@@ -44,34 +44,39 @@ public:
         I2CConfig config,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval) {
+        : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval)
+        , bus(i2c.getBusFor(config)) {
 
         LOGI("Initializing TSL2591 light sensor with %s",
             config.toString().c_str());
 
-        if (!sensor.begin(&i2c.getWireFor(config), config.address)) {
-            throw PeripheralCreationException("Failed to initialize TSL2591 light sensor");
-        }
+        ESP_ERROR_CHECK(tsl2591_init_desc(&sensor, bus->port, bus->sda->getGpio(), bus->scl->getGpio()));
+        ESP_ERROR_CHECK(tsl2591_init(&sensor));
 
         // TODO Make these configurable
-        sensor.setGain(TSL2591_GAIN_MED);
-        sensor.setTiming(TSL2591_INTEGRATIONTIME_300MS);
-
-        sensor_t sensorInfo;
-        sensor.getSensor(&sensorInfo);
-        LOGD("Found sensor: %s, driver version: %ld, unique ID: %ld, max value: %.2f lux, min value: %.2f lux, resolution: %.2f mlux",
-            sensorInfo.name, sensorInfo.version, sensorInfo.sensor_id, sensorInfo.max_value, sensorInfo.min_value, sensorInfo.resolution * 1000);
+        ESP_ERROR_CHECK(tsl2591_set_power_status(&sensor, TSL2591_POWER_ON));
+        ESP_ERROR_CHECK(tsl2591_set_als_status(&sensor, TSL2591_ALS_ON));
+        ESP_ERROR_CHECK(tsl2591_set_gain(&sensor, TSL2591_GAIN_MEDIUM));
+        ESP_ERROR_CHECK(tsl2591_set_integration_time(&sensor, TSL2591_INTEGRATION_300MS));
 
         runLoop();
     }
 
 protected:
     double readLightLevel() override {
-        return sensor.getLuminosity(TSL2591_VISIBLE);
+        esp_err_t res;
+        float lux;
+        if ((res = tsl2591_get_lux(&sensor, &lux)) != ESP_OK) {
+            LOGD("Could not read light level: %s", esp_err_to_name(res));
+            return std::numeric_limits<double>::quiet_NaN();
+        } else {
+            return lux;
+        }
     }
 
 private:
-    Adafruit_TSL2591 sensor;
+    shared_ptr<I2CBus> bus;
+    tsl2591_t sensor;
 };
 
 class Tsl2591

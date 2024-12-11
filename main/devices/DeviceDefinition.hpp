@@ -5,9 +5,6 @@
 
 #include <Arduino.h>
 
-#include <SHT2x.h>
-#include <SHT31.h>
-
 #include <ArduinoJson.h>
 
 #include <kernel/Kernel.hpp>
@@ -21,7 +18,7 @@
 #include <peripherals/environment/Ds18B20SoilSensor.hpp>
 #include <peripherals/environment/Environment.hpp>
 #include <peripherals/environment/Sht2xComponent.hpp>
-#include <peripherals/environment/Sht31Component.hpp>
+#include <peripherals/environment/Sht3xComponent.hpp>
 #include <peripherals/environment/SoilMoistureSensor.hpp>
 #include <peripherals/fence/ElectricFenceMonitor.hpp>
 #include <peripherals/light_sensor/Bh1750.hpp>
@@ -112,9 +109,10 @@ public:
     MqttDriver::Config& mqttConfig = mqttConfigFile.config;
 
 private:
-    I2CEnvironmentFactory<Sht31Component> sht3xFactory { "sht3x", 0x44 /* Also supports 0x45 */ };
-    I2CEnvironmentFactory<Sht2xComponent<SHT2x>> sht2xFactory { "sht2x", 0x40 /* Not configurable */ };
-    I2CEnvironmentFactory<Sht2xComponent<HTU21>> htu2xFactory { "htu2x", 0x40 /* Not configurable */ };
+    I2CEnvironmentFactory<Sht3xComponent> sht3xFactory { "sht3x", 0x44 /* Also supports 0x45 */ };
+    // TODO Unify these two factories
+    I2CEnvironmentFactory<Sht2xComponent> sht2xFactory { "sht2x", 0x40 /* Not configurable */ };
+    I2CEnvironmentFactory<Sht2xComponent> htu2xFactory { "htu2x", 0x40 /* Not configurable */ };
     SoilMoistureSensorFactory soilMoistureSensorFactory;
 
     Ds18B20SoilSensorFactory ds18b20SoilSensorFactory;

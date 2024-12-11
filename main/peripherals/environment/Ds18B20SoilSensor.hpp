@@ -4,12 +4,11 @@
 
 #include <Arduino.h>
 
-#include <DallasTemperature.h>
-#include <OneWire.h>
+#include <ds18x20.h>
 
-#include <peripherals/Peripheral.hpp>
-#include <kernel/Configuration.hpp>
 #include <kernel/Component.hpp>
+#include <kernel/Configuration.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <peripherals/SinglePinDeviceConfig.hpp>
 
 using namespace farmhub::kernel;
@@ -32,58 +31,40 @@ public:
         const String& name,
         shared_ptr<MqttRoot> mqttRoot,
         InternalPinPtr pin)
-        : Component(name, mqttRoot) {
+        : Component(name, mqttRoot)
+        , pin(pin) {
 
         LOGI("Initializing DS18B20 soil temperature sensor on pin %s",
             pin->getName().c_str());
 
-        oneWire.begin(pin->getGpio());
+        gpio_set_pull_mode(pin->getGpio(), GPIO_PULLUP_ONLY);
 
-        // locate devices on the bus
-        LOGV("Locating devices...");
-        sensors.begin();
-        LOGD("Found %d devices, parasitic power is %s",
-            sensors.getDeviceCount(),
-            sensors.isParasitePowerMode() ? "ON" : "OFF");
+        LOGV("Locating DS18B20 sensors on bus...");
+        size_t sensorCount;
+        // TODO How many slots do we need here actually?
+        int maxSensors = 1;
 
-        DeviceAddress thermometer;
-        if (!sensors.getAddress(thermometer, 0)) {
-            throw PeripheralCreationException("unable to find address for device");
+        esp_err_t searchResult = ds18x20_scan_devices(pin->getGpio(), &sensor, maxSensors, &sensorCount);
+        if (searchResult == ESP_OK) {
+            if (!sensorCount) {
+                throw PeripheralCreationException("No DS18B20 sensors found on bus");
+            }
+            LOGD("Found a DS18B20 at address: %016llX", sensor);
+        } else {
+            throw PeripheralCreationException("Error searching for DS18B20 devices: " + String(esp_err_to_name(searchResult)));
         }
-
-        // show the addresses we found on the bus
-        LOGD("Device 0 Address: %s",
-            toStringAddress(thermometer).c_str());
     }
 
     void populateTelemetry(JsonObject& json) override {
-        if (!sensors.requestTemperaturesByIndex(0)) {
-            LOGE("Failed to get temperature from DS18B20 sensor");
-            return;
-        }
-        float temperature = sensors.getTempCByIndex(0);
-        if (temperature == DEVICE_DISCONNECTED_C) {
-            LOGE("Failed to get temperature from DS18B20 sensor");
-            return;
-        }
+        // TODO Get temperature in a task to avoid delaying reporting
+        float temperature;
+        ESP_ERROR_CHECK(ds18x20_measure_and_read_multi(pin->getGpio(), &sensor, 1, &temperature));
         json["temperature"] = temperature;
     }
 
 private:
-
-    OneWire oneWire;
-
-    // Pass our oneWire reference to Dallas Temperature.
-    DallasTemperature sensors { &oneWire };
-
-    String toStringAddress(DeviceAddress address) {
-        char result[17];
-        for (int i = 0; i < 8; i++) {
-            sprintf(&result[i * 2], "%02X", address[i]);
-        }
-        result[16] = '\0';
-        return result;
-    }
+    const InternalPinPtr pin;
+    onewire_addr_t sensor;
 };
 
 class Ds18B20SoilSensor
