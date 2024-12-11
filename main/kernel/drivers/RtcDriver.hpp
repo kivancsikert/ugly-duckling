@@ -99,12 +99,9 @@ private:
         } else {
             MdnsRecord ntpServer;
             if (mdns.lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
-                LOGTD("rtc", "using NTP server %s:%d (%s) from mDNS",
-                    ntpServer.hostname.c_str(),
-                    ntpServer.port,
-                    ntpServer.ip.toString().c_str());
-                auto serverIp = convertIp4(ntpServer.ip);
-                esp_sntp_setserver(0, &serverIp);
+                LOGTD("rtc", "using NTP server %s from mDNS",
+                    ntpServer.toString().c_str());
+                esp_sntp_setserver(0, (const ip_addr_t*) &ntpServer.ip);
             } else {
                 LOGTD("rtc", "no NTP server configured, using default");
             }
@@ -146,14 +143,6 @@ private:
                 }
             }
         }
-    }
-
-    // TODO Use ESP-IDF's ip4_addr_t
-    static ip_addr_t convertIp4(const IPAddress& ip) {
-        ip_addr_t espIP;
-        IP4_ADDR(&espIP.u_addr.ip4, ip[0], ip[1], ip[2], ip[3]);
-        espIP.type = IPADDR_TYPE_V4;
-        return espIP;
     }
 
     WiFiDriver& wifi;

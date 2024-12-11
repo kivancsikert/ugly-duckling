@@ -327,9 +327,7 @@ private:
                         LOGTE("mqtt", "Failed to lookup MQTT server");
                         return false;
                     }
-                    hostname = mqttServer.ip == IPAddress()
-                        ? mqttServer.hostname
-                        : mqttServer.ip.toString();
+                    hostname = mqttServer.ipOrHost();
                     port = mqttServer.port;
 #endif
                 } else {
