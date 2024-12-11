@@ -212,7 +212,8 @@ private:
 class MemoryTelemetryProvider : public TelemetryProvider {
 public:
     void populateTelemetry(JsonObject& json) override {
-        json["free-heap"] = ESP.getFreeHeap();
+        json["free-heap"] = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+        json["min-heap"] = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
     }
 };
 
@@ -229,7 +230,6 @@ public:
 private:
     WiFiDriver& wifi;
 };
-
 
 class PowerManagementTelemetryProvider : public TelemetryProvider {
 public:
