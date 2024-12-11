@@ -2,16 +2,18 @@
 
 #include <functional>
 
-#include <Preferences.h>
+#include <Arduino.h>
+
+#include <nvs.h>
+#include <nvs_flash.h>
 
 #include <ArduinoJson.h>
-
 #include <kernel/Concurrent.hpp>
 
 namespace farmhub::kernel {
 
 /**
- * @brief Thread safe NVS store for JSON serializable objects.
+ * @brief Thread-safe NVS store for JSON serializable objects.
  */
 class NvsStore {
 public:
@@ -24,9 +26,19 @@ public:
     }
 
     bool contains(const char* key) {
-        return withPreferences(true, [&]() {
-            return preferences.isKey(key);
-        });
+        return withPreferences(true, [&](nvs_handle_t handle) {
+            size_t length = 0;
+            esp_err_t err = nvs_get_str(handle, key, nullptr, &length);
+            switch (err) {
+                case ESP_OK:
+                case ESP_ERR_NVS_NOT_FOUND:
+                    break;
+                default:
+                    LOGTW("nvs", "contains(%s) = failed to read: %s", key, esp_err_to_name(err));
+                    break;
+            }
+            return err;
+        }) == ESP_OK;
     }
 
     template <typename T>
@@ -36,25 +48,33 @@ public:
 
     template <typename T>
     bool get(const char* key, T& value) {
-        return withPreferences(true, [&]() {
-            if (!preferences.isKey(key)) {
-                LOGTV("nvs", "get(%s) = not found",
-                    key);
-                return false;
+        return withPreferences(true, [&](nvs_handle_t handle) {
+            size_t length = 0;
+            esp_err_t err = nvs_get_str(handle, key, nullptr, &length);
+            if (err != ESP_OK) {
+                LOGTV("nvs", "get(%s) = failed to read: %s", key, esp_err_to_name(err));
+                return err;
             }
-            String jsonString = preferences.getString(key);
-            LOGTV("nvs", "get(%s) = %s",
-                key, jsonString.c_str());
+
+            char json[length];
+            err = nvs_get_str(handle, key, json, &length);
+            if (err != ESP_OK) {
+                LOGTE("nvs", "get(%s) = failed to read: %s", key, esp_err_to_name(err));
+                return err;
+            }
+
+            LOGTV("nvs", "get(%s) = %s", key, json);
+
             JsonDocument jsonDocument;
-            deserializeJson(jsonDocument, jsonString);
-            if (jsonDocument.isNull()) {
-                LOGTE("nvs", "get(%s) = invalid JSON",
-                    key);
-                return false;
+            DeserializationError jsonError = deserializeJson(jsonDocument, json);
+            if (jsonError) {
+                LOGTE("nvs", "get(%s) = invalid JSON: %s", key, jsonError.c_str());
+                return ESP_FAIL;
             }
+
             value = jsonDocument.as<T>();
-            return true;
-        });
+            return ESP_OK;
+        }) == ESP_OK;
     }
 
     template <typename T>
@@ -64,15 +84,22 @@ public:
 
     template <typename T>
     bool set(const char* key, const T& value) {
-        return withPreferences(false, [&]() {
+        return withPreferences(false, [&](nvs_handle_t handle) {
             JsonDocument jsonDocument;
             jsonDocument.set(value);
             String jsonString;
             serializeJson(jsonDocument, jsonString);
-            LOGTV("nvs", "set(%s) = %s",
-                key, jsonString.c_str());
-            return preferences.putString(key, jsonString.c_str());
-        });
+
+            LOGTV("nvs", "set(%s) = %s", key, jsonString.c_str());
+
+            esp_err_t err = nvs_set_str(handle, key, jsonString.c_str());
+            if (err != ESP_OK) {
+                LOGTE("nvs", "set(%s) = failed to write: %s", key, esp_err_to_name(err));
+                return err;
+            }
+
+            return nvs_commit(handle);
+        }) == ESP_OK;
     }
 
     bool remove(const String& key) {
@@ -80,35 +107,38 @@ public:
     }
 
     bool remove(const char* key) {
-        return withPreferences(false, [&]() {
-            LOGTV("nvs", "remove(%s)",
-                key);
-            if (preferences.isKey(key)) {
-                return preferences.remove(key);
-            } else {
-                return false;
+        return withPreferences(false, [&](nvs_handle_t handle) {
+            LOGTV("nvs", "remove(%s)", key);
+            esp_err_t err = nvs_erase_key(handle, key);
+            if (err != ESP_OK) {
+                LOGTE("nvs", "remove(%s) = cannot delete: %s", key, esp_err_to_name(err));
+                return err;
             }
-        });
+
+            return nvs_commit(handle);
+        }) == ESP_OK;
     }
 
 private:
-    bool withPreferences(bool readOnly, std::function<bool()> action) {
+    esp_err_t withPreferences(bool readOnly, std::function<esp_err_t(nvs_handle_t)> action) {
         Lock lock(preferencesMutex);
-        LOGTV("nvs", "%s '%s'",
-            readOnly ? "read" : "write", name.c_str());
-        if (!preferences.begin(name.c_str(), readOnly)) {
-            LOGTE("nvs", "failed to %s '%s'",
-                readOnly ? "read" : "write", name.c_str());
+        LOGTV("nvs", "%s '%s'", readOnly ? "read" : "write", name.c_str());
+
+        nvs_handle_t handle;
+        esp_err_t err = nvs_open(name.c_str(), readOnly ? NVS_READONLY : NVS_READWRITE, &handle);
+        if (err != ESP_OK) {
+            LOGTE("nvs", "failed to %s '%s'", readOnly ? "read" : "write", name.c_str());
             return false;
         }
-        bool result = action();
-        preferences.end();
+
+        esp_err_t result = action(handle);
+        nvs_close(handle);
+
         LOGTV("nvs", "finished %s '%s', result: %s",
-            readOnly ? "read" : "write", name.c_str(), result ? "true" : "false");
+            readOnly ? "read" : "write", name.c_str(), esp_err_to_name(result));
         return result;
     }
 
-    Preferences preferences;
     Mutex preferencesMutex;
     const String name;
 };
