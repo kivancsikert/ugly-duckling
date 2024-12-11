@@ -102,21 +102,12 @@ public:
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
-        File root = fs.open("/", FILE_READ);
         JsonArray files = response["files"].to<JsonArray>();
-        while (true) {
-            File entry = root.openNextFile();
-            if (!entry) {
-                break;
-            }
+        fs.readDir("/", [&](const String& name, off_t size) {
             JsonObject file = files.add<JsonObject>();
-            file["name"] = String(entry.name());
-            file["size"] = entry.size();
-            file["type"] = entry.isDirectory()
-                ? "dir"
-                : "file";
-            entry.close();
-        }
+            file["name"] = name;
+            file["size"] = size;
+        });
     }
 };
 
@@ -134,10 +125,14 @@ public:
         LOGI("Reading %s",
             path.c_str());
         response["path"] = path;
-        File file = fs.open(path, FILE_READ);
-        if (file) {
-            response["size"] = file.size();
-            response["contents"] = file.readString();
+        if (fs.exists(path)) {
+            size_t size = fs.size(path);
+            response["size"] = size;
+            char* buffer = (char*) malloc(size + 1);
+            auto read = fs.read(path, buffer, size);
+            buffer[read] = '\0';
+            response["contents"] = buffer;
+            free(buffer);
         } else {
             response["error"] = "File not found";
         }
@@ -159,15 +154,8 @@ public:
             path.c_str());
         String contents = request["contents"];
         response["path"] = path;
-        File file = fs.open(path, FILE_WRITE);
-        if (file) {
-            auto written = file.print(contents);
-            file.flush();
-            response["written"] = written;
-            file.close();
-        } else {
-            response["error"] = "File not found";
-        }
+        size_t written = fs.write(path, contents.c_str(), contents.length());
+        response["written"] = written;
     }
 };
 
@@ -185,7 +173,7 @@ public:
         LOGI("Removing %s",
             path.c_str());
         response["path"] = path;
-        if (fs.remove(path)) {
+        if (unlink(path.c_str()) == 0) {
             response["removed"] = true;
         } else {
             response["error"] = "File not found";

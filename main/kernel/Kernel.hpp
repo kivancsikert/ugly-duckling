@@ -36,7 +36,7 @@ class Kernel;
 
 static RTC_DATA_ATTR int bootCount = 0;
 
-static const String UPDATE_FILE = "/update.json";
+static constexpr const char* UPDATE_FILE = "/update.json";
 
 // TODO Move this to a separate file
 static const String& getMacAddress() {
@@ -102,7 +102,7 @@ public:
     }
 
     void prepareUpdate(const String& url) {
-        auto fUpdate = fs.open(UPDATE_FILE, FILE_WRITE);
+        std::ofstream fUpdate = fs.openWrite(UPDATE_FILE);
         JsonDocument doc;
         doc["url"] = url;
         serializeJson(doc, fUpdate);
@@ -125,7 +125,7 @@ public:
             statusLed.turnOn();
 
             LOGI(" - Deleting the file system...");
-            fs.reset();
+            FileSystem::format();
         }
 
         LOGI(" - Clearing NVS...");
@@ -212,11 +212,11 @@ private:
             return "";
         }
 
-        auto fUpdate = fs.open(UPDATE_FILE, FILE_READ);
+        std::ifstream fUpdate = fs.openRead(UPDATE_FILE);
         JsonDocument doc;
         auto error = deserializeJson(doc, fUpdate);
         fUpdate.close();
-        fs.remove(UPDATE_FILE);
+        unlink(UPDATE_FILE);
 
         if (error) {
             return "Failed to parse update.json: " + String(error.c_str());

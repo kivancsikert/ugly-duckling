@@ -48,6 +48,7 @@ void convertFromJson(JsonVariantConst src, Level& dst) {
 static void initLogging() {
     const char* logTags[] = {
         "farmhub",
+        "farmhub:fs",
         "farmhub:mdns",
         "farmhub:mqtt",
         "farmhub:pm",
