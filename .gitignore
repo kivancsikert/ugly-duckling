@@ -11,5 +11,5 @@
 /build/
 /managed_components/
 /sdkconfig*
-/!sdkconfig*.defaults
+!/sdkconfig*.defaults
 /dependencies*.lock
