@@ -79,8 +79,6 @@ static void dumpPerTaskHeapInfo() {
 #include <devices/Device.hpp>
 
 extern "C" void app_main() {
-    initArduino();
-
     Log::init();
 
 #ifdef CONFIG_HEAP_TRACING
