@@ -199,7 +199,7 @@ private:
             for (auto event = eventQueue.pollIn(WIFI_CHECK_INTERVAL); event.has_value(); event = eventQueue.poll()) {
                 switch (event.value()) {
                     case WiFiEvent::STARTED:
-                        if (networkRequested.isSet()) {
+                        if (networkRequested.isSet() && !configPortalRunning.isSet()) {
                             esp_err_t err = esp_wifi_connect();
                             if (err != ESP_OK) {
                                 LOGTD("wifi", "Failed to start connecting: %s", esp_err_to_name(err));
@@ -226,6 +226,11 @@ private:
             if (clients > 0) {
                 networkRequested.set();
                 if (!connected) {
+                    if (configPortalRunning.isSet()) {
+                        // TODO Add some sort of timeout here
+                        LOGTV("wifi", "Provisioning already running");
+                        continue;
+                    }
                     if (networkConnecting.isSet()) {
                         if (boot_clock::now() - connectingSince.value() < WIFI_CONNECTION_TIMEOUT) {
                             LOGTV("wifi", "Already connecting");
@@ -235,11 +240,6 @@ private:
                         LOGTI("wifi", "Connection timed out, retrying");
                         networkConnecting.clear();
                         ensureWifiDeinitialized();
-                        connectingSince.reset();
-                    } else if (configPortalRunning.isSet()) {
-                        // TODO Add some sort of timeout here
-                        LOGTV("wifi", "Provisioning already running");
-                        continue;
                     }
                     LOGTV("wifi", "Connecting for first client");
                     connectingSince = boot_clock::now();
