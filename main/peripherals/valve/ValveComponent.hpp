@@ -83,7 +83,7 @@ protected:
 private:
     void driveAndHold(MotorPhase phase) {
         controller.drive(phase, 1.0);
-        delay(switchDuration.count());
+        Task::delay(switchDuration);
         controller.drive(phase, holdDuty);
     }
 };
@@ -147,13 +147,13 @@ public:
 
     void open() override {
         controller.drive(MotorPhase::FORWARD, switchDuty);
-        delay(switchDuration.count());
+        Task::delay(switchDuration);
         controller.stop();
     }
 
     void close() override {
         controller.drive(MotorPhase::REVERSE, switchDuty);
-        delay(switchDuration.count());
+        Task::delay(switchDuration);
         controller.stop();
     }
 

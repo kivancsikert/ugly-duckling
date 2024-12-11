@@ -336,7 +336,7 @@ private:
                 }
                 printf("Shutdown process finished\n");
             });
-            task.delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
+            Task::delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
             enterLowPowerDeepSleep();
         }
     }

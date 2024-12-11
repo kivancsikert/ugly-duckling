@@ -57,13 +57,13 @@ public:
                         // Attempt a retry, but with mDNS cache disabled
                         LOGTE(Tag::RTC, "NTP update failed, retrying in 10 seconds with mDNS cache disabled");
                         trustMdnsCache = false;
-                        task.delay(10s);
+                        Task::delay(10s);
                         continue;
                     }
                 }
 
                 // We are good for a while now
-                task.delay(1h);
+                Task::delay(1h);
             }
         });
     }

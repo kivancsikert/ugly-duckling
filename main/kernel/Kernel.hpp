@@ -115,15 +115,15 @@ public:
         LOGI("Performing factory reset");
 
         statusLed.turnOn();
-        delay(1000);
+        Task::delay(1s);
         statusLed.turnOff();
-        delay(1000);
+        Task::delay(1s);
         statusLed.turnOn();
 
         if (completeReset) {
-            delay(1000);
+            Task::delay(1s);
             statusLed.turnOff();
-            delay(1000);
+            Task::delay(1s);
             statusLed.turnOn();
 
             LOGI(" - Deleting the file system...");
