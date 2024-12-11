@@ -42,10 +42,8 @@ CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
 # Increase main task stack from default 3584
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
 
-# Allow time to be adjusted smoothly from the DHCP server's recommendation
+# Allow time to be adjusted the DHCP server's recommendation
 CONFIG_LWIP_DHCP_GET_NTP_SRV=y
-# Figure out how to enable smooth adjustment
-# CONFIG_SNTP_SYNC_MODE_SMOOTH=y
 
 #
 # Power management
