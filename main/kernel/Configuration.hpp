@@ -1,8 +1,9 @@
 #pragma once
 
-#include <ArduinoJson.h>
 #include <functional>
 #include <list>
+
+#include <ArduinoJson.h>
 
 #include <kernel/FileSystem.hpp>
 
@@ -282,8 +283,8 @@ public:
             LOGD("The configuration file '%s' was not found, falling back to defaults",
                 path.c_str());
         } else {
-            File file = fs.open(path, FILE_READ);
-            if (!file) {
+            std::ifstream file = fs.openRead(path);
+            if (file.fail()) {
                 throw ConfigurationException("Cannot open config file " + path);
             }
 
@@ -305,12 +306,11 @@ public:
                 path.c_str(), toString().c_str());
         }
         onUpdate([&fs, path](const JsonObject& json) {
-            File file = fs.open(path, FILE_WRITE);
-            if (!file) {
-                throw ConfigurationException("Cannot open config file " + path);
-            }
-
+            std::ofstream file = fs.openWrite(path);
             serializeJson(json, file);
+            if (file.fail()) {
+                throw ConfigurationException("Cannot write config file " + path);
+            }
             file.close();
         });
     }
