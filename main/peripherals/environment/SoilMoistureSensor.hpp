@@ -3,7 +3,6 @@
 #include <memory>
 
 #include <Arduino.h>
-#include <Wire.h>
 
 #include <kernel/Component.hpp>
 #include <kernel/Telemetry.hpp>
