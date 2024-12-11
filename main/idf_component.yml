@@ -5,5 +5,3 @@ dependencies:
   bblanchon/arduinojson: 7.2.1
   idf:
     version: 5.3.2
-  espressif/onewire_bus: 1.0.2
-  espressif/ds18b20: 0.1.1

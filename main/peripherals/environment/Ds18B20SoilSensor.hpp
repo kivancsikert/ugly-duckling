@@ -4,8 +4,7 @@
 
 #include <Arduino.h>
 
-#include <ds18b20.h>
-#include <onewire_bus.h>
+#include <ds18x20.h>
 
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>
@@ -32,63 +31,40 @@ public:
         const String& name,
         shared_ptr<MqttRoot> mqttRoot,
         InternalPinPtr pin)
-        : Component(name, mqttRoot) {
+        : Component(name, mqttRoot)
+        , pin(pin) {
 
         LOGI("Initializing DS18B20 soil temperature sensor on pin %s",
             pin->getName().c_str());
 
-        onewire_bus_handle_t bus;
-        onewire_bus_config_t busConfig = {
-            .bus_gpio_num = pin->getGpio(),
-        };
-        onewire_bus_rmt_config_t rmtConfig = {
-            .max_rx_bytes = 10,    // 1byte ROM command + 8byte ROM number + 1byte device command
-        };
-        ESP_ERROR_CHECK(onewire_new_bus_rmt(&busConfig, &rmtConfig, &bus));
+        gpio_set_pull_mode(pin->getGpio(), GPIO_PULLUP_ONLY);
 
         LOGV("Locating DS18B20 sensors on bus...");
-        int sensorCount = 0;
+        size_t sensorCount;
         // TODO How many slots do we need here actually?
         int maxSensors = 1;
-        ds18b20_device_handle_t sensors[maxSensors];
-        onewire_device_iter_handle_t iter = NULL;
-        onewire_device_t nextOnewireDevice;
-        ESP_ERROR_CHECK(onewire_new_device_iter(bus, &iter));
 
-        while (sensorCount < maxSensors) {
-            esp_err_t searchResult = onewire_device_iter_get_next(iter, &nextOnewireDevice);
-            if (searchResult == ESP_OK) {
-                ds18b20_config_t sensorConfig = {};
-                // Check if the device is a DS18B20, if so, return its handle
-                if (ds18b20_new_device(&nextOnewireDevice, &sensorConfig, &sensors[sensorCount]) == ESP_OK) {
-                    LOGD("Found a DS18B20[%d], address: %016llX", sensorCount, nextOnewireDevice.address);
-                    sensorCount++;
-                } else {
-                    LOGD("Found an unknown device, address: %016llX", nextOnewireDevice.address);
-                }
-            } else {
-                throw PeripheralCreationException("Error searching for DS18B20 devices: " + String(esp_err_to_name(searchResult)));
+        esp_err_t searchResult = ds18x20_scan_devices(pin->getGpio(), &sensor, maxSensors, &sensorCount);
+        if (searchResult == ESP_OK) {
+            if (!sensorCount) {
+                throw PeripheralCreationException("No DS18B20 sensors found on bus");
             }
+            LOGD("Found a DS18B20 at address: %016llX", sensor);
+        } else {
+            throw PeripheralCreationException("Error searching for DS18B20 devices: " + String(esp_err_to_name(searchResult)));
         }
-        ESP_ERROR_CHECK(onewire_del_device_iter(iter));
-
-        if (sensorCount == 0) {
-            throw PeripheralCreationException("No DS18B20 sensors found on bus");
-        }
-
-        sensor = sensors[0];
     }
 
     void populateTelemetry(JsonObject& json) override {
         // TODO Get temperature in a task to avoid delaying reporting
         float temperature;
-        ESP_ERROR_CHECK(ds18b20_trigger_temperature_conversion(sensor));
-        ESP_ERROR_CHECK(ds18b20_get_temperature(sensor, &temperature));
+        ESP_ERROR_CHECK(ds18x20_measure_and_read_multi(pin->getGpio(), &sensor, 1, &temperature));
         json["temperature"] = temperature;
     }
 
 private:
-    ds18b20_device_handle_t sensor;
+    const InternalPinPtr pin;
+    onewire_addr_t sensor;
 };
 
 class Ds18B20SoilSensor
