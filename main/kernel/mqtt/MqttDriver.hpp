@@ -119,9 +119,7 @@ public:
                 Task::delay(5s);
             }
             trustMdnsCache = true;
-            hostname = mqttServer.ip == IPAddress()
-                ? mqttServer.hostname
-                : mqttServer.ip.toString();
+            hostname = mqttServer.ipOrHost();
             port = mqttServer.port;
 #endif
         } else {
