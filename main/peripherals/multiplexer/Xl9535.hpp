@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Arduino.h>
-#include <Wire.h>
 
 #include <kernel/Pin.hpp>
 #include <kernel/Component.hpp>
