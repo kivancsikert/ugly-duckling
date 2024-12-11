@@ -122,15 +122,15 @@ private:
         status.concat(farmhubVersion);
         status.concat("\033[0m");
 
+        status.concat(", uptime: \033[33m");
+        status.concat(String(float(millis()) / 1000.0f, 1));
+        status.concat("\033[0m s");
+
         status.concat(", WIFI: ");
         status.concat(wifiStatus());
         status.concat(" (up \033[33m");
         status.concat(String(float(wifi.getUptime().count()) / 1000.0f, 1));
         status.concat("\033[0m s)");
-
-        status.concat(", uptime: \033[33m");
-        status.concat(String(float(millis()) / 1000.0f, 1));
-        status.concat("\033[0m s");
 
         status.concat(", RTC: \033[33m");
         status.concat(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED");
