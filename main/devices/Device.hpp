@@ -12,6 +12,7 @@
 
 #include <Print.h>
 
+#include <kernel/BootClock.hpp>
 #include <kernel/Command.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/Console.hpp>
@@ -111,6 +112,7 @@ private:
     void printStatus() {
         static const char* spinner = "|/-\\";
         static const int spinnerLength = strlen(spinner);
+        auto uptime = duration_cast<milliseconds>(boot_clock::now().time_since_epoch());
 
         status.clear();
         counter = (counter + 1) % spinnerLength;
@@ -122,22 +124,22 @@ private:
         status.concat(farmhubVersion);
         status.concat("\033[0m");
 
+        status.concat(", uptime: \033[33m");
+        status.concat(String(uptime.count() / 1000.0, 1));
+        status.concat("\033[0m s");
+
         status.concat(", WIFI: ");
         status.concat(wifiStatus());
         status.concat(" (up \033[33m");
-        status.concat(String(float(wifi.getUptime().count()) / 1000.0f, 1));
+        status.concat(String(double(wifi.getUptime().count()) / 1000.0, 1));
         status.concat("\033[0m s)");
-
-        status.concat(", uptime: \033[33m");
-        status.concat(String(float(millis()) / 1000.0f, 1));
-        status.concat("\033[0m s");
 
         status.concat(", RTC: \033[33m");
         status.concat(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED");
         status.concat("\033[0m");
 
         status.concat(", heap: \033[33m");
-        status.concat(String(float(ESP.getFreeHeap()) / 1024.0f, 2));
+        status.concat(String(double(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)) / 1024.0, 2));
         status.concat("\033[0m kB");
 
         status.concat(", CPU: \033[33m");
@@ -212,7 +214,8 @@ private:
 class MemoryTelemetryProvider : public TelemetryProvider {
 public:
     void populateTelemetry(JsonObject& json) override {
-        json["free-heap"] = ESP.getFreeHeap();
+        json["free-heap"] = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+        json["min-heap"] = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
     }
 };
 
@@ -229,7 +232,6 @@ public:
 private:
     WiFiDriver& wifi;
 };
-
 
 class PowerManagementTelemetryProvider : public TelemetryProvider {
 public:
@@ -486,6 +488,7 @@ public:
                 // TODO Remove redundant mentions of "ugly-duckling"
                 json["app"] = "ugly-duckling";
                 json["version"] = kernel.version;
+                json["reset"] = esp_reset_reason();
                 json["wakeup"] = esp_sleep_get_wakeup_cause();
                 json["bootCount"] = bootCount++;
                 json["time"] = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();

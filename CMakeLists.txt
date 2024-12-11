@@ -26,8 +26,25 @@ endif()
 
 message("Building Ugly Duckling '${UD_GEN}'")
 
-set(SDKCONFIG_DEFAULTS "sdkconfig.defaults;sdkconfig.${UD_GEN_LOWER}.defaults")
-# set(SDKCONFIG "sdkconfig.${UD_GEN_LOWER}")
+if(NOT DEFINED UD_DEBUG)
+    set(UD_DEBUG "$ENV{UD_DEBUG}")
+endif()
+if(UD_DEBUG STREQUAL "")
+    message("UD_DEBUG is not set, assuming 0.")
+    set(UD_DEBUG 0)
+endif()
+
+# Make sure we reconfigure if UD_DEBUG changes
+set_property(DIRECTORY PROPERTY UD_DEBUG_TRACKER "${UD_DEBUG}")
+
+if (UD_DEBUG)
+    message("Building with debug options")
+    set(SDKCONFIG_DEFAULTS "sdkconfig.defaults;sdkconfig.${UD_GEN_LOWER}.defaults;sdkconfig.debug.defaults")
+else()
+    message("Building with release options")
+    set(SDKCONFIG_DEFAULTS "sdkconfig.defaults;sdkconfig.${UD_GEN_LOWER}.defaults")
+    add_compile_options("-O2")
+endif()
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
