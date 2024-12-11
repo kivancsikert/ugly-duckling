@@ -7,6 +7,7 @@
 #include <SPIFFS.h>
 
 #include <esp_sleep.h>
+#include <esp_system.h>
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/Named.hpp>
@@ -66,7 +67,7 @@ public:
     void handle(const JsonObject& request, JsonObject& response) override {
         printf("Restarting...\n");
         Serial.flush();
-        ESP.restart();
+        esp_restart();
     }
 };
 
@@ -202,8 +203,8 @@ public:
         response["success"] = true;
         Task::run("update", 3072, [](Task& task) {
             LOGI("Restarting in 5 seconds to apply update");
-            delay(5000);
-            ESP.restart();
+            Task::delay(5s);
+            esp_restart();
         });
     }
 

@@ -8,6 +8,7 @@
 #include <esp_http_client.h>
 #include <esp_https_ota.h>
 #include <esp_mac.h>
+#include <esp_system.h>
 
 #include <nvs_flash.h>
 
@@ -133,7 +134,7 @@ public:
         nvs_flash_erase();
 
         LOGI(" - Restarting...");
-        ESP.restart();
+        esp_restart();
     }
 
     const String version;
