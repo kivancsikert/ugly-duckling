@@ -486,6 +486,7 @@ public:
                 // TODO Remove redundant mentions of "ugly-duckling"
                 json["app"] = "ugly-duckling";
                 json["version"] = kernel.version;
+                json["reset"] = esp_reset_reason();
                 json["wakeup"] = esp_sleep_get_wakeup_cause();
                 json["bootCount"] = bootCount++;
                 json["time"] = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
