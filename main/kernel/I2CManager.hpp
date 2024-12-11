@@ -49,6 +49,10 @@ public:
                   // TODO Allow this to be configred
                   .sda_pullup_en = false,
                   .scl_pullup_en = false,
+                  .master {
+                      // TODO Allow clock speed to be configured
+                      .clk_speed = 400000,
+                  },
               },
               .addr = address,
           }) {

@@ -28,7 +28,7 @@ public:
     }
 
     float getVoltage() override {
-        // LOGV("Capacityt: %d/%d", readWord(0x10), readWord(0x12));
+        // LOGV("Capacityt: %d/%d", readRegWord(0x10), readRegWord(0x12));
         return device->readRegWord(0x08) / 1000.0;
     }
 
@@ -44,7 +44,7 @@ protected:
     void populateTelemetry(JsonObject& json) override {
         BatteryDriver::populateTelemetry(json);
         json["current"] = getCurrent();
-        auto status = device->readWord(0x0A);
+        auto status = device->readRegWord(0x0A);
         json["status"] = status;
         json["charging"] = (status & 0x0001) == 0;
         json["temperature"] = getTemperature();
@@ -52,12 +52,12 @@ protected:
 
 private:
     int16_t readSigned(uint8_t reg) {
-        return static_cast<int16_t>(device->readWord(reg));
+        return static_cast<int16_t>(device->readRegWord(reg));
     }
 
     uint16_t readControlWord(uint16_t subcommand) {
-        device->writeWord(0x00, subcommand);
-        return device->readByte(0x40) | (device->readByte(0x41) << 8);
+        device->writeRegWord(0x00, subcommand);
+        return device->readRegByte(0x40) | (device->readRegByte(0x41) << 8);
     }
 
     shared_ptr<I2CDevice> device;
