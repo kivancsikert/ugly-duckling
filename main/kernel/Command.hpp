@@ -66,7 +66,8 @@ public:
     }
     void handle(const JsonObject& request, JsonObject& response) override {
         printf("Restarting...\n");
-        Serial.flush();
+        fflush(stdout);
+        fsync(fileno(stdout));
         esp_restart();
     }
 };
