@@ -5,8 +5,6 @@
 #include <list>
 #include <variant>
 
-#include <Arduino.h>
-
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/Task.hpp>
@@ -59,8 +57,8 @@ void convertFromJson(JsonVariantConst src, OperationState& dst) {
 class ChickenDoorLightSensorConfig
     : public I2CDeviceConfig {
 public:
-    Property<String> type { this, "type", "bh1750" };
-    Property<String> i2c { this, "i2c" };
+    Property<std::string> type { this, "type", "bh1750" };
+    Property<std::string> i2c { this, "i2c" };
     Property<seconds> measurementFrequency { this, "measurementFrequency", 1s };
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
 };
@@ -68,7 +66,7 @@ public:
 class ChickenDoorDeviceConfig
     : public ConfigurationSection {
 public:
-    Property<String> motor { this, "motor" };
+    Property<std::string> motor { this, "motor" };
     Property<InternalPinPtr> openPin { this, "openPin" };
     Property<InternalPinPtr> closedPin { this, "closedPin" };
     Property<seconds> movementTimeout { this, "movementTimeout", seconds(60) };
@@ -88,7 +86,7 @@ class ChickenDoorComponent
       public TelemetryProvider {
 public:
     ChickenDoorComponent(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         SwitchManager& switches,
         PwmMotorDriver& motor,
@@ -155,7 +153,7 @@ public:
             auto timeinfo = gmtime(&rawtime);
             char buffer[80];
             strftime(buffer, 80, "%FT%TZ", timeinfo);
-            telemetry["overrideEnd"] = String(buffer);
+            telemetry["overrideEnd"] = std::string(buffer);
             telemetry["overrideState"] = overrideState;
         }
     }
@@ -354,7 +352,7 @@ class ChickenDoor
     : public Peripheral<ChickenDoorConfig> {
 public:
     ChickenDoor(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         uint8_t lightSensorAddress,
@@ -400,7 +398,7 @@ private:
 class NoLightSensorComponent : public LightSensorComponent {
 public:
     NoLightSensorComponent(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         I2CConfig config,
@@ -425,7 +423,7 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const String& name, const ChickenDoorDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const std::string& name, const ChickenDoorDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         PwmMotorDriver& motor = findMotor(deviceConfig.motor.get());
         auto lightSensorType = deviceConfig.lightSensor.get().type.get();
         try {

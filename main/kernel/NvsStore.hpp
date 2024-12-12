@@ -2,8 +2,6 @@
 
 #include <functional>
 
-#include <Arduino.h>
-
 #include <nvs.h>
 #include <nvs_flash.h>
 
@@ -17,7 +15,7 @@ namespace farmhub::kernel {
  */
 class NvsStore {
 public:
-    NvsStore(const String& name)
+    NvsStore(const std::string& name)
         : name(name) {
         // Initialize NVS
         esp_err_t err = nvs_flash_init();
@@ -30,7 +28,7 @@ public:
         ESP_ERROR_CHECK(err);
     }
 
-    bool contains(const String& key) {
+    bool contains(const std::string& key) {
         return contains(key.c_str());
     }
 
@@ -51,7 +49,7 @@ public:
     }
 
     template <typename T>
-    bool get(const String& key, T& value) {
+    bool get(const std::string& key, T& value) {
         return get(key.c_str(), value);
     }
 
@@ -87,7 +85,7 @@ public:
     }
 
     template <typename T>
-    bool set(const String& key, const T& value) {
+    bool set(const std::string& key, const T& value) {
         return set(key.c_str(), value);
     }
 
@@ -96,7 +94,7 @@ public:
         return withPreferences(false, [&](nvs_handle_t handle) {
             JsonDocument jsonDocument;
             jsonDocument.set(value);
-            String jsonString;
+            std::string jsonString;
             serializeJson(jsonDocument, jsonString);
 
             LOGTV("nvs", "set(%s) = %s", key, jsonString.c_str());
@@ -111,7 +109,7 @@ public:
         }) == ESP_OK;
     }
 
-    bool remove(const String& key) {
+    bool remove(const std::string& key) {
         return remove(key.c_str());
     }
 
@@ -149,7 +147,7 @@ private:
     }
 
     Mutex preferencesMutex;
-    const String name;
+    const std::string name;
 };
 
 }    // namespace farmhub::kernel

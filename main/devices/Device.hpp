@@ -3,14 +3,10 @@
 #include <chrono>
 #include <memory>
 
-#include <Arduino.h>
-
 #include "esp_netif.h"
 #include "esp_wifi.h"
 #include <esp_pm.h>
 #include <esp_private/esp_clk.h>
-
-#include <Print.h>
 
 #include <kernel/BootClock.hpp>
 #include <kernel/Command.hpp>
@@ -114,42 +110,18 @@ private:
         static const int spinnerLength = strlen(spinner);
         auto uptime = duration_cast<milliseconds>(boot_clock::now().time_since_epoch());
 
-        status.clear();
         counter = (counter + 1) % spinnerLength;
-        status.concat("[");
-        status.concat(spinner[counter]);
-        status.concat("] ");
-
-        status.concat("\033[33m");
-        status.concat(farmhubVersion);
-        status.concat("\033[0m");
-
-        status.concat(", uptime: \033[33m");
-        status.concat(String(uptime.count() / 1000.0, 1));
-        status.concat("\033[0m s");
-
-        status.concat(", WIFI: ");
-        status.concat(wifiStatus());
-        status.concat(" (up \033[33m");
-        status.concat(String(double(wifi.getUptime().count()) / 1000.0, 1));
-        status.concat("\033[0m s)");
-
-        status.concat(", RTC: \033[33m");
-        status.concat(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED");
-        status.concat("\033[0m");
-
-        status.concat(", heap: \033[33m");
-        status.concat(String(double(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)) / 1024.0, 2));
-        status.concat("\033[0m kB");
-
-        status.concat(", CPU: \033[33m");
-        status.concat(esp_clk_cpu_freq() / 1000000);
-        status.concat("\033[0m MHz");
+        status.clear();
+        status += std::format("[{}] ", spinner[counter]);
+        status += std::format("\033[33m{}\033[0m", farmhubVersion);
+        status += std::format(", uptime: \033[33m{:.2f}\033[0m s", uptime.count() / 1000.0);
+        status += std::format(", WIFI: {} (up \033[33m{:.1f}\033[0m s)", wifiStatus(), wifi.getUptime().count() / 1000.0);
+        status += std::format(", RTC \033[33m{}\033[0m", RtcDriver::isTimeSet() ? "OK" : "UNSYNCED");
+        status += std::format(", heap \033[33m{:.2f}\033[0m kB", heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024.0);
+        status += std::format(", CPU: \033[33m{}\033[0m MHz", esp_clk_cpu_freq() / 1000000);
 
         if (battery != nullptr) {
-            status.concat(", battery: \033[33m");
-            status.concat(String(battery->getVoltage(), 2));
-            status.concat("\033[0m V");
+            status += std::format(", battery: \033[33m{:.2f}\033[0m V", battery->getVoltage());
         }
 
         printf("\033[1G\033[0K%s", status.c_str());
@@ -205,7 +177,7 @@ private:
     }
 
     int counter;
-    String status;
+    std::string status;
     const std::shared_ptr<BatteryDriver> battery;
     WiFiDriver& wifi;
 };
@@ -435,10 +407,10 @@ public:
                 // Remove the level prefix
                 auto messageStart = 2;
                 // Remove trailing newline
-                auto messageEnd = record.message.charAt(length - 1) == '\n'
+                auto messageEnd = record.message[length - 1] == '\n'
                     ? length - 1
                     : length;
-                String message = record.message.substring(messageStart, messageEnd);
+                std::string message = record.message.substr(messageStart, messageEnd - messageStart);
 
                 mqttDeviceRoot->publish(
                     "log", [&](JsonObject& json) {
@@ -534,7 +506,7 @@ private:
         peripheralManager.publishTelemetry();
     }
 
-    String locationPrefix() {
+    std::string locationPrefix() {
         if (deviceConfig.location.hasValue()) {
             return deviceConfig.location.get() + "/";
         } else {
@@ -565,7 +537,7 @@ private:
     FileReadCommand fileReadCommand { fs };
     FileWriteCommand fileWriteCommand { fs };
     FileRemoveCommand fileRemoveCommand { fs };
-    HttpUpdateCommand httpUpdateCommand { [this](const String& url) {
+    HttpUpdateCommand httpUpdateCommand { [this](const std::string& url) {
         kernel.prepareUpdate(url);
     } };
 

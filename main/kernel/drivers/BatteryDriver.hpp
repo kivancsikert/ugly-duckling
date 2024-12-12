@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
-
 #include <kernel/Pin.hpp>
 #include <kernel/Telemetry.hpp>
 

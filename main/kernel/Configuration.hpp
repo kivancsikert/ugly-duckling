@@ -16,7 +16,7 @@ namespace farmhub::kernel {
 class ConfigurationException
     : public std::exception {
 public:
-    ConfigurationException(const String& message)
+    ConfigurationException(const std::string& message)
         : message("ConfigurationException: " + message) {
     }
 
@@ -24,7 +24,7 @@ public:
         return message.c_str();
     }
 
-    const String message;
+    const std::string message;
 };
 
 class JsonAsString {
@@ -32,7 +32,7 @@ public:
     JsonAsString() {
     }
 
-    JsonAsString(const String& value)
+    JsonAsString(const std::string& value)
         : value(value) {
     }
 
@@ -42,20 +42,20 @@ public:
 
     JsonAsString& operator=(const JsonAsString& other) = default;
 
-    const String& get() const {
+    const std::string& get() const {
         return value;
     }
 
-    void set(const String& value) {
+    void set(const std::string& value) {
         this->value = value;
     }
 
 private:
-    String value;
+    std::string value;
 };
 
 bool convertToJson(const JsonAsString& src, JsonVariant dst) {
-    const String& stringValue = src.get();
+    const std::string& stringValue = src.get();
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, stringValue);
 
@@ -68,7 +68,7 @@ bool convertToJson(const JsonAsString& src, JsonVariant dst) {
     return true;
 }
 bool convertFromJson(JsonVariantConst src, JsonAsString& dst) {
-    String value;
+    std::string value;
     serializeJson(src, value);
     dst.set(value);
     return true;
@@ -76,14 +76,14 @@ bool convertFromJson(JsonVariantConst src, JsonAsString& dst) {
 
 class ConfigurationEntry {
 public:
-    void loadFromString(const String& json) {
+    void loadFromString(const std::string& json) {
         JsonDocument jsonDocument;
         DeserializationError error = deserializeJson(jsonDocument, json);
         if (error == DeserializationError::EmptyInput) {
             return;
         }
         if (error) {
-            throw ConfigurationException("Cannot parse JSON configuration: " + String(error.c_str()) + json);
+            throw ConfigurationException("Cannot parse JSON configuration: " + std::string(error.c_str()) + json);
         }
         load(jsonDocument.as<JsonObject>());
     }
@@ -138,7 +138,7 @@ template <typename TDelegate>
 class NamedConfigurationEntry : public ConfigurationEntry {
 public:
     template <typename... Args>
-    NamedConfigurationEntry(ConfigurationSection* parent, const String& name, Args&&... args)
+    NamedConfigurationEntry(ConfigurationSection* parent, const std::string& name, Args&&... args)
         : name(name)
         , delegate(std::forward<Args>(args)...) {
         parent->add(*this);
@@ -174,7 +174,7 @@ public:
     }
 
 private:
-    const String name;
+    const std::string name;
     TDelegate delegate;
     bool namePresentAtLoad = false;
 };
@@ -182,7 +182,7 @@ private:
 template <typename T>
 class Property : public ConfigurationEntry {
 public:
-    Property(ConfigurationSection* parent, const String& name, const T& defaultValue = T(), const bool secret = false)
+    Property(ConfigurationSection* parent, const std::string& name, const T& defaultValue = T(), const bool secret = false)
         : name(name)
         , secret(secret)
         , value(defaultValue)
@@ -224,7 +224,7 @@ public:
     }
 
 private:
-    const String name;
+    const std::string name;
     const bool secret;
     bool configured = false;
     T value;
@@ -234,7 +234,7 @@ private:
 template <typename T>
 class ArrayProperty : public ConfigurationEntry {
 public:
-    ArrayProperty(ConfigurationSection* parent, const String& name)
+    ArrayProperty(ConfigurationSection* parent, const std::string& name)
         : name(name) {
         parent->add(*this);
     }
@@ -270,14 +270,14 @@ public:
     }
 
 private:
-    const String name;
+    const std::string name;
     std::list<T> entries;
 };
 
 template <typename TConfiguration>
 class ConfigurationFile {
 public:
-    ConfigurationFile(const FileSystem& fs, const String& path)
+    ConfigurationFile(const FileSystem& fs, const std::string& path)
         : path(path) {
         if (!fs.exists(path)) {
             LOGD("The configuration file '%s' was not found, falling back to defaults",
@@ -299,7 +299,7 @@ public:
                         path.c_str());
                     break;
                 default:
-                    throw ConfigurationException("Cannot open config file " + path + " (" + String(error.c_str()) + ")");
+                    throw ConfigurationException("Cannot open config file " + path + " (" + std::string(error.c_str()) + ")");
             }
             update(json.as<JsonObject>());
             LOGI("Effective configuration for '%s': %s",
@@ -335,11 +335,11 @@ public:
         config.store(json, inlineDefaults);
     }
 
-    String toString(bool includeDefaults = true) {
+    std::string toString(bool includeDefaults = true) {
         JsonDocument json;
         auto root = json.to<JsonObject>();
         store(root, includeDefaults);
-        String jsonString;
+        std::string jsonString;
         serializeJson(json, jsonString);
         return jsonString;
     }
@@ -347,7 +347,7 @@ public:
     TConfiguration config;
 
 private:
-    const String path;
+    const std::string path;
     std::list<std::function<void(const JsonObject&)>> callbacks;
 };
 

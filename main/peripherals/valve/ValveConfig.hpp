@@ -48,7 +48,7 @@ public:
      *
      * @details When the pin is specified, this is ignored.
      */
-    Property<String> motor { this, "motor" };
+    Property<std::string> motor { this, "motor" };
 
     /**
      * @brief The strategy to use to control the motorized valve.
@@ -112,7 +112,7 @@ bool convertToJson(const ValveControlStrategyType& src, JsonVariant dst) {
     }
 }
 void convertFromJson(JsonVariantConst src, ValveControlStrategyType& dst) {
-    String strategy = src.as<String>();
+    std::string strategy = src.as<std::string>();
     if (strategy == "NO") {
         dst = ValveControlStrategyType::NormallyOpen;
     } else if (strategy == "NC") {

@@ -33,7 +33,7 @@ class RtcDriver {
 public:
     class Config : public ConfigurationSection {
     public:
-        Property<String> host { this, "host", "" };
+        Property<std::string> host { this, "host", "" };
     };
 
     RtcDriver(WiFiDriver& wifi, MdnsDriver& mdns, const Config& ntpConfig, StateSource& rtcInSync)

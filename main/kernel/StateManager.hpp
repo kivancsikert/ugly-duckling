@@ -17,7 +17,7 @@ public:
         : eventGroup(xEventGroupCreate()) {
     }
 
-    StateSource createStateSource(const String& name) {
+    StateSource createStateSource(const std::string& name) {
         LOGV("Creating state: %s",
             name.c_str());
         if (nextEventBit > 31) {
@@ -27,7 +27,7 @@ public:
         return StateSource(name, eventGroup, eventBits);
     }
 
-    State combineStates(const String& name, const std::list<State>& states) const {
+    State combineStates(const std::string& name, const std::list<State>& states) const {
         LOGD("Creating combined state: %s",
             name.c_str());
         int eventBits = 0;
