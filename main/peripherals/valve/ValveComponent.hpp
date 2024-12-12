@@ -6,8 +6,6 @@
 #include <memory>
 #include <variant>
 
-#include <Arduino.h>
-
 #include <ArduinoJson.h>
 
 #include <kernel/Component.hpp>
@@ -38,7 +36,7 @@ public:
     virtual void close() = 0;
     virtual ValveState getDefaultState() const = 0;
 
-    virtual String describe() const = 0;
+    virtual std::string describe() const = 0;
 };
 
 class MotorValveControlStrategy
@@ -107,8 +105,8 @@ public:
         return ValveState::CLOSED;
     }
 
-    String describe() const override {
-        return "normally closed with switch duration " + String((int) switchDuration.count()) + "ms and hold duty " + String(holdDuty * 100) + "%";
+    std::string describe() const override {
+        return std::format("normally closed with switch duration {} ms and hold duty {}%", switchDuration.count(), holdDuty * 100);
     }
 };
 
@@ -131,8 +129,8 @@ public:
         return ValveState::OPEN;
     }
 
-    String describe() const override {
-        return "normally open with switch duration " + String((int) switchDuration.count()) + "ms and hold duty " + String(holdDuty * 100) + "%";
+    std::string describe() const override {
+        return std::format("normally open with switch duration {} ms and hold duty {}%", switchDuration.count(), holdDuty * 100);
     }
 };
 
@@ -161,8 +159,8 @@ public:
         return ValveState::NONE;
     }
 
-    String describe() const override {
-        return "latching with switch duration " + String((int) switchDuration.count()) + "ms with switch duty " + String(switchDuty * 100) + "%";
+    std::string describe() const override {
+        return std::format("latching with switch duration {} ms and switch duty {}%", switchDuration.count(), switchDuty * 100);
     }
 
 private:
@@ -190,7 +188,7 @@ public:
         return ValveState::NONE;
     }
 
-    String describe() const override {
+    std::string describe() const override {
         return "latching with pin " + pin->getName();
     }
 
@@ -201,7 +199,7 @@ private:
 class ValveComponent : public Component {
 public:
     ValveComponent(
-        const String& name,
+        const std::string& name,
         ValveControlStrategy& strategy,
         shared_ptr<MqttRoot> mqttRoot,
         std::function<void()> publishTelemetry)
@@ -315,7 +313,7 @@ public:
             auto timeinfo = gmtime(&rawtime);
             char buffer[80];
             strftime(buffer, 80, "%FT%TZ", timeinfo);
-            telemetry["overrideEnd"] = String(buffer);
+            telemetry["overrideEnd"] = std::string(buffer);
             telemetry["overrideState"] = this->overrideState.load();
         }
     }

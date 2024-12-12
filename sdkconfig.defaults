@@ -13,6 +13,12 @@ CONFIG_SECURE_FLASH_ENC_ENABLED=n
 
 # We want to use exceptions
 CONFIG_COMPILER_CXX_EXCEPTIONS=y
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+
+# Reduce binary size
+CONFIG_LWIP_IPV6=n
+CONFIG_VFS_SUPPORT_TERMIOS=n
+CONFIG_VFS_SUPPORT_SELECT=n
 
 # Less chatty
 CONFIG_BOOTLOADER_LOG_LEVEL_ERROR=y
@@ -24,12 +30,6 @@ CONFIG_LOG_COLORS=n
 
 # Seems like a good idea to have some stack checks
 CONFIG_COMPILER_STACK_CHECK_MODE_NORM=y
-
-# This is ERROR by default
-CONFIG_ARDUHAL_LOG_DEFAULT_LEVEL_WARN=y
-
-# Why compile more than necessary?
-CONFIG_ARDUINO_SELECTIVE_COMPILATION=y
 
 # Give peripheral-related tasks to have some length to their names
 CONFIG_FREERTOS_MAX_TASK_NAME_LEN=32

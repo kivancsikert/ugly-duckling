@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
-
 #include <kernel/FileSystem.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/Pin.hpp>
@@ -70,7 +68,7 @@ public:
         peripheralManager.registerFactory(chickenDoorFactory);
     }
 
-    std::list<String> getBuiltInPeripherals() override {
+    std::list<std::string> getBuiltInPeripherals() override {
         // Device address is 0x44 = 68
         return {
             R"({

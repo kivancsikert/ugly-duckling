@@ -4,8 +4,6 @@
 
 #include <driver/pulse_cnt.h>
 
-#include <Arduino.h>
-
 namespace farmhub::kernel {
 
 // TODO Limit number of channels available

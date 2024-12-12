@@ -6,8 +6,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
 
-#include <Arduino.h>
-
 #include <kernel/Time.hpp>
 
 using namespace std::chrono;
@@ -26,7 +24,7 @@ class StateManager;
  */
 class State {
 public:
-    State(const String& name, EventGroupHandle_t eventGroup, EventBits_t eventBits)
+    State(const std::string& name, EventGroupHandle_t eventGroup, EventBits_t eventBits)
         : name(name)
         , eventGroup(eventGroup)
         , eventBits(eventBits) {
@@ -66,7 +64,7 @@ protected:
         return (bits & eventBits) == eventBits;
     }
 
-    const String name;
+    const std::string name;
     const EventGroupHandle_t eventGroup;
     const EventBits_t eventBits;
 
@@ -76,7 +74,7 @@ protected:
 class StateSource
     : public State {
 public:
-    StateSource(const String& name, EventGroupHandle_t eventGroup, EventBits_t eventBits)
+    StateSource(const std::string& name, EventGroupHandle_t eventGroup, EventBits_t eventBits)
         : State(name, eventGroup, eventBits) {
     }
 

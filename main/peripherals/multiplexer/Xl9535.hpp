@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
-
 #include <kernel/Pin.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>
@@ -17,7 +15,7 @@ class Xl9535Component
 
 public:
     Xl9535Component(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         I2CConfig config)
@@ -85,7 +83,7 @@ private:
 
 class Xl9535Pin : public Pin {
 public:
-    Xl9535Pin(const String& name, Xl9535Component& mpx, uint8_t pin)
+    Xl9535Pin(const std::string& name, Xl9535Component& mpx, uint8_t pin)
         : Pin(name)
         , mpx(mpx)
         , pin(pin) {
@@ -111,13 +109,13 @@ private:
 class Xl9535
     : public Peripheral<EmptyConfiguration> {
 public:
-    Xl9535(const String& name, shared_ptr<MqttRoot> mqttRoot, I2CManager& i2c, I2CConfig config)
+    Xl9535(const std::string& name, shared_ptr<MqttRoot> mqttRoot, I2CManager& i2c, I2CConfig config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , component(name, mqttRoot, i2c, config) {
 
         // Create a pin for each bit in the pins mask
         for (int i = 0; i < 16; i++) {
-            String pinName = name + ":" + String(i);
+            std::string pinName = std::format("{}:{}", name, i);
             LOGV("Registering external pin %s",
                 pinName.c_str());
             auto pin = std::make_shared<Xl9535Pin>(pinName, component, i);
@@ -136,7 +134,7 @@ public:
         : PeripheralFactory<Xl9535DeviceConfig, EmptyConfiguration>("multiplexer:xl9535") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const Xl9535DeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const Xl9535DeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         return make_unique<Xl9535>(name, mqttRoot, services.i2c, deviceConfig.parse());
     }
 };

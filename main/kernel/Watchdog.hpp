@@ -18,7 +18,7 @@ typedef std::function<void(WatchdogState)> WatchdogCallback;
 
 class Watchdog {
 public:
-    Watchdog(const String& name, const ticks timeout, WatchdogCallback callback)
+    Watchdog(const std::string& name, const ticks timeout, WatchdogCallback callback)
         : name(name)
         , timeout(timeout)
         , callback(callback) {
@@ -48,7 +48,7 @@ public:
     }
 
 private:
-    const String name;
+    const std::string name;
     const ticks timeout;
     const WatchdogCallback callback;
 

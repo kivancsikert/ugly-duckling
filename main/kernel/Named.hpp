@@ -1,17 +1,15 @@
 #pragma once
 
-#include <Arduino.h>
-
 namespace farmhub::kernel {
 
 class Named {
 protected:
-    Named(const String& name)
+    Named(const std::string& name)
         : name(name) {
     }
 
 public:
-    const String name;
+    const std::string name;
 };
 
 }    // namespace farmhub::kernel

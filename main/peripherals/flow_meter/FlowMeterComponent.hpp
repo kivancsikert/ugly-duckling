@@ -2,7 +2,6 @@
 
 #include <chrono>
 
-#include <Arduino.h>
 #include <ArduinoJson.h>
 
 #include <kernel/BootClock.hpp>
@@ -22,7 +21,7 @@ class FlowMeterComponent
       public TelemetryProvider {
 public:
     FlowMeterComponent(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         PcntManager& pcnt,
         InternalPinPtr pin,

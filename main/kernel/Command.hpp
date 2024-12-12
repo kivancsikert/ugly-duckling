@@ -22,7 +22,7 @@ public:
     virtual void handle(const JsonObject& request, JsonObject& response) = 0;
 
 protected:
-    Command(const String& name)
+    Command(const std::string& name)
         : Named(name) {
     }
 };
@@ -88,7 +88,7 @@ public:
 
 class FileCommand : public Command {
 public:
-    FileCommand(const String& name, FileSystem& fs)
+    FileCommand(const std::string& name, FileSystem& fs)
         : Command(name)
         , fs(fs) {
     }
@@ -105,7 +105,7 @@ public:
 
     void handle(const JsonObject& request, JsonObject& response) override {
         JsonArray files = response["files"].to<JsonArray>();
-        fs.readDir("/", [&](const String& name, off_t size) {
+        fs.readDir("/", [&](const std::string& name, off_t size) {
             JsonObject file = files.add<JsonObject>();
             file["name"] = name;
             file["size"] = size;
@@ -120,8 +120,8 @@ public:
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
-        String path = request["path"];
-        if (!path.startsWith("/")) {
+        std::string path = request["path"];
+        if (!path.starts_with("/")) {
             path = "/" + path;
         }
         LOGI("Reading %s",
@@ -148,13 +148,13 @@ public:
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
-        String path = request["path"];
-        if (!path.startsWith("/")) {
+        std::string path = request["path"];
+        if (!path.starts_with("/")) {
             path = "/" + path;
         }
         LOGI("Writing %s",
             path.c_str());
-        String contents = request["contents"];
+        std::string contents = request["contents"];
         response["path"] = path;
         size_t written = fs.write(path, contents.c_str(), contents.length());
         response["written"] = written;
@@ -168,8 +168,8 @@ public:
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
-        String path = request["path"];
-        if (!path.startsWith("/")) {
+        std::string path = request["path"];
+        if (!path.starts_with("/")) {
             path = "/" + path;
         }
         LOGI("Removing %s",
@@ -185,17 +185,17 @@ public:
 
 class HttpUpdateCommand : public Command {
 public:
-    HttpUpdateCommand(const std::function<void(const String&)> prepareUpdate)
+    HttpUpdateCommand(const std::function<void(const std::string&)> prepareUpdate)
         : Command("update")
         , prepareUpdate(prepareUpdate) {
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
-        if (!request["url"].is<String>()) {
+        if (!request["url"].is<std::string>()) {
             response["failure"] = "Command contains no URL";
             return;
         }
-        String url = request["url"];
+        std::string url = request["url"];
         if (url.length() == 0) {
             response["failure"] = "Command contains empty url";
             return;
@@ -210,8 +210,8 @@ public:
     }
 
 private:
-    const std::function<void(const String&)> prepareUpdate;
-    const String currentVersion;
+    const std::function<void(const std::string&)> prepareUpdate;
+    const std::string currentVersion;
 };
 
 }    // namespace farmhub::kernel

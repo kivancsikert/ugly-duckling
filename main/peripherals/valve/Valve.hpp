@@ -4,8 +4,6 @@
 #include <list>
 #include <memory>
 
-#include <Arduino.h>
-
 #include <ArduinoJson.h>
 
 #include <kernel/Service.hpp>
@@ -33,7 +31,7 @@ class Valve
     : public Peripheral<ValveConfig> {
 public:
     Valve(
-        const String& name,
+        const std::string& name,
         ValveControlStrategy& strategy,
         shared_ptr<MqttRoot> mqttRoot)
         : Peripheral<ValveConfig>(name, mqttRoot)
@@ -69,7 +67,7 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<ValveConfig>> createPeripheral(const String& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         auto strategy = deviceConfig.createValveControlStrategy(this);
         return make_unique<Valve>(name, *strategy, mqttRoot);
     }

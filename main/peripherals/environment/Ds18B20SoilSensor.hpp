@@ -2,8 +2,6 @@
 
 #include <memory>
 
-#include <Arduino.h>
-
 #include <ds18x20.h>
 
 #include <kernel/Component.hpp>
@@ -28,7 +26,7 @@ class Ds18B20SoilSensorComponent
       public TelemetryProvider {
 public:
     Ds18B20SoilSensorComponent(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         InternalPinPtr pin)
         : Component(name, mqttRoot)
@@ -51,7 +49,7 @@ public:
             }
             LOGD("Found a DS18B20 at address: %016llX", sensor);
         } else {
-            throw PeripheralCreationException("Error searching for DS18B20 devices: " + String(esp_err_to_name(searchResult)));
+            throw PeripheralCreationException("Error searching for DS18B20 devices: " + std::string(esp_err_to_name(searchResult)));
         }
     }
 
@@ -70,7 +68,7 @@ private:
 class Ds18B20SoilSensor
     : public Peripheral<EmptyConfiguration> {
 public:
-    Ds18B20SoilSensor(const String& name, shared_ptr<MqttRoot> mqttRoot, InternalPinPtr pin)
+    Ds18B20SoilSensor(const std::string& name, shared_ptr<MqttRoot> mqttRoot, InternalPinPtr pin)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , sensor(name, mqttRoot, pin) {
     }
@@ -90,7 +88,7 @@ public:
         : PeripheralFactory<SinglePinDeviceConfig, EmptyConfiguration>("environment:ds18b20", "environment") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const SinglePinDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const SinglePinDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         return make_unique<Ds18B20SoilSensor>(name, mqttRoot, deviceConfig.pin.get());
     }
 };
