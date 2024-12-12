@@ -43,9 +43,9 @@ public:
             sleepPin->getName().c_str());
 
         if (sleepPin != nullptr) {
-            sleepPin->pinMode(OUTPUT);
+            sleepPin->pinMode(Pin::Mode::Output);
         }
-        faultPin->pinMode(INPUT);
+        faultPin->pinMode(Pin::Mode::Input);
 
         updateSleepState();
     }
