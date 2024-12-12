@@ -54,7 +54,7 @@ enum class PublishStatus {
 
 typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
 
-typedef std::function<void(const String&, const JsonObject&)> SubscriptionHandler;
+typedef std::function<void(const std::string&, const JsonObject&)> SubscriptionHandler;
 
 class MqttRoot;
 
@@ -62,20 +62,20 @@ class MqttDriver {
 public:
     class Config : public ConfigurationSection {
     public:
-        Property<String> host { this, "host", "" };
+        Property<std::string> host { this, "host", "" };
         Property<unsigned int> port { this, "port", 1883 };
-        Property<String> clientId { this, "clientId", "" };
+        Property<std::string> clientId { this, "clientId", "" };
         Property<size_t> queueSize { this, "queueSize", 128 };
-        ArrayProperty<String> serverCert { this, "serverCert" };
-        ArrayProperty<String> clientCert { this, "clientCert" };
-        ArrayProperty<String> clientKey { this, "clientKey" };
+        ArrayProperty<std::string> serverCert { this, "serverCert" };
+        ArrayProperty<std::string> clientCert { this, "clientCert" };
+        ArrayProperty<std::string> clientKey { this, "clientKey" };
     };
 
     MqttDriver(
         WiFiDriver& wifi,
         MdnsDriver& mdns,
         const Config& config,
-        const String& instanceName,
+        const std::string& instanceName,
         bool powerSaveMode,
         StateSource& mqttReady)
         : wifi(wifi)
@@ -107,7 +107,7 @@ public:
     }
 
     void configMqttClient(esp_mqtt_client_config_t& config) {
-        if (configHostname.isEmpty()) {
+        if (configHostname.empty()) {
 #ifdef WOKWI
             hostname = "host.wokwi.internal";
             port = 1883;
@@ -147,13 +147,13 @@ public:
             config.broker.address.port,
             config.credentials.client_id);
 
-        if (!configServerCert.isEmpty()) {
+        if (!configServerCert.empty()) {
             config.broker.address.transport = MQTT_TRANSPORT_OVER_SSL;
             config.broker.verification.certificate = configServerCert.c_str();
             LOGTV(Tag::MQTT, "Server cert:\n%s",
                 config.broker.verification.certificate);
 
-            if (!configClientCert.isEmpty() && !configClientKey.isEmpty()) {
+            if (!configClientCert.empty() && !configClientKey.empty()) {
                 config.credentials.authentication = {
                     .certificate = configClientCert.c_str(),
                     .key = configClientKey.c_str(),
@@ -166,7 +166,7 @@ public:
         }
     }
 
-    shared_ptr<MqttRoot> forRoot(const String& topic) {
+    shared_ptr<MqttRoot> forRoot(const std::string& topic) {
         return make_shared<MqttRoot>(*this, topic);
     }
 
@@ -192,8 +192,8 @@ private:
     };
 
     struct OutgoingMessage {
-        const String topic;
-        const String payload;
+        const std::string topic;
+        const std::string payload;
         const Retention retain;
         const QoS qos;
         const TaskHandle_t waitingTask;
@@ -202,12 +202,12 @@ private:
     };
 
     struct IncomingMessage {
-        const String topic;
-        const String payload;
+        const std::string topic;
+        const std::string payload;
     };
 
     struct Subscription {
-        const String topic;
+        const std::string topic;
         const QoS qos;
         const SubscriptionHandler handle;
         const milliseconds extendKeepAlive;
@@ -228,10 +228,10 @@ private:
 
     struct Disconnected { };
 
-    PublishStatus publish(const String& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = MQTT_DEFAULT_PUBLISH_TIMEOUT, milliseconds extendAlertBy = milliseconds::zero(), LogPublish log = LogPublish::Log) {
+    PublishStatus publish(const std::string& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = MQTT_DEFAULT_PUBLISH_TIMEOUT, milliseconds extendAlertBy = milliseconds::zero(), LogPublish log = LogPublish::Log) {
         if (log == LogPublish::Log) {
 #ifdef DUMP_MQTT
-            String serializedJson;
+            std::string serializedJson;
             serializeJsonPretty(json, serializedJson);
             LOGTD(Tag::MQTT, "Queuing topic '%s'%s (qos = %d, timeout = %lld ms): %s",
                 topic.c_str(),
@@ -247,12 +247,12 @@ private:
                 duration_cast<milliseconds>(timeout).count());
 #endif
         }
-        String payload;
+        std::string payload;
         serializeJson(json, payload);
         return publishAndWait(topic, payload, retain, qos, timeout, extendAlertBy);
     }
 
-    PublishStatus clear(const String& topic, Retention retain, QoS qos, ticks timeout = MQTT_DEFAULT_PUBLISH_TIMEOUT, milliseconds extendAlertBy = milliseconds::zero()) {
+    PublishStatus clear(const std::string& topic, Retention retain, QoS qos, ticks timeout = MQTT_DEFAULT_PUBLISH_TIMEOUT, milliseconds extendAlertBy = milliseconds::zero()) {
         LOGTD(Tag::MQTT, "Clearing topic '%s' (qos = %d, timeout = %lld ms)",
             topic.c_str(),
             static_cast<int>(qos),
@@ -260,7 +260,7 @@ private:
         return publishAndWait(topic, "", retain, qos, timeout, extendAlertBy);
     }
 
-    PublishStatus publishAndWait(const String& topic, const String& payload, Retention retain, QoS qos, ticks timeout, milliseconds extendAlertBy) {
+    PublishStatus publishAndWait(const std::string& topic, const std::string& payload, Retention retain, QoS qos, ticks timeout, milliseconds extendAlertBy) {
         TaskHandle_t waitingTask = timeout == ticks::zero() ? nullptr : xTaskGetCurrentTaskHandle();
 
         bool offered = eventQueue.offerIn(
@@ -294,7 +294,7 @@ private:
         }
     }
 
-    bool subscribe(const String& topic, QoS qos, SubscriptionHandler handler, milliseconds extendKeepAlive = MQTT_MINIMUM_CONNECTED_TIME) {
+    bool subscribe(const std::string& topic, QoS qos, SubscriptionHandler handler, milliseconds extendKeepAlive = MQTT_MINIMUM_CONNECTED_TIME) {
         return eventQueue.offerIn(
             MQTT_QUEUE_TIMEOUT,
             // TODO Add an actual timeout, separate from extending keep-alive
@@ -305,11 +305,11 @@ private:
                 extendKeepAlive });
     }
 
-    static String joinStrings(std::list<String> strings) {
+    static std::string joinStrings(std::list<std::string> strings) {
         if (strings.empty()) {
             return "";
         }
-        String result;
+        std::string result;
         for (auto& str : strings) {
             result += str + "\n";
         }
@@ -583,8 +583,8 @@ private:
                 break;
             }
             case MQTT_EVENT_DATA: {
-                String topic(event->topic, event->topic_len);
-                String payload(event->data, event->data_len);
+                std::string topic(event->topic, event->topic_len);
+                std::string payload(event->data, event->data_len);
                 LOGTV(Tag::MQTT, "Received message on topic '%s'",
                     topic.c_str());
                 incomingQueue.offerIn(MQTT_QUEUE_TIMEOUT, IncomingMessage { topic, payload });
@@ -703,10 +703,10 @@ private:
     }
 
     void processIncomingMessage(const IncomingMessage& message) {
-        const String& topic = message.topic;
-        const String& payload = message.payload;
+        const std::string& topic = message.topic;
+        const std::string& payload = message.payload;
 
-        if (payload.isEmpty()) {
+        if (payload.empty()) {
             LOGTV(Tag::MQTT, "Ignoring empty payload");
             return;
         }
@@ -737,7 +737,7 @@ private:
             topic.c_str());
     }
 
-    static String getClientId(const String& clientId, const String& instanceName) {
+    static std::string getClientId(const std::string& clientId, const std::string& instanceName) {
         if (clientId.length() > 0) {
             return clientId;
         }
@@ -749,17 +749,17 @@ private:
     MdnsDriver& mdns;
     bool trustMdnsCache = true;
 
-    const String configHostname;
+    const std::string configHostname;
     const int configPort;
-    const String configServerCert;
-    const String configClientCert;
-    const String configClientKey;
-    const String clientId;
+    const std::string configServerCert;
+    const std::string configClientCert;
+    const std::string configClientKey;
+    const std::string clientId;
 
     const bool powerSaveMode;
     StateSource& mqttReady;
 
-    String hostname;
+    std::string hostname;
     uint32_t port;
     esp_mqtt_client_config_t mqttConfig {};
     esp_mqtt_client_handle_t client;

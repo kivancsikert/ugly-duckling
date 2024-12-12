@@ -27,14 +27,14 @@ public:
         }
     }
 
-    void registerProvider(const String& name, std::shared_ptr<TelemetryProvider> provider) {
+    void registerProvider(const std::string& name, std::shared_ptr<TelemetryProvider> provider) {
         LOGV("Registering telemetry provider %s", name.c_str());
         // TODO Check for duplicates
         providers.emplace(name, provider);
     }
 
 private:
-    std::map<String, std::shared_ptr<TelemetryProvider>> providers;
+    std::map<std::string, std::shared_ptr<TelemetryProvider>> providers;
 };
 
 class TelemetryPublisher {

@@ -41,8 +41,8 @@ static RTC_DATA_ATTR int bootCount = 0;
 static constexpr const char* UPDATE_FILE = "/update.json";
 
 // TODO Move this to a separate file
-static const String& getMacAddress() {
-    static String macAddress;
+static const std::string& getMacAddress() {
+    static std::string macAddress;
     if (macAddress.length() == 0) {
         uint8_t rawMac[6];
         for (int i = 0; i < 6; i++) {
@@ -81,7 +81,7 @@ public:
         Task::loop("status-update", 3072, [this](Task&) { updateState(); });
 
         httpUpdateResult = handleHttpUpdate();
-        if (!httpUpdateResult.isEmpty()) {
+        if (!httpUpdateResult.empty()) {
             LOGE("HTTP update failed because: %s",
                 httpUpdateResult.c_str());
         }
@@ -99,11 +99,11 @@ public:
         return kernelReadyState;
     }
 
-    const String& getHttpUpdateResult() const {
+    const std::string& getHttpUpdateResult() const {
         return httpUpdateResult;
     }
 
-    void prepareUpdate(const String& url) {
+    void prepareUpdate(const std::string& url) {
         std::ofstream fUpdate = fs.openWrite(UPDATE_FILE);
         JsonDocument doc;
         doc["url"] = url;
@@ -137,7 +137,7 @@ public:
         esp_restart();
     }
 
-    const String version;
+    const std::string version;
 
     FileSystem& fs { FileSystem::get() };
 
@@ -209,7 +209,7 @@ private:
         stateManager.awaitStateChange();
     }
 
-    String handleHttpUpdate() {
+    std::string handleHttpUpdate() {
         if (!fs.exists(UPDATE_FILE)) {
             return "";
         }
@@ -227,9 +227,9 @@ private:
         unlink(UPDATE_FILE);
 
         if (error) {
-            return "Failed to parse update.json: " + String(error.c_str());
+            return "Failed to parse update.json: " + std::string(error.c_str());
         }
-        String url = doc["url"];
+        std::string url = doc["url"];
         if (url.length() == 0) {
             return "Command contains empty url";
         }
@@ -259,9 +259,9 @@ private:
             Task::delay(5s);
             esp_restart();
         } else {
-            LOGE("Update failed (err = %d), continuing with regular boot",
-                ret);
-            return "Firmware upgrade failed: " + String(ret);
+            LOGE("Update failed (%s), continuing with regular boot",
+                esp_err_to_name(ret));
+            return std::format("Firmware upgrade failed: {}", esp_err_to_name(ret));
         }
     }    // namespace farmhub::kernel
 
@@ -331,7 +331,7 @@ private:
     MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
     RtcDriver rtc { wifi, mdns, deviceConfig.ntp.get(), rtcInSyncState };
 
-    String httpUpdateResult;
+    std::string httpUpdateResult;
 
 public:
     MqttDriver mqtt { wifi, mdns, mqttConfig, deviceConfig.instance.get(), deviceConfig.sleepWhenIdle.get(), mqttReadyState };

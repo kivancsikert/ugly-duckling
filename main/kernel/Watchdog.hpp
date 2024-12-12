@@ -18,7 +18,7 @@ typedef std::function<void(WatchdogState)> WatchdogCallback;
 
 class Watchdog {
 public:
-    Watchdog(const String& name, const ticks timeout, bool startImmediately, WatchdogCallback callback)
+    Watchdog(const std::string& name, const ticks timeout, bool startImmediately, WatchdogCallback callback)
         : timeout(timeout)
         , callback(callback)
         , timer(xTimerCreate(name.c_str(), timeout.count(), false, this, [](TimerHandle_t timer) {

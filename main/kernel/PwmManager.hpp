@@ -2,8 +2,6 @@
 
 #include <driver/ledc.h>
 
-#include <Arduino.h>
-
 namespace farmhub::kernel {
 
 // TODO Figure out what to do with low/high speed modes
@@ -78,7 +76,7 @@ public:
         ESP_ERROR_CHECK(ledc_update_duty(timer.speedMode, channel));
     }
 
-    const String& getName() const {
+    const std::string& getName() const {
         return pin->getName();
     }
 

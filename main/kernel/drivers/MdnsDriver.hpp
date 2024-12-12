@@ -13,12 +13,12 @@
 namespace farmhub::kernel::drivers {
 
 struct MdnsRecord {
-    String hostname;
+    std::string hostname;
     esp_ip4_addr_t ip;
     int port;
 
     bool hasHostname() const {
-        return !hostname.isEmpty();
+        return !hostname.empty();
     }
 
     bool hasIp() const {
@@ -33,13 +33,13 @@ struct MdnsRecord {
         return (hasHostname() || hasIp()) && hasPort();
     }
 
-    String ipAsString() const {
+    std::string ipAsString() const {
         char ipStr[16];
         esp_ip4addr_ntoa(&ip, ipStr, sizeof(ipStr));
         return ipStr;
     }
 
-    String ipOrHost() const {
+    std::string ipOrHost() const {
         if (hasIp()) {
             return ipAsString();
         } else {
@@ -47,8 +47,8 @@ struct MdnsRecord {
         }
     }
 
-    String toString() const {
-        String result = ipOrHost();
+    std::string toString() const {
+        std::string result = ipOrHost();
         result += ":" + port;
         return result;
     }
@@ -58,9 +58,9 @@ class MdnsDriver {
 public:
     MdnsDriver(
         WiFiDriver& wifi,
-        const String& hostname,
-        const String& instanceName,
-        const String& version,
+        const std::string& hostname,
+        const std::string& instanceName,
+        const std::string& version,
         StateSource& mdnsReady)
         : wifi(wifi)
         , mdnsReady(mdnsReady) {
@@ -86,7 +86,7 @@ public:
         });
     }
 
-    bool lookupService(const String& serviceName, const String& port, MdnsRecord& record, bool loadFromCache = true, milliseconds timeout = 5s) {
+    bool lookupService(const std::string& serviceName, const std::string& port, MdnsRecord& record, bool loadFromCache = true, milliseconds timeout = 5s) {
         // Wait indefinitely
         Lock lock(lookupMutex);
         auto result = lookupServiceUnderMutex(serviceName, port, record, loadFromCache, timeout);
@@ -94,9 +94,9 @@ public:
     }
 
 private:
-    bool lookupServiceUnderMutex(const String& serviceName, const String& port, MdnsRecord& record, bool loadFromCache, milliseconds timeout) {
+    bool lookupServiceUnderMutex(const std::string& serviceName, const std::string& port, MdnsRecord& record, bool loadFromCache, milliseconds timeout) {
         // TODO Use a callback and retry if cached entry doesn't work
-        String cacheKey = serviceName + "." + port;
+        std::string cacheKey = serviceName + "." + port;
         if (loadFromCache) {
             if (nvs.get(cacheKey, record)) {
                 if (record.validate()) {
@@ -119,7 +119,7 @@ private:
         mdnsReady.awaitSet();
 
         mdns_result_t* results = nullptr;
-        esp_err_t err = mdns_query_ptr(String("_" + serviceName).c_str(), String("_" + port).c_str(), timeout.count(), 1, &results);
+        esp_err_t err = mdns_query_ptr(std::string("_" + serviceName).c_str(), std::string("_" + port).c_str(), timeout.count(), 1, &results);
         if (err) {
             LOGTE(Tag::MDNS, "query failed for %s.%s: %d",
                 serviceName.c_str(), port.c_str(), err);
@@ -170,13 +170,13 @@ bool convertToJson(const MdnsRecord& src, JsonVariant dst) {
 }
 void convertFromJson(JsonVariantConst src, MdnsRecord& dst) {
     auto jsonRecord = src.as<JsonObjectConst>();
-    if (jsonRecord["hostname"].is<String>()) {
-        dst.hostname = jsonRecord["hostname"].as<String>();
+    if (jsonRecord["hostname"].is<std::string>()) {
+        dst.hostname = jsonRecord["hostname"].as<std::string>();
     } else {
         dst.hostname = "";
     }
-    if (jsonRecord["ip"].is<String>()) {
-        const char* ipStr = jsonRecord["ip"].as<String>().c_str();
+    if (jsonRecord["ip"].is<std::string>()) {
+        const char* ipStr = jsonRecord["ip"].as<std::string>().c_str();
         dst.ip.addr = esp_ip4addr_aton(ipStr);
     } else {
         dst.ip.addr = 0;

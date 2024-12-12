@@ -3,8 +3,6 @@
 #include <list>
 #include <memory>
 
-#include <Arduino.h>
-
 #include <ArduinoJson.h>
 
 #include <kernel/Kernel.hpp>
@@ -33,15 +31,15 @@ namespace farmhub::devices {
 
 class DeviceConfiguration : public ConfigurationSection {
 public:
-    DeviceConfiguration(const String& defaultModel)
+    DeviceConfiguration(const std::string& defaultModel)
         : model(this, "model", defaultModel)
         , instance(this, "instance", getMacAddress()) {
     }
 
-    Property<String> model;
-    Property<String> id { this, "id", "UNIDENTIFIED" };
-    Property<String> instance;
-    Property<String> location { this, "location" };
+    Property<std::string> model;
+    Property<std::string> id { this, "id", "UNIDENTIFIED" };
+    Property<std::string> instance;
+    Property<std::string> location { this, "location" };
 
     NamedConfigurationEntry<RtcDriver::Config> ntp { this, "ntp" };
 
@@ -51,10 +49,10 @@ public:
 
     Property<Level> publishLogs { this, "publishLogs", Level::Info };
 
-    virtual const String getHostname() {
-        String hostname = instance.get();
-        hostname.replace(":", "-");
-        hostname.replace("?", "");
+    virtual const std::string getHostname() {
+        std::string hostname = instance.get();
+        std::replace(hostname.begin(), hostname.end(), ':', '-');
+        std::erase(hostname, '?');
         return hostname;
     }
 };
@@ -86,7 +84,7 @@ public:
     /**
      * @brief Returns zero or more JSON configurations for any built-in peripheral of the device.
      */
-    virtual std::list<String> getBuiltInPeripherals() {
+    virtual std::list<std::string> getBuiltInPeripherals() {
         return {};
     }
 

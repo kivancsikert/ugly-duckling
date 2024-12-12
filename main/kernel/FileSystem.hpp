@@ -8,33 +8,30 @@
 
 #include <esp_spiffs.h>
 
-#include <Arduino.h>
-
 namespace farmhub::kernel {
 
 static constexpr const char* PARTITION = "data";
 
 class FileSystem {
 public:
-    bool exists(const String& path) const {
+    bool exists(const std::string& path) const {
         struct stat fileStat;
-        const char* resolvedPath = resolve(path).c_str();
-        return stat(resolvedPath, &fileStat) == 0;
+        return stat(resolve(path).c_str(), &fileStat) == 0;
     }
 
-    FILE* open(const String& path, const char* mode) const {
+    FILE* open(const std::string& path, const char* mode) const {
         return fopen(resolve(path).c_str(), mode);
     }
 
-    std::ifstream openRead(const String& path) const {
+    std::ifstream openRead(const std::string& path) const {
         return std::ifstream(resolve(path).c_str());
     }
 
-    std::ofstream openWrite(const String& path) const {
+    std::ofstream openWrite(const std::string& path) const {
         return std::ofstream(resolve(path).c_str());
     }
 
-    size_t size(const String& path) const {
+    size_t size(const std::string& path) const {
         struct stat fileStat;
         if (stat(resolve(path).c_str(), &fileStat) != 0) {
             return 0;
@@ -42,7 +39,7 @@ public:
         return fileStat.st_size;
     }
 
-    size_t read(const String& path, char* buffer, size_t size) const {
+    size_t read(const std::string& path, char* buffer, size_t size) const {
         FILE* file = open(resolve(path), "r");
         if (file == nullptr) {
             return 0;
@@ -53,7 +50,7 @@ public:
         return bytesRead;
     }
 
-    size_t write(const String& path, const char* buffer, size_t size) const {
+    size_t write(const std::string& path, const char* buffer, size_t size) const {
         FILE* file = open(resolve(path), "w");
         if (file == nullptr) {
             return 0;
@@ -64,8 +61,8 @@ public:
         return bytesWritten;
     }
 
-    bool readDir(const String& path, std::function<void(const String&, size_t)> callback) const {
-        String resolvedPath = resolve(path);
+    bool readDir(const std::string& path, std::function<void(const std::string&, size_t)> callback) const {
+        std::string resolvedPath = resolve(path);
         DIR* dir = opendir(resolvedPath.c_str());
         if (dir == nullptr) {
             LOGTE(Tag::FS, "Failed to open directory: %s", path.c_str());
@@ -74,7 +71,7 @@ public:
 
         struct dirent* entry;
         while ((entry = readdir(dir)) != nullptr) {
-            String fullPath = String(resolvedPath) + "/" + entry->d_name;
+            std::string fullPath = std::string(resolvedPath) + "/" + entry->d_name;
             callback(entry->d_name, size(fullPath));
         }
 
@@ -82,7 +79,7 @@ public:
         return true;
     }
 
-    String resolve(const String& path) const {
+    std::string resolve(const std::string& path) const {
         return mountPoint + path;
     }
 
@@ -103,12 +100,12 @@ public:
     }
 
 private:
-    FileSystem(const String& mountPoint)
+    FileSystem(const std::string& mountPoint)
         : mountPoint(mountPoint) {
     }
 
     static FileSystem* initializeFileSystem() {
-        const String mountPoint = "/" + String(PARTITION);
+        const std::string mountPoint = "/" + std::string(PARTITION);
         FileSystem* fs = nullptr;
 
         esp_vfs_spiffs_conf_t conf = {
@@ -123,7 +120,7 @@ private:
             case ESP_OK: {
                 LOGTI(Tag::FS, "SPIFFS partition '%s' mounted successfully", PARTITION);
                 fs = new FileSystem(mountPoint);
-                fs->readDir(mountPoint, [&](const String& name, size_t size) {
+                fs->readDir(mountPoint, [&](const std::string& name, size_t size) {
                     LOGTI(Tag::FS, " - %s (%u bytes)", name.c_str(), size);
                 });
                 break;
@@ -142,7 +139,7 @@ private:
         return fs;
     }
 
-    const String mountPoint;
+    const std::string mountPoint;
 };
 
 }    // namespace farmhub::kernel

@@ -4,8 +4,6 @@
 #include <deque>
 #include <memory>
 
-#include <Arduino.h>
-
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/I2CManager.hpp>
@@ -28,7 +26,7 @@ class LightSensorComponent
       public TelemetryProvider {
 public:
     LightSensorComponent(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         seconds measurementFrequency,
         seconds latencyInterval)

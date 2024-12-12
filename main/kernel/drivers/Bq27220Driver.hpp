@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
-
 #include <kernel/I2CManager.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 

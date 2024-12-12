@@ -2,8 +2,6 @@
 
 #include <chrono>
 
-#include <Arduino.h>
-
 #include <kernel/Configuration.hpp>
 
 using namespace std::chrono;

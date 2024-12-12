@@ -9,7 +9,7 @@ namespace farmhub::kernel {
 template <typename T>
 class ServiceRef : public Named {
 public:
-    ServiceRef(const String& name, T& instance)
+    ServiceRef(const std::string& name, T& instance)
         : Named(name)
         , reference(instance) {
     }
@@ -18,7 +18,7 @@ public:
         : ServiceRef(other.name, other.reference) {
     }
 
-    const String& getName() const {
+    const std::string& getName() const {
         return name;
     }
 

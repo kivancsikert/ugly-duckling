@@ -6,8 +6,6 @@
 
 #include <driver/gpio.h>
 
-#include <Arduino.h>
-
 #include <kernel/Concurrent.hpp>
 #include <kernel/Pin.hpp>
 #include <kernel/Task.hpp>
@@ -25,7 +23,7 @@ enum class SwitchMode {
 
 class Switch {
 public:
-    virtual const String& getName() const = 0;
+    virtual const std::string& getName() const = 0;
     virtual InternalPinPtr getPin() const = 0;
     virtual bool isEngaged() const = 0;
 };
@@ -54,17 +52,17 @@ public:
     typedef std::function<void(const Switch&)> SwitchEngagementHandler;
     typedef std::function<void(const Switch&, milliseconds duration)> SwitchReleaseHandler;
 
-    const Switch& onEngaged(const String& name, InternalPinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
+    const Switch& onEngaged(const std::string& name, InternalPinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
         return registerHandler(
             name, pin, mode, engagementHandler, [](const Switch&, milliseconds) {});
     }
 
-    const Switch& onReleased(const String& name, InternalPinPtr pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
+    const Switch& onReleased(const std::string& name, InternalPinPtr pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
         return registerHandler(
             name, pin, mode, [](const Switch&) {}, releaseHandler);
     }
 
-    const Switch& registerHandler(const String& name, InternalPinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
+    const Switch& registerHandler(const std::string& name, InternalPinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
         LOGI("Registering switch %s on pin %s, mode %s",
             name.c_str(), pin->getName().c_str(), mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
 
@@ -92,7 +90,7 @@ public:
 private:
     struct SwitchState : public Switch {
     public:
-        const String& getName() const override {
+        const std::string& getName() const override {
             return name;
         }
 
@@ -105,7 +103,7 @@ private:
         }
 
     private:
-        String name;
+        std::string name;
         InternalPinPtr pin;
         SwitchMode mode;
 

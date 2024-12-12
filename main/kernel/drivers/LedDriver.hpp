@@ -18,7 +18,7 @@ class LedDriver {
 public:
     typedef std::vector<milliseconds> BlinkPattern;
 
-    LedDriver(const String& name, PinPtr pin)
+    LedDriver(const std::string& name, PinPtr pin)
         : pin(pin)
         , patternQueue(name, 1)
         , pattern({ -milliseconds::max() }) {

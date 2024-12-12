@@ -3,8 +3,6 @@
 #include <exception>
 #include <memory>
 
-#include <Arduino.h>
-
 #include <i2cdev.h>
 
 #include <kernel/Pin.hpp>
@@ -23,8 +21,8 @@ public:
     InternalPinPtr sda;
     InternalPinPtr scl;
 
-    String toString() const {
-        return String("I2C address: 0x") + String(address, HEX) + ", SDA: " + sda->getName() + ", SCL: " + scl->getName();
+    std::string toString() const {
+        return std::format("I2C address: 0x{:#x}, SDA: {}, SCL: {}", address, sda->getName(), scl->getName());
     }
 };
 
@@ -37,7 +35,7 @@ public:
 
 class I2CDevice {
 public:
-    I2CDevice(const String& name, shared_ptr<I2CBus> bus, uint8_t address)
+    I2CDevice(const std::string& name, shared_ptr<I2CBus> bus, uint8_t address)
         : name(name)
         , bus(bus)
         , address(address)
@@ -97,7 +95,7 @@ public:
     }
 
 private:
-    const String name;
+    const std::string name;
     const shared_ptr<I2CBus> bus;
     const uint8_t address;
     i2c_dev_t device;
@@ -114,11 +112,11 @@ public:
         ESP_ERROR_CHECK(i2cdev_done());
     }
 
-    shared_ptr<I2CDevice> createDevice(const String& name, const I2CConfig& config) {
+    shared_ptr<I2CDevice> createDevice(const std::string& name, const I2CConfig& config) {
         return createDevice(name, config.sda, config.scl, config.address);
     }
 
-    shared_ptr<I2CDevice> createDevice(const String& name, InternalPinPtr sda, InternalPinPtr scl, uint8_t address) {
+    shared_ptr<I2CDevice> createDevice(const std::string& name, InternalPinPtr sda, InternalPinPtr scl, uint8_t address) {
         auto device = std::make_shared<I2CDevice>(name, getBusFor(sda, scl), address);
         LOGI("Created I2C device %s at address 0x%02x",
             name.c_str(), address);
@@ -126,7 +124,7 @@ public:
         // esp_err_t err = device->probeRead();
         // if (err != ESP_OK) {
         //     throw std::runtime_error(
-        //         String("Failed to communicate with I2C device " + name + " at address 0x" + String(address, HEX) + ": " + esp_err_to_name(err)).c_str());
+        //         std::format("Failed to communicate with I2C device {} at address 0x{:#x}: {}", name, address, esp_err_to_name(err)).c_str());
         // }
         return device;
     }

@@ -6,8 +6,6 @@
 
 #include <kernel/Pin.hpp>
 
-#include <Arduino.h>
-
 namespace farmhub::kernel {
 
 /**

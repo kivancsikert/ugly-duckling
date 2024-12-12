@@ -2,8 +2,6 @@
 
 #include <limits>
 
-#include <Arduino.h>
-
 #include <sht3x.h>
 
 #include <kernel/Component.hpp>
@@ -23,8 +21,8 @@ class Sht3xComponent
       public TelemetryProvider {
 public:
     Sht3xComponent(
-        const String& name,
-        const String& sensorType,
+        const std::string& name,
+        const std::string& sensorType,
         shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         I2CConfig config)

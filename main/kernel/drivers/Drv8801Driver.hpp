@@ -3,8 +3,6 @@
 #include <atomic>
 #include <chrono>
 
-#include <Arduino.h>
-
 #include <kernel/PwmManager.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
 

@@ -2,8 +2,6 @@
 
 #include <memory>
 
-#include <Arduino.h>
-
 #include <kernel/Component.hpp>
 #include <kernel/Telemetry.hpp>
 
@@ -28,7 +26,7 @@ class SoilMoistureSensorComponent
       public TelemetryProvider {
 public:
     SoilMoistureSensorComponent(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         const SoilMoistureSensorDeviceConfig& config)
         : Component(name, mqttRoot)
@@ -62,7 +60,7 @@ private:
 class SoilMoistureSensor
     : public Peripheral<EmptyConfiguration> {
 public:
-    SoilMoistureSensor(const String& name, shared_ptr<MqttRoot> mqttRoot, const SoilMoistureSensorDeviceConfig& config)
+    SoilMoistureSensor(const std::string& name, shared_ptr<MqttRoot> mqttRoot, const SoilMoistureSensorDeviceConfig& config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , sensor(name, mqttRoot, config) {
     }
@@ -82,7 +80,7 @@ public:
         : PeripheralFactory<SoilMoistureSensorDeviceConfig, EmptyConfiguration>("environment:soil-moisture", "environment") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const SoilMoistureSensorDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const SoilMoistureSensorDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         return std::make_unique<SoilMoistureSensor>(name, mqttRoot, deviceConfig);
     }
 };
