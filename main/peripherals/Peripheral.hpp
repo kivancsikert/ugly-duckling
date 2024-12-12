@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 
+#include <kernel/BootClock.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/I2CManager.hpp>
 #include <kernel/Named.hpp>
@@ -35,7 +36,7 @@ public:
         mqttRoot->registerCommand("ping", [this](const JsonObject& request, JsonObject& response) {
             LOGV("Received ping request");
             publishTelemetry();
-            response["pong"] = millis();
+            response["pong"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
         });
     }
 

@@ -4,11 +4,11 @@
 #include <functional>
 
 #include <ArduinoJson.h>
-#include <SPIFFS.h>
 
 #include <esp_sleep.h>
 #include <esp_system.h>
 
+#include <kernel/BootClock.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/Named.hpp>
 #include <kernel/Task.hpp>
@@ -52,7 +52,7 @@ public:
         } catch (...) {
             LOGE("Failed to send ping response");
         }
-        response["pong"] = millis();
+        response["pong"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
     }
 
 private:
