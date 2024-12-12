@@ -1,8 +1,7 @@
 #pragma once
 
 #include <dirent.h>
-#include <fstream>
-#include <iostream>
+#include <expected>
 #include <stdio.h>
 #include <sys/stat.h>
 
@@ -23,12 +22,33 @@ public:
         return fopen(resolve(path).c_str(), mode);
     }
 
-    std::ifstream openRead(const std::string& path) const {
-        return std::ifstream(resolve(path).c_str());
+    std::optional<std::string> readAll(const std::string& path) const {
+        std::string resolvedPath = resolve(path);
+        struct stat fileStat;
+        if (stat(resolvedPath.c_str(), &fileStat) != 0) {
+            return std::nullopt;
+        }
+        FILE* file = fopen(resolvedPath.c_str(), "r");
+        if (file == nullptr) {
+            return std::nullopt;
+        }
+        std::string result(fileStat.st_size, '\0');
+        size_t bytesRead = fread(result.data(), 1, fileStat.st_size, file);
+        fclose(file);
+        if (bytesRead != fileStat.st_size) {
+            return std::nullopt;
+        }
+        return result;
     }
 
-    std::ofstream openWrite(const std::string& path) const {
-        return std::ofstream(resolve(path).c_str());
+    bool writeAll(const std::string& path, const std::string& content) const {
+        FILE* file = fopen(resolve(path).c_str(), "w");
+        if (file == nullptr) {
+            return false;
+        }
+        size_t bytesWritten = fwrite(content.data(), 1, content.size(), file);
+        fclose(file);
+        return bytesWritten == content.size();
     }
 
     size_t size(const std::string& path) const {
