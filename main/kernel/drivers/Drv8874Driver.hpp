@@ -46,9 +46,9 @@ public:
             sleepPin->getName().c_str(),
             currentPin->getName().c_str());
 
-        sleepPin->pinMode(OUTPUT);
-        faultPin->pinMode(INPUT);
-        currentPin->pinMode(INPUT);
+        sleepPin->pinMode(Pin::Mode::Output);
+        faultPin->pinMode(Pin::Mode::Input);
+        currentPin->pinMode(Pin::Mode::Input);
 
         sleep();
     }

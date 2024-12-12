@@ -50,12 +50,12 @@ public:
             mode2Pin->getName().c_str(),
             currentPin->getName().c_str());
 
-        enablePin->pinMode(OUTPUT);
-        mode1Pin->pinMode(OUTPUT);
-        mode2Pin->pinMode(OUTPUT);
-        sleepPin->pinMode(OUTPUT);
-        faultPin->pinMode(INPUT);
-        currentPin->pinMode(INPUT);
+        enablePin->pinMode(Pin::Mode::Output);
+        mode1Pin->pinMode(Pin::Mode::Output);
+        mode2Pin->pinMode(Pin::Mode::Output);
+        sleepPin->pinMode(Pin::Mode::Output);
+        faultPin->pinMode(Pin::Mode::Input);
+        currentPin->pinMode(Pin::Mode::Input);
 
         // TODO Allow using the DRV8801 in other modes
         mode1Pin->digitalWrite(1);
