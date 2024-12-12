@@ -93,7 +93,7 @@ public:
         // Switch off strapping pin
         // TODO: Add a LED driver instead
         pins::LEDA_RED->pinMode(Pin::Mode::Output);
-        pins::LEDA_RED->digitalWrite(HIGH);
+        pins::LEDA_RED->digitalWrite(1);
     }
 
     virtual std::shared_ptr<BatteryDriver> createBatteryDriver(I2CManager& i2c) override {

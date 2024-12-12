@@ -79,12 +79,12 @@ public:
     }
 
     void sleep() {
-        sleepPin->digitalWrite(LOW);
+        sleepPin->digitalWrite(0);
         sleeping = true;
     }
 
     void wakeUp() {
-        sleepPin->digitalWrite(HIGH);
+        sleepPin->digitalWrite(1);
         sleeping = false;
     }
 

@@ -132,7 +132,7 @@ private:
 
     void setSleepState(bool sleep) {
         if (sleepPin != nullptr) {
-            sleepPin->digitalWrite(sleep ? LOW : HIGH);
+            sleepPin->digitalWrite(sleep ? 0 : 1);
         }
     }
 

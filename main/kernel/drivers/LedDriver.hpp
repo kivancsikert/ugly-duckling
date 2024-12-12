@@ -64,9 +64,9 @@ private:
         cursor++;
 
         if (blinkTime > milliseconds::zero()) {
-            setLedState(LOW);
+            setLedState(0);
         } else {
-            setLedState(HIGH);
+            setLedState(1);
         }
 
         // TOOD Substract processing time from delay
