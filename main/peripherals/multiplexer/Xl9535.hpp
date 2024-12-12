@@ -42,7 +42,7 @@ public:
     }
 
     void digitalWrite(uint8_t pin, uint8_t val) {
-        if (val == HIGH) {
+        if (val == 1) {
             output |= 1 << pin;
         } else {
             output &= ~(1 << pin);

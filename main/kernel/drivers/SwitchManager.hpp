@@ -101,7 +101,7 @@ private:
         }
 
         bool isEngaged() const override {
-            return pin->digitalRead() == (mode == SwitchMode::PullUp ? LOW : HIGH);
+            return pin->digitalRead() == (mode == SwitchMode::PullUp ? 0 : 1);
         }
 
     private:
@@ -135,7 +135,7 @@ private:
 // ISR handler for GPIO interrupt
 static void IRAM_ATTR handleSwitchInterrupt(void* arg) {
     SwitchManager::SwitchState* state = static_cast<SwitchManager::SwitchState*>(arg);
-    bool engaged = state->pin->digitalRead() == (state->mode == SwitchMode::PullUp ? LOW : HIGH);
+    bool engaged = state->pin->digitalRead() == (state->mode == SwitchMode::PullUp ? 0 : 1);
     state->manager->queueSwitchStateChange(state, engaged);
 }
 

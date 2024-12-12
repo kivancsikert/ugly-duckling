@@ -58,8 +58,8 @@ public:
         currentPin->pinMode(INPUT);
 
         // TODO Allow using the DRV8801 in other modes
-        mode1Pin->digitalWrite(HIGH);
-        mode2Pin->digitalWrite(HIGH);
+        mode1Pin->digitalWrite(1);
+        mode2Pin->digitalWrite(1);
 
         sleep();
     }
@@ -68,11 +68,11 @@ public:
         if (duty == 0) {
             LOGD("Stopping");
             sleep();
-            enablePin->digitalWrite(LOW);
+            enablePin->digitalWrite(0);
             return;
         }
         wakeUp();
-        enablePin->digitalWrite(HIGH);
+        enablePin->digitalWrite(1);
 
         int direction = (phase == MotorPhase::FORWARD ? 1 : -1);
         int dutyValue = phaseChannel.maxValue() / 2 + direction * (int) (phaseChannel.maxValue() / 2 * duty);
@@ -84,12 +84,12 @@ public:
     }
 
     void sleep() {
-        sleepPin->digitalWrite(LOW);
+        sleepPin->digitalWrite(0);
         sleeping = true;
     }
 
     void wakeUp() {
-        sleepPin->digitalWrite(HIGH);
+        sleepPin->digitalWrite(1);
         sleeping = false;
     }
 

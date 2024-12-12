@@ -179,11 +179,11 @@ public:
     }
 
     void open() override {
-        pin->digitalWrite(HIGH);
+        pin->digitalWrite(1);
     }
 
     void close() override {
-        pin->digitalWrite(LOW);
+        pin->digitalWrite(0);
     }
 
     ValveState getDefaultState() const override {
