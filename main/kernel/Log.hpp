@@ -49,6 +49,7 @@ static void initLogging() {
     const char* logTags[] = {
         "farmhub",
         "farmhub:fs",
+        "farmhub:ledc",
         "farmhub:mdns",
         "farmhub:mqtt",
         "farmhub:pm",

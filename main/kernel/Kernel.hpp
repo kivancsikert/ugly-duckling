@@ -8,6 +8,7 @@
 #include <esp_http_client.h>
 #include <esp_https_ota.h>
 #include <esp_mac.h>
+#include <esp_system.h>
 
 #include <nvs_flash.h>
 
@@ -113,15 +114,15 @@ public:
         LOGI("Performing factory reset");
 
         statusLed.turnOn();
-        delay(1000);
+        Task::delay(1s);
         statusLed.turnOff();
-        delay(1000);
+        Task::delay(1s);
         statusLed.turnOn();
 
         if (completeReset) {
-            delay(1000);
+            Task::delay(1s);
             statusLed.turnOff();
-            delay(1000);
+            Task::delay(1s);
             statusLed.turnOn();
 
             LOGI(" - Deleting the file system...");
@@ -132,7 +133,7 @@ public:
         nvs_flash_erase();
 
         LOGI(" - Restarting...");
-        ESP.restart();
+        esp_restart();
     }
 
     const String version;

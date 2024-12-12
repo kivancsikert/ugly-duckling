@@ -69,7 +69,7 @@ public:
             name.c_str(), pin->getName().c_str(), mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
 
         // Configure PIN_INPUT as input
-        pin->pinMode(mode == SwitchMode::PullUp ? INPUT_PULLUP : INPUT_PULLDOWN);
+        pin->pinMode(mode == SwitchMode::PullUp ? Pin::Mode::InputPullUp : Pin::Mode::InputPullDown);
         // gpio_set_direction(pin, GPIO_MODE_INPUT);
         // gpio_set_pull_mode(pin, mode == SwitchMode::PullUp ? GPIO_PULLUP_ONLY : GPIO_PULLDOWN_ONLY);
 
@@ -101,7 +101,7 @@ private:
         }
 
         bool isEngaged() const override {
-            return pin->digitalRead() == (mode == SwitchMode::PullUp ? LOW : HIGH);
+            return pin->digitalRead() == (mode == SwitchMode::PullUp ? 0 : 1);
         }
 
     private:
@@ -135,7 +135,7 @@ private:
 // ISR handler for GPIO interrupt
 static void IRAM_ATTR handleSwitchInterrupt(void* arg) {
     SwitchManager::SwitchState* state = static_cast<SwitchManager::SwitchState*>(arg);
-    bool engaged = state->pin->digitalRead() == (state->mode == SwitchMode::PullUp ? LOW : HIGH);
+    bool engaged = state->pin->digitalRead() == (state->mode == SwitchMode::PullUp ? 0 : 1);
     state->manager->queueSwitchStateChange(state, engaged);
 }
 

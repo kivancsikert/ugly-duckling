@@ -8,9 +8,6 @@
 
 namespace farmhub::kernel {
 
-// TODO Figure out what to do with low/high speed modes
-//      See https://docs.espressif.com/projects/esp-idf/en/release-v4.2/esp32/api-reference/peripherals/ledc.html#ledc-high-and-low-speed-mode
-
 // TODO Limit number of channels available
 struct PcntUnit {
     PcntUnit(pcnt_unit_handle_t unit, InternalPinPtr pin)

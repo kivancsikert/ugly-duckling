@@ -60,7 +60,7 @@ public:
         //             printf("Task Name\tState\tPrio\tStack\tNum\n");
         //             printf("%s\n", buffer);
         // #endif
-        //             task.delay(10s);
+        //             Task::delay(10s);
         //         });
     }
     const bool sleepWhenIdle;

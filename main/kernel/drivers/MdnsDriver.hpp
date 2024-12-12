@@ -14,11 +14,43 @@ namespace farmhub::kernel::drivers {
 
 struct MdnsRecord {
     String hostname;
-    IPAddress ip;
+    esp_ip4_addr_t ip;
     int port;
 
-    bool validate() {
-        return hostname.length() > 0 && ip != IPAddress() && port > 0;
+    bool hasHostname() const {
+        return !hostname.isEmpty();
+    }
+
+    bool hasIp() const {
+        return ip.addr != 0;
+    }
+
+    bool hasPort() const {
+        return port > 0;
+    }
+
+    bool validate() const {
+        return (hasHostname() || hasIp()) && hasPort();
+    }
+
+    String ipAsString() const {
+        char ipStr[16];
+        esp_ip4addr_ntoa(&ip, ipStr, sizeof(ipStr));
+        return ipStr;
+    }
+
+    String ipOrHost() const {
+        if (hasIp()) {
+            return ipAsString();
+        } else {
+            return hostname;
+        }
+    }
+
+    String toString() const {
+        String result = ipOrHost();
+        result += ":" + port;
+        return result;
     }
 };
 
@@ -104,7 +136,7 @@ private:
             record.hostname = result.hostname;
         }
         if (result.addr != nullptr) {
-            record.ip = IPAddress(result.addr->addr.u_addr.ip4.addr);
+            record.ip = result.addr->addr.u_addr.ip4;
         }
         record.port = result.port;
         mdns_query_results_free(results);
@@ -125,16 +157,35 @@ private:
 
 bool convertToJson(const MdnsRecord& src, JsonVariant dst) {
     auto jsonRecord = dst.to<JsonObject>();
-    jsonRecord["hostname"] = src.hostname;
-    jsonRecord["ip"] = src.ip.toString();
-    jsonRecord["port"] = src.port;
+    if (src.hasHostname()) {
+        jsonRecord["hostname"] = src.hostname;
+    }
+    if (src.hasIp()) {
+        jsonRecord["ip"] = src.ipAsString();
+    }
+    if (src.hasPort()) {
+        jsonRecord["port"] = src.port;
+    }
     return true;
 }
 void convertFromJson(JsonVariantConst src, MdnsRecord& dst) {
     auto jsonRecord = src.as<JsonObjectConst>();
-    dst.hostname = jsonRecord["hostname"].as<String>();
-    dst.ip.fromString(jsonRecord["ip"].as<String>());
-    dst.port = jsonRecord["port"].as<int>();
+    if (jsonRecord["hostname"].is<String>()) {
+        dst.hostname = jsonRecord["hostname"].as<String>();
+    } else {
+        dst.hostname = "";
+    }
+    if (jsonRecord["ip"].is<String>()) {
+        const char* ipStr = jsonRecord["ip"].as<String>().c_str();
+        dst.ip.addr = esp_ip4addr_aton(ipStr);
+    } else {
+        dst.ip.addr = 0;
+    }
+    if (jsonRecord["port"].is<int>()) {
+        dst.port = jsonRecord["port"].as<int>();
+    } else {
+        dst.port = 0;
+    }
 }
 
 }    // namespace farmhub::kernel::drivers

@@ -335,14 +335,14 @@ private:
                 }
                 printf("Shutdown process finished\n");
             });
-            task.delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
+            Task::delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
             enterLowPowerDeepSleep();
         }
     }
 
     [[noreturn]] inline void enterLowPowerDeepSleep() {
         printf("Entering low power deep sleep\n");
-        ESP.deepSleep(duration_cast<microseconds>(LOW_POWER_SLEEP_CHECK_INTERVAL).count());
+        esp_deep_sleep(duration_cast<microseconds>(LOW_POWER_SLEEP_CHECK_INTERVAL).count());
         // Signal to the compiler that we are not returning for real
         abort();
     }
@@ -513,7 +513,7 @@ public:
         kernel.getKernelReadyState().set();
 
         LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
-            millis() / 1000.0,
+            duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count() / 1000.0,
             kernel.version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),

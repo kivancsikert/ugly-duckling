@@ -4,10 +4,11 @@
 #include <functional>
 
 #include <ArduinoJson.h>
-#include <SPIFFS.h>
 
 #include <esp_sleep.h>
+#include <esp_system.h>
 
+#include <kernel/BootClock.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/Named.hpp>
 #include <kernel/Task.hpp>
@@ -51,7 +52,7 @@ public:
         } catch (...) {
             LOGE("Failed to send ping response");
         }
-        response["pong"] = millis();
+        response["pong"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
     }
 
 private:
@@ -65,8 +66,9 @@ public:
     }
     void handle(const JsonObject& request, JsonObject& response) override {
         printf("Restarting...\n");
-        Serial.flush();
-        ESP.restart();
+        fflush(stdout);
+        fsync(fileno(stdout));
+        esp_restart();
     }
 };
 
@@ -202,8 +204,8 @@ public:
         response["success"] = true;
         Task::run("update", 3072, [](Task& task) {
             LOGI("Restarting in 5 seconds to apply update");
-            delay(5000);
-            ESP.restart();
+            Task::delay(5s);
+            esp_restart();
         });
     }
 

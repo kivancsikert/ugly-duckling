@@ -37,13 +37,11 @@ public:
         , pin(config.pin.get()) {
 
         LOGI("Initializing soil moisture sensor on pin %s; air value: %d; water value: %d",
-            pin->getName().c_str(), airValue, waterValue);
-
-        pin->pinMode(INPUT);
+            pin.getName().c_str(), airValue, waterValue);
     }
 
     void populateTelemetry(JsonObject& json) override {
-        uint16_t soilMoistureValue = pin->analogRead();
+        uint16_t soilMoistureValue = pin.analogRead();
         LOGV("Soil moisture value: %d",
             soilMoistureValue);
 
@@ -58,7 +56,7 @@ public:
 private:
     const int airValue;
     const int waterValue;
-    InternalPinPtr pin;
+    AnalogPin pin;
 };
 
 class SoilMoistureSensor

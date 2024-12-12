@@ -27,8 +27,9 @@ public:
             config.toString().c_str());
     }
 
-    void pinMode(uint8_t pin, uint8_t mode) {
-        if (mode == OUTPUT) {
+    void pinMode(uint8_t pin, Pin::Mode mode) {
+        // TODO Signal if pull-up or pull-down is requested that we cannot support it
+        if (mode == Pin::Mode::Output) {
             direction &= ~(1 << pin);
         } else {
             direction |= 1 << pin;
@@ -41,7 +42,7 @@ public:
     }
 
     void digitalWrite(uint8_t pin, uint8_t val) {
-        if (val == HIGH) {
+        if (val == 1) {
             output |= 1 << pin;
         } else {
             output &= ~(1 << pin);
@@ -90,7 +91,7 @@ public:
         , pin(pin) {
     }
 
-    void pinMode(uint8_t mode) const override {
+    void pinMode(Mode mode) const override {
         mpx.pinMode(pin, mode);
     }
 
