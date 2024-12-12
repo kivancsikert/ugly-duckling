@@ -5,6 +5,7 @@
 
 #include <ArduinoJson.h>
 
+#include <kernel/BootClock.hpp>
 #include <kernel/Task.hpp>
 
 namespace farmhub::kernel {
@@ -17,7 +18,7 @@ public:
 class TelemetryCollector {
 public:
     void collect(JsonObject& root) {
-        root["uptime"] = millis();
+        root["uptime"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
         for (auto& entry : providers) {
             auto& name = entry.first;
             auto& provider = entry.second;

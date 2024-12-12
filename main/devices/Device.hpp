@@ -520,7 +520,7 @@ public:
         kernel.getKernelReadyState().set();
 
         LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
-            millis() / 1000.0,
+            duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count() / 1000.0,
             kernel.version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
