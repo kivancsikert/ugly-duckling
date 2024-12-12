@@ -283,14 +283,13 @@ public:
             LOGD("The configuration file '%s' was not found, falling back to defaults",
                 path.c_str());
         } else {
-            std::ifstream file = fs.openRead(path);
-            if (file.fail()) {
+            auto contents = fs.readAll(path);
+            if (!contents.has_value()) {
                 throw ConfigurationException("Cannot open config file " + path);
             }
 
             JsonDocument json;
-            DeserializationError error = deserializeJson(json, file);
-            file.close();
+            DeserializationError error = deserializeJson(json, contents.value());
             switch (error.code()) {
                 case DeserializationError::Code::Ok:
                     break;
@@ -306,12 +305,12 @@ public:
                 path.c_str(), toString().c_str());
         }
         onUpdate([&fs, path](const JsonObject& json) {
-            std::ofstream file = fs.openWrite(path);
-            serializeJson(json, file);
-            if (file.fail()) {
+            std::string contents;
+            serializeJson(json, contents);
+            bool success = fs.writeAll(path, contents);
+            if (success) {
                 throw ConfigurationException("Cannot write config file " + path);
             }
-            file.close();
         });
     }
 

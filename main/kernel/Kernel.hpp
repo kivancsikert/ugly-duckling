@@ -103,11 +103,11 @@ public:
     }
 
     void prepareUpdate(const std::string& url) {
-        std::ofstream fUpdate = fs.openWrite(UPDATE_FILE);
         JsonDocument doc;
         doc["url"] = url;
-        serializeJson(doc, fUpdate);
-        fUpdate.close();
+        std::string content;
+        serializeJson(doc, content);
+        fs.writeAll(UPDATE_FILE, content);
     }
 
     void performFactoryReset(bool completeReset) {
@@ -213,10 +213,12 @@ private:
             return "";
         }
 
-        std::ifstream fUpdate = fs.openRead(UPDATE_FILE);
+        auto contents = fs.readAll(UPDATE_FILE);
+        if (!contents.has_value()) {
+            return "Failed to read update file";
+        }
         JsonDocument doc;
-        auto error = deserializeJson(doc, fUpdate);
-        fUpdate.close();
+        auto error = deserializeJson(doc, contents.value());
         unlink(UPDATE_FILE);
 
         if (error) {
