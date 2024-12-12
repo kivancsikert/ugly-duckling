@@ -1,5 +1,6 @@
 #pragma once
 
+#include <format>
 #include <map>
 #include <memory>
 
@@ -114,7 +115,7 @@ public:
         , peripheralType(peripheralType) {
     }
 
-    virtual unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) = 0;
+    virtual std::expected<unique_ptr<PeripheralBase>, std::string> createPeripheral(const std::string& name, const std::string& jsonConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) = 0;
 
     const std::string factoryType;
     const std::string peripheralType;
@@ -133,7 +134,7 @@ public:
         , deviceConfigArgs(std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
-    unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) override {
+    std::expected<unique_ptr<PeripheralBase>, std::string> createPeripheral(const std::string& name, const std::string& jsonConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) override {
         // Use short prefix because SPIFFS has a 32 character limit
         ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/p/" + name);
         mqttRoot->subscribe("config", [name, configFile](const std::string&, const JsonObject& configJson) {
@@ -145,7 +146,10 @@ public:
             return TDeviceConfig(std::forward<TDeviceConfigArgs>(args)...);
         },
             deviceConfigArgs);
-        deviceConfig.loadFromString(jsonConfig);
+        auto result = deviceConfig.loadFromString(jsonConfig);
+        if (!result) {
+            return std::unexpected(result.error());
+        }
         unique_ptr<Peripheral<TConfig>> peripheral = createPeripheral(name, deviceConfig, mqttRoot, services);
         peripheral->configure(configFile->config);
 
@@ -185,11 +189,10 @@ public:
         LOGI("Creating peripheral with config: %s",
             peripheralConfig.c_str());
         PeripheralDeviceConfiguration deviceConfig;
-        try {
-            deviceConfig.loadFromString(peripheralConfig);
-        } catch (const std::exception& e) {
+        auto result = deviceConfig.loadFromString(peripheralConfig);
+        if (!result) {
             LOGE("Failed to parse peripheral config because %s:\n%s",
-                e.what(), peripheralConfig.c_str());
+                result.error().c_str(), peripheralConfig.c_str());
             return false;
         }
 
@@ -197,31 +200,24 @@ public:
         std::string type = deviceConfig.type.get();
         JsonObject initJson = peripheralsInitJson.add<JsonObject>();
         deviceConfig.store(initJson, true);
-        try {
-            Lock lock(stateMutex);
-            if (state == State::Stopped) {
-                LOGE("Not creating peripheral '%s' because the peripheral manager is stopped",
-                    name.c_str());
-                return false;
-            }
-            JsonDocument initConfigDoc;
-            JsonObject initConfigJson = initConfigDoc.to<JsonObject>();
-            unique_ptr<PeripheralBase> peripheral = createPeripheral(name, type, deviceConfig.params.get().get(), initConfigJson);
-            initJson["config"].to<JsonObject>().set(initConfigJson);
-            peripherals.push_back(move(peripheral));
-
-            return true;
-        } catch (const std::exception& e) {
-            LOGE("Failed to create '%s' peripheral '%s' because %s",
-                type.c_str(), name.c_str(), e.what());
-            initJson["error"] = std::string(e.what());
-            return false;
-        } catch (...) {
-            LOGE("Failed to create '%s' peripheral '%s' because of an unknown exception",
-                type.c_str(), name.c_str());
-            initJson["error"] = "unknown exception";
+        Lock lock(stateMutex);
+        if (state == State::Stopped) {
+            LOGE("Not creating peripheral '%s' because the peripheral manager is stopped",
+                name.c_str());
             return false;
         }
+        JsonDocument initConfigDoc;
+        JsonObject initConfigJson = initConfigDoc.to<JsonObject>();
+        auto peripheral = createPeripheral(name, type, deviceConfig.params.get().get(), initConfigJson);
+        if (!peripheral) {
+            LOGE("Failed to create '%s' peripheral '%s' because %s",
+                type.c_str(), name.c_str(), peripheral.error().c_str());
+            initJson["error"] = std::string(peripheral.error());
+            return false;
+        }
+        initJson["config"].to<JsonObject>().set(initConfigJson);
+        peripherals.push_back(move(peripheral.value()));
+        return true;
     }
 
     void publishTelemetry() override {
@@ -259,12 +255,12 @@ private:
         Property<JsonAsString> params { this, "params" };
     };
 
-    unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& factoryType, const std::string& configJson, JsonObject& initConfigJson) {
+    std::expected<unique_ptr<PeripheralBase>, std::string> createPeripheral(const std::string& name, const std::string& factoryType, const std::string& configJson, JsonObject& initConfigJson) {
         LOGD("Creating peripheral '%s' with factory '%s'",
             name.c_str(), factoryType.c_str());
         auto it = factories.find(factoryType);
         if (it == factories.end()) {
-            throw PeripheralCreationException("Factory not found: '" + factoryType + "'");
+            return std::unexpected(std::format("Factory not found: '{}'", factoryType));
         }
         const std::string& peripheralType = it->second.get().peripheralType;
         shared_ptr<MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);

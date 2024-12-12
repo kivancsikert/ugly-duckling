@@ -42,6 +42,7 @@ public:
         , device({
               .port = bus->port,
               .cfg = {
+                  .mode = I2C_MODE_MASTER,
                   .sda_io_num = bus->sda->getGpio(),
                   .scl_io_num = bus->scl->getGpio(),
                   // TODO Allow this to be configred
