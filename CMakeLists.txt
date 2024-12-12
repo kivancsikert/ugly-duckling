@@ -60,10 +60,6 @@ endif()
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-if(UD_GEN STREQUAL MK4)
-    add_compile_definitions(HWCDCSerial=Serial0)
-endif()
-
 # Keep struct initializers simple
 add_compile_options("-Wno-missing-field-initializers")
 
