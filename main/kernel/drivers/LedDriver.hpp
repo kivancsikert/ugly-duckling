@@ -25,7 +25,7 @@ public:
         LOGI("Initializing LED driver on pin %s",
             pin->getName().c_str());
 
-        pin->pinMode(OUTPUT);
+        pin->pinMode(Pin::Mode::Output);
         Task::loop(name, 2048, [this](Task& task) {
             handleIteration();
         });

@@ -6,6 +6,10 @@
 #include <optional>
 #include <vector>
 
+#include <driver/gpio.h>
+#include <esp_adc/adc_oneshot.h>
+#include <hal/adc_types.h>
+
 #include <Arduino.h>
 
 #include <ArduinoJson.h>
@@ -33,7 +37,14 @@ public:
         throw std::runtime_error(String("Unknown pin: " + name).c_str());
     }
 
-    virtual void pinMode(uint8_t mode) const = 0;
+    enum class Mode {
+        Output,
+        Input,
+        InputPullUp,
+        InputPullDown,
+    };
+
+    virtual void pinMode(Mode mode) const = 0;
 
     virtual void digitalWrite(uint8_t val) const = 0;
 
@@ -96,20 +107,22 @@ public:
         , gpio(gpio) {
     }
 
-    inline void pinMode(uint8_t mode) const override {
-        ::pinMode(gpio, mode);
+    void pinMode(Mode mode) const override {
+        gpio_config_t conf = {
+            .pin_bit_mask = (1ULL << gpio),
+            .mode = mode == Mode::Output ? GPIO_MODE_OUTPUT : GPIO_MODE_INPUT,
+            .pull_up_en = mode == Mode::InputPullUp ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE,
+            .pull_down_en = mode == Mode::InputPullDown ? GPIO_PULLDOWN_ENABLE : GPIO_PULLDOWN_DISABLE,
+        };
+        ESP_ERROR_CHECK(gpio_config(&conf));
     }
 
     inline void digitalWrite(uint8_t val) const override {
-        ::digitalWrite(gpio, val);
+        gpio_set_level(gpio, val);
     }
 
     inline int digitalRead() const override {
-        return ::digitalRead(gpio);
-    }
-
-    inline uint16_t analogRead() const {
-        return ::analogRead(gpio);
+        return gpio_get_level(gpio);
     }
 
     inline gpio_num_t getGpio() const {
@@ -122,8 +135,60 @@ private:
     static std::map<gpio_num_t, InternalPinPtr> INTERNAL_BY_GPIO;
 };
 
+class AnalogPin {
+public:
+    AnalogPin(const InternalPinPtr pin)
+        : pin(pin) {
+        adc_unit_t unit;
+        ESP_ERROR_CHECK(adc_oneshot_io_to_channel(pin->getGpio(), &unit, &channel));
+
+        handle = getUnitHandle(unit);
+
+        adc_oneshot_chan_cfg_t config = {
+            .atten = ADC_ATTEN_DB_12,
+            .bitwidth = ADC_BITWIDTH_DEFAULT,
+        };
+        ESP_ERROR_CHECK(adc_oneshot_config_channel(handle, channel, &config));
+    }
+
+    ~AnalogPin() {
+        ESP_ERROR_CHECK(adc_oneshot_del_unit(handle));
+    }
+
+    int analogRead() const {
+        int value;
+        ESP_ERROR_CHECK(adc_oneshot_read(handle, channel, &value));
+        return value;
+    }
+
+    const String& getName() const {
+        return pin->getName();
+    }
+
+private:
+    static adc_oneshot_unit_handle_t getUnitHandle(adc_unit_t unit) {
+        adc_oneshot_unit_handle_t handle = ANALOG_UNITS[unit];
+        if (handle == nullptr) {
+            adc_oneshot_unit_init_cfg_t config = {
+                .unit_id = unit,
+                .ulp_mode = ADC_ULP_MODE_DISABLE,
+            };
+            ESP_ERROR_CHECK(adc_oneshot_new_unit(&config, &handle));
+            ANALOG_UNITS[unit] = handle;
+        }
+        return handle;
+    }
+
+    static std::vector<adc_oneshot_unit_handle_t> ANALOG_UNITS;
+
+    const InternalPinPtr pin;
+    adc_oneshot_unit_handle_t handle;
+    adc_channel_t channel;
+};
+
 std::map<String, InternalPinPtr> InternalPin::INTERNAL_BY_NAME;
 std::map<gpio_num_t, InternalPinPtr> InternalPin::INTERNAL_BY_GPIO;
+std::vector<adc_oneshot_unit_handle_t> AnalogPin::ANALOG_UNITS { 2 };
 
 }    // namespace farmhub::kernel
 

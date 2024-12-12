@@ -92,7 +92,7 @@ public:
               pins::BOOT) {
         // Switch off strapping pin
         // TODO: Add a LED driver instead
-        pins::LEDA_RED->pinMode(OUTPUT);
+        pins::LEDA_RED->pinMode(Pin::Mode::Output);
         pins::LEDA_RED->digitalWrite(HIGH);
     }
 

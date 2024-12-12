@@ -175,7 +175,7 @@ class LatchingPinValveControlStrategy
 public:
     LatchingPinValveControlStrategy(PinPtr pin)
         : pin(pin) {
-        pin->pinMode(OUTPUT);
+        pin->pinMode(Pin::Mode::Output);
     }
 
     void open() override {
