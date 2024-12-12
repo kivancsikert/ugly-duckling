@@ -52,19 +52,18 @@ set_property(DIRECTORY PROPERTY UD_DEBUG_TRACKER "${UD_DEBUG}")
 if (UD_DEBUG)
     message("Building with debug options")
     set(SDKCONFIG_DEFAULTS "sdkconfig.defaults;sdkconfig.${UD_GEN_LOWER}.defaults;sdkconfig.debug.defaults")
+    set(CMAKE_BUILD_TYPE Debug)
 else()
     message("Building with release options")
     set(SDKCONFIG_DEFAULTS "sdkconfig.defaults;sdkconfig.${UD_GEN_LOWER}.defaults")
-    add_compile_options("-O2")
+    set(CMAKE_BUILD_TYPE Release)
 endif()
+add_link_options("-Wl,--gc-sections")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 # Keep struct initializers simple
 add_compile_options("-Wno-missing-field-initializers")
-
-# TODO Make this depend on some flag
-set(CMAKE_BUILD_TYPE Debug)
 
 project(ugly-duckling)
 
