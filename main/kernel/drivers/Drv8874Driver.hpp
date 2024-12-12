@@ -21,8 +21,8 @@ class Drv8874Driver
     : public PwmMotorDriver {
 
 private:
-    const uint32_t PWM_FREQ = 25000;     // 25kHz
-    const uint8_t PWM_RESOLUTION = 8;    // 8 bit
+    static constexpr uint32_t PWM_FREQ = 25000;
+    static constexpr ledc_timer_bit_t PWM_RESOLUTION = LEDC_TIMER_8_BIT;
 
 public:
     // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
@@ -93,8 +93,8 @@ public:
     }
 
 private:
-    const PwmPin in1Channel;
-    const PwmPin in2Channel;
+    const PwmPin& in1Channel;
+    const PwmPin& in2Channel;
     const PinPtr currentPin;
     const PinPtr faultPin;
     const PinPtr sleepPin;
