@@ -60,14 +60,6 @@ endif()
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-idf_build_set_property(DEPENDENCIES_LOCK "dependencies.lock")
-
-# list(APPEND EXTRA_COMPONENT_DIRS $ENV{IDF_PATH}/components)
-
-# Adds necessary definitions for compiling it using Serial symbol attached to the HW USB CDC port
-add_compile_definitions(ARDUINO_USB_CDC_ON_BOOT=1)
-add_compile_definitions(ARDUINO_USB_MODE=1)
-
 if(UD_GEN STREQUAL MK4)
     add_compile_definitions(HWCDCSerial=Serial0)
 endif()
