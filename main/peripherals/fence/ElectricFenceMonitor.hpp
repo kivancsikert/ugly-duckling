@@ -72,7 +72,7 @@ public:
                 int16_t count = pin.pcntUnit.getAndClearCount();
 
                 if (count > 0) {
-                    lastVoltage = max(pin.voltage, lastVoltage);
+                    lastVoltage = std::max(pin.voltage, lastVoltage);
                     LOGV("Counted %d pulses on pin %s (voltage: %dV)",
                         count, pin.pcntUnit.getPin()->getName().c_str(), pin.voltage);
                 }
