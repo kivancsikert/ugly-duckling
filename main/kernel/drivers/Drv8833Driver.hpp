@@ -61,8 +61,8 @@ public:
 private:
     class Drv8833MotorDriver : public PwmMotorDriver {
     private:
-        static constexpr uint32_t PWM_FREQ = 25000;      // 25kHz
-        static constexpr uint8_t PWM_RESOLUTION = 10;    // 10 bit
+        static constexpr uint32_t PWM_FREQ = 25000;
+        static constexpr ledc_timer_bit_t PWM_RESOLUTION = LEDC_TIMER_10_BIT;
 
     public:
         Drv8833MotorDriver(
@@ -81,8 +81,8 @@ private:
             int dutyValue = static_cast<int>((in1Channel.maxValue() + in1Channel.maxValue() * duty) / 2);
             LOGD("Driving motor %s on pins %s/%s at %d%% (duty = %d)",
                 phase == MotorPhase::FORWARD ? "forward" : "reverse",
-                in1Channel.pin->getName().c_str(),
-                in2Channel.pin->getName().c_str(),
+                in1Channel.getName().c_str(),
+                in2Channel.getName().c_str(),
                 (int) (duty * 100),
                 dutyValue);
 
@@ -120,8 +120,8 @@ private:
 
     private:
         Drv8833Driver* const driver;
-        const PwmPin in1Channel;
-        const PwmPin in2Channel;
+        const PwmPin& in1Channel;
+        const PwmPin& in2Channel;
 
         bool sleeping;
     };
