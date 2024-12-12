@@ -70,7 +70,7 @@ public:
                 uint32_t count = pin.counter->reset();
 
                 if (count > 0) {
-                    lastVoltage = max(pin.voltage, lastVoltage);
+                    lastVoltage = std::max(pin.voltage, lastVoltage);
                     LOGV("Counted %ld pulses on pin %s (voltage: %dV)",
                         count, pin.counter->getPin()->getName().c_str(), pin.voltage);
                 }
