@@ -133,9 +133,18 @@ private:
 
         nvs_handle_t handle;
         esp_err_t err = nvs_open(name.c_str(), readOnly ? NVS_READONLY : NVS_READWRITE, &handle);
-        if (err != ESP_OK) {
-            LOGTE(Tag::NVS, "failed to %s '%s'", readOnly ? "read" : "write", name.c_str());
-            return false;
+        switch (err) {
+            case ESP_OK:
+                break;
+            case ESP_ERR_NVS_NOT_FOUND:
+                LOGTV(Tag::NVS, "namespace '%s' does not exist yet, nothing to read",
+                    name.c_str());
+                return ESP_ERR_NOT_FOUND;
+                break;
+            default:
+                LOGTW(Tag::NVS, "failed to open NVS to %s '%s': %s",
+                    readOnly ? "read" : "write", name.c_str(), esp_err_to_name(err));
+                break;
         }
 
         esp_err_t result = action(handle);
