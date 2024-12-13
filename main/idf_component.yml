@@ -4,4 +4,4 @@ dependencies:
   espressif/mdns: "1.4.2"
   bblanchon/arduinojson: "7.2.1"
   idf:
-    version: "5.3.2"
+    version: "5.3.1"
