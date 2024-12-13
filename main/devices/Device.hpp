@@ -566,7 +566,7 @@ private:
                 [&](JsonObject& json) {
                     reportPreviousCrash(json, summary);
                 },
-                Retention::NoRetain, QoS::AtLeastOnce, 5s);
+                Retention::Retain, QoS::AtLeastOnce, 5s);
         }
 
         ESP_ERROR_CHECK_WITHOUT_ABORT(esp_core_dump_image_erase());
