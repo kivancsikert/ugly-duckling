@@ -138,7 +138,12 @@ public:
         ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/p/" + name);
         mqttRoot->subscribe("config", [name, configFile](const std::string&, const JsonObject& configJson) {
             LOGD("Received configuration update for peripheral: %s", name.c_str());
-            configFile->update(configJson);
+            try {
+                configFile->update(configJson);
+            } catch (const std::exception& e) {
+                LOGE("Failed to update configuration for peripheral '%s' because %s",
+                    name.c_str(), e.what());
+            }
         });
 
         TDeviceConfig deviceConfig = std::apply([](TDeviceConfigArgs... args) {
