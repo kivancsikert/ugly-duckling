@@ -5,10 +5,11 @@
 
 #include <Arduino.h>
 
-#include "esp_netif.h"
-#include "esp_wifi.h"
+#include <esp_core_dump.h>
+#include <esp_netif.h>
 #include <esp_pm.h>
 #include <esp_private/esp_clk.h>
+#include <esp_wifi.h>
 
 #include <Print.h>
 
@@ -495,6 +496,8 @@ public:
                 json["state"] = static_cast<int>(initState);
                 json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
                 json["sleepWhenIdle"] = kernel.powerManager.sleepWhenIdle;
+
+                reportPreviousCrashIfAny(json);
             },
             Retention::NoRetain, QoS::AtLeastOnce, 5s);
 
@@ -539,6 +542,65 @@ private:
             return deviceConfig.location.get() + "/";
         } else {
             return "";
+        }
+    }
+
+    void reportPreviousCrashIfAny(JsonObject& json) {
+        esp_err_t errCheck = esp_core_dump_image_check();
+        if (errCheck == ESP_ERR_NOT_FOUND) {
+            LOGV("No core dump found");
+            return;
+        }
+        if (errCheck != ESP_OK) {
+            LOGE("Failed to check for core dump: %s", esp_err_to_name(errCheck));
+            return;
+        }
+
+        esp_core_dump_summary_t summary;
+        esp_err_t err = esp_core_dump_get_summary(&summary);
+        if (err != ESP_OK) {
+            LOGE("Failed to get core dump summary: %s", esp_err_to_name(err));
+        } else {
+            auto crashJson = json["crash"].to<JsonObject>();
+            reportPreviousCrash(crashJson, summary);
+        }
+
+        ESP_ERROR_CHECK_WITHOUT_ABORT(esp_core_dump_image_erase());
+    }
+
+    void reportPreviousCrash(JsonObject& json, const esp_core_dump_summary_t& summary) {
+        auto excCause =
+#if __XTENSA__
+            summary.ex_info.exc_cause;
+#else
+            summary.ex_info.mcause;
+#endif
+
+        LOGW("Core dump found: task: %s, cause: %ld",
+            summary.exc_task, excCause);
+
+        json["version"] = summary.core_dump_version;
+        json["sha256"] = String((const char*) summary.app_elf_sha256, CONFIG_APP_RETRIEVE_LEN_ELF_SHA);
+        json["task"] = summary.exc_task;
+        json["cause"] = excCause;
+
+        static constexpr size_t PANIC_REASON_SIZE = 256;
+        char panicReason[PANIC_REASON_SIZE];
+        if (esp_core_dump_get_panic_reason(panicReason, PANIC_REASON_SIZE) == ESP_OK) {
+            LOGW("Panic reason: %s", panicReason);
+            json["panicReason"] = panicReason;
+        }
+
+        auto backtraceJson = json["backtrace"].to<JsonObject>();
+        if (summary.exc_bt_info.corrupted) {
+            LOGE("Backtrace corrupted, depth %lu", summary.exc_bt_info.depth);
+            backtraceJson["corrupted"] = true;
+        } else {
+            auto framesJson = backtraceJson["frames"].to<JsonArray>();
+            for (int i = 0; i < summary.exc_bt_info.depth; i++) {
+                auto& frame = summary.exc_bt_info.bt[i];
+                framesJson.add("0x" + String(frame, HEX));
+            }
         }
     }
 
