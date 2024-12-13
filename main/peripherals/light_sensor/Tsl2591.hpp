@@ -1,7 +1,6 @@
 #pragma once
 
 #include <chrono>
-#include <deque>
 #include <memory>
 
 #include <tsl2591.h>

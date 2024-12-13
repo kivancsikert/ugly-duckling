@@ -1,7 +1,6 @@
 #pragma once
 
 #include <chrono>
-#include <deque>
 #include <memory>
 
 #include <esp_system.h>
