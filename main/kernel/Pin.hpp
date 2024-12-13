@@ -93,7 +93,7 @@ public:
     static InternalPinPtr byGpio(gpio_num_t pin) {
         auto it = INTERNAL_BY_GPIO.find(pin);
         if (it == INTERNAL_BY_GPIO.end()) {
-            std::string name = std::format("GPIO_NUM_{}", static_cast<int>(pin));
+            std::string name = "GPIO_NUM_" + std::to_string(static_cast<int>(pin));
             return registerPin(name, pin);
         } else {
             return it->second;

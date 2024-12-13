@@ -106,7 +106,7 @@ public:
     }
 
     std::string describe() const override {
-        return std::format("normally closed with switch duration {} ms and hold duty {}%", switchDuration.count(), holdDuty * 100);
+        return "normally closed with switch duration " + std::to_string(switchDuration.count()) + " ms and hold duty " + std::to_string(holdDuty * 100) + "%";
     }
 };
 
@@ -130,7 +130,7 @@ public:
     }
 
     std::string describe() const override {
-        return std::format("normally open with switch duration {} ms and hold duty {}%", switchDuration.count(), holdDuty * 100);
+        return "normally open with switch duration " + std::to_string(switchDuration.count()) + " ms and hold duty " + std::to_string(holdDuty * 100) + "%";
     }
 };
 
@@ -160,7 +160,7 @@ public:
     }
 
     std::string describe() const override {
-        return std::format("latching with switch duration {} ms and switch duty {}%", switchDuration.count(), switchDuty * 100);
+        return "latching with switch duration " + std::to_string(switchDuration.count()) + " ms and switch duty " + std::to_string(switchDuty * 100) + "%";
     }
 
 private:
