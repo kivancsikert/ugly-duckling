@@ -1,7 +1,5 @@
 #pragma once
 
-#include <thread>
-
 #include <ArduinoJson.h>
 
 #include <esp_log.h>
