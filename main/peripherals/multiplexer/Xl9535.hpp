@@ -115,7 +115,7 @@ public:
 
         // Create a pin for each bit in the pins mask
         for (int i = 0; i < 16; i++) {
-            std::string pinName = std::format("{}:{}", name, i);
+            std::string pinName = name + ":" + std::to_string(i);
             LOGV("Registering external pin %s",
                 pinName.c_str());
             auto pin = std::make_shared<Xl9535Pin>(pinName, component, i);

@@ -263,7 +263,7 @@ private:
         } else {
             LOGE("Update failed (%s), continuing with regular boot",
                 esp_err_to_name(ret));
-            return std::format("Firmware upgrade failed: {}", esp_err_to_name(ret));
+            return std::string("Firmware upgrade failed: ") + esp_err_to_name(ret);
         }
     }    // namespace farmhub::kernel
 

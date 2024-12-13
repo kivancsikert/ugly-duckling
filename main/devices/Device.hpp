@@ -14,6 +14,7 @@
 #include <kernel/Concurrent.hpp>
 #include <kernel/Console.hpp>
 #include <kernel/Kernel.hpp>
+#include <kernel/Strings.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
 #include <kernel/mqtt/MqttDriver.hpp>
@@ -113,16 +114,16 @@ private:
 
         counter = (counter + 1) % spinnerLength;
         status.clear();
-        status += std::format("[{}] ", spinner[counter]);
-        status += std::format("\033[33m{}\033[0m", farmhubVersion);
-        status += std::format(", uptime: \033[33m{:.2f}\033[0m s", uptime.count() / 1000.0);
-        status += std::format(", WIFI: {} (up \033[33m{:.1f}\033[0m s)", wifiStatus(), wifi.getUptime().count() / 1000.0);
-        status += std::format(", RTC \033[33m{}\033[0m", RtcDriver::isTimeSet() ? "OK" : "UNSYNCED");
-        status += std::format(", heap \033[33m{:.2f}\033[0m kB", heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024.0);
-        status += std::format(", CPU: \033[33m{}\033[0m MHz", esp_clk_cpu_freq() / 1000000);
+        status += "[" + std::string(1, spinner[counter]) + "] ";
+        status += "\033[33m" + std::string(farmhubVersion) + "\033[0m";
+        status += ", uptime: \033[33m" + toStringWithPrecision(uptime.count() / 1000.0f, 1) + "\033[0m s";
+        status += ", WIFI: " + std::string(wifiStatus()) + " (up \033[33m" + toStringWithPrecision(wifi.getUptime().count() / 1000.0f, 1) + "\033[0m s)";
+        status += ", RTC \033[33m" + std::string(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED") + "\033[0m";
+        status += ", heap \033[33m" + toStringWithPrecision(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024.0f, 2) + "\033[0m kB";
+        status += ", CPU: \033[33m" + std::to_string(esp_clk_cpu_freq() / 1000000) + "\033[0m MHz";
 
         if (battery != nullptr) {
-            status += std::format(", battery: \033[33m{:.2f}\033[0m V", battery->getVoltage());
+            status += ", battery: \033[33m" + toStringWithPrecision(battery->getVoltage(), 2) + "\033[0m V";
         }
 
         printf("\033[1G\033[0K%s", status.c_str());
