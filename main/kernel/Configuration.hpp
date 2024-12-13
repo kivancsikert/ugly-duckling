@@ -308,7 +308,7 @@ public:
             std::string contents;
             serializeJson(json, contents);
             bool success = fs.writeAll(path, contents);
-            if (success) {
+            if (!success) {
                 throw ConfigurationException("Cannot write config file " + path);
             }
         });
