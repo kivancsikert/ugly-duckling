@@ -4,7 +4,6 @@
 #include <functional>
 #include <optional>
 #include <memory>
-#include <utility>
 
 #include <freertos/FreeRTOS.h>
 
