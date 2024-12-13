@@ -6,6 +6,7 @@
 #include <i2cdev.h>
 
 #include <kernel/Pin.hpp>
+#include <kernel/Strings.hpp>
 
 namespace farmhub::kernel {
 
@@ -22,7 +23,7 @@ public:
     InternalPinPtr scl;
 
     std::string toString() const {
-        return std::format("I2C address: 0x{:#x}, SDA: {}, SCL: {}", address, sda->getName(), scl->getName());
+        return "I2C address: 0x" + toHexString(address) + ", SDA: " + sda->getName() + ", SCL: " + scl->getName();
     }
 };
 
@@ -124,7 +125,7 @@ public:
         // esp_err_t err = device->probeRead();
         // if (err != ESP_OK) {
         //     throw std::runtime_error(
-        //         std::format("Failed to communicate with I2C device {} at address 0x{:#x}: {}", name, address, esp_err_to_name(err)).c_str());
+        //         "Failed to communicate with I2C device " + name + " at address 0x" + std::to_string(address) + ": " + esp_err_to_name(err);
         // }
         return device;
     }

@@ -53,7 +53,7 @@ public:
         for (auto& pinConfig : config.pins.get()) {
             if (pinsDescription.length() > 0)
                 pinsDescription += ", ";
-            pinsDescription += std::format("{}={}V", pinConfig.pin->getName(), pinConfig.voltage);
+            pinsDescription += pinConfig.pin->getName() + "=" + std::to_string(pinConfig.voltage) + "V";
         }
         LOGI("Initializing electric fence with pins %s", pinsDescription.c_str());
 
