@@ -496,10 +496,10 @@ public:
                 json["state"] = static_cast<int>(initState);
                 json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
                 json["sleepWhenIdle"] = kernel.powerManager.sleepWhenIdle;
+
+                reportPreviousCrashIfAny(json);
             },
             Retention::NoRetain, QoS::AtLeastOnce, 5s);
-
-        reportPreviousCrashIfAny();
 
         Task::loop("telemetry", 8192, [this](Task& task) {
             publishTelemetry();
@@ -545,7 +545,7 @@ private:
         }
     }
 
-    void reportPreviousCrashIfAny() {
+    void reportPreviousCrashIfAny(JsonObject& json) {
         esp_err_t errCheck = esp_core_dump_image_check();
         if (errCheck == ESP_ERR_NOT_FOUND) {
             LOGV("No core dump found");
@@ -561,12 +561,8 @@ private:
         if (err != ESP_OK) {
             LOGE("Failed to get core dump summary: %s", esp_err_to_name(err));
         } else {
-            mqttDeviceRoot->publish(
-                "crash",
-                [&](JsonObject& json) {
-                    reportPreviousCrash(json, summary);
-                },
-                Retention::Retain, QoS::AtLeastOnce, 5s);
+            auto crashJson = json["crash"].to<JsonObject>();
+            reportPreviousCrash(crashJson, summary);
         }
 
         ESP_ERROR_CHECK_WITHOUT_ABORT(esp_core_dump_image_erase());
