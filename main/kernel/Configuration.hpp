@@ -1,5 +1,6 @@
 #pragma once
 
+#include <expected>
 #include <functional>
 #include <list>
 
@@ -76,16 +77,17 @@ bool convertFromJson(JsonVariantConst src, JsonAsString& dst) {
 
 class ConfigurationEntry {
 public:
-    void loadFromString(const std::string& json) {
+    std::expected<void, std::string> loadFromString(const std::string& json) {
         JsonDocument jsonDocument;
         DeserializationError error = deserializeJson(jsonDocument, json);
         if (error == DeserializationError::EmptyInput) {
-            return;
+            return {};
         }
         if (error) {
-            throw ConfigurationException("Cannot parse JSON configuration: " + std::string(error.c_str()) + json);
+            return std::unexpected(error.c_str());
         }
         load(jsonDocument.as<JsonObject>());
+        return {};
     }
 
     virtual void load(const JsonObject& json) = 0;
