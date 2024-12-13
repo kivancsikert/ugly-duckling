@@ -496,9 +496,10 @@ public:
                 json["state"] = static_cast<int>(initState);
                 json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
                 json["sleepWhenIdle"] = kernel.powerManager.sleepWhenIdle;
-                addCoreDumpInfo(json);
             },
             Retention::NoRetain, QoS::AtLeastOnce, 5s);
+
+        reportPreviousCrashIfAny();
 
         Task::loop("telemetry", 8192, [this](Task& task) {
             publishTelemetry();
@@ -544,18 +545,14 @@ private:
         }
     }
 
-    void addCoreDumpInfo(JsonObject& json) {
+    void reportPreviousCrashIfAny() {
         esp_err_t errCheck = esp_core_dump_image_check();
         if (errCheck == ESP_ERR_NOT_FOUND) {
             LOGV("No core dump found");
             return;
         }
-
-        auto coreDumpJson = json["coreDump"].to<JsonObject>();
-
         if (errCheck != ESP_OK) {
             LOGE("Failed to check for core dump: %s", esp_err_to_name(errCheck));
-            coreDumpJson["error"] = esp_err_to_name(errCheck);
             return;
         }
 
@@ -563,10 +560,19 @@ private:
         esp_err_t err = esp_core_dump_get_summary(&summary);
         if (err != ESP_OK) {
             LOGE("Failed to get core dump summary: %s", esp_err_to_name(err));
-            coreDumpJson["error"] = esp_err_to_name(err);
-            return;
+        } else {
+            mqttDeviceRoot->publish(
+                "crash",
+                [&](JsonObject& json) {
+                    reportPreviousCrash(json, summary);
+                },
+                Retention::NoRetain, QoS::AtLeastOnce, 5s);
         }
 
+        ESP_ERROR_CHECK_WITHOUT_ABORT(esp_core_dump_image_erase());
+    }
+
+    void reportPreviousCrash(JsonObject& json, const esp_core_dump_summary_t& summary) {
         auto excCause =
 #if __XTENSA__
             summary.ex_info.exc_cause;
@@ -577,20 +583,19 @@ private:
         LOGW("Core dump found: task: %s, cause: %ld",
             summary.exc_task, excCause);
 
-        coreDumpJson["version"] = summary.core_dump_version;
-        coreDumpJson["sha256"] = String((const char*) summary.app_elf_sha256, CONFIG_APP_RETRIEVE_LEN_ELF_SHA);
-        coreDumpJson["task"] = summary.exc_task;
-        coreDumpJson["cause"] = excCause;
+        json["version"] = summary.core_dump_version;
+        json["sha256"] = String((const char*) summary.app_elf_sha256, CONFIG_APP_RETRIEVE_LEN_ELF_SHA);
+        json["task"] = summary.exc_task;
+        json["cause"] = excCause;
 
         static constexpr size_t PANIC_REASON_SIZE = 256;
         char panicReason[PANIC_REASON_SIZE];
-        err = esp_core_dump_get_panic_reason(panicReason, PANIC_REASON_SIZE);
-        if (err == ESP_OK) {
+        if (esp_core_dump_get_panic_reason(panicReason, PANIC_REASON_SIZE) == ESP_OK) {
             LOGW("Panic reason: %s", panicReason);
-            coreDumpJson["panicReason"] = panicReason;
+            json["panicReason"] = panicReason;
         }
 
-        auto backtraceJson = coreDumpJson["backtrace"].to<JsonObject>();
+        auto backtraceJson = json["backtrace"].to<JsonObject>();
         if (summary.exc_bt_info.corrupted) {
             LOGE("Backtrace corrupted, depth %lu", summary.exc_bt_info.depth);
             backtraceJson["corrupted"] = true;
@@ -601,8 +606,6 @@ private:
                 framesJson.add("0x" + String(frame, HEX));
             }
         }
-
-        ESP_ERROR_CHECK(esp_core_dump_image_erase());
     }
 
     Queue<LogRecord> logRecords { "logs", 32 };
