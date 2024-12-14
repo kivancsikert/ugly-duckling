@@ -47,16 +47,16 @@ jobs:
 
       - name: Rename firmware artifact
         run: |
-          cp ${{ github.workspace }}/build/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
+          cp build/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
 
       - name: Create debug artifact
         run: |
           zip debug-${{ matrix.environment }}.zip \
-            ${{ github.workspace }}/build/project_description.json \
-            ${{ github.workspace }}/build/*.bin \
-            ${{ github.workspace }}/build/*.elf \
-            ${{ github.workspace }}/build/*.map \
-            ${{ github.workspace }}/build/config/sdkconfig.h
+            build/project_description.json \
+            build/*.bin \
+            build/*.elf \
+            build/*.map \
+            build/config/sdkconfig.h
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
