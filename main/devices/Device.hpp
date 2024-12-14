@@ -68,7 +68,7 @@ typedef farmhub::devices::Mk6Config TDeviceConfiguration;
 /**
  * @brief Do not boot if battery is below this threshold.
  */
-static constexpr double BATTERY_BOOT_THRESHOLD = 3.7;
+static constexpr double BATTERY_BOOT_THRESHOLD = 3.9;
 
 /**
  * @brief Shutdown if battery drops below this threshold.
@@ -83,7 +83,7 @@ typedef farmhub::devices::Mk7Config TDeviceConfiguration;
 /**
  * @brief Do not boot if battery is below this threshold.
  */
-static constexpr double BATTERY_BOOT_THRESHOLD = 3.2;
+static constexpr double BATTERY_BOOT_THRESHOLD = 3.7;
 
 /**
  * @brief Shutdown if battery drops below this threshold.
