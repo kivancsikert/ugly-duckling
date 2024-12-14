@@ -46,13 +46,25 @@ jobs:
           command: idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }}
 
       - name: Rename firmware artifact
-        run: cp ${{ github.workspace }}/build/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
+        run: |
+          cp ${{ github.workspace }}/build/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
 
-      - name: Upload firmware artifact
+      - name: Create debug artifact
+        run: |
+          zip debug-${{ matrix.environment }}.zip \
+            ${{ github.workspace }}/build/project_description.json \
+            ${{ github.workspace }}/build/*.bin \
+            ${{ github.workspace }}/build/*.elf \
+            ${{ github.workspace }}/build/*.map \
+            ${{ github.workspace }}/build/config/sdkconfig.h
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: firmware-${{ matrix.environment }}
-          path: ugly-duckling-${{ matrix.environment }}.bin
+          path: |
+            ugly-duckling-${{ matrix.environment }}.bin
+            debug-${{ matrix.environment }}.zip
           if-no-files-found: error
 
   release:
