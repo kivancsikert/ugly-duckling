@@ -61,7 +61,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: firmware-${{ matrix.environment }}
+          name: ${{ matrix.environment }}
           path: |
             ugly-duckling-${{ matrix.environment }}.bin
             debug-${{ matrix.environment }}.zip
