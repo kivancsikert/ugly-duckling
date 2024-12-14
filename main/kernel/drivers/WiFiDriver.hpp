@@ -191,7 +191,7 @@ private:
         }
     }
 
-    inline void runLoop() {
+    void runLoop() {
         int clients = 0;
         bool connected = false;
         std::optional<time_point<boot_clock>> connectingSince;
