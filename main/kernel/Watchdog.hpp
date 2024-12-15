@@ -18,10 +18,13 @@ typedef std::function<void(WatchdogState)> WatchdogCallback;
 
 class Watchdog {
 public:
-    Watchdog(const String& name, const ticks timeout, WatchdogCallback callback)
+    Watchdog(const String& name, const ticks timeout, bool startImmediately, WatchdogCallback callback)
         : name(name)
         , timeout(timeout)
         , callback(callback) {
+        if (startImmediately) {
+            restart();
+        }
     }
 
     void restart() {

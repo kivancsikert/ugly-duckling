@@ -17,6 +17,7 @@
 #include <kernel/I2CManager.hpp>
 #include <kernel/PowerManager.hpp>
 #include <kernel/StateManager.hpp>
+#include <kernel/Watchdog.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
@@ -303,6 +304,14 @@ private:
     TDeviceConfiguration& deviceConfig;
 
 public:
+    // TODO Make this configurable
+    Watchdog watchdog { "watchdog", 5min, true, [](WatchdogState state) {
+                           if (state == WatchdogState::TimedOut) {
+                               LOGE("Watchdog timed out");
+                               esp_system_abort("Watchdog timed out");
+                           }
+                       } };
+
     PowerManager powerManager { deviceConfig.sleepWhenIdle.get() };
 
 private:

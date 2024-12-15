@@ -112,7 +112,7 @@ public:
               SwitchMode::PullUp,
               [this](const Switch&) { updateState(); },
               [this](const Switch&, milliseconds) { updateState(); }))
-        , watchdog(name + ":watchdog", movementTimeout, [this](WatchdogState state) {
+        , watchdog(name + ":watchdog", movementTimeout, false, [this](WatchdogState state) {
             handleWatchdogEvent(state);
         })
         , publishTelemetry(publishTelemetry)
