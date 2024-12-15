@@ -6,6 +6,7 @@
 #include <optional>
 #include <unordered_map>
 #include <variant>
+#include <vector>
 
 #include <esp_event.h>
 #include <mqtt_client.h>
@@ -172,6 +173,11 @@ public:
     }
 
 private:
+    struct PendingMessage {
+        const int messageId;
+        const TaskHandle_t waitingTask;
+    };
+
     struct OutgoingMessage {
         const String topic;
         const String payload;
@@ -298,6 +304,9 @@ private:
         // The first session is always clean
         bool startCleanSession = true;
 
+        // List of messages we are waiting on
+        std::list<PendingMessage> pendingMessages;
+
         while (true) {
             auto now = boot_clock::now();
             bool shouldBeConencted =
@@ -358,9 +367,7 @@ private:
                             if (!arg.sessionPresent) {
                                 // Re-subscribe to existing subscriptions
                                 // because we got a clean session
-                                for (auto& subscription : subscriptions) {
-                                    registerSubscriptionWithMqtt(subscription);
-                                }
+                                processSubscriptions(subscriptions);
                             }
                         } else if constexpr (std::is_same_v<T, Disconnected>) {
                             LOGTV("mqtt", "Processing disconnected event");
@@ -393,14 +400,14 @@ private:
                         } else if constexpr (std::is_same_v<T, OutgoingMessage>) {
                             LOGTV("mqtt", "Processing outgoing message to %s",
                                 arg.topic.c_str());
-                            processOutgoingMessage(arg);
+                            processOutgoingMessage(arg, pendingMessages);
                             extendKeepAlive = std::max(extendKeepAlive, arg.extendKeepAlive);
                         } else if constexpr (std::is_same_v<T, Subscription>) {
                             LOGTV("mqtt", "Processing subscription");
                             subscriptions.push_back(arg);
                             if (connected) {
                                 // If we are connected, we need to subscribe immediately.
-                                registerSubscriptionWithMqtt(arg);
+                                processSubscriptions({ arg });
                             } else {
                                 // If we are not connected, we need to rely on the next
                                 // clean session to make the subscription.
@@ -521,7 +528,7 @@ private:
         }
     }
 
-    void processOutgoingMessage(const OutgoingMessage message) {
+    bool processOutgoingMessage(const OutgoingMessage message, std::list<PendingMessage>& pendingMessages) {
         int ret = esp_mqtt_client_enqueue(
             client,
             message.topic.c_str(),
@@ -536,33 +543,41 @@ private:
                 message.topic.c_str(), message.payload.length(), ret);
         }
 #endif
-        switch (ret) {
-            case -1: {
-                LOGTD("mqtt", "Error publishing to '%s'",
-                    message.topic.c_str());
-                notifyWaitingTask(message.waitingTask, false);
-                break;
-            }
-            case -2: {
-                LOGTD("mqtt", "Outbox full, message to '%s' dropped",
-                    message.topic.c_str());
-                notifyWaitingTask(message.waitingTask, false);
-                break;
-            }
-            default: {
-                auto messageId = ret;
-                if (message.waitingTask != nullptr) {
-                    if (messageId == 0) {
-                        // Notify tasks waiting on QoS 0 messages immediately
-                        notifyWaitingTask(message.waitingTask, true);
-                    } else {
-                        // Record
-                        pendingMessages.push_back({ messageId, message.waitingTask });
-                    }
-                    break;
-                }
+        if (ret < 0) {
+            LOGTD("mqtt", "Error publishing to '%s': %s",
+                message.topic.c_str(), ret == -2 ? "outbox full" : "failure");
+            notifyWaitingTask(message.waitingTask, false);
+            return false;
+        }
+
+        auto messageId = ret;
+        if (message.waitingTask != nullptr) {
+            if (messageId == 0) {
+                // Notify tasks waiting on QoS 0 messages immediately
+                notifyWaitingTask(message.waitingTask, true);
+            } else {
+                // Record pending task
+                pendingMessages.push_back({ messageId, message.waitingTask });
             }
         }
+        return true;
+    }
+
+    bool processSubscriptions(const std::list<Subscription>& subscriptions) {
+        std::vector<esp_mqtt_topic_t> topics;
+        for (auto& subscription : subscriptions) {
+            LOGTV("mqtt", "Subscribing to topic '%s' (qos = %d)",
+                subscription.topic.c_str(), static_cast<int>(subscription.qos));
+            topics.emplace_back(subscription.topic.c_str(), static_cast<int>(subscription.qos));
+        }
+
+        int ret = esp_mqtt_client_subscribe_multiple(client, topics.data(), topics.size());
+        if (ret < 0) {
+            LOGTD("mqtt", "Error subscribing: %s",
+                ret == -2 ? "outbox full" : "failure");
+            return false;
+        }
+        return true;
     }
 
     void processIncomingMessage(const IncomingMessage& message) {
@@ -600,25 +615,6 @@ private:
             topic.c_str());
     }
 
-    // Actually subscribe to the given topic
-    bool registerSubscriptionWithMqtt(const Subscription& subscription) {
-        LOGTV("mqtt", "Subscribing to topic '%s' (qos = %d)",
-            subscription.topic.c_str(), static_cast<int>(subscription.qos));
-        int ret = esp_mqtt_client_subscribe(client, subscription.topic.c_str(), static_cast<int>(subscription.qos));
-        switch (ret) {
-            case -1:
-                LOGTE("mqtt", "Error subscribing to topic '%s'",
-                    subscription.topic.c_str());
-                return false;
-            case -2:
-                LOGTE("mqtt", "Subscription to topic '%s' failed, outbox full",
-                    subscription.topic.c_str());
-                return false;
-            default:
-                return true;
-        }
-    }
-
     static String getClientId(const String& clientId, const String& instanceName) {
         if (clientId.length() > 0) {
             return clientId;
@@ -650,12 +646,6 @@ private:
     Queue<IncomingMessage> incomingQueue;
     // TODO Use a map instead
     std::list<Subscription> subscriptions;
-
-    struct PendingMessage {
-        const int messageId;
-        const TaskHandle_t waitingTask;
-    };
-    std::list<PendingMessage> pendingMessages;
 
     static constexpr uint32_t PUBLISH_SUCCESS = 1;
     static constexpr uint32_t PUBLISH_FAILED = 2;
