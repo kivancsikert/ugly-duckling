@@ -37,7 +37,7 @@
       "id": "battery",
       "top": -106.9,
       "left": 9.4,
-      "attrs": { "value": "950" }
+      "attrs": { "value": "1000" }
     },
     {
       "type": "wokwi-resistor",
