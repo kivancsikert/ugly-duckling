@@ -43,6 +43,10 @@ public:
         ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onEvent, this));
         ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &WiFiDriver::onEvent, this));
 
+        wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+        ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+        ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
+
         Task::run("wifi-driver", 4096, [this](Task&) {
             runLoop();
         });
@@ -191,7 +195,7 @@ private:
         }
     }
 
-    inline void runLoop() {
+    void runLoop() {
         int clients = 0;
         bool connected = false;
         std::optional<time_point<boot_clock>> connectingSince;
@@ -202,8 +206,8 @@ private:
                         if (networkRequested.isSet() && !configPortalRunning.isSet()) {
                             esp_err_t err = esp_wifi_connect();
                             if (err != ESP_OK) {
-                                LOGTD("wifi", "Failed to start connecting: %s", esp_err_to_name(err));
-                                ensureWifiDeinitialized();
+                                LOGTD("wifi", "Failed to start connecting: %s, stopping", esp_err_to_name(err));
+                                ensureWifiStopped();
                             }
                         }
                         break;
@@ -239,7 +243,7 @@ private:
 
                         LOGTI("wifi", "Connection timed out, retrying");
                         networkConnecting.clear();
-                        ensureWifiDeinitialized();
+                        ensureWifiStopped();
                     }
                     LOGTV("wifi", "Connecting for first client");
                     connectingSince = boot_clock::now();
@@ -256,7 +260,6 @@ private:
 
     void connect() {
         networkConnecting.set();
-        ensureWifiInitialized();
 
 #ifdef WOKWI
         LOGTD("wifi", "Skipping provisioning on Wokwi");
@@ -288,32 +291,9 @@ private:
     void disconnect() {
         if (powerSaveMode) {
             LOGTV("wifi", "No more clients, shutting down radio to conserve power");
-            ensureWifiDeinitialized();
+            ensureWifiStopped();
         } else {
             LOGTV("wifi", "No more clients, but staying online because not saving power");
-        }
-    }
-
-    void ensureWifiInitialized() {
-        if (!wifiInitialized) {
-            LOGTD("wifi", "Initializing WiFi");
-            wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-            ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-            ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
-            wifiUpSince = boot_clock::now();
-            wifiInitialized = true;
-        }
-    }
-
-    void ensureWifiDeinitialized() {
-        if (wifiInitialized) {
-            ensureWifiStopped();
-            auto currentUptime = currentWifiUptime();
-            wifiUptimeBefore += currentUptime;
-            wifiUpSince.reset();
-            LOGTD("wifi", "De-initializing WiFi (spent %lld ms initialized)", currentUptime.count());
-            ESP_ERROR_CHECK(esp_wifi_deinit());
-            wifiInitialized = false;
         }
     }
 
@@ -325,7 +305,7 @@ private:
     }
 
     void ensureWifiStationStarted(wifi_config_t& config) {
-        ensureWifiInitialized();
+        wifiUpSince = boot_clock::now();
         if (!stationStarted.isSet()) {
             if (powerSaveMode) {
                 auto listenInterval = 50;
@@ -351,6 +331,10 @@ private:
             LOGTD("wifi", "Stopping");
             ESP_ERROR_CHECK(esp_wifi_stop());
         }
+        auto currentUptime = currentWifiUptime();
+        wifiUptimeBefore += currentUptime;
+        wifiUpSince.reset();
+        LOGTD("wifi", "Stopping WiFi (was up %lld ms)", currentUptime.count());
     }
 
     void ensureWifiDisconnected() {
@@ -367,8 +351,6 @@ private:
     }
 
     void startProvisioning() {
-        ensureWifiInitialized();
-
         // Initialize provisioning manager
         wifi_prov_mgr_config_t config = {
             .scheme = wifi_prov_scheme_softap,

@@ -1,8 +1,20 @@
 {
   "id": "wokwi",
   "instance": "wokwi",
-  "location": "local",
+  "location": "bumblebee",
   "peripherals": [
+    {
+      "name": "flow-control-a",
+      "type": "flow-control",
+      "params": {
+        "valve": {
+          "motor": "a"
+        },
+        "flow-meter": {
+          "pin": "A1"
+        }
+      }
+    }
   ],
   "sleepWhenIdle": true
 }

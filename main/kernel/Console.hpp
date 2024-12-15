@@ -84,6 +84,12 @@ private:
             case Level::Info:
                 count += printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_GREEN));
                 break;
+            case Level::Debug:
+                count += printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_CYAN));
+                break;
+            case Level::Verbose:
+                count += printf(FARMHUB_LOG_COLOR(FARMHUB_LOG_COLOR_BLUE));
+                break;
             default:
                 break;
         }

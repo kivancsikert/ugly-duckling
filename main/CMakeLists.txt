@@ -1,5 +1,11 @@
 FILE(GLOB_RECURSE app_sources main.cpp **/*.cpp)
 
+idf_component_register(
+    SRCS ${app_sources}
+    INCLUDE_DIRS "."
+    EMBED_TXTFILES "${CMAKE_SOURCE_DIR}/partitions.csv"
+)
+
 if(NOT DEFINED WOKWI)
     set(WOKWI "$ENV{WOKWI}")
 endif()
@@ -10,12 +16,6 @@ set_property(DIRECTORY PROPERTY WOKWI_TRACKER "${WOKWI}")
 if(WOKWI)
     component_compile_definitions(WOKWI)
 endif()
-
-idf_component_register(
-    SRCS ${app_sources}
-    INCLUDE_DIRS "."
-    EMBED_TXTFILES "${CMAKE_SOURCE_DIR}/partitions.csv"
-)
 
 component_compile_definitions("${UD_GEN}")
 component_compile_definitions(FARMHUB_REPORT_MEMORY)
