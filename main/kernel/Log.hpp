@@ -30,6 +30,11 @@ public:
     static constexpr const char* PM = "farmhub:pm";
     static constexpr const char* RTC = "farmhub:rtc";
     static constexpr const char* WIFI = "farmhub:wifi";
+
+    class Peripheral {
+    public:
+        static constexpr const char* FLOW_METER = "farmhub:perip:flow-meter";
+    };
 };
 
 #define LOGTE(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_ERROR, tag, format, ##__VA_ARGS__)
@@ -85,6 +90,8 @@ private:
         Tag::PM,
         Tag::RTC,
         Tag::WIFI,
+
+        Tag::Peripheral::FLOW_METER,
     };
 };
 
