@@ -26,7 +26,7 @@ public:
     PowerManager(bool requestedSleepWhenIdle)
         : sleepWhenIdle(shouldSleepWhenIdle(requestedSleepWhenIdle)) {
 
-        LOGV("Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
+        LOGTV(Tag::PM, "Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
             MAX_CPU_FREQ_MHZ, MIN_CPU_FREQ_MHZ, sleepWhenIdle ? "enabled" : "disabled");
         esp_pm_config_t pm_config = {
             .max_freq_mhz = MAX_CPU_FREQ_MHZ,
@@ -79,24 +79,24 @@ private:
     static bool shouldSleepWhenIdle(bool requestedSleepWhenIdle) {
         if (requestedSleepWhenIdle) {
 #if FARMHUB_DEBUG
-            LOGW("Light sleep is disabled in debug mode");
+            LOGTW(Tag::PM, "Light sleep is disabled in debug mode");
             return false;
 #elif WOKWI
             // See https://github.com/wokwi/wokwi-features/issues/922
-            LOGW("Light sleep is disabled when running under Wokwi");
+            LOGTW(Tag::PM, "Light sleep is disabled when running under Wokwi");
             return false;
 #elif not(CONFIG_PM_ENABLE)
-            LOGI("Power management is disabled because CONFIG_PM_ENABLE is not set");
+            LOGTI(Tag::PM, "Power management is disabled because CONFIG_PM_ENABLE is not set");
             return false;
 #elif not(CONFIG_FREERTOS_USE_TICKLESS_IDLE)
-            LOGI("Light sleep is disabled because CONFIG_FREERTOS_USE_TICKLESS_IDLE is not set");
+            LOGTI(Tag::PM, "Light sleep is disabled because CONFIG_FREERTOS_USE_TICKLESS_IDLE is not set");
             return false;
 #else
-            LOGI("Light sleep is enabled");
+            LOGTI(Tag::PM, "Light sleep is enabled");
             return true;
 #endif
         } else {
-            LOGI("Light sleep is disabled");
+            LOGTI(Tag::PM, "Light sleep is disabled");
             return false;
         }
     }
