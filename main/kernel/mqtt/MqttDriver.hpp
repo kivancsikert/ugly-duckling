@@ -424,8 +424,10 @@ private:
                             keepAliveUntil = boot_clock::now() + keepAliveAfterConnection;
                             keepAliveAfterConnection = milliseconds::zero();
 
-                            // Next connection can start with a persistent session
-                            nextSessionShouldBeClean = false;
+                            // TODO Should make it work with persistent sessions, but apparenlty it doesn't
+                            // // Next connection can start with a persistent session
+                            // nextSessionShouldBeClean = false;
+
                             if (!arg.sessionPresent) {
                                 // Re-subscribe to existing subscriptions
                                 // because we got a clean session
