@@ -416,8 +416,24 @@ private:
                         } else if constexpr (std::is_same_v<T, OutgoingMessage>) {
                             LOGTV("mqtt", "Processing outgoing message to %s",
                                 arg.topic.c_str());
-                            processOutgoingMessage(arg, pendingMessages);
-                            extendKeepAlive = std::max(extendKeepAlive, arg.extendKeepAlive);
+                            int ret = processOutgoingMessage(arg);
+                            if (ret < 0) {
+                                LOGTD("mqtt", "Error publishing to '%s': %s",
+                                    arg.topic.c_str(), ret == -2 ? "outbox full" : "failure");
+                                notifyWaitingTask(arg.waitingTask, false);
+                            } else {
+                                auto messageId = ret;
+                                if (arg.waitingTask != nullptr) {
+                                    if (messageId == 0) {
+                                        // Notify tasks waiting on QoS 0 messages immediately
+                                        notifyWaitingTask(arg.waitingTask, true);
+                                    } else {
+                                        // Record pending task
+                                        pendingMessages.push_back({ messageId, arg.waitingTask });
+                                    }
+                                }
+                                extendKeepAlive = std::max(extendKeepAlive, arg.extendKeepAlive);
+                            }
                         } else if constexpr (std::is_same_v<T, Subscription>) {
                             LOGTV("mqtt", "Processing subscription");
                             subscriptions.push_back(arg);
@@ -544,7 +560,7 @@ private:
         }
     }
 
-    bool processOutgoingMessage(const OutgoingMessage message, std::list<PendingMessage>& pendingMessages) {
+    int processOutgoingMessage(const OutgoingMessage message) {
         int ret = esp_mqtt_client_enqueue(
             client,
             message.topic.c_str(),
@@ -559,24 +575,7 @@ private:
                 message.topic.c_str(), message.payload.length(), ret);
         }
 #endif
-        if (ret < 0) {
-            LOGTD("mqtt", "Error publishing to '%s': %s",
-                message.topic.c_str(), ret == -2 ? "outbox full" : "failure");
-            notifyWaitingTask(message.waitingTask, false);
-            return false;
-        }
-
-        auto messageId = ret;
-        if (message.waitingTask != nullptr) {
-            if (messageId == 0) {
-                // Notify tasks waiting on QoS 0 messages immediately
-                notifyWaitingTask(message.waitingTask, true);
-            } else {
-                // Record pending task
-                pendingMessages.push_back({ messageId, message.waitingTask });
-            }
-        }
-        return true;
+        return ret;
     }
 
     bool processSubscriptions(const std::list<Subscription>& subscriptions) {
