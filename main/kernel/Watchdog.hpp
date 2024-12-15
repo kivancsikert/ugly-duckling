@@ -2,8 +2,8 @@
 
 #include <functional>
 
-#include <kernel/Concurrent.hpp>
-#include <kernel/Task.hpp>
+#include <esp_check.h>
+
 #include <kernel/Time.hpp>
 
 namespace farmhub::kernel {
@@ -19,44 +19,49 @@ typedef std::function<void(WatchdogState)> WatchdogCallback;
 class Watchdog {
 public:
     Watchdog(const String& name, const ticks timeout, bool startImmediately, WatchdogCallback callback)
-        : name(name)
-        , timeout(timeout)
+        : timeout(timeout)
         , callback(callback) {
+        timer = xTimerCreate(name.c_str(), timeout.count(), false, this, [](TimerHandle_t timer) {
+            LOGD("Watchdog '%s' timed out", pcTimerGetName(timer));
+            auto watchdog = static_cast<Watchdog*>(pvTimerGetTimerID(timer));
+            watchdog->callback(WatchdogState::TimedOut);
+        });
+        if (!timer) {
+            LOGE("Failed to create watchdog timer");
+            esp_system_abort("Failed to create watchdog timer");
+        }
         if (startImmediately) {
             restart();
         }
     }
 
-    void restart() {
-        Lock lock(updateMutex);
-        cancel();
-        handle = Task::run(name, 3172, [this](Task& task) {
-            task.delayUntil(timeout);
-            Lock lock(updateMutex);
-            callback(WatchdogState::TimedOut);
-        });
-        callback(WatchdogState::Started);
-        LOGD("Watchdog started with a timeout of %.2f seconds",
-            duration_cast<milliseconds>(timeout).count() / 1000.0);
+    ~Watchdog() {
+        xTimerDelete(timer, 0);
     }
 
-    void cancel() {
-        Lock lock(updateMutex);
-        if (handle.isValid()) {
-            handle.abort();
-            callback(WatchdogState::Cancelled);
-            handle = TaskHandle();
-            LOGD("Watchdog cancelled");
+    bool restart() {
+        if (xTimerReset(timer, 0) != pdPASS) {
+            LOGE("Failed to reset watchdog timer '%s'", pcTimerGetName(timer));
+            return false;
         }
+        callback(WatchdogState::Started);
+        return true;
+    }
+
+    bool cancel() {
+        if (xTimerStop(timer, 0) != pdPASS) {
+            LOGE("Failed to stop watchdog timer '%s'", pcTimerGetName(timer));
+            return false;
+        }
+        callback(WatchdogState::Cancelled);
+        return true;
     }
 
 private:
-    const String name;
     const ticks timeout;
     const WatchdogCallback callback;
 
-    RecursiveMutex updateMutex;
-    TaskHandle handle;
+    TimerHandle_t timer = nullptr;
 };
 
 }    // namespace farmhub::kernel
