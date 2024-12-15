@@ -22,7 +22,7 @@ struct boot_clock {
         return time_point(duration(esp_timer_get_time()));
     }
 
-    static time_point boot_time() noexcept {
+    static time_point zero() noexcept {
         return time_point(duration(0));
     }
 };
