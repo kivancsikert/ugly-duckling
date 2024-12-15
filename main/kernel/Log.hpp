@@ -45,28 +45,41 @@ void convertFromJson(JsonVariantConst src, Level& dst) {
     dst = static_cast<Level>(src.as<int>());
 }
 
-static void initLogging() {
+class Log {
+public:
+    static constexpr const char* FARMHUB = "farmhub";
+    static constexpr const char* MDNS = "farmhub:mdns";
+    static constexpr const char* MQTT = "farmhub:mqtt";
+    static constexpr const char* PM = "farmhub:pm";
+    static constexpr const char* NVS = "farmhub:nvs";
+    static constexpr const char* RTC = "farmhub:rtc";
+    static constexpr const char* WIFI = "farmhub:wifi";
+
+    static void init() {
 #ifdef FARMHUB_DEBUG
-    // Reset ANSI colors
-    printf("\033[0m");
+        // Reset ANSI colors
+        printf("\033[0m");
 #endif
 
-    const char* logTags[] = {
-        "farmhub",
-        "farmhub:mdns",
-        "farmhub:mqtt",
-        "farmhub:pm",
-        "farmhub:nvs",
-        "farmhub:rtc",
-        "farmhub:wifi",
-    };
-    for (const char* tag : logTags) {
+        for (const char* tag : TAGS) {
 #ifdef FARMHUB_DEBUG
-        esp_log_level_set(tag, ESP_LOG_DEBUG);
+            esp_log_level_set(tag, ESP_LOG_DEBUG);
 #else
-        esp_log_level_set(tag, ESP_LOG_INFO);
+            esp_log_level_set(tag, ESP_LOG_INFO);
 #endif
+        }
     }
-}
+
+private:
+    static constexpr const char* TAGS[] = {
+        FARMHUB,
+        MDNS,
+        MQTT,
+        PM,
+        NVS,
+        RTC,
+        WIFI,
+    };
+};
 
 }    // namespace farmhub::kernel
