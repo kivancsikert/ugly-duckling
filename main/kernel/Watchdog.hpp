@@ -20,12 +20,12 @@ class Watchdog {
 public:
     Watchdog(const String& name, const ticks timeout, bool startImmediately, WatchdogCallback callback)
         : timeout(timeout)
-        , callback(callback) {
-        timer = xTimerCreate(name.c_str(), timeout.count(), false, this, [](TimerHandle_t timer) {
+        , callback(callback)
+        , timer(xTimerCreate(name.c_str(), timeout.count(), false, this, [](TimerHandle_t timer) {
             LOGD("Watchdog '%s' timed out", pcTimerGetName(timer));
             auto watchdog = static_cast<Watchdog*>(pvTimerGetTimerID(timer));
             watchdog->callback(WatchdogState::TimedOut);
-        });
+        })) {
         if (!timer) {
             LOGE("Failed to create watchdog timer");
             esp_system_abort("Failed to create watchdog timer");
@@ -60,8 +60,7 @@ public:
 private:
     const ticks timeout;
     const WatchdogCallback callback;
-
-    TimerHandle_t timer = nullptr;
+    const TimerHandle_t timer;
 };
 
 }    // namespace farmhub::kernel
