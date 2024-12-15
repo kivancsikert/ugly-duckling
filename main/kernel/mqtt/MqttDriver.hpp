@@ -176,6 +176,7 @@ private:
     struct PendingMessage {
         const int messageId;
         const TaskHandle_t waitingTask;
+        const milliseconds extendKeepAlive;
     };
 
     struct OutgoingMessage {
@@ -405,9 +406,10 @@ private:
                             pendingMessages.clear();
                         } else if constexpr (std::is_same_v<T, MessagePublished>) {
                             LOGTV("mqtt", "Processing message published");
-                            pendingMessages.remove_if([this, arg](const auto& pendingMessage) {
+                            pendingMessages.remove_if([&](const auto& pendingMessage) {
                                 if (pendingMessage.messageId == arg.messageId) {
                                     notifyWaitingTask(pendingMessage.waitingTask, arg.success);
+                                    extendKeepAlive = std::max(extendKeepAlive, pendingMessage.extendKeepAlive);
                                     return true;
                                 } else {
                                     return false;
@@ -427,12 +429,12 @@ private:
                                     if (messageId == 0) {
                                         // Notify tasks waiting on QoS 0 messages immediately
                                         notifyWaitingTask(arg.waitingTask, true);
+                                        extendKeepAlive = std::max(extendKeepAlive, arg.extendKeepAlive);
                                     } else {
                                         // Record pending task
-                                        pendingMessages.push_back({ messageId, arg.waitingTask });
+                                        pendingMessages.emplace_back(messageId, arg.waitingTask, arg.extendKeepAlive);
                                     }
                                 }
-                                extendKeepAlive = std::max(extendKeepAlive, arg.extendKeepAlive);
                             }
                         } else if constexpr (std::is_same_v<T, Subscription>) {
                             LOGTV("mqtt", "Processing subscription");
