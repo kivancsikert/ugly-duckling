@@ -112,7 +112,7 @@ public:
               SwitchMode::PullUp,
               [this](const Switch&) { updateState(); },
               [this](const Switch&, milliseconds) { updateState(); }))
-        , watchdog(name + ":watchdog", movementTimeout, [this](WatchdogState state) {
+        , watchdog(name + ":watchdog", movementTimeout, false, [this](WatchdogState state) {
             handleWatchdogEvent(state);
         })
         , publishTelemetry(publishTelemetry)
@@ -260,7 +260,7 @@ private:
                 LOGI("Watchdog started");
                 sleepLock.emplace(preventLightSleep);
                 break;
-            case WatchdogState::Cacnelled:
+            case WatchdogState::Cancelled:
                 LOGI("Watchdog cancelled");
                 sleepLock.reset();
                 break;

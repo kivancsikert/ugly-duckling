@@ -503,6 +503,10 @@ public:
 
         Task::loop("telemetry", 8192, [this](Task& task) {
             publishTelemetry();
+
+            // Signal that we are still alive
+            kernel.watchdog.restart();
+
             // TODO Configure these telemetry intervals
             // Publishing interval
             const auto interval = 1min;
