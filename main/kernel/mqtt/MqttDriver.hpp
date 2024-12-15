@@ -436,6 +436,7 @@ private:
                         } else if constexpr (std::is_same_v<T, Disconnected>) {
                             LOGTV(Tag::MQTT, "Processing disconnected event");
                             state = MqttState::Disconnected;
+                            stopClient();
 
                             // If we lost connection while keeping alive, let's make
                             // sure we keep alive for a while after reconnection
@@ -516,20 +517,32 @@ private:
             LOGTV(Tag::MQTT, "Connected to WiFi");
         }
 
-        LOGTD(Tag::MQTT, "Starting MQTT client, clean session: %d",
-            startCleanSession);
+        stopClient();
+
         mqttConfig.session.disable_clean_session = !startCleanSession;
         esp_mqtt_set_config(client, &mqttConfig);
+        LOGTD(Tag::MQTT, "Connecting to %s:%lu, clean session: %d",
+            mqttConfig.broker.address.hostname, mqttConfig.broker.address.port, startCleanSession);
         ESP_ERROR_CHECK(esp_mqtt_client_start(client));
+        clientRunning = true;
     }
 
     void disconnect() {
         mqttReady.clear();
         LOGTD(Tag::MQTT, "Disconnecting from MQTT server");
         ESP_ERROR_CHECK(esp_mqtt_client_disconnect(client));
-        ESP_ERROR_CHECK(esp_mqtt_client_stop(client));
+        stopClient();
         wifiConnection.reset();
     }
+
+    void stopClient() {
+        if (clientRunning) {
+            ESP_ERROR_CHECK(esp_mqtt_client_stop(client));
+            clientRunning = false;
+        }
+    }
+
+    bool clientRunning = false;
 
     static void handleMqttEventCallback(void* userData, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
         auto event = static_cast<esp_mqtt_event_handle_t>(eventData);
