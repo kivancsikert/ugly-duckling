@@ -81,7 +81,7 @@ static void dumpPerTaskHeapInfo() {
 extern "C" void app_main() {
     initArduino();
 
-    initLogging();
+    Log::init();
 
 #ifdef CONFIG_HEAP_TRACING
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));

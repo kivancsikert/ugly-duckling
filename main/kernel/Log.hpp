@@ -18,17 +18,31 @@ enum class Level {
     Verbose = 6,
 };
 
-#define LOGE(format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_ERROR, "farmhub", format, ##__VA_ARGS__)
-#define LOGW(format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_WARN, "farmhub", format, ##__VA_ARGS__)
-#define LOGI(format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_INFO, "farmhub", format, ##__VA_ARGS__)
-#define LOGD(format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_DEBUG, "farmhub", format, ##__VA_ARGS__)
-#define LOGV(format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_VERBOSE, "farmhub", format, ##__VA_ARGS__)
+class Tag {
+public:
+    //
+    // When adding elements here, make sure to also list them in Log::init()
+    //
+    static constexpr const char* FARMHUB = "farmhub";
+    static constexpr const char* MDNS = "farmhub:mdns";
+    static constexpr const char* MQTT = "farmhub:mqtt";
+    static constexpr const char* NVS = "farmhub:nvs";
+    static constexpr const char* PM = "farmhub:pm";
+    static constexpr const char* RTC = "farmhub:rtc";
+    static constexpr const char* WIFI = "farmhub:wifi";
+};
 
-#define LOGTE(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_ERROR, "farmhub:" tag, format, ##__VA_ARGS__)
-#define LOGTW(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_WARN, "farmhub:" tag, format, ##__VA_ARGS__)
-#define LOGTI(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_INFO, "farmhub:" tag, format, ##__VA_ARGS__)
-#define LOGTD(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_DEBUG, "farmhub:" tag, format, ##__VA_ARGS__)
-#define LOGTV(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_VERBOSE, "farmhub:" tag, format, ##__VA_ARGS__)
+#define LOGTE(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_ERROR, tag, format, ##__VA_ARGS__)
+#define LOGTW(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_WARN, tag, format, ##__VA_ARGS__)
+#define LOGTI(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_INFO, tag, format, ##__VA_ARGS__)
+#define LOGTD(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_DEBUG, tag, format, ##__VA_ARGS__)
+#define LOGTV(tag, format, ...) ESP_LOG_LEVEL_LOCAL(ESP_LOG_VERBOSE, tag, format, ##__VA_ARGS__)
+
+#define LOGE(format, ...) LOGTE(Tag::FARMHUB, format, ##__VA_ARGS__)
+#define LOGW(format, ...) LOGTW(Tag::FARMHUB, format, ##__VA_ARGS__)
+#define LOGI(format, ...) LOGTI(Tag::FARMHUB, format, ##__VA_ARGS__)
+#define LOGD(format, ...) LOGTD(Tag::FARMHUB, format, ##__VA_ARGS__)
+#define LOGV(format, ...) LOGTV(Tag::FARMHUB, format, ##__VA_ARGS__)
 
 #ifndef FARMHUB_LOG_LEVEL
 #ifdef FARMHUB_DEBUG
@@ -45,28 +59,33 @@ void convertFromJson(JsonVariantConst src, Level& dst) {
     dst = static_cast<Level>(src.as<int>());
 }
 
-static void initLogging() {
+class Log {
+public:
+    static void init() {
 #ifdef FARMHUB_DEBUG
-    // Reset ANSI colors
-    printf("\033[0m");
+        // Reset ANSI colors
+        printf("\033[0m");
 #endif
 
-    const char* logTags[] = {
-        "farmhub",
-        "farmhub:mdns",
-        "farmhub:mqtt",
-        "farmhub:pm",
-        "farmhub:nvs",
-        "farmhub:rtc",
-        "farmhub:wifi",
-    };
-    for (const char* tag : logTags) {
+        for (const char* tag : TAGS) {
 #ifdef FARMHUB_DEBUG
-        esp_log_level_set(tag, ESP_LOG_DEBUG);
+            esp_log_level_set(tag, ESP_LOG_DEBUG);
 #else
-        esp_log_level_set(tag, ESP_LOG_INFO);
+            esp_log_level_set(tag, ESP_LOG_INFO);
 #endif
+        }
     }
-}
+
+private:
+    static constexpr const char* TAGS[] = {
+        Tag::FARMHUB,
+        Tag::MDNS,
+        Tag::MQTT,
+        Tag::NVS,
+        Tag::PM,
+        Tag::RTC,
+        Tag::WIFI,
+    };
+};
 
 }    // namespace farmhub::kernel
