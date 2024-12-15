@@ -259,7 +259,7 @@ public:
     }
 
     void publishTelemetry() {
-        mqttRoot->publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); });
+        mqttRoot->publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); }, Retention::NoRetain, QoS::AtLeastOnce);
     }
 
 private:

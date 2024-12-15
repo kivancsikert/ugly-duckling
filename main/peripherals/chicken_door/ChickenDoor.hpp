@@ -202,7 +202,7 @@ private:
                 motor.stop();
                 mqttRoot->publish("events/state", [=](JsonObject& json) {
                     json["state"] = currentState;
-                });
+                }, Retention::NoRetain, QoS::AtLeastOnce);
             }
         }
 
