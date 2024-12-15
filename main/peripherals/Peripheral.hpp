@@ -50,7 +50,7 @@ public:
             LOGV("No telemetry to publish for peripheral: %s", name.c_str());
             return;
         }
-        mqttRoot->publish("telemetry", telemetryDoc);
+        mqttRoot->publish("telemetry", telemetryDoc, Retention::NoRetain, QoS::AtLeastOnce);
     }
 
     virtual void populateTelemetry(JsonObject& telemetryJson) override {

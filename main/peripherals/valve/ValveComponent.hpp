@@ -365,7 +365,7 @@ private:
 
         mqttRoot->publish("events/state", [=](JsonObject& json) {
             json["state"] = state;
-        });
+        }, Retention::NoRetain, QoS::AtLeastOnce);
         publishTelemetry();
     }
 
