@@ -58,42 +58,6 @@ typedef std::function<void(const String&, const JsonObject&)> SubscriptionHandle
 class MqttRoot;
 
 class MqttDriver {
-private:
-    struct OutgoingMessage {
-        const String topic;
-        const String payload;
-        const Retention retain;
-        const QoS qos;
-        const TaskHandle_t waitingTask;
-        const LogPublish log;
-        const milliseconds extendKeepAlive;
-
-        static const uint32_t PUBLISH_SUCCESS = 1;
-        static const uint32_t PUBLISH_FAILED = 2;
-    };
-
-    struct IncomingMessage {
-        const String topic;
-        const String payload;
-    };
-
-    struct Subscription {
-        const String topic;
-        const QoS qos;
-        const SubscriptionHandler handle;
-    };
-
-    struct MessagePublished {
-        const int messageId;
-        const bool success;
-    };
-
-    struct Connected {
-        const bool sessionPresent;
-    };
-
-    struct Disconnected { };
-
 public:
     class Config : public ConfigurationSection {
     public:
@@ -208,6 +172,38 @@ public:
     }
 
 private:
+    struct OutgoingMessage {
+        const String topic;
+        const String payload;
+        const Retention retain;
+        const QoS qos;
+        const TaskHandle_t waitingTask;
+        const LogPublish log;
+        const milliseconds extendKeepAlive;
+    };
+
+    struct IncomingMessage {
+        const String topic;
+        const String payload;
+    };
+
+    struct Subscription {
+        const String topic;
+        const QoS qos;
+        const SubscriptionHandler handle;
+    };
+
+    struct MessagePublished {
+        const int messageId;
+        const bool success;
+    };
+
+    struct Connected {
+        const bool sessionPresent;
+    };
+
+    struct Disconnected { };
+
     PublishStatus publish(const String& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log, milliseconds extendKeepAlive = MQTT_KEEP_ALIVE_AFTER_OUTGOING) {
         if (log == LogPublish::Log) {
 #ifdef DUMP_MQTT
@@ -259,9 +255,9 @@ private:
         switch (status) {
             case 0:
                 return PublishStatus::TimeOut;
-            case OutgoingMessage::PUBLISH_SUCCESS:
+            case PUBLISH_SUCCESS:
                 return PublishStatus::Success;
-            case OutgoingMessage::PUBLISH_FAILED:
+            case PUBLISH_FAILED:
             default:
                 return PublishStatus::Failed;
         }
@@ -514,7 +510,7 @@ private:
 
     void notifyWaitingTask(TaskHandle_t task, bool success) {
         if (task != nullptr) {
-            uint32_t status = success ? OutgoingMessage::PUBLISH_SUCCESS : OutgoingMessage::PUBLISH_FAILED;
+            uint32_t status = success ? PUBLISH_SUCCESS : PUBLISH_FAILED;
             xTaskNotify(task, status, eSetValueWithOverwrite);
         }
     }
@@ -660,6 +656,9 @@ private:
         const TaskHandle_t waitingTask;
     };
     std::list<PendingMessage> pendingMessages;
+
+    static constexpr uint32_t PUBLISH_SUCCESS = 1;
+    static constexpr uint32_t PUBLISH_FAILED = 2;
 
     // TODO Review these values
     static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = 10s;
