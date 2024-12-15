@@ -39,7 +39,6 @@ public:
         LOGI("Initializing %s environment sensor with %s",
             sensorType.c_str(), config.toString().c_str());
 
-        memset(&sensor, 0, sizeof(i2c_dev_t));
         ESP_ERROR_CHECK(si7021_init_desc(&sensor, bus->port, bus->sda->getGpio(), bus->scl->getGpio()));
     }
 
@@ -72,7 +71,7 @@ private:
     }
 
     shared_ptr<I2CBus> bus;
-    i2c_dev_t sensor;
+    i2c_dev_t sensor {};
 };
 
 }    // namespace farmhub::peripherals::environment

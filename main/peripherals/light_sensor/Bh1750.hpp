@@ -46,8 +46,6 @@ public:
         LOGI("Initializing BH1750 light sensor with %s",
             config.toString().c_str());
 
-        memset(&sensor, 0, sizeof(i2c_dev_t));    // Zero descriptor
-
         // TODO Use I2CManager to create device
         ESP_ERROR_CHECK(bh1750_init_desc(&sensor, config.address, I2C_NUM_0, config.sda->getGpio(), config.scl->getGpio()));
         ESP_ERROR_CHECK(bh1750_setup(&sensor, BH1750_MODE_CONTINUOUS, BH1750_RES_LOW));
@@ -65,7 +63,7 @@ protected:
     }
 
 private:
-    i2c_dev_t sensor;
+    i2c_dev_t sensor {};
 };
 
 class Bh1750

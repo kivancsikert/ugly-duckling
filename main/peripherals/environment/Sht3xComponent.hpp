@@ -56,7 +56,7 @@ public:
 
 private:
     shared_ptr<I2CBus> bus;
-    sht3x_t sensor;
+    sht3x_t sensor {};
 };
 
 }    // namespace farmhub::peripherals::environment

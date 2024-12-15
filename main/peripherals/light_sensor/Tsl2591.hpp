@@ -73,7 +73,7 @@ protected:
 
 private:
     shared_ptr<I2CBus> bus;
-    tsl2591_t sensor;
+    tsl2591_t sensor {};
 };
 
 class Tsl2591
