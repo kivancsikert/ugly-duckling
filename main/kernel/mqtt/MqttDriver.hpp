@@ -290,6 +290,12 @@ private:
         return result;
     }
 
+    enum class MqttState {
+        Disconnected,
+        Connecting,
+        Connected,
+    };
+
     void runEventLoop(Task& task) {
         // How long we need to stay connected after a connection is made
         //   - to await incoming messages
@@ -298,11 +304,11 @@ private:
         auto keepAliveUntil = boot_clock::zero();
 
         // We are not yet connected
-        bool connected = false;
-        bool connecting = false;
+        auto state = MqttState::Disconnected;
+        auto connectionStarted = boot_clock::zero();
 
         // The first session is always clean
-        bool startCleanSession = true;
+        auto startCleanSession = true;
 
         // List of messages we are waiting on
         std::list<PendingMessage> pendingMessages;
@@ -319,24 +325,36 @@ private:
                 || keepAliveAfterConnection > milliseconds::zero();
 
             if (shouldBeConencted) {
-                if (!connected) {
-                    // TODO Retry connecting and re-lookup MQTT server from mDNS if necessary
-                    if (!connecting) {
-                        connecting = true;
+                switch (state) {
+                    case MqttState::Disconnected:
                         connect(startCleanSession);
-                    }
+                        state = MqttState::Connecting;
+                        connectionStarted = now;
+                        break;
+                    case MqttState::Connecting:
+                        if (now - connectionStarted > MQTT_CONNECTION_TIMEOUT) {
+                            LOGTE("mqtt", "Connecting to MQTT server timed out");
+                            mqttReady.clear();
+                            disconnect();
+                            // Make sure we re-lookup the server address when we retry
+                            trustMdnsCache = false;
+                            state = MqttState::Disconnected;
+                        }
+                        break;
+                    case MqttState::Connected:
+                        // Stay connected
+                        break;
                 }
             } else {
-                if (connected || connecting) {
-                    connected = false;
-                    connecting = false;
+                if (state != MqttState::Disconnected) {
                     mqttReady.clear();
                     disconnect();
+                    state = MqttState::Disconnected;
                 }
             }
 
             milliseconds timeout;
-            if (powerSaveMode && connected && keepAliveUntil > now) {
+            if (powerSaveMode && state != MqttState::Disconnected && keepAliveUntil > now) {
                 auto keepAlivePeriod = duration_cast<milliseconds>(keepAliveUntil - now);
                 LOGTV("mqtt", "Keeping alive for %lld ms",
                     keepAlivePeriod.count());
@@ -355,8 +373,7 @@ private:
                         if constexpr (std::is_same_v<T, Connected>) {
                             LOGTV("mqtt", "Processing connected event, session present: %d",
                                 arg.sessionPresent);
-                            connected = true;
-                            connecting = false;
+                            state = MqttState::Connected;
 
                             // This is what we have been waiting for, let's keep alive
                             keepAliveUntil = boot_clock::now() + keepAliveAfterConnection;
@@ -371,8 +388,7 @@ private:
                             }
                         } else if constexpr (std::is_same_v<T, Disconnected>) {
                             LOGTV("mqtt", "Processing disconnected event");
-                            connected = false;
-                            connecting = false;
+                            state = MqttState::Disconnected;
 
                             // If we lost connection while keeping alive, let's make
                             // sure we keep alive for a while after reconnection
@@ -405,7 +421,7 @@ private:
                         } else if constexpr (std::is_same_v<T, Subscription>) {
                             LOGTV("mqtt", "Processing subscription");
                             subscriptions.push_back(arg);
-                            if (connected) {
+                            if (state == MqttState::Connected) {
                                 // If we are connected, we need to subscribe immediately.
                                 processSubscriptions({ arg });
                             } else {
@@ -418,7 +434,7 @@ private:
                     },
                     event);
                 if (extendKeepAlive > milliseconds::zero()) {
-                    if (connected) {
+                    if (state == MqttState::Connected) {
                         keepAliveUntil = std::max(keepAliveUntil, boot_clock::now() + extendKeepAlive);
                     } else {
                         keepAliveAfterConnection = std::max(keepAliveAfterConnection, extendKeepAlive);
@@ -651,7 +667,7 @@ private:
     static constexpr uint32_t PUBLISH_FAILED = 2;
 
     // TODO Review these values
-    static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = 10s;
+    static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = 30s;
     static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
     static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = 5s;
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
