@@ -172,10 +172,24 @@ public:
         return make_shared<MqttRoot>(*this, topic);
     }
 
+    // TODO Review these values
+    static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = 30s;
+    static constexpr milliseconds MQTT_DEFAULT_PUBLISH_TIMEOUT = 5s;
+    static constexpr milliseconds MQTT_SUBSCRIPTION_TIMEOUT = MQTT_DEFAULT_PUBLISH_TIMEOUT;
+    static constexpr milliseconds MQTT_MINIMUM_CONNECTED_TIME = 1500ms;
+    static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
+    static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
+
 private:
     struct PendingMessage {
         const int messageId;
         const TaskHandle_t waitingTask;
+        const milliseconds extendKeepAlive;
+    };
+
+    struct PendingSubscription {
+        const int messageId;
+        const time_point<boot_clock> subscribedAt;
         const milliseconds extendKeepAlive;
     };
 
@@ -198,11 +212,16 @@ private:
         const String topic;
         const QoS qos;
         const SubscriptionHandler handle;
+        const milliseconds extendKeepAlive;
     };
 
     struct MessagePublished {
         const int messageId;
         const bool success;
+    };
+
+    struct Subscribed {
+        const int messageId;
     };
 
     struct Connected {
@@ -277,14 +296,15 @@ private:
         }
     }
 
-    /**
-     * @brief Subscribes to the given topic.
-     *
-     * Note that subscription does not support wildcards.
-     */
-    bool subscribe(const String& topic, QoS qos, SubscriptionHandler handler) {
-        // Allow some time for the queue to empty
-        return eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Subscription { topic, qos, handler });
+    bool subscribe(const String& topic, QoS qos, SubscriptionHandler handler, milliseconds extendKeepAlive = MQTT_MINIMUM_CONNECTED_TIME) {
+        return eventQueue.offerIn(
+            MQTT_QUEUE_TIMEOUT,
+            // TODO Add an actual timeout, separate from extending keep-alive
+            Subscription {
+                topic,
+                qos,
+                handler,
+                extendKeepAlive });
     }
 
     static String joinStrings(std::list<String> strings) {
@@ -316,18 +336,35 @@ private:
         auto connectionStarted = boot_clock::zero();
 
         // The first session is always clean
-        auto startCleanSession = true;
+        auto nextSessionShouldBeClean = true;
 
         // List of messages we are waiting on
         std::list<PendingMessage> pendingMessages;
+        std::list<PendingSubscription> pendingSubscriptions;
 
         while (true) {
             auto now = boot_clock::now();
+
+            // Cull pending subscriptions
+            // TODO Do this with deleted messages?
+            pendingSubscriptions.remove_if([&](const auto& pendingSubscription) {
+                if (now - pendingSubscription.subscribedAt > MQTT_SUBSCRIPTION_TIMEOUT) {
+                    LOGTE("mqtt", "Subscription timed out with message id %d", pendingSubscription.messageId);
+                    // Force next session to start clean, so we can re-subscribe
+                    nextSessionShouldBeClean = true;
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+
             bool shouldBeConencted =
                 // We stay connected all the time if we are not in power save mode
                 !powerSaveMode
                 // We stay connected if there are pending messages (timeouts will cause them to be removed)
                 || !pendingMessages.empty()
+                // We stay connected if there are pending subscriptions (we just culled them above)
+                || !pendingSubscriptions.empty()
                 // We stay connected if recent subscriptions or published QoS = 0 messages force us to keep alive
                 || keepAliveUntil > now
                 || keepAliveAfterConnection > milliseconds::zero();
@@ -335,7 +372,7 @@ private:
             if (shouldBeConencted) {
                 switch (state) {
                     case MqttState::Disconnected:
-                        connect(startCleanSession);
+                        connect(nextSessionShouldBeClean);
                         state = MqttState::Connecting;
                         connectionStarted = now;
                         break;
@@ -388,11 +425,11 @@ private:
                             keepAliveAfterConnection = milliseconds::zero();
 
                             // Next connection can start with a persistent session
-                            startCleanSession = false;
+                            nextSessionShouldBeClean = false;
                             if (!arg.sessionPresent) {
                                 // Re-subscribe to existing subscriptions
                                 // because we got a clean session
-                                processSubscriptions(subscriptions);
+                                extendKeepAlive = processSubscriptions(subscriptions, pendingSubscriptions);
                             }
                         } else if constexpr (std::is_same_v<T, Disconnected>) {
                             LOGTV("mqtt", "Processing disconnected event");
@@ -411,8 +448,11 @@ private:
                                 notifyWaitingTask(message.waitingTask, false);
                             }
                             pendingMessages.clear();
+
+                            // Clear pending subscriptions
+                            pendingSubscriptions.clear();
                         } else if constexpr (std::is_same_v<T, MessagePublished>) {
-                            LOGTV("mqtt", "Processing message published");
+                            LOGTV("mqtt", "Processing message published: %d", arg.messageId);
                             pendingMessages.remove_if([&](const auto& pendingMessage) {
                                 if (pendingMessage.messageId == arg.messageId) {
                                     notifyWaitingTask(pendingMessage.waitingTask, arg.success);
@@ -422,31 +462,43 @@ private:
                                     return false;
                                 }
                             });
+                        } else if constexpr (std::is_same_v<T, Subscribed>) {
+                            LOGTV("mqtt", "Processing subscribed event: %d", arg.messageId);
+                            pendingSubscriptions.remove_if([&](const auto& pendingSubscription) {
+                                if (pendingSubscription.messageId == arg.messageId) {
+                                    extendKeepAlive = std::max(extendKeepAlive, pendingSubscription.extendKeepAlive);
+                                    return true;
+                                } else {
+                                    return false;
+                                }
+                            });
                         } else if constexpr (std::is_same_v<T, OutgoingMessage>) {
                             LOGTV("mqtt", "Processing outgoing message to %s",
                                 arg.topic.c_str());
-                            auto extendKeepAliveImmediately = processOutgoingMessage(arg, pendingMessages);
-                            extendKeepAlive = std::max(extendKeepAlive, extendKeepAliveImmediately);
+                            extendKeepAlive = processOutgoingMessage(arg, pendingMessages);
                         } else if constexpr (std::is_same_v<T, Subscription>) {
                             LOGTV("mqtt", "Processing subscription");
                             subscriptions.push_back(arg);
                             if (state == MqttState::Connected) {
                                 // If we are connected, we need to subscribe immediately.
-                                processSubscriptions({ arg });
+                                extendKeepAlive = processSubscriptions({ arg }, pendingSubscriptions);
                             } else {
                                 // If we are not connected, we need to rely on the next
                                 // clean session to make the subscription.
-                                startCleanSession = true;
+                                nextSessionShouldBeClean = true;
                             }
-                            extendKeepAlive = std::max(extendKeepAlive, MQTT_KEEP_ALIVE_AFTER_SUBSCRIBE);
                         }
                     },
                     event);
 
                 if (extendKeepAlive > milliseconds::zero()) {
                     if (state == MqttState::Connected) {
+                        LOGTV("mqtt", "Extending keep alive while connected by %lld ms",
+                            extendKeepAlive.count());
                         keepAliveUntil = std::max(keepAliveUntil, boot_clock::now() + extendKeepAlive);
                     } else {
+                        LOGTV("mqtt", "Extending keep alive after connection by %lld ms",
+                            extendKeepAlive.count());
                         keepAliveAfterConnection = std::max(keepAliveAfterConnection, extendKeepAlive);
                     }
                 }
@@ -505,6 +557,7 @@ private:
             }
             case MQTT_EVENT_SUBSCRIBED: {
                 LOGTV("mqtt", "Subscribed, message ID: %d", event->msg_id);
+                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Subscribed { event->msg_id });
                 break;
             }
             case MQTT_EVENT_UNSUBSCRIBED: {
@@ -563,12 +616,6 @@ private:
             static_cast<int>(message.qos),
             message.retain == Retention::Retain,
             true);
-#ifdef DUMP_MQTT
-        if (message.log == LogPublish::Log) {
-            LOGTV("mqtt", "Published to '%s' (size: %d), result: %d",
-                message.topic.c_str(), message.payload.length(), ret);
-        }
-#endif
 
         milliseconds extendKeepAliveImmediately = milliseconds::zero();
         if (ret < 0) {
@@ -577,6 +624,12 @@ private:
             notifyWaitingTask(message.waitingTask, false);
         } else {
             auto messageId = ret;
+#ifdef DUMP_MQTT
+            if (message.log == LogPublish::Log) {
+                LOGTV("mqtt", "Published to '%s' (size: %d), message ID: %d",
+                    message.topic.c_str(), message.payload.length(), messageId);
+            }
+#endif
             if (message.waitingTask != nullptr) {
                 if (messageId == 0) {
                     // Notify tasks waiting on QoS 0 messages immediately
@@ -592,21 +645,35 @@ private:
         return extendKeepAliveImmediately;
     }
 
-    bool processSubscriptions(const std::list<Subscription>& subscriptions) {
+    milliseconds processSubscriptions(const std::list<Subscription>& subscriptions, std::list<PendingSubscription>& pendingSubscriptions) {
         std::vector<esp_mqtt_topic_t> topics;
+        milliseconds extendKeepAlive = milliseconds::zero();
         for (auto& subscription : subscriptions) {
             LOGTV("mqtt", "Subscribing to topic '%s' (qos = %d)",
                 subscription.topic.c_str(), static_cast<int>(subscription.qos));
             topics.emplace_back(subscription.topic.c_str(), static_cast<int>(subscription.qos));
+            extendKeepAlive = std::max(extendKeepAlive, subscription.extendKeepAlive);
         }
 
         int ret = esp_mqtt_client_subscribe_multiple(client, topics.data(), topics.size());
+
+        milliseconds extendKeepAliveImmediately = milliseconds::zero();
         if (ret < 0) {
             LOGTD("mqtt", "Error subscribing: %s",
                 ret == -2 ? "outbox full" : "failure");
-            return false;
+        } else {
+            auto messageId = ret;
+            LOGTV("mqtt", "%d subscriptions published, message ID = %d",
+                topics.size(), messageId);
+            if (messageId == 0) {
+                // ...and then keep alive as much as we need to
+                extendKeepAliveImmediately = extendKeepAlive;
+            } else {
+                // Record pending task (we'll keep alive after the message has been confirmed)
+                pendingSubscriptions.emplace_back(messageId, boot_clock::now(), extendKeepAlive);
+            }
         }
-        return true;
+        return extendKeepAliveImmediately;
     }
 
     void processIncomingMessage(const IncomingMessage& message) {
@@ -671,22 +738,13 @@ private:
     esp_mqtt_client_config_t mqttConfig;
     esp_mqtt_client_handle_t client;
 
-    Queue<std::variant<Connected, Disconnected, MessagePublished, OutgoingMessage, Subscription>> eventQueue;
+    Queue<std::variant<Connected, Disconnected, MessagePublished, Subscribed, OutgoingMessage, Subscription>> eventQueue;
     Queue<IncomingMessage> incomingQueue;
     // TODO Use a map instead
     std::list<Subscription> subscriptions;
 
     static constexpr uint32_t PUBLISH_SUCCESS = 1;
     static constexpr uint32_t PUBLISH_FAILED = 2;
-
-    // TODO Review these values
-    static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = 30s;
-    static constexpr milliseconds MQTT_DEFAULT_PUBLISH_TIMEOUT = 5s;
-    static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
-    static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = 5s;
-    static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
-    static constexpr milliseconds MQTT_KEEP_ALIVE_AFTER_SUBSCRIBE = 1500ms;
-    static constexpr milliseconds MQTT_MAX_TIMEOUT_POWER_SAVE = 1h;
 
     friend class MqttRoot;
 };
