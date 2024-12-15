@@ -211,7 +211,7 @@ private:
 
     struct Disconnected { };
 
-    PublishStatus publish(const String& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log, milliseconds extendKeepAlive = MQTT_KEEP_ALIVE_AFTER_OUTGOING) {
+    PublishStatus publish(const String& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = MQTT_DEFAULT_PUBLISH_TIMEOUT, LogPublish log = LogPublish::Log) {
         if (log == LogPublish::Log) {
 #ifdef DUMP_MQTT
             String serializedJson;
@@ -233,17 +233,35 @@ private:
         String payload;
         serializeJson(json, payload);
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
-            return eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, payload, retain, qos, waitingTask, log, extendKeepAlive });
+            return eventQueue.offerIn(
+                MQTT_QUEUE_TIMEOUT,
+                OutgoingMessage {
+                    topic,
+                    payload,
+                    retain,
+                    qos,
+                    waitingTask,
+                    log,
+                    qos == QoS::AtMostOnce ? timeout : ticks::zero() });
         });
     }
 
-    PublishStatus clear(const String& topic, Retention retain, QoS qos, ticks timeout = ticks::zero(), milliseconds extendKeepAlive = MQTT_KEEP_ALIVE_AFTER_OUTGOING) {
+    PublishStatus clear(const String& topic, Retention retain, QoS qos, ticks timeout = MQTT_DEFAULT_PUBLISH_TIMEOUT) {
         LOGTD("mqtt", "Clearing topic '%s' (qos = %d, timeout = %lld ms)",
             topic.c_str(),
             static_cast<int>(qos),
             duration_cast<milliseconds>(timeout).count());
         return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
-            return eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, OutgoingMessage { topic, "", retain, qos, waitingTask, LogPublish::Log, extendKeepAlive });
+            return eventQueue.offerIn(
+                MQTT_QUEUE_TIMEOUT,
+                OutgoingMessage {
+                    topic,
+                    "",
+                    retain,
+                    qos,
+                    waitingTask,
+                    LogPublish::Log,
+                    qos == QoS::AtMostOnce ? timeout : ticks::zero() });
         });
     }
 
@@ -447,7 +465,7 @@ private:
                                 // clean session to make the subscription.
                                 startCleanSession = true;
                             }
-                            extendKeepAlive = std::max(extendKeepAlive, MQTT_KEEP_ALIVE_AFTER_OUTGOING);
+                            extendKeepAlive = std::max(extendKeepAlive, MQTT_KEEP_ALIVE_AFTER_SUBSCRIBE);
                         }
                     },
                     event);
@@ -669,10 +687,11 @@ private:
 
     // TODO Review these values
     static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = 30s;
+    static constexpr milliseconds MQTT_DEFAULT_PUBLISH_TIMEOUT = 5s;
     static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
     static constexpr milliseconds MQTT_DISCONNECTED_CHECK_INTERVAL = 5s;
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
-    static constexpr milliseconds MQTT_KEEP_ALIVE_AFTER_OUTGOING = 1500ms;
+    static constexpr milliseconds MQTT_KEEP_ALIVE_AFTER_SUBSCRIBE = 1500ms;
     static constexpr milliseconds MQTT_MAX_TIMEOUT_POWER_SAVE = 1h;
 
     friend class MqttRoot;
