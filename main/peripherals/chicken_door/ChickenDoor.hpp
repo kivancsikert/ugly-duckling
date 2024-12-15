@@ -260,7 +260,7 @@ private:
                 LOGI("Watchdog started");
                 sleepLock.emplace(preventLightSleep);
                 break;
-            case WatchdogState::Cacnelled:
+            case WatchdogState::Cancelled:
                 LOGI("Watchdog cancelled");
                 sleepLock.reset();
                 break;

@@ -10,7 +10,7 @@ namespace farmhub::kernel {
 
 enum class WatchdogState {
     Started,
-    Cacnelled,
+    Cancelled,
     TimedOut
 };
 
@@ -41,7 +41,7 @@ public:
         Lock lock(updateMutex);
         if (handle.isValid()) {
             handle.abort();
-            callback(WatchdogState::Cacnelled);
+            callback(WatchdogState::Cancelled);
             handle = TaskHandle();
             LOGD("Watchdog cancelled");
         }
