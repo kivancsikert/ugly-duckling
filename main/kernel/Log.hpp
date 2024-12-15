@@ -46,6 +46,11 @@ void convertFromJson(JsonVariantConst src, Level& dst) {
 }
 
 static void initLogging() {
+#ifdef FARMHUB_DEBUG
+    // Reset ANSI colors
+    printf("\033[0m");
+#endif
+
     const char* logTags[] = {
         "farmhub",
         "farmhub:mdns",
