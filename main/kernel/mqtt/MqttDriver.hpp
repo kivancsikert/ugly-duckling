@@ -211,7 +211,7 @@ private:
 
     struct Disconnected { };
 
-    PublishStatus publish(const String& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = MQTT_DEFAULT_PUBLISH_TIMEOUT, LogPublish log = LogPublish::Log) {
+    PublishStatus publish(const String& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = MQTT_DEFAULT_PUBLISH_TIMEOUT, milliseconds extendAlertBy = milliseconds::zero(), LogPublish log = LogPublish::Log) {
         if (log == LogPublish::Log) {
 #ifdef DUMP_MQTT
             String serializedJson;
@@ -232,42 +232,31 @@ private:
         }
         String payload;
         serializeJson(json, payload);
-        return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
-            return eventQueue.offerIn(
-                MQTT_QUEUE_TIMEOUT,
-                OutgoingMessage {
-                    topic,
-                    payload,
-                    retain,
-                    qos,
-                    waitingTask,
-                    log,
-                    qos == QoS::AtMostOnce ? timeout : ticks::zero() });
-        });
+        return publishAndWait(topic, payload, retain, qos, timeout, extendAlertBy);
     }
 
-    PublishStatus clear(const String& topic, Retention retain, QoS qos, ticks timeout = MQTT_DEFAULT_PUBLISH_TIMEOUT) {
+    PublishStatus clear(const String& topic, Retention retain, QoS qos, ticks timeout = MQTT_DEFAULT_PUBLISH_TIMEOUT, milliseconds extendAlertBy = milliseconds::zero()) {
         LOGTD("mqtt", "Clearing topic '%s' (qos = %d, timeout = %lld ms)",
             topic.c_str(),
             static_cast<int>(qos),
             duration_cast<milliseconds>(timeout).count());
-        return executeAndAwait(timeout, [&](TaskHandle_t waitingTask) {
-            return eventQueue.offerIn(
-                MQTT_QUEUE_TIMEOUT,
-                OutgoingMessage {
-                    topic,
-                    "",
-                    retain,
-                    qos,
-                    waitingTask,
-                    LogPublish::Log,
-                    qos == QoS::AtMostOnce ? timeout : ticks::zero() });
-        });
+        return publishAndWait(topic, "", retain, qos, timeout, extendAlertBy);
     }
 
-    PublishStatus executeAndAwait(ticks timeout, std::function<bool(TaskHandle_t)> enqueue) {
+    PublishStatus publishAndWait(const String& topic, const String& payload, Retention retain, QoS qos, ticks timeout, milliseconds extendAlertBy) {
         TaskHandle_t waitingTask = timeout == ticks::zero() ? nullptr : xTaskGetCurrentTaskHandle();
-        bool offered = enqueue(waitingTask);
+
+        bool offered = eventQueue.offerIn(
+            MQTT_QUEUE_TIMEOUT,
+            OutgoingMessage {
+                topic,
+                payload,
+                retain,
+                qos,
+                waitingTask,
+                LogPublish::Log,
+                extendAlertBy + (qos == QoS::AtMostOnce ? timeout : ticks::zero()) });
+
         if (!offered) {
             return PublishStatus::QueueFull;
         }
@@ -436,24 +425,8 @@ private:
                         } else if constexpr (std::is_same_v<T, OutgoingMessage>) {
                             LOGTV("mqtt", "Processing outgoing message to %s",
                                 arg.topic.c_str());
-                            int ret = processOutgoingMessage(arg);
-                            if (ret < 0) {
-                                LOGTD("mqtt", "Error publishing to '%s': %s",
-                                    arg.topic.c_str(), ret == -2 ? "outbox full" : "failure");
-                                notifyWaitingTask(arg.waitingTask, false);
-                            } else {
-                                auto messageId = ret;
-                                if (arg.waitingTask != nullptr) {
-                                    if (messageId == 0) {
-                                        // Notify tasks waiting on QoS 0 messages immediately
-                                        notifyWaitingTask(arg.waitingTask, true);
-                                        extendKeepAlive = std::max(extendKeepAlive, arg.extendKeepAlive);
-                                    } else {
-                                        // Record pending task
-                                        pendingMessages.emplace_back(messageId, arg.waitingTask, arg.extendKeepAlive);
-                                    }
-                                }
-                            }
+                            auto extendKeepAliveImmediately = processOutgoingMessage(arg, pendingMessages);
+                            extendKeepAlive = std::max(extendKeepAlive, extendKeepAliveImmediately);
                         } else if constexpr (std::is_same_v<T, Subscription>) {
                             LOGTV("mqtt", "Processing subscription");
                             subscriptions.push_back(arg);
@@ -469,6 +442,7 @@ private:
                         }
                     },
                     event);
+
                 if (extendKeepAlive > milliseconds::zero()) {
                     if (state == MqttState::Connected) {
                         keepAliveUntil = std::max(keepAliveUntil, boot_clock::now() + extendKeepAlive);
@@ -580,7 +554,7 @@ private:
         }
     }
 
-    int processOutgoingMessage(const OutgoingMessage message) {
+    milliseconds processOutgoingMessage(const OutgoingMessage message, std::list<PendingMessage>& pendingMessages) {
         int ret = esp_mqtt_client_enqueue(
             client,
             message.topic.c_str(),
@@ -595,7 +569,27 @@ private:
                 message.topic.c_str(), message.payload.length(), ret);
         }
 #endif
-        return ret;
+
+        milliseconds extendKeepAliveImmediately = milliseconds::zero();
+        if (ret < 0) {
+            LOGTD("mqtt", "Error publishing to '%s': %s",
+                message.topic.c_str(), ret == -2 ? "outbox full" : "failure");
+            notifyWaitingTask(message.waitingTask, false);
+        } else {
+            auto messageId = ret;
+            if (message.waitingTask != nullptr) {
+                if (messageId == 0) {
+                    // Notify tasks waiting on QoS 0 messages immediately
+                    notifyWaitingTask(message.waitingTask, true);
+                    // ...and then keep alive as much as we need to
+                    extendKeepAliveImmediately = message.extendKeepAlive;
+                } else {
+                    // Record pending task (we'll keep alive after the message has been confirmed)
+                    pendingMessages.emplace_back(messageId, message.waitingTask, message.extendKeepAlive);
+                }
+            }
+        }
+        return extendKeepAliveImmediately;
     }
 
     bool processSubscriptions(const std::list<Subscription>& subscriptions) {

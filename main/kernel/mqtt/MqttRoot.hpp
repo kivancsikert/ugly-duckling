@@ -18,7 +18,7 @@ public:
     }
 
     PublishStatus publish(const String& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log) {
-        return mqtt.publish(fullTopic(suffix), json, retain, qos, timeout, log);
+        return mqtt.publish(fullTopic(suffix), json, retain, qos, timeout, milliseconds::zero(), log);
     }
 
     PublishStatus publish(const String& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = ticks::zero(), LogPublish log = LogPublish::Log) {
