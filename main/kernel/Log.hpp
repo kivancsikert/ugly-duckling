@@ -26,8 +26,8 @@ public:
     static constexpr const char* FARMHUB = "farmhub";
     static constexpr const char* MDNS = "farmhub:mdns";
     static constexpr const char* MQTT = "farmhub:mqtt";
-    static constexpr const char* PM = "farmhub:pm";
     static constexpr const char* NVS = "farmhub:nvs";
+    static constexpr const char* PM = "farmhub:pm";
     static constexpr const char* RTC = "farmhub:rtc";
     static constexpr const char* WIFI = "farmhub:wifi";
 };
@@ -81,8 +81,8 @@ private:
         Tag::FARMHUB,
         Tag::MDNS,
         Tag::MQTT,
-        Tag::PM,
         Tag::NVS,
+        Tag::PM,
         Tag::RTC,
         Tag::WIFI,
     };
