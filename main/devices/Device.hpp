@@ -560,7 +560,7 @@ private:
             return;
         }
 
-        esp_core_dump_summary_t summary;
+        esp_core_dump_summary_t summary {};
         esp_err_t err = esp_core_dump_get_summary(&summary);
         if (err != ESP_OK) {
             LOGE("Failed to get core dump summary: %s", esp_err_to_name(err));
@@ -584,7 +584,7 @@ private:
             summary.exc_task, excCause);
 
         json["version"] = summary.core_dump_version;
-        json["sha256"] = String((const char*) summary.app_elf_sha256, CONFIG_APP_RETRIEVE_LEN_ELF_SHA);
+        json["sha256"] = summary.app_elf_sha256;
         json["task"] = summary.exc_task;
         json["cause"] = excCause;
 
