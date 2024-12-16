@@ -213,6 +213,12 @@ private:
             return "";
         }
 
+#ifdef CONFIG_PM_ENABLE
+        // Don't sleep while we are performing the update
+        PowerManagementLock preventLightSleep { "firmware-update", ESP_PM_NO_LIGHT_SLEEP };
+        PowerManagementLockGuard sleepLock(preventLightSleep);
+#endif
+
         auto fUpdate = fs.open(UPDATE_FILE, FILE_READ);
         JsonDocument doc;
         auto error = deserializeJson(doc, fUpdate);
@@ -235,8 +241,6 @@ private:
         if (!connection.await(15s)) {
             return "Network not ready, aborting update";
         }
-
-        // TODO Disable power save mode for WiFi
 
         esp_http_client_config_t httpConfig = {
             .url = url.c_str(),
