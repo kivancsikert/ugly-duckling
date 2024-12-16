@@ -329,7 +329,11 @@ private:
                 ensureWifiDisconnected();
             }
             LOGTD(Tag::WIFI, "Stopping");
-            ESP_ERROR_CHECK(esp_wifi_stop());
+            // This might return ESP_ERR_WIFI_STOP_STATE, but we can ignore it
+            esp_err_t err = esp_wifi_stop();
+            if (err != ESP_OK) {
+                LOGTD(Tag::WIFI, "Failed to stop WiFi: %s, assuming we are still okay", esp_err_to_name(err));
+            }
         }
         auto currentUptime = currentWifiUptime();
         wifiUptimeBefore += currentUptime;
