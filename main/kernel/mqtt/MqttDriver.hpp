@@ -750,7 +750,7 @@ private:
 
     String hostname;
     uint32_t port;
-    esp_mqtt_client_config_t mqttConfig;
+    esp_mqtt_client_config_t mqttConfig {};
     esp_mqtt_client_handle_t client;
 
     Queue<std::variant<Connected, Disconnected, MessagePublished, Subscribed, OutgoingMessage, Subscription>> eventQueue;
