@@ -37,7 +37,7 @@
       "id": "battery",
       "top": -106.9,
       "left": 9.4,
-      "attrs": { "value": "950" }
+      "attrs": { "value": "1000" }
     },
     {
       "type": "wokwi-resistor",
@@ -120,6 +120,13 @@
       "top": 169.4,
       "left": 153.6,
       "attrs": { "color": "green", "label": "Flash", "bounce": "0" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn2",
+      "top": -22.6,
+      "left": -115.2,
+      "attrs": { "color": "green", "label": "Flow", "bounce": "1", "key": "m" }
     }
   ],
   "connections": [
@@ -150,7 +157,9 @@
     [ "nsleepLed:C", "r4:2", "green", [ "h-18.8", "v28.8" ] ],
     [ "r4:1", "esp:GND.1", "black", [ "v0" ] ],
     [ "esp:GND.4", "btn1:2.l", "black", [ "h0" ] ],
-    [ "esp:0", "btn1:1.l", "green", [ "h0" ] ]
+    [ "esp:0", "btn1:1.l", "green", [ "h0" ] ],
+    [ "btn2:2.r", "esp:6", "green", [ "h9.8", "v67.4" ] ],
+    [ "esp:GND.2", "btn2:1.r", "black", [ "v0" ] ]
   ],
   "dependencies": {}
 }
