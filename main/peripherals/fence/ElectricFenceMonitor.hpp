@@ -7,7 +7,7 @@
 
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
-#include <kernel/PcntManager.hpp>
+#include <kernel/PulseCounter.hpp>
 #include <kernel/Telemetry.hpp>
 
 #include <peripherals/Peripheral.hpp>
@@ -47,7 +47,6 @@ public:
     ElectricFenceMonitorComponent(
         const String& name,
         shared_ptr<MqttRoot> mqttRoot,
-        PcntManager& pcnt,
         const ElectricFenceMonitorDeviceConfig& config)
         : Component(name, mqttRoot) {
 
@@ -60,27 +59,23 @@ public:
         LOGI("Initializing electric fence with pins %s", pinsDescription.c_str());
 
         for (auto& pinConfig : config.pins.get()) {
-            auto unit = pcnt.registerUnit(pinConfig.pin);
-            pins.push_back({ pinConfig.voltage, unit });
+            auto unit = make_shared<PulseCounter>(pinConfig.pin);
+            pins.emplace_back(pinConfig.voltage, unit);
         }
 
-        // TODO Use PCNT event callbacks instead?
         auto measurementFrequency = config.measurementFrequency.get();
         Task::loop(name, 3172, [this, measurementFrequency](Task& task) {
             uint16_t lastVoltage = 0;
             for (auto& pin : pins) {
-                int16_t count = pin.pcntUnit.getAndClearCount();
+                uint32_t count = pin.counter->reset();
 
                 if (count > 0) {
                     lastVoltage = max(pin.voltage, lastVoltage);
-                    LOGV("Counted %d pulses on pin %s (voltage: %dV)",
-                        count, pin.pcntUnit.getPin()->getName().c_str(), pin.voltage);
+                    LOGV("Counted %ld pulses on pin %s (voltage: %dV)",
+                        count, pin.counter->getPin()->getName().c_str(), pin.voltage);
                 }
             }
-            {
-                Lock lock(updateMutex);
-                this->lastVoltage = lastVoltage;
-            }
+            this->lastVoltage = lastVoltage;
             LOGV("Last voltage: %d",
                 lastVoltage);
             task.delayUntil(measurementFrequency);
@@ -88,17 +83,15 @@ public:
     }
 
     void populateTelemetry(JsonObject& json) override {
-        Lock lock(updateMutex);
-        json["voltage"] = lastVoltage;
+        json["voltage"] = lastVoltage.load();
     }
 
 private:
-    Mutex updateMutex;
-    uint16_t lastVoltage;
+    std::atomic<uint16_t> lastVoltage { 0 };
 
     struct FencePin {
         uint16_t voltage;
-        PcntUnit pcntUnit;
+        shared_ptr<PulseCounter> counter;
     };
 
     std::list<FencePin> pins;
@@ -107,9 +100,9 @@ private:
 class ElectricFenceMonitor
     : public Peripheral<EmptyConfiguration> {
 public:
-    ElectricFenceMonitor(const String& name, shared_ptr<MqttRoot> mqttRoot, PcntManager& pcnt, const ElectricFenceMonitorDeviceConfig& config)
+    ElectricFenceMonitor(const String& name, shared_ptr<MqttRoot> mqttRoot, const ElectricFenceMonitorDeviceConfig& config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , monitor(name, mqttRoot, pcnt, config) {
+        , monitor(name, mqttRoot, config) {
     }
 
     void populateTelemetry(JsonObject& telemetryJson) override {
@@ -128,7 +121,7 @@ public:
     }
 
     unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const ElectricFenceMonitorDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
-        return std::make_unique<ElectricFenceMonitor>(name, mqttRoot, services.pcntManager, deviceConfig);
+        return std::make_unique<ElectricFenceMonitor>(name, mqttRoot, deviceConfig);
     }
 };
 

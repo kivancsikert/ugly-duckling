@@ -3,7 +3,6 @@
 #include <memory>
 
 #include <kernel/Configuration.hpp>
-#include <kernel/PcntManager.hpp>
 #include <kernel/mqtt/MqttDriver.hpp>
 #include <peripherals/Motorized.hpp>
 #include <peripherals/Peripheral.hpp>
@@ -31,7 +30,6 @@ public:
     FlowControl(
         const String& name,
         shared_ptr<MqttRoot> mqttRoot,
-        PcntManager& pcnt,
         ValveControlStrategy& strategy,
         InternalPinPtr pin,
         double qFactor,
@@ -40,7 +38,7 @@ public:
         , valve(name, strategy, mqttRoot, [this]() {
             publishTelemetry();
         })
-        , flowMeter(name, mqttRoot, pcnt, pin, qFactor, measurementFrequency) {
+        , flowMeter(name, mqttRoot, pin, qFactor, measurementFrequency) {
     }
 
     void configure(const FlowControlConfig& config) override {
@@ -92,7 +90,6 @@ public:
             name,
             mqttRoot,
 
-            services.pcntManager,
             *strategy,
 
             flowMeterConfig.pin.get(),

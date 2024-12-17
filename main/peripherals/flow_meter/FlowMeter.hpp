@@ -4,7 +4,6 @@
 
 #include <peripherals/Peripheral.hpp>
 #include <kernel/Configuration.hpp>
-#include <kernel/PcntManager.hpp>
 #include <kernel/mqtt/MqttDriver.hpp>
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>
 #include <peripherals/flow_meter/FlowMeterConfig.hpp>
@@ -19,9 +18,9 @@ namespace farmhub::peripherals::flow_meter {
 class FlowMeter
     : public Peripheral<EmptyConfiguration> {
 public:
-    FlowMeter(const String& name, shared_ptr<MqttRoot> mqttRoot, PcntManager& pcnt, InternalPinPtr pin, double qFactor, milliseconds measurementFrequency)
+    FlowMeter(const String& name, shared_ptr<MqttRoot> mqttRoot, InternalPinPtr pin, double qFactor, milliseconds measurementFrequency)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , flowMeter(name, mqttRoot, pcnt, pin, qFactor, measurementFrequency) {
+        , flowMeter(name, mqttRoot, pin, qFactor, measurementFrequency) {
     }
 
     void populateTelemetry(JsonObject& telemetryJson) override {
@@ -40,7 +39,7 @@ public:
     }
 
     unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const FlowMeterDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
-        return make_unique<FlowMeter>(name, mqttRoot, services.pcntManager, deviceConfig.pin.get(), deviceConfig.qFactor.get(), deviceConfig.measurementFrequency.get());
+        return make_unique<FlowMeter>(name, mqttRoot, deviceConfig.pin.get(), deviceConfig.qFactor.get(), deviceConfig.measurementFrequency.get());
     }
 };
 
