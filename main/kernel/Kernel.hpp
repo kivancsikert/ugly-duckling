@@ -244,23 +244,13 @@ private:
 
         esp_http_client_config_t httpConfig = {
             .url = url.c_str(),
-            .timeout_ms = duration_cast<milliseconds>(2min).count(),
-            .max_redirection_count = 5,
             .event_handler = httpEventHandler,
-            .buffer_size = 8192,
-            .buffer_size_tx = 8192,
             .user_data = this,
-            // TODO Do we need this?
-            .skip_cert_common_name_check = true,
             .crt_bundle_attach = esp_crt_bundle_attach,
             .keep_alive_enable = true,
         };
         esp_https_ota_config_t otaConfig = {
             .http_config = &httpConfig,
-            // TODO Make it work without partial downloads
-            // With this we seem to be able to install a new firmware, even if very slowly;
-            // without it we get the error upon download completion: 'no more processes'.
-            .partial_http_download = true,
         };
         esp_err_t ret = esp_https_ota(&otaConfig);
         if (ret == ESP_OK) {
