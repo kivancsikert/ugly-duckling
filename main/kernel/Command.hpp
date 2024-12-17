@@ -128,13 +128,11 @@ public:
             path.c_str());
         response["path"] = path;
         if (fs.exists(path)) {
-            size_t size = fs.size(path);
-            response["size"] = size;
-            char* buffer = (char*) malloc(size + 1);
-            auto read = fs.read(path, buffer, size);
-            buffer[read] = '\0';
-            response["contents"] = buffer;
-            free(buffer);
+            response["size"] = fs.size(path);
+            auto contents = fs.readAll(path);
+            if (contents.has_value()) {
+                response["contents"] = contents.value();
+            }
         } else {
             response["error"] = "File not found";
         }

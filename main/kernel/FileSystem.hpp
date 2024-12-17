@@ -91,7 +91,9 @@ public:
 
         struct dirent* entry;
         while ((entry = readdir(dir)) != nullptr) {
-            std::string fullPath = std::string(resolvedPath) + "/" + entry->d_name;
+            std::string fullPath = path.ends_with("/")
+                ? (path + entry->d_name)
+                : (path + "/" + entry->d_name);
             callback(entry->d_name, size(fullPath));
         }
 
