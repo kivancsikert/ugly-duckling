@@ -57,7 +57,7 @@ private:
 
 class PcntManager {
 public:
-    PcntUnit registerUnit(InternalPinPtr pin) {
+    PcntUnit registerUnit(InternalPinPtr pin, nanoseconds maxGlitchDuration = 1000ns) {
         pcnt_unit_config_t unitConfig = {
             .low_limit = std::numeric_limits<int16_t>::min(),
             .high_limit = std::numeric_limits<int16_t>::max(),
@@ -66,14 +66,12 @@ public:
         pcnt_unit_handle_t unit = nullptr;
         ESP_ERROR_CHECK(pcnt_new_unit(&unitConfig, &unit));
 
-        // TODO Re-enable glitch filter
-        //      The filter is disabled because enabling it locks ESP_PM_APB_FREQ_MAX,
-        //      which then prevents light sleep from working.
-        //
-        // pcnt_glitch_filter_config_t filterConfig = {
-        //     .max_glitch_ns = 1000,
-        // };
-        // ESP_ERROR_CHECK(pcnt_unit_set_glitch_filter(unit, &filterConfig));
+        if (maxGlitchDuration != 0ns) {
+            pcnt_glitch_filter_config_t filterConfig = {
+                .max_glitch_ns = static_cast<uint32_t>(maxGlitchDuration.count()),
+            };
+            ESP_ERROR_CHECK(pcnt_unit_set_glitch_filter(unit, &filterConfig));
+        }
 
         pcnt_chan_config_t channelConfig = {
             .edge_gpio_num = pin->getGpio(),
