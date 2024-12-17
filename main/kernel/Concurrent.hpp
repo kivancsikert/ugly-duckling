@@ -4,7 +4,6 @@
 #include <functional>
 #include <optional>
 #include <memory>
-#include <utility>
 
 #include <freertos/FreeRTOS.h>
 
@@ -17,7 +16,7 @@ namespace farmhub::kernel {
 
 class BaseQueue {
 protected:
-    BaseQueue(const String& name, size_t messageSize, size_t capacity)
+    BaseQueue(const std::string& name, size_t messageSize, size_t capacity)
         : name(name)
         , queue(xQueueCreate(capacity, messageSize)) {
     }
@@ -35,14 +34,14 @@ public:
 
 protected:
 
-    const String name;
+    const std::string name;
     const QueueHandle_t queue;
 };
 
 template <typename TMessage>
 class Queue : public BaseQueue {
 public:
-    Queue(const String& name, size_t capacity = 16)
+    Queue(const std::string& name, size_t capacity = 16)
         : BaseQueue(name, sizeof(TMessage*), capacity) {
     }
 
@@ -151,7 +150,7 @@ public:
 template <typename TMessage>
 class CopyQueue : public BaseQueue {
 public:
-    CopyQueue(const String& name, size_t capacity = 16)
+    CopyQueue(const std::string& name, size_t capacity = 16)
         : BaseQueue(name, sizeof(TMessage), capacity) {
     }
 

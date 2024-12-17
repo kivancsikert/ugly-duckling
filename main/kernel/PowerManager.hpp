@@ -2,8 +2,6 @@
 
 #include <esp_pm.h>
 
-#include <Arduino.h>
-
 #include <kernel/Concurrent.hpp>
 
 // FIXME Why do we need to define these manually?
@@ -60,7 +58,7 @@ public:
         //             printf("Task Name\tState\tPrio\tStack\tNum\n");
         //             printf("%s\n", buffer);
         // #endif
-        //             task.delay(10s);
+        //             Task::delay(10s);
         //         });
     }
     const bool sleepWhenIdle;
@@ -109,7 +107,7 @@ private:
 
 class PowerManagementLock {
 public:
-    PowerManagementLock(const String& name, esp_pm_lock_type_t type) : name(name) {
+    PowerManagementLock(const std::string& name, esp_pm_lock_type_t type) : name(name) {
         ESP_ERROR_CHECK(esp_pm_lock_create(type, 0, name.c_str(), &lock));
     }
 
@@ -122,7 +120,7 @@ public:
     PowerManagementLock& operator=(const PowerManagementLock&) = delete;
 
 private:
-    const String name;
+    const std::string name;
     esp_pm_lock_handle_t lock;
 
     friend class PowerManagementLockGuard;

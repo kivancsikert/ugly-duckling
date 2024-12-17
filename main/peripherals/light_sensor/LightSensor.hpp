@@ -1,13 +1,7 @@
 #pragma once
 
 #include <chrono>
-#include <deque>
 #include <memory>
-
-#include <Arduino.h>
-#include <Wire.h>
-
-#include <BH1750.h>
 
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>
@@ -31,7 +25,7 @@ class LightSensorComponent
       public TelemetryProvider {
 public:
     LightSensorComponent(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         seconds measurementFrequency,
         seconds latencyInterval)

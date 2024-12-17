@@ -4,12 +4,7 @@
 
 #include <driver/pulse_cnt.h>
 
-#include <Arduino.h>
-
 namespace farmhub::kernel {
-
-// TODO Figure out what to do with low/high speed modes
-//      See https://docs.espressif.com/projects/esp-idf/en/release-v4.2/esp32/api-reference/peripherals/ledc.html#ledc-high-and-low-speed-mode
 
 // TODO Limit number of channels available
 struct PulseCounterUnit {

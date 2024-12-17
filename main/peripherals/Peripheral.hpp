@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 
+#include <kernel/BootClock.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/I2CManager.hpp>
 #include <kernel/Named.hpp>
@@ -28,14 +29,14 @@ class PeripheralBase
     : public TelemetryProvider,
       public Named {
 public:
-    PeripheralBase(const String& name, shared_ptr<MqttRoot> mqttRoot, size_t telemetrySize = 2048)
+    PeripheralBase(const std::string& name, shared_ptr<MqttRoot> mqttRoot, size_t telemetrySize = 2048)
         : Named(name)
         , mqttRoot(mqttRoot)
         , telemetrySize(telemetrySize) {
         mqttRoot->registerCommand("ping", [this](const JsonObject& request, JsonObject& response) {
             LOGV("Received ping request");
             publishTelemetry();
-            response["pong"] = millis();
+            response["pong"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
         });
     }
 
@@ -74,7 +75,7 @@ template <typename TConfig>
 class Peripheral
     : public PeripheralBase {
 public:
-    Peripheral(const String& name, shared_ptr<MqttRoot> mqttRoot)
+    Peripheral(const std::string& name, shared_ptr<MqttRoot> mqttRoot)
         : PeripheralBase(name, mqttRoot) {
     }
 
@@ -88,15 +89,15 @@ public:
 class PeripheralCreationException
     : public std::exception {
 public:
-    PeripheralCreationException(const String& reason)
-        : message(String(reason)) {
+    PeripheralCreationException(const std::string& reason)
+        : message(std::string(reason)) {
     }
 
     const char* what() const noexcept override {
         return message.c_str();
     }
 
-    const String message;
+    const std::string message;
 };
 
 struct PeripheralServices {
@@ -108,36 +109,41 @@ struct PeripheralServices {
 
 class PeripheralFactoryBase {
 public:
-    PeripheralFactoryBase(const String& factoryType, const String& peripheralType)
+    PeripheralFactoryBase(const std::string& factoryType, const std::string& peripheralType)
         : factoryType(factoryType)
         , peripheralType(peripheralType) {
     }
 
-    virtual unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) = 0;
+    virtual unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) = 0;
 
-    const String factoryType;
-    const String peripheralType;
+    const std::string factoryType;
+    const std::string peripheralType;
 };
 
 template <typename TDeviceConfig, typename TConfig, typename... TDeviceConfigArgs>
 class PeripheralFactory : public PeripheralFactoryBase {
 public:
     // By default use the factory type as the peripheral type
-    PeripheralFactory(const String& type, TDeviceConfigArgs... deviceConfigArgs)
+    PeripheralFactory(const std::string& type, TDeviceConfigArgs... deviceConfigArgs)
         : PeripheralFactory(type, type, std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
-    PeripheralFactory(const String& factoryType, const String& peripheralType, TDeviceConfigArgs... deviceConfigArgs)
+    PeripheralFactory(const std::string& factoryType, const std::string& peripheralType, TDeviceConfigArgs... deviceConfigArgs)
         : PeripheralFactoryBase(factoryType, peripheralType)
         , deviceConfigArgs(std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
-    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& jsonConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) override {
+    unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) override {
         // Use short prefix because SPIFFS has a 32 character limit
         ConfigurationFile<TConfig>* configFile = new ConfigurationFile<TConfig>(FileSystem::get(), "/p/" + name);
-        mqttRoot->subscribe("config", [name, configFile](const String&, const JsonObject& configJson) {
+        mqttRoot->subscribe("config", [name, configFile](const std::string&, const JsonObject& configJson) {
             LOGD("Received configuration update for peripheral: %s", name.c_str());
-            configFile->update(configJson);
+            try {
+                configFile->update(configJson);
+            } catch (const std::exception& e) {
+                LOGE("Failed to update configuration for peripheral '%s' because %s",
+                    name.c_str(), e.what());
+            }
         });
 
         TDeviceConfig deviceConfig = std::apply([](TDeviceConfigArgs... args) {
@@ -153,7 +159,7 @@ public:
         return peripheral;
     }
 
-    virtual unique_ptr<Peripheral<TConfig>> createPeripheral(const String& name, const TDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) = 0;
+    virtual unique_ptr<Peripheral<TConfig>> createPeripheral(const std::string& name, const TDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) = 0;
 
 private:
     std::tuple<TDeviceConfigArgs...> deviceConfigArgs;
@@ -180,7 +186,7 @@ public:
         factories.insert(std::make_pair(factory.factoryType, std::reference_wrapper<PeripheralFactoryBase>(factory)));
     }
 
-    bool createPeripheral(const String& peripheralConfig, JsonArray peripheralsInitJson) {
+    bool createPeripheral(const std::string& peripheralConfig, JsonArray peripheralsInitJson) {
         LOGI("Creating peripheral with config: %s",
             peripheralConfig.c_str());
         PeripheralDeviceConfiguration deviceConfig;
@@ -192,8 +198,8 @@ public:
             return false;
         }
 
-        String name = deviceConfig.name.get();
-        String type = deviceConfig.type.get();
+        std::string name = deviceConfig.name.get();
+        std::string type = deviceConfig.type.get();
         JsonObject initJson = peripheralsInitJson.add<JsonObject>();
         deviceConfig.store(initJson, true);
         try {
@@ -213,7 +219,7 @@ public:
         } catch (const std::exception& e) {
             LOGE("Failed to create '%s' peripheral '%s' because %s",
                 type.c_str(), name.c_str(), e.what());
-            initJson["error"] = String(e.what());
+            initJson["error"] = std::string(e.what());
             return false;
         } catch (...) {
             LOGE("Failed to create '%s' peripheral '%s' because of an unknown exception",
@@ -253,19 +259,19 @@ public:
 private:
     class PeripheralDeviceConfiguration : public ConfigurationSection {
     public:
-        Property<String> name { this, "name", "default" };
-        Property<String> type { this, "type" };
+        Property<std::string> name { this, "name", "default" };
+        Property<std::string> type { this, "type" };
         Property<JsonAsString> params { this, "params" };
     };
 
-    unique_ptr<PeripheralBase> createPeripheral(const String& name, const String& factoryType, const String& configJson, JsonObject& initConfigJson) {
+    unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& factoryType, const std::string& configJson, JsonObject& initConfigJson) {
         LOGD("Creating peripheral '%s' with factory '%s'",
             name.c_str(), factoryType.c_str());
         auto it = factories.find(factoryType);
         if (it == factories.end()) {
             throw PeripheralCreationException("Factory not found: '" + factoryType + "'");
         }
-        const String& peripheralType = it->second.get().peripheralType;
+        const std::string& peripheralType = it->second.get().peripheralType;
         shared_ptr<MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
         PeripheralFactoryBase& factory = it->second.get();
         return factory.createPeripheral(name, configJson, mqttRoot, services, initConfigJson);
@@ -282,7 +288,7 @@ private:
     const shared_ptr<MqttRoot> mqttDeviceRoot;
 
     // TODO Use an unordered_map?
-    std::map<String, std::reference_wrapper<PeripheralFactoryBase>> factories;
+    std::map<std::string, std::reference_wrapper<PeripheralFactoryBase>> factories;
     Mutex stateMutex;
     State state = State::Running;
     std::list<unique_ptr<PeripheralBase>> peripherals;

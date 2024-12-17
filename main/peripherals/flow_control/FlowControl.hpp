@@ -28,7 +28,7 @@ class FlowControlConfig
 class FlowControl : public Peripheral<FlowControlConfig> {
 public:
     FlowControl(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         ValveControlStrategy& strategy,
         InternalPinPtr pin,
@@ -82,7 +82,7 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const String& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         auto strategy = deviceConfig.valve.get().createValveControlStrategy(this);
 
         auto flowMeterConfig = deviceConfig.flowMeter.get();

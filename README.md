@@ -4,7 +4,7 @@
 
 Ugly Duckling is a firmware for IoT devices participating in the FarmHub ecosystem.
 
-The devices are built around the Espressif ESP32 micro-controller using FreeRTOS and the Arduino framework.
+The devices are built around the Espressif ESP32 micro-controller using the ESP-IDF framework and FreeRTOS.
 The devices can report telemetry to, and receive configuration and commands from the FarmHub server via MQTT over WiFi.
 They can also receive firmware updates via HTTP(S).
 
@@ -149,8 +149,6 @@ See `FileCommands` for more information.
 ### Prerequisites
 
 - ESP-IDF v5.3.2 (see [installation instructions](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/index.html))
-
-We are using this version because it is the latest version that is compatible with Arduino-ESP32 3.1.0-rc-1.
 
 ### Building
 

@@ -21,7 +21,7 @@ namespace farmhub::kernel::drivers {
 
 class WiFiDriver {
 public:
-    WiFiDriver(StateSource& networkRequested, StateSource& networkConnecting, StateSource& networkReady, StateSource& configPortalRunning, const String& hostname, bool powerSaveMode)
+    WiFiDriver(StateSource& networkRequested, StateSource& networkConnecting, StateSource& networkReady, StateSource& configPortalRunning, const std::string& hostname, bool powerSaveMode)
         : networkRequested(networkRequested)
         , networkConnecting(networkConnecting)
         , networkReady(networkReady)
@@ -52,17 +52,17 @@ public:
         });
     }
 
-    std::optional<String> getSsid() {
+    std::optional<std::string> getSsid() {
         Lock lock(metadataMutex);
         return ssid;
     }
 
-    std::optional<String> getIp() {
+    std::optional<std::string> getIp() {
         Lock lock(metadataMutex);
         return ip.transform([](const esp_ip4_addr_t& ip) {
             char ipString[16];
             esp_ip4addr_ntoa(&ip, ipString, sizeof(ipString));
-            return String(ipString);
+            return std::string(ipString);
         });
     }
 
@@ -97,7 +97,7 @@ private:
             }
             case WIFI_EVENT_STA_CONNECTED: {
                 auto event = static_cast<wifi_event_sta_connected_t*>(eventData);
-                String newSsid(event->ssid, event->ssid_len);
+                std::string newSsid((const char*) event->ssid, event->ssid_len);
                 {
                     Lock lock(metadataMutex);
                     ssid = newSsid;
@@ -116,7 +116,7 @@ private:
                 }
                 eventQueue.offer(WiFiEvent::DISCONNECTED);
                 LOGTD(Tag::WIFI, "Disconnected from the AP %s, reason: %d",
-                    String(event->ssid, event->ssid_len).c_str(), event->reason);
+                    std::string((const char*) event->ssid, event->ssid_len).c_str(), event->reason);
                 break;
             }
             case WIFI_EVENT_AP_STACONNECTED: {
@@ -394,7 +394,7 @@ private:
     StateSource& networkConnecting;
     StateSource& networkReady;
     StateSource& configPortalRunning;
-    const String hostname;
+    const std::string hostname;
     const bool powerSaveMode;
 
     StateManager internalStates;
@@ -416,7 +416,7 @@ private:
     static constexpr milliseconds WIFI_CHECK_INTERVAL = 1min;
 
     Mutex metadataMutex;
-    std::optional<String> ssid;
+    std::optional<std::string> ssid;
     std::optional<esp_ip4_addr_t> ip;
 
     std::optional<time_point<boot_clock>> wifiUpSince;

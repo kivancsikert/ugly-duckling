@@ -2,8 +2,6 @@
 
 #include <list>
 
-#include <Arduino.h>
-
 #include <kernel/Service.hpp>
 
 #include <kernel/drivers/MotorDriver.hpp>
@@ -20,9 +18,9 @@ public:
         : motors(motors) {
     }
 
-    PwmMotorDriver& findMotor(const String& motorName) {
+    PwmMotorDriver& findMotor(const std::string& motorName) {
         // If there's only one motor and no name is specified, use it
-        if (motorName.isEmpty() && motors.size() == 1) {
+        if (motorName.empty() && motors.size() == 1) {
             return motors.front().get();
         }
         for (auto& motor : motors) {

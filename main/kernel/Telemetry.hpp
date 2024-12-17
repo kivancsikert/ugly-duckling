@@ -1,10 +1,10 @@
 #pragma once
 
-#include <map>
 #include <memory>
 
 #include <ArduinoJson.h>
 
+#include <kernel/BootClock.hpp>
 #include <kernel/Task.hpp>
 
 namespace farmhub::kernel {
@@ -17,7 +17,7 @@ public:
 class TelemetryCollector {
 public:
     void collect(JsonObject& root) {
-        root["uptime"] = millis();
+        root["uptime"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
         for (auto& entry : providers) {
             auto& name = entry.first;
             auto& provider = entry.second;
@@ -26,14 +26,14 @@ public:
         }
     }
 
-    void registerProvider(const String& name, std::shared_ptr<TelemetryProvider> provider) {
+    void registerProvider(const std::string& name, std::shared_ptr<TelemetryProvider> provider) {
         LOGV("Registering telemetry provider %s", name.c_str());
         // TODO Check for duplicates
         providers.emplace(name, provider);
     }
 
 private:
-    std::map<String, std::shared_ptr<TelemetryProvider>> providers;
+    std::map<std::string, std::shared_ptr<TelemetryProvider>> providers;
 };
 
 class TelemetryPublisher {

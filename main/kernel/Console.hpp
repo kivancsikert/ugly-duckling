@@ -1,14 +1,12 @@
 #pragma once
 
-#include <Arduino.h>
-
 #include <kernel/Log.hpp>
 
 namespace farmhub::kernel {
 
 struct LogRecord {
     Level level;
-    String message;
+    std::string message;
 };
 
 #define FARMHUB_LOG_COLOR_BLACK "30"
@@ -37,34 +35,34 @@ public:
 
 private:
     static int processLogFunc(const char* format, va_list args) {
-        String message = consoleProvider->renderMessage(format, args);
+        std::string message = consoleProvider->renderMessage(format, args);
         return consoleProvider->processLog(message);
     }
 
-    int processLog(const String& message) {
-        if (message.isEmpty()) {
+    int processLog(const std::string& message) {
+        if (message.empty()) {
             return 0;
         }
 
-        String assembledMessage;
+        std::string assembledMessage;
         {
             std::lock_guard<std::mutex> lock(partialMessageMutex);
-            if (message.charAt(message.length() - 1) != '\n') {
+            if (message[message.length() - 1] != '\n') {
                 partialMessage += message;
                 return 0;
-            } else if (!partialMessage.isEmpty()) {
+            } else if (!partialMessage.empty()) {
                 assembledMessage = partialMessage + message;
                 partialMessage.clear();
             }
         }
-        if (assembledMessage.isEmpty()) {
+        if (assembledMessage.empty()) {
             return processLogLine(message);
         } else {
             return processLogLine(assembledMessage);
         }
     }
 
-    int processLogLine(const String& message) {
+    int processLogLine(const std::string& message) {
         Level level = getLevel(message);
         if (level <= recordedLevel) {
             logRecords.offer(level, message);
@@ -111,7 +109,7 @@ private:
         return count;
     }
 
-    String renderMessage(const char* format, va_list args) {
+    std::string renderMessage(const char* format, va_list args) {
         int length;
         {
             std::lock_guard<std::mutex> lock(bufferMutex);
@@ -119,7 +117,7 @@ private:
             if (length < 0) {
                 return "<Encoding error>";
             } else if (length < BUFFER_SIZE) {
-                return String(buffer, length);
+                return std::string(buffer, length);
             }
         }
 
@@ -127,17 +125,17 @@ private:
         length = std::min(length, 2048);
         char* heapBuffer = new char[length + 1];
         vsnprintf(heapBuffer, length + 1, format, args);
-        String result(heapBuffer, length);
+        std::string result(heapBuffer, length);
         delete[] heapBuffer;
         return result;
     }
 
-    static Level getLevel(const String& message) {
+    static Level getLevel(const std::string& message) {
         // Anything that doesn't look like 'X ...' is a debug message
-        if (message.length() < 2 || message.charAt(1) != ' ') {
+        if (message.length() < 2 || message[1] != ' ') {
             return Level::Debug;
         }
-        switch (message.charAt(0)) {
+        switch (message[0]) {
             case 'E':
                 return Level::Error;
             case 'W':
@@ -162,7 +160,7 @@ private:
     char buffer[BUFFER_SIZE];
 
     std::mutex partialMessageMutex;
-    String partialMessage;
+    std::string partialMessage;
 };
 
 }    // namespace farmhub::kernel

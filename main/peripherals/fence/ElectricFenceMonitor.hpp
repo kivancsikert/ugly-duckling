@@ -3,8 +3,6 @@
 #include <chrono>
 #include <list>
 
-#include <Arduino.h>
-
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/PulseCounter.hpp>
@@ -45,16 +43,16 @@ class ElectricFenceMonitorComponent
       public TelemetryProvider {
 public:
     ElectricFenceMonitorComponent(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         const ElectricFenceMonitorDeviceConfig& config)
         : Component(name, mqttRoot) {
 
-        String pinsDescription;
+        std::string pinsDescription;
         for (auto& pinConfig : config.pins.get()) {
             if (pinsDescription.length() > 0)
                 pinsDescription += ", ";
-            pinsDescription += pinConfig.pin->getName() + "=" + String(pinConfig.voltage) + "V";
+            pinsDescription += pinConfig.pin->getName() + "=" + std::to_string(pinConfig.voltage) + "V";
         }
         LOGI("Initializing electric fence with pins %s", pinsDescription.c_str());
 
@@ -70,7 +68,7 @@ public:
                 uint32_t count = pin.counter->reset();
 
                 if (count > 0) {
-                    lastVoltage = max(pin.voltage, lastVoltage);
+                    lastVoltage = std::max(pin.voltage, lastVoltage);
                     LOGV("Counted %ld pulses on pin %s (voltage: %dV)",
                         count, pin.counter->getPin()->getName().c_str(), pin.voltage);
                 }
@@ -100,7 +98,7 @@ private:
 class ElectricFenceMonitor
     : public Peripheral<EmptyConfiguration> {
 public:
-    ElectricFenceMonitor(const String& name, shared_ptr<MqttRoot> mqttRoot, const ElectricFenceMonitorDeviceConfig& config)
+    ElectricFenceMonitor(const std::string& name, shared_ptr<MqttRoot> mqttRoot, const ElectricFenceMonitorDeviceConfig& config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , monitor(name, mqttRoot, config) {
     }
@@ -120,7 +118,7 @@ public:
         : PeripheralFactory<ElectricFenceMonitorDeviceConfig, EmptyConfiguration>("electric-fence") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const ElectricFenceMonitorDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const ElectricFenceMonitorDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         return std::make_unique<ElectricFenceMonitor>(name, mqttRoot, deviceConfig);
     }
 };

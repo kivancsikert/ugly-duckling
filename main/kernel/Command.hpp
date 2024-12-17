@@ -4,10 +4,11 @@
 #include <functional>
 
 #include <ArduinoJson.h>
-#include <SPIFFS.h>
 
 #include <esp_sleep.h>
+#include <esp_system.h>
 
+#include <kernel/BootClock.hpp>
 #include <kernel/FileSystem.hpp>
 #include <kernel/Named.hpp>
 #include <kernel/Task.hpp>
@@ -21,7 +22,7 @@ public:
     virtual void handle(const JsonObject& request, JsonObject& response) = 0;
 
 protected:
-    Command(const String& name)
+    Command(const std::string& name)
         : Named(name) {
     }
 };
@@ -51,7 +52,7 @@ public:
         } catch (...) {
             LOGE("Failed to send ping response");
         }
-        response["pong"] = millis();
+        response["pong"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
     }
 
 private:
@@ -65,8 +66,9 @@ public:
     }
     void handle(const JsonObject& request, JsonObject& response) override {
         printf("Restarting...\n");
-        Serial.flush();
-        ESP.restart();
+        fflush(stdout);
+        fsync(fileno(stdout));
+        esp_restart();
     }
 };
 
@@ -86,7 +88,7 @@ public:
 
 class FileCommand : public Command {
 public:
-    FileCommand(const String& name, FileSystem& fs)
+    FileCommand(const std::string& name, FileSystem& fs)
         : Command(name)
         , fs(fs) {
     }
@@ -102,21 +104,12 @@ public:
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
-        File root = fs.open("/", FILE_READ);
         JsonArray files = response["files"].to<JsonArray>();
-        while (true) {
-            File entry = root.openNextFile();
-            if (!entry) {
-                break;
-            }
+        fs.readDir("/", [&](const std::string& name, off_t size) {
             JsonObject file = files.add<JsonObject>();
-            file["name"] = String(entry.name());
-            file["size"] = entry.size();
-            file["type"] = entry.isDirectory()
-                ? "dir"
-                : "file";
-            entry.close();
-        }
+            file["name"] = name;
+            file["size"] = size;
+        });
     }
 };
 
@@ -127,17 +120,19 @@ public:
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
-        String path = request["path"];
-        if (!path.startsWith("/")) {
+        std::string path = request["path"];
+        if (!path.starts_with("/")) {
             path = "/" + path;
         }
         LOGI("Reading %s",
             path.c_str());
         response["path"] = path;
-        File file = fs.open(path, FILE_READ);
-        if (file) {
-            response["size"] = file.size();
-            response["contents"] = file.readString();
+        if (fs.exists(path)) {
+            response["size"] = fs.size(path);
+            auto contents = fs.readAll(path);
+            if (contents.has_value()) {
+                response["contents"] = contents.value();
+            }
         } else {
             response["error"] = "File not found";
         }
@@ -151,23 +146,16 @@ public:
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
-        String path = request["path"];
-        if (!path.startsWith("/")) {
+        std::string path = request["path"];
+        if (!path.starts_with("/")) {
             path = "/" + path;
         }
         LOGI("Writing %s",
             path.c_str());
-        String contents = request["contents"];
+        std::string contents = request["contents"];
         response["path"] = path;
-        File file = fs.open(path, FILE_WRITE);
-        if (file) {
-            auto written = file.print(contents);
-            file.flush();
-            response["written"] = written;
-            file.close();
-        } else {
-            response["error"] = "File not found";
-        }
+        size_t written = fs.writeAll(path, contents);
+        response["written"] = written;
     }
 };
 
@@ -178,14 +166,14 @@ public:
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
-        String path = request["path"];
-        if (!path.startsWith("/")) {
+        std::string path = request["path"];
+        if (!path.starts_with("/")) {
             path = "/" + path;
         }
         LOGI("Removing %s",
             path.c_str());
         response["path"] = path;
-        if (fs.remove(path)) {
+        if (unlink(path.c_str()) == 0) {
             response["removed"] = true;
         } else {
             response["error"] = "File not found";
@@ -195,17 +183,17 @@ public:
 
 class HttpUpdateCommand : public Command {
 public:
-    HttpUpdateCommand(const std::function<void(const String&)> prepareUpdate)
+    HttpUpdateCommand(const std::function<void(const std::string&)> prepareUpdate)
         : Command("update")
         , prepareUpdate(prepareUpdate) {
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
-        if (!request["url"].is<String>()) {
+        if (!request["url"].is<std::string>()) {
             response["failure"] = "Command contains no URL";
             return;
         }
-        String url = request["url"];
+        std::string url = request["url"];
         if (url.length() == 0) {
             response["failure"] = "Command contains empty url";
             return;
@@ -214,14 +202,14 @@ public:
         response["success"] = true;
         Task::run("update", 3072, [](Task& task) {
             LOGI("Restarting in 5 seconds to apply update");
-            delay(5000);
-            ESP.restart();
+            Task::delay(5s);
+            esp_restart();
         });
     }
 
 private:
-    const std::function<void(const String&)> prepareUpdate;
-    const String currentVersion;
+    const std::function<void(const std::string&)> prepareUpdate;
+    const std::string currentVersion;
 };
 
 }    // namespace farmhub::kernel

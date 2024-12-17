@@ -1,7 +1,5 @@
 #pragma once
 
-#include <thread>
-
 #include <ArduinoJson.h>
 
 #include <esp_log.h>
@@ -24,6 +22,8 @@ public:
     // When adding elements here, make sure to also list them in Log::init()
     //
     static constexpr const char* FARMHUB = "farmhub";
+    static constexpr const char* FS = "farmhub:fs";
+    static constexpr const char* LEDC = "farmhub:ledc";
     static constexpr const char* MDNS = "farmhub:mdns";
     static constexpr const char* MQTT = "farmhub:mqtt";
     static constexpr const char* NVS = "farmhub:nvs";
@@ -80,6 +80,8 @@ public:
 private:
     static constexpr const char* TAGS[] = {
         Tag::FARMHUB,
+        Tag::FS,
+        Tag::LEDC,
         Tag::MDNS,
         Tag::MQTT,
         Tag::NVS,

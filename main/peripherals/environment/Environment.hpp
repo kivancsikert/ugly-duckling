@@ -21,8 +21,8 @@ class Environment
     : public Peripheral<EmptyConfiguration> {
 public:
     Environment(
-        const String& name,
-        const String& sensorType,
+        const std::string& name,
+        const std::string& sensorType,
         shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         I2CConfig config)
@@ -42,13 +42,13 @@ template <typename TComponent>
 class I2CEnvironmentFactory
     : public PeripheralFactory<I2CDeviceConfig, EmptyConfiguration> {
 public:
-    I2CEnvironmentFactory(const String& sensorType, uint8_t defaultAddress)
+    I2CEnvironmentFactory(const std::string& sensorType, uint8_t defaultAddress)
         : PeripheralFactory<I2CDeviceConfig, EmptyConfiguration>("environment:" + sensorType, "environment")
         , sensorType(sensorType)
         , defaultAddress(defaultAddress) {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const I2CDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const I2CDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         auto i2cConfig = deviceConfig.parse(defaultAddress);
         LOGI("Creating %s sensor %s with %s",
             sensorType.c_str(), name.c_str(), i2cConfig.toString().c_str());
@@ -56,7 +56,7 @@ public:
     }
 
 private:
-    const String sensorType;
+    const std::string sensorType;
     const uint8_t defaultAddress;
 };
 

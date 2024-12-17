@@ -13,12 +13,44 @@
 namespace farmhub::kernel::drivers {
 
 struct MdnsRecord {
-    String hostname;
-    IPAddress ip;
+    std::string hostname;
+    esp_ip4_addr_t ip;
     int port;
 
-    bool validate() {
-        return hostname.length() > 0 && ip != IPAddress() && port > 0;
+    bool hasHostname() const {
+        return !hostname.empty();
+    }
+
+    bool hasIp() const {
+        return ip.addr != 0;
+    }
+
+    bool hasPort() const {
+        return port > 0;
+    }
+
+    bool validate() const {
+        return (hasHostname() || hasIp()) && hasPort();
+    }
+
+    std::string ipAsString() const {
+        char ipStr[16];
+        esp_ip4addr_ntoa(&ip, ipStr, sizeof(ipStr));
+        return ipStr;
+    }
+
+    std::string ipOrHost() const {
+        if (hasIp()) {
+            return ipAsString();
+        } else {
+            return hostname;
+        }
+    }
+
+    std::string toString() const {
+        std::string result = ipOrHost();
+        result += ":" + port;
+        return result;
     }
 };
 
@@ -26,9 +58,9 @@ class MdnsDriver {
 public:
     MdnsDriver(
         WiFiDriver& wifi,
-        const String& hostname,
-        const String& instanceName,
-        const String& version,
+        const std::string& hostname,
+        const std::string& instanceName,
+        const std::string& version,
         StateSource& mdnsReady)
         : wifi(wifi)
         , mdnsReady(mdnsReady) {
@@ -54,7 +86,7 @@ public:
         });
     }
 
-    bool lookupService(const String& serviceName, const String& port, MdnsRecord& record, bool loadFromCache = true, milliseconds timeout = 5s) {
+    bool lookupService(const std::string& serviceName, const std::string& port, MdnsRecord& record, bool loadFromCache = true, milliseconds timeout = 5s) {
         // Wait indefinitely
         Lock lock(lookupMutex);
         auto result = lookupServiceUnderMutex(serviceName, port, record, loadFromCache, timeout);
@@ -62,9 +94,9 @@ public:
     }
 
 private:
-    bool lookupServiceUnderMutex(const String& serviceName, const String& port, MdnsRecord& record, bool loadFromCache, milliseconds timeout) {
+    bool lookupServiceUnderMutex(const std::string& serviceName, const std::string& port, MdnsRecord& record, bool loadFromCache, milliseconds timeout) {
         // TODO Use a callback and retry if cached entry doesn't work
-        String cacheKey = serviceName + "." + port;
+        std::string cacheKey = serviceName + "." + port;
         if (loadFromCache) {
             if (nvs.get(cacheKey, record)) {
                 if (record.validate()) {
@@ -87,7 +119,7 @@ private:
         mdnsReady.awaitSet();
 
         mdns_result_t* results = nullptr;
-        esp_err_t err = mdns_query_ptr(String("_" + serviceName).c_str(), String("_" + port).c_str(), timeout.count(), 1, &results);
+        esp_err_t err = mdns_query_ptr(std::string("_" + serviceName).c_str(), std::string("_" + port).c_str(), timeout.count(), 1, &results);
         if (err) {
             LOGTE(Tag::MDNS, "query failed for %s.%s: %d",
                 serviceName.c_str(), port.c_str(), err);
@@ -104,7 +136,7 @@ private:
             record.hostname = result.hostname;
         }
         if (result.addr != nullptr) {
-            record.ip = IPAddress(result.addr->addr.u_addr.ip4.addr);
+            record.ip = result.addr->addr.u_addr.ip4;
         }
         record.port = result.port;
         mdns_query_results_free(results);
@@ -125,16 +157,35 @@ private:
 
 bool convertToJson(const MdnsRecord& src, JsonVariant dst) {
     auto jsonRecord = dst.to<JsonObject>();
-    jsonRecord["hostname"] = src.hostname;
-    jsonRecord["ip"] = src.ip.toString();
-    jsonRecord["port"] = src.port;
+    if (src.hasHostname()) {
+        jsonRecord["hostname"] = src.hostname;
+    }
+    if (src.hasIp()) {
+        jsonRecord["ip"] = src.ipAsString();
+    }
+    if (src.hasPort()) {
+        jsonRecord["port"] = src.port;
+    }
     return true;
 }
 void convertFromJson(JsonVariantConst src, MdnsRecord& dst) {
     auto jsonRecord = src.as<JsonObjectConst>();
-    dst.hostname = jsonRecord["hostname"].as<String>();
-    dst.ip.fromString(jsonRecord["ip"].as<String>());
-    dst.port = jsonRecord["port"].as<int>();
+    if (jsonRecord["hostname"].is<std::string>()) {
+        dst.hostname = jsonRecord["hostname"].as<std::string>();
+    } else {
+        dst.hostname = "";
+    }
+    if (jsonRecord["ip"].is<std::string>()) {
+        const char* ipStr = jsonRecord["ip"].as<std::string>().c_str();
+        dst.ip.addr = esp_ip4addr_aton(ipStr);
+    } else {
+        dst.ip.addr = 0;
+    }
+    if (jsonRecord["port"].is<int>()) {
+        dst.port = jsonRecord["port"].as<int>();
+    } else {
+        dst.port = 0;
+    }
 }
 
 }    // namespace farmhub::kernel::drivers

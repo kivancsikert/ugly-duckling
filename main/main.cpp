@@ -7,6 +7,7 @@
 #include <string>
 
 #include <esp_app_desc.h>
+#include <driver/gpio.h>
 
 static const char* const farmhubVersion = esp_app_get_description()->version;
 
@@ -79,9 +80,20 @@ static void dumpPerTaskHeapInfo() {
 #include <devices/Device.hpp>
 
 extern "C" void app_main() {
-    initArduino();
-
     Log::init();
+
+    // Initialize NVS
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        // NVS partition was truncated and needs to be erased
+        // Retry nvs_flash_init
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(err);
+
+    // Install GPIO ISR service
+    gpio_install_isr_service(0);
 
 #ifdef CONFIG_HEAP_TRACING
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));

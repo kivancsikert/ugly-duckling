@@ -3,11 +3,6 @@
 #include <list>
 #include <memory>
 
-#include <Arduino.h>
-
-#include <SHT2x.h>
-#include <SHT31.h>
-
 #include <ArduinoJson.h>
 
 #include <kernel/Kernel.hpp>
@@ -21,7 +16,7 @@
 #include <peripherals/environment/Ds18B20SoilSensor.hpp>
 #include <peripherals/environment/Environment.hpp>
 #include <peripherals/environment/Sht2xComponent.hpp>
-#include <peripherals/environment/Sht31Component.hpp>
+#include <peripherals/environment/Sht3xComponent.hpp>
 #include <peripherals/environment/SoilMoistureSensor.hpp>
 #include <peripherals/fence/ElectricFenceMonitor.hpp>
 #include <peripherals/light_sensor/Bh1750.hpp>
@@ -36,15 +31,15 @@ namespace farmhub::devices {
 
 class DeviceConfiguration : public ConfigurationSection {
 public:
-    DeviceConfiguration(const String& defaultModel)
+    DeviceConfiguration(const std::string& defaultModel)
         : model(this, "model", defaultModel)
         , instance(this, "instance", getMacAddress()) {
     }
 
-    Property<String> model;
-    Property<String> id { this, "id", "UNIDENTIFIED" };
-    Property<String> instance;
-    Property<String> location { this, "location" };
+    Property<std::string> model;
+    Property<std::string> id { this, "id", "UNIDENTIFIED" };
+    Property<std::string> instance;
+    Property<std::string> location { this, "location" };
 
     NamedConfigurationEntry<RtcDriver::Config> ntp { this, "ntp" };
 
@@ -54,10 +49,10 @@ public:
 
     Property<Level> publishLogs { this, "publishLogs", Level::Info };
 
-    virtual const String getHostname() {
-        String hostname = instance.get();
-        hostname.replace(":", "-");
-        hostname.replace("?", "");
+    virtual const std::string getHostname() {
+        std::string hostname = instance.get();
+        std::replace(hostname.begin(), hostname.end(), ':', '-');
+        std::erase(hostname, '?');
         return hostname;
     }
 };
@@ -89,7 +84,7 @@ public:
     /**
      * @brief Returns zero or more JSON configurations for any built-in peripheral of the device.
      */
-    virtual std::list<String> getBuiltInPeripherals() {
+    virtual std::list<std::string> getBuiltInPeripherals() {
         return {};
     }
 
@@ -112,9 +107,10 @@ public:
     MqttDriver::Config& mqttConfig = mqttConfigFile.config;
 
 private:
-    I2CEnvironmentFactory<Sht31Component> sht3xFactory { "sht3x", 0x44 /* Also supports 0x45 */ };
-    I2CEnvironmentFactory<Sht2xComponent<SHT2x>> sht2xFactory { "sht2x", 0x40 /* Not configurable */ };
-    I2CEnvironmentFactory<Sht2xComponent<HTU21>> htu2xFactory { "htu2x", 0x40 /* Not configurable */ };
+    I2CEnvironmentFactory<Sht3xComponent> sht3xFactory { "sht3x", 0x44 /* Also supports 0x45 */ };
+    // TODO Unify these two factories
+    I2CEnvironmentFactory<Sht2xComponent> sht2xFactory { "sht2x", 0x40 /* Not configurable */ };
+    I2CEnvironmentFactory<Sht2xComponent> htu2xFactory { "htu2x", 0x40 /* Not configurable */ };
     SoilMoistureSensorFactory soilMoistureSensorFactory;
 
     Ds18B20SoilSensorFactory ds18b20SoilSensorFactory;

@@ -1,8 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
-#include <Wire.h>
-
 #include <kernel/Pin.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>
@@ -18,7 +15,7 @@ class Xl9535Component
 
 public:
     Xl9535Component(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         I2CConfig config)
@@ -28,8 +25,9 @@ public:
             config.toString().c_str());
     }
 
-    void pinMode(uint8_t pin, uint8_t mode) {
-        if (mode == OUTPUT) {
+    void pinMode(uint8_t pin, Pin::Mode mode) {
+        // TODO Signal if pull-up or pull-down is requested that we cannot support it
+        if (mode == Pin::Mode::Output) {
             direction &= ~(1 << pin);
         } else {
             direction |= 1 << pin;
@@ -42,7 +40,7 @@ public:
     }
 
     void digitalWrite(uint8_t pin, uint8_t val) {
-        if (val == HIGH) {
+        if (val == 1) {
             output |= 1 << pin;
         } else {
             output &= ~(1 << pin);
@@ -55,36 +53,25 @@ public:
     }
 
     int digitalRead(uint8_t pin) {
-        I2CTransmission tx(device);
-        tx.write(pin < 8 ? 0x00 : 0x01);
-        tx.requestFrom(1);
-        uint8_t data = tx.read();
+        uint8_t data = device->readRegByte(pin < 8 ? 0x00 : 0x01);
         return (data >> (pin % 8)) & 1;
     }
 
 private:
     void updateDirection1() {
-        I2CTransmission tx(device);
-        tx.write(0x06);
-        tx.write(direction & 0xFF);
+        device->writeRegByte(0x06, direction & 0xFF);
     }
 
     void updateDirection2() {
-        I2CTransmission tx(device);
-        tx.write(0x07);
-        tx.write(direction >> 8);
+        device->writeRegByte(0x07, direction >> 8);
     }
 
     void updateOutput1() {
-        I2CTransmission tx(device);
-        tx.write(0x02);
-        tx.write(output & 0xFF);
+        device->writeRegByte(0x02, output & 0xFF);
     }
 
     void updateOutput2() {
-        I2CTransmission tx(device);
-        tx.write(0x03);
-        tx.write(output >> 8);
+        device->writeRegByte(0x03, output >> 8);
     }
 
     shared_ptr<I2CDevice> device;
@@ -96,13 +83,13 @@ private:
 
 class Xl9535Pin : public Pin {
 public:
-    Xl9535Pin(const String& name, Xl9535Component& mpx, uint8_t pin)
+    Xl9535Pin(const std::string& name, Xl9535Component& mpx, uint8_t pin)
         : Pin(name)
         , mpx(mpx)
         , pin(pin) {
     }
 
-    void pinMode(uint8_t mode) const override {
+    void pinMode(Mode mode) const override {
         mpx.pinMode(pin, mode);
     }
 
@@ -122,13 +109,13 @@ private:
 class Xl9535
     : public Peripheral<EmptyConfiguration> {
 public:
-    Xl9535(const String& name, shared_ptr<MqttRoot> mqttRoot, I2CManager& i2c, I2CConfig config)
+    Xl9535(const std::string& name, shared_ptr<MqttRoot> mqttRoot, I2CManager& i2c, I2CConfig config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , component(name, mqttRoot, i2c, config) {
 
         // Create a pin for each bit in the pins mask
         for (int i = 0; i < 16; i++) {
-            String pinName = name + ":" + String(i);
+            std::string pinName = name + ":" + std::to_string(i);
             LOGV("Registering external pin %s",
                 pinName.c_str());
             auto pin = std::make_shared<Xl9535Pin>(pinName, component, i);
@@ -147,7 +134,7 @@ public:
         : PeripheralFactory<Xl9535DeviceConfig, EmptyConfiguration>("multiplexer:xl9535") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const Xl9535DeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const Xl9535DeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         return make_unique<Xl9535>(name, mqttRoot, services.i2c, deviceConfig.parse());
     }
 };

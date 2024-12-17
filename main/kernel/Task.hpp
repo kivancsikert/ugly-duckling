@@ -6,8 +6,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include <Arduino.h>
-
 #include <kernel/Time.hpp>
 
 using namespace std::chrono;
@@ -75,10 +73,10 @@ private:
 
 class Task {
 public:
-    static TaskHandle inline run(const String& name, uint32_t stackSize, const TaskFunction runFunction) {
+    static TaskHandle inline run(const std::string& name, uint32_t stackSize, const TaskFunction runFunction) {
         return Task::run(name, stackSize, DEFAULT_PRIORITY, runFunction);
     }
-    static TaskHandle run(const String& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
+    static TaskHandle run(const std::string& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
         TaskFunction* taskFunction = new TaskFunction(runFunction);
         LOGD("Creating task %s with priority %d and stack size %ld",
             name.c_str(), priority, stackSize);
@@ -97,10 +95,10 @@ public:
         TIMEOUT,
     };
 
-    static RunResult inline runIn(const String& name, ticks timeout, uint32_t stackSize, const TaskFunction runFunction) {
+    static RunResult inline runIn(const std::string& name, ticks timeout, uint32_t stackSize, const TaskFunction runFunction) {
         return Task::runIn(name, timeout, stackSize, DEFAULT_PRIORITY, runFunction);
     }
-    static RunResult runIn(const String& name, ticks timeout, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
+    static RunResult runIn(const std::string& name, ticks timeout, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
         TaskHandle_t caller = xTaskGetCurrentTaskHandle();
         TaskHandle callee = run(name, stackSize, priority, [runFunction, caller](Task& task) {
             runFunction(task);
@@ -117,10 +115,10 @@ public:
         }
     }
 
-    static TaskHandle inline loop(const String& name, uint32_t stackSize, TaskFunction loopFunction) {
+    static TaskHandle inline loop(const std::string& name, uint32_t stackSize, TaskFunction loopFunction) {
         return Task::loop(name, stackSize, DEFAULT_PRIORITY, loopFunction);
     }
-    static TaskHandle loop(const String& name, uint32_t stackSize, UBaseType_t priority, TaskFunction loopFunction) {
+    static TaskHandle loop(const std::string& name, uint32_t stackSize, UBaseType_t priority, TaskFunction loopFunction) {
         return Task::run(name, stackSize, priority, [loopFunction](Task& task) {
             while (true) {
                 loopFunction(task);

@@ -3,21 +3,18 @@
 #include <chrono>
 #include <memory>
 
-#include <Arduino.h>
-
 #include <esp_core_dump.h>
 #include <esp_netif.h>
 #include <esp_pm.h>
 #include <esp_private/esp_clk.h>
 #include <esp_wifi.h>
 
-#include <Print.h>
-
 #include <kernel/BootClock.hpp>
 #include <kernel/Command.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/Console.hpp>
 #include <kernel/Kernel.hpp>
+#include <kernel/Strings.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/RtcDriver.hpp>
 #include <kernel/mqtt/MqttDriver.hpp>
@@ -115,42 +112,18 @@ private:
         static const int spinnerLength = strlen(spinner);
         auto uptime = duration_cast<milliseconds>(boot_clock::now().time_since_epoch());
 
-        status.clear();
         counter = (counter + 1) % spinnerLength;
-        status.concat("[");
-        status.concat(spinner[counter]);
-        status.concat("] ");
-
-        status.concat("\033[33m");
-        status.concat(farmhubVersion);
-        status.concat("\033[0m");
-
-        status.concat(", uptime: \033[33m");
-        status.concat(String(uptime.count() / 1000.0, 1));
-        status.concat("\033[0m s");
-
-        status.concat(", WIFI: ");
-        status.concat(wifiStatus());
-        status.concat(" (up \033[33m");
-        status.concat(String(double(wifi.getUptime().count()) / 1000.0, 1));
-        status.concat("\033[0m s)");
-
-        status.concat(", RTC: \033[33m");
-        status.concat(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED");
-        status.concat("\033[0m");
-
-        status.concat(", heap: \033[33m");
-        status.concat(String(double(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)) / 1024.0, 2));
-        status.concat("\033[0m kB");
-
-        status.concat(", CPU: \033[33m");
-        status.concat(esp_clk_cpu_freq() / 1000000);
-        status.concat("\033[0m MHz");
+        status.clear();
+        status += "[" + std::string(1, spinner[counter]) + "] ";
+        status += "\033[33m" + std::string(farmhubVersion) + "\033[0m";
+        status += ", uptime: \033[33m" + toStringWithPrecision(uptime.count() / 1000.0f, 1) + "\033[0m s";
+        status += ", WIFI: " + std::string(wifiStatus()) + " (up \033[33m" + toStringWithPrecision(wifi.getUptime().count() / 1000.0f, 1) + "\033[0m s)";
+        status += ", RTC \033[33m" + std::string(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED") + "\033[0m";
+        status += ", heap \033[33m" + toStringWithPrecision(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024.0f, 2) + "\033[0m kB";
+        status += ", CPU: \033[33m" + std::to_string(esp_clk_cpu_freq() / 1000000) + "\033[0m MHz";
 
         if (battery != nullptr) {
-            status.concat(", battery: \033[33m");
-            status.concat(String(battery->getVoltage(), 2));
-            status.concat("\033[0m V");
+            status += ", battery: \033[33m" + toStringWithPrecision(battery->getVoltage(), 2) + "\033[0m V";
         }
 
         printf("\033[1G\033[0K%s", status.c_str());
@@ -206,7 +179,7 @@ private:
     }
 
     int counter;
-    String status;
+    std::string status;
     const std::shared_ptr<BatteryDriver> battery;
     WiFiDriver& wifi;
 };
@@ -336,14 +309,14 @@ private:
                 }
                 printf("Shutdown process finished\n");
             });
-            task.delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
+            Task::delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
             enterLowPowerDeepSleep();
         }
     }
 
     [[noreturn]] inline void enterLowPowerDeepSleep() {
         printf("Entering low power deep sleep\n");
-        ESP.deepSleep(duration_cast<microseconds>(LOW_POWER_SLEEP_CHECK_INTERVAL).count());
+        esp_deep_sleep(duration_cast<microseconds>(LOW_POWER_SLEEP_CHECK_INTERVAL).count());
         // Signal to the compiler that we are not returning for real
         abort();
     }
@@ -436,10 +409,10 @@ public:
                 // Remove the level prefix
                 auto messageStart = 2;
                 // Remove trailing newline
-                auto messageEnd = record.message.charAt(length - 1) == '\n'
+                auto messageEnd = record.message[length - 1] == '\n'
                     ? length - 1
                     : length;
-                String message = record.message.substring(messageStart, messageEnd);
+                std::string message = record.message.substr(messageStart, messageEnd - messageStart);
 
                 mqttDeviceRoot->publish(
                     "log", [&](JsonObject& json) {
@@ -520,7 +493,7 @@ public:
         kernel.getKernelReadyState().set();
 
         LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
-            millis() / 1000.0,
+            duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count() / 1000.0,
             kernel.version.c_str(),
             deviceConfig.model.get().c_str(),
             deviceConfig.instance.get().c_str(),
@@ -541,7 +514,7 @@ private:
         peripheralManager.publishTelemetry();
     }
 
-    String locationPrefix() {
+    std::string locationPrefix() {
         if (deviceConfig.location.hasValue()) {
             return deviceConfig.location.get() + "/";
         } else {
@@ -603,7 +576,7 @@ private:
             auto framesJson = backtraceJson["frames"].to<JsonArray>();
             for (int i = 0; i < summary.exc_bt_info.depth; i++) {
                 auto& frame = summary.exc_bt_info.bt[i];
-                framesJson.add("0x" + String(frame, HEX));
+                framesJson.add(toHexString(frame));
             }
         }
     }
@@ -631,7 +604,7 @@ private:
     FileReadCommand fileReadCommand { fs };
     FileWriteCommand fileWriteCommand { fs };
     FileRemoveCommand fileRemoveCommand { fs };
-    HttpUpdateCommand httpUpdateCommand { [this](const String& url) {
+    HttpUpdateCommand httpUpdateCommand { [this](const std::string& url) {
         kernel.prepareUpdate(url);
     } };
 

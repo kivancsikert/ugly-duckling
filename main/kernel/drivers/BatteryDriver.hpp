@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Arduino.h>
-
 #include <kernel/Pin.hpp>
 #include <kernel/Telemetry.hpp>
 
@@ -23,21 +21,19 @@ class AnalogBatteryDriver
     : public BatteryDriver {
 public:
     AnalogBatteryDriver(InternalPinPtr pin, float voltageDividerRatio)
-        : pin(pin)
+        : analogPin(pin)
         , voltageDividerRatio(voltageDividerRatio) {
         LOGI("Initializing analog battery driver on pin %s",
-            pin->getName().c_str());
-
-        pin->pinMode(INPUT);
+            analogPin.getName().c_str());
     }
 
     float getVoltage() {
-        auto batteryLevel = pin->analogRead();
+        auto batteryLevel = analogPin.analogRead();
         return batteryLevel * 3.3 / 4096 * voltageDividerRatio;
     }
 
 private:
-    const InternalPinPtr pin;
+    AnalogPin analogPin;
     const float voltageDividerRatio;
 };
 

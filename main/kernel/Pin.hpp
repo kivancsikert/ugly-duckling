@@ -6,7 +6,9 @@
 #include <optional>
 #include <vector>
 
-#include <Arduino.h>
+#include <driver/gpio.h>
+#include <esp_adc/adc_oneshot.h>
+#include <hal/adc_types.h>
 
 #include <ArduinoJson.h>
 
@@ -25,47 +27,54 @@ using InternalPinPtr = std::shared_ptr<InternalPin>;
  */
 class Pin {
 public:
-    static PinPtr byName(const String& name) {
+    static PinPtr byName(const std::string& name) {
         auto it = BY_NAME.find(name);
         if (it != BY_NAME.end()) {
             return it->second;
         }
-        throw std::runtime_error(String("Unknown pin: " + name).c_str());
+        throw std::runtime_error(std::string("Unknown pin: " + name).c_str());
     }
 
-    virtual void pinMode(uint8_t mode) const = 0;
+    enum class Mode {
+        Output,
+        Input,
+        InputPullUp,
+        InputPullDown,
+    };
+
+    virtual void pinMode(Mode mode) const = 0;
 
     virtual void digitalWrite(uint8_t val) const = 0;
 
     virtual int digitalRead() const = 0;
 
-    inline const String& getName() const {
+    inline const std::string& getName() const {
         return name;
     }
 
-    static void registerPin(const String& name, PinPtr pin) {
+    static void registerPin(const std::string& name, PinPtr pin) {
         BY_NAME[name] = pin;
     }
 
 protected:
-    Pin(const String& name)
+    Pin(const std::string& name)
         : name(name) {
     }
 
 protected:
-    const String name;
+    const std::string name;
 
-    static std::map<String, PinPtr> BY_NAME;
+    static std::map<std::string, PinPtr> BY_NAME;
 };
 
-std::map<String, PinPtr> Pin::BY_NAME;
+std::map<std::string, PinPtr> Pin::BY_NAME;
 
 /**
  * @brief An internal GPIO pin of the MCU. These pins can do analog reads as well, and can expose the GPIO number.
  */
 class InternalPin : public Pin {
 public:
-    static InternalPinPtr registerPin(const String& name, gpio_num_t gpio) {
+    static InternalPinPtr registerPin(const std::string& name, gpio_num_t gpio) {
         auto pin = std::make_shared<InternalPin>(name, gpio);
         INTERNAL_BY_GPIO[gpio] = pin;
         INTERNAL_BY_NAME[name] = pin;
@@ -73,43 +82,45 @@ public:
         return pin;
     }
 
-    static InternalPinPtr byName(const String& name) {
+    static InternalPinPtr byName(const std::string& name) {
         auto it = INTERNAL_BY_NAME.find(name);
         if (it != INTERNAL_BY_NAME.end()) {
             return it->second;
         }
-        throw std::runtime_error(String("Unknown internal pin: " + name).c_str());
+        throw std::runtime_error(std::string("Unknown internal pin: " + name).c_str());
     }
 
     static InternalPinPtr byGpio(gpio_num_t pin) {
         auto it = INTERNAL_BY_GPIO.find(pin);
         if (it == INTERNAL_BY_GPIO.end()) {
-            String name = "GPIO_NUM_" + String(pin);
+            std::string name = "GPIO_NUM_" + std::to_string(static_cast<int>(pin));
             return registerPin(name, pin);
         } else {
             return it->second;
         }
     }
 
-    InternalPin(const String& name, gpio_num_t gpio)
+    InternalPin(const std::string& name, gpio_num_t gpio)
         : Pin(name)
         , gpio(gpio) {
     }
 
-    inline void pinMode(uint8_t mode) const override {
-        ::pinMode(gpio, mode);
+    void pinMode(Mode mode) const override {
+        gpio_config_t conf = {
+            .pin_bit_mask = (1ULL << gpio),
+            .mode = mode == Mode::Output ? GPIO_MODE_OUTPUT : GPIO_MODE_INPUT,
+            .pull_up_en = mode == Mode::InputPullUp ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE,
+            .pull_down_en = mode == Mode::InputPullDown ? GPIO_PULLDOWN_ENABLE : GPIO_PULLDOWN_DISABLE,
+        };
+        ESP_ERROR_CHECK(gpio_config(&conf));
     }
 
     inline void digitalWrite(uint8_t val) const override {
-        ::digitalWrite(gpio, val);
+        gpio_set_level(gpio, val);
     }
 
     inline int digitalRead() const override {
-        return ::digitalRead(gpio);
-    }
-
-    inline uint16_t analogRead() const {
-        return ::analogRead(gpio);
+        return gpio_get_level(gpio);
     }
 
     inline gpio_num_t getGpio() const {
@@ -118,12 +129,64 @@ public:
 
 private:
     const gpio_num_t gpio;
-    static std::map<String, InternalPinPtr> INTERNAL_BY_NAME;
+    static std::map<std::string, InternalPinPtr> INTERNAL_BY_NAME;
     static std::map<gpio_num_t, InternalPinPtr> INTERNAL_BY_GPIO;
 };
 
-std::map<String, InternalPinPtr> InternalPin::INTERNAL_BY_NAME;
+class AnalogPin {
+public:
+    AnalogPin(const InternalPinPtr pin)
+        : pin(pin) {
+        adc_unit_t unit;
+        ESP_ERROR_CHECK(adc_oneshot_io_to_channel(pin->getGpio(), &unit, &channel));
+
+        handle = getUnitHandle(unit);
+
+        adc_oneshot_chan_cfg_t config = {
+            .atten = ADC_ATTEN_DB_12,
+            .bitwidth = ADC_BITWIDTH_DEFAULT,
+        };
+        ESP_ERROR_CHECK(adc_oneshot_config_channel(handle, channel, &config));
+    }
+
+    ~AnalogPin() {
+        ESP_ERROR_CHECK(adc_oneshot_del_unit(handle));
+    }
+
+    int analogRead() const {
+        int value;
+        ESP_ERROR_CHECK(adc_oneshot_read(handle, channel, &value));
+        return value;
+    }
+
+    const std::string& getName() const {
+        return pin->getName();
+    }
+
+private:
+    static adc_oneshot_unit_handle_t getUnitHandle(adc_unit_t unit) {
+        adc_oneshot_unit_handle_t handle = ANALOG_UNITS[unit];
+        if (handle == nullptr) {
+            adc_oneshot_unit_init_cfg_t config = {
+                .unit_id = unit,
+                .ulp_mode = ADC_ULP_MODE_DISABLE,
+            };
+            ESP_ERROR_CHECK(adc_oneshot_new_unit(&config, &handle));
+            ANALOG_UNITS[unit] = handle;
+        }
+        return handle;
+    }
+
+    static std::vector<adc_oneshot_unit_handle_t> ANALOG_UNITS;
+
+    const InternalPinPtr pin;
+    adc_oneshot_unit_handle_t handle;
+    adc_channel_t channel;
+};
+
+std::map<std::string, InternalPinPtr> InternalPin::INTERNAL_BY_NAME;
 std::map<gpio_num_t, InternalPinPtr> InternalPin::INTERNAL_BY_GPIO;
+std::vector<adc_oneshot_unit_handle_t> AnalogPin::ANALOG_UNITS { 2 };
 
 }    // namespace farmhub::kernel
 
@@ -148,7 +211,7 @@ struct Converter<PinPtr> {
         if (src.is<const char*>()) {
             return Pin::byName(src.as<const char*>());
         } else {
-            throw std::runtime_error(String("Invalid pin name: " + src.as<String>()).c_str());
+            throw std::runtime_error(std::string("Invalid pin name: " + src.as<std::string>()).c_str());
         }
     }
 
@@ -162,7 +225,7 @@ struct Converter<InternalPinPtr> {
     static void toJson(const InternalPinPtr& src, JsonVariant dst) {
         if (src == nullptr) {
             dst.set(nullptr);
-        } else if (src->getName().startsWith("GPIO_NUM_")) {
+        } else if (src->getName().starts_with("GPIO_NUM_")) {
             dst.set(static_cast<int>(src->getGpio()));
         } else {
             dst.set(src->getName());

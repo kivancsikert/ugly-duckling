@@ -1,13 +1,11 @@
 #pragma once
 
 #include <chrono>
-#include <deque>
 #include <memory>
 
-#include <Arduino.h>
-#include <Wire.h>
+#include <esp_system.h>
 
-#include <BH1750.h>
+#include <bh1750.h>
 
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>
@@ -37,36 +35,35 @@ class Bh1750Component
     : public LightSensorComponent {
 public:
     Bh1750Component(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         I2CConfig config,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval)
-        , sensor(config.address) {
+        : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval) {
 
         LOGI("Initializing BH1750 light sensor with %s",
             config.toString().c_str());
 
-        // TODO Make mode configurable
-        // TODO What's the difference between one-time and continuous mode here?
-        //      Can we save some battery by using one-time mode? Are we losing anything by doing so?
-        TwoWire& wire = i2c.getWireFor(config);
-        if (!sensor.begin(BH1750::CONTINUOUS_LOW_RES_MODE, config.address, &wire)) {
-            throw PeripheralCreationException("Failed to initialize BH1750 light sensor");
-        }
+        // TODO Use I2CManager to create device
+        ESP_ERROR_CHECK(bh1750_init_desc(&sensor, config.address, I2C_NUM_0, config.sda->getGpio(), config.scl->getGpio()));
+        ESP_ERROR_CHECK(bh1750_setup(&sensor, BH1750_MODE_CONTINUOUS, BH1750_RES_LOW));
 
         runLoop();
     }
 
 protected:
     double readLightLevel() override {
-        return sensor.readLightLevel();
+        uint16_t lightLevel;
+        if (bh1750_read(&sensor, &lightLevel) != ESP_OK) {
+            LOGE("Could not read light level");
+        }
+        return lightLevel;
     }
 
 private:
-    BH1750 sensor;
+    i2c_dev_t sensor {};
 };
 
 class Bh1750
@@ -74,7 +71,7 @@ class Bh1750
 
 public:
     Bh1750(
-        const String& name,
+        const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
         const I2CConfig& config,
@@ -99,7 +96,7 @@ public:
         : PeripheralFactory<Bh1750DeviceConfig, EmptyConfiguration>("light-sensor:bh1750", "light-sensor") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const String& name, const Bh1750DeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const Bh1750DeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
         I2CConfig i2cConfig = deviceConfig.parse(0x23);
         return std::make_unique<Bh1750>(name, mqttRoot, services.i2c, i2cConfig, deviceConfig.measurementFrequency.get(), deviceConfig.latencyInterval.get());
     }

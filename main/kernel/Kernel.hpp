@@ -8,6 +8,7 @@
 #include <esp_http_client.h>
 #include <esp_https_ota.h>
 #include <esp_mac.h>
+#include <esp_system.h>
 
 #include <nvs_flash.h>
 
@@ -37,11 +38,11 @@ class Kernel;
 
 static RTC_DATA_ATTR int bootCount = 0;
 
-static const String UPDATE_FILE = "/update.json";
+static constexpr const char* UPDATE_FILE = "/update.json";
 
 // TODO Move this to a separate file
-static const String& getMacAddress() {
-    static String macAddress;
+static const std::string& getMacAddress() {
+    static std::string macAddress;
     if (macAddress.length() == 0) {
         uint8_t rawMac[6];
         for (int i = 0; i < 6; i++) {
@@ -80,7 +81,7 @@ public:
         Task::loop("status-update", 3072, [this](Task&) { updateState(); });
 
         httpUpdateResult = handleHttpUpdate();
-        if (!httpUpdateResult.isEmpty()) {
+        if (!httpUpdateResult.empty()) {
             LOGE("HTTP update failed because: %s",
                 httpUpdateResult.c_str());
         }
@@ -98,45 +99,45 @@ public:
         return kernelReadyState;
     }
 
-    const String& getHttpUpdateResult() const {
+    const std::string& getHttpUpdateResult() const {
         return httpUpdateResult;
     }
 
-    void prepareUpdate(const String& url) {
-        auto fUpdate = fs.open(UPDATE_FILE, FILE_WRITE);
+    void prepareUpdate(const std::string& url) {
         JsonDocument doc;
         doc["url"] = url;
-        serializeJson(doc, fUpdate);
-        fUpdate.close();
+        std::string content;
+        serializeJson(doc, content);
+        fs.writeAll(UPDATE_FILE, content);
     }
 
     void performFactoryReset(bool completeReset) {
         LOGI("Performing factory reset");
 
         statusLed.turnOn();
-        delay(1000);
+        Task::delay(1s);
         statusLed.turnOff();
-        delay(1000);
+        Task::delay(1s);
         statusLed.turnOn();
 
         if (completeReset) {
-            delay(1000);
+            Task::delay(1s);
             statusLed.turnOff();
-            delay(1000);
+            Task::delay(1s);
             statusLed.turnOn();
 
             LOGI(" - Deleting the file system...");
-            fs.reset();
+            FileSystem::format();
         }
 
         LOGI(" - Clearing NVS...");
         nvs_flash_erase();
 
         LOGI(" - Restarting...");
-        ESP.restart();
+        esp_restart();
     }
 
-    const String version;
+    const std::string version;
 
     FileSystem& fs { FileSystem::get() };
 
@@ -208,7 +209,7 @@ private:
         stateManager.awaitStateChange();
     }
 
-    String handleHttpUpdate() {
+    std::string handleHttpUpdate() {
         if (!fs.exists(UPDATE_FILE)) {
             return "";
         }
@@ -219,16 +220,18 @@ private:
         PowerManagementLockGuard sleepLock(preventLightSleep);
 #endif
 
-        auto fUpdate = fs.open(UPDATE_FILE, FILE_READ);
+        auto contents = fs.readAll(UPDATE_FILE);
+        if (!contents.has_value()) {
+            return "Failed to read update file";
+        }
         JsonDocument doc;
-        auto error = deserializeJson(doc, fUpdate);
-        fUpdate.close();
-        fs.remove(UPDATE_FILE);
+        auto error = deserializeJson(doc, contents.value());
+        unlink(UPDATE_FILE);
 
         if (error) {
-            return "Failed to parse update.json: " + String(error.c_str());
+            return "Failed to parse update.json: " + std::string(error.c_str());
         }
-        String url = doc["url"];
+        std::string url = doc["url"];
         if (url.length() == 0) {
             return "Command contains empty url";
         }
@@ -245,6 +248,10 @@ private:
         esp_http_client_config_t httpConfig = {
             .url = url.c_str(),
             .event_handler = httpEventHandler,
+            // Additional buffers to fit headers
+            // Updating directly via GitHub's release links requires these
+            .buffer_size = 4 * 1024,
+            .buffer_size_tx = 12 * 1024,
             .user_data = this,
             .crt_bundle_attach = esp_crt_bundle_attach,
             .keep_alive_enable = true,
@@ -258,9 +265,9 @@ private:
             Task::delay(5s);
             esp_restart();
         } else {
-            LOGE("Update failed (err = %d), continuing with regular boot",
-                ret);
-            return "Firmware upgrade failed: " + String(ret);
+            LOGE("Update failed (%s), continuing with regular boot",
+                esp_err_to_name(ret));
+            return std::string("Firmware upgrade failed: ") + esp_err_to_name(ret);
         }
     }    // namespace farmhub::kernel
 
@@ -330,7 +337,7 @@ private:
     MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
     RtcDriver rtc { wifi, mdns, deviceConfig.ntp.get(), rtcInSyncState };
 
-    String httpUpdateResult;
+    std::string httpUpdateResult;
 
 public:
     MqttDriver mqtt { wifi, mdns, mqttConfig, deviceConfig.instance.get(), deviceConfig.sleepWhenIdle.get(), mqttReadyState };
