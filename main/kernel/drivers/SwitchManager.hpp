@@ -79,7 +79,6 @@ public:
         switchState->releaseHandler = releaseHandler;
 
         // Install GPIO ISR
-        gpio_install_isr_service(0);
         gpio_isr_handler_add(pin->getGpio(), handleSwitchInterrupt, switchState);
         gpio_set_intr_type(pin->getGpio(), GPIO_INTR_ANYEDGE);
 

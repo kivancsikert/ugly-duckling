@@ -7,6 +7,7 @@
 #include <string>
 
 #include <esp_app_desc.h>
+#include <driver/gpio.h>
 
 static const char* const farmhubVersion = esp_app_get_description()->version;
 
@@ -90,6 +91,9 @@ extern "C" void app_main() {
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
+
+    // Install GPIO ISR service
+    gpio_install_isr_service(0);
 
 #ifdef CONFIG_HEAP_TRACING
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));

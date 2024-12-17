@@ -25,9 +25,6 @@ public:
         };
         gpio_config(&config);
 
-        // Install GPIO ISR service
-        gpio_install_isr_service(0);
-
         // Attach the ISR handler to the GPIO pin
         gpio_isr_handler_add(pin->getGpio(), interruptHandler, this);
 
