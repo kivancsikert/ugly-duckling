@@ -59,7 +59,7 @@ public:
         LOGI("Initializing electric fence with pins %s", pinsDescription.c_str());
 
         for (auto& pinConfig : config.pins.get()) {
-            auto unit = make_shared<PulseCounter>(pinConfig.pin);
+            auto unit = make_shared<PulseCounter>(pinConfig.pin, 0us);
             pins.emplace_back(pinConfig.voltage, unit);
         }
 

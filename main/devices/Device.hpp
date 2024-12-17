@@ -386,13 +386,16 @@ private:
 class Device {
 public:
     Device() {
-        kernel.switches.onReleased("factory-reset", deviceDefinition.bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
+        kernel.switches.onReleased("main-button", deviceDefinition.bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 15s) {
                 LOGI("Factory reset triggered after %lld ms", duration.count());
                 kernel.performFactoryReset(true);
             } else if (duration >= 5s) {
                 LOGI("WiFi reset triggered after %lld ms", duration.count());
                 kernel.performFactoryReset(false);
+            } else if (duration >= 200ms) {
+                LOGI("Triggering telemetry publish on request");
+                telemetryPublishQueue.overwrite(true);
             }
         });
 

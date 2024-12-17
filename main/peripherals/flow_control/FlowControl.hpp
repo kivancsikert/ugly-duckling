@@ -33,12 +33,13 @@ public:
         ValveControlStrategy& strategy,
         InternalPinPtr pin,
         double qFactor,
-        milliseconds measurementFrequency)
+        milliseconds measurementFrequency,
+        microseconds glitchDuration)
         : Peripheral<FlowControlConfig>(name, mqttRoot)
         , valve(name, strategy, mqttRoot, [this]() {
             publishTelemetry();
         })
-        , flowMeter(name, mqttRoot, pin, qFactor, measurementFrequency) {
+        , flowMeter(name, mqttRoot, pin, qFactor, measurementFrequency, glitchDuration) {
     }
 
     void configure(const FlowControlConfig& config) override {
@@ -94,7 +95,8 @@ public:
 
             flowMeterConfig.pin.get(),
             flowMeterConfig.qFactor.get(),
-            flowMeterConfig.measurementFrequency.get());
+            flowMeterConfig.measurementFrequency.get(),
+            flowMeterConfig.glitchDuration.get());
     }
 
 private:
