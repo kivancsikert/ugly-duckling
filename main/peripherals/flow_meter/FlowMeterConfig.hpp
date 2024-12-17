@@ -16,6 +16,7 @@ public:
     Property<InternalPinPtr> pin { this, "pin" };
     Property<double> qFactor { this, "qFactor", 5.0 };
     Property<milliseconds> measurementFrequency { this, "measurementFrequency", 1s };
+    Property<microseconds> glitchDuration { this, "glitchDuration", 10us };
 };
 
 }

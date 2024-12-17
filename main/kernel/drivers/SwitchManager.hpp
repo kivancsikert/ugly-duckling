@@ -39,13 +39,15 @@ public:
             SwitchStateChange stateChange = switchStateInterrupts.take();
             auto state = stateChange.switchState;
             auto engaged = stateChange.engaged;
+            auto now = boot_clock::now();
             LOGV("Switch %s is %s",
                 state->name.c_str(), engaged ? "engaged" : "released");
             if (engaged) {
-                state->engagementStarted = system_clock::now();
+                state->engagementStarted = now;
                 state->engagementHandler(*state);
-            } else if (state->engagementStarted.time_since_epoch().count() > 0) {
-                auto duration = duration_cast<milliseconds>(system_clock::now() - state->engagementStarted);
+            } else if (state->engagementStarted.has_value() && now - state->engagementStarted.value() > 100ms) {
+                auto duration = duration_cast<milliseconds>(boot_clock::now() - state->engagementStarted.value());
+                state->engagementStarted.reset();
                 state->releaseHandler(*state, duration);
             }
         });
@@ -112,7 +114,7 @@ private:
         SwitchEngagementHandler engagementHandler;
         SwitchReleaseHandler releaseHandler;
 
-        time_point<system_clock> engagementStarted;
+        std::optional<time_point<boot_clock>> engagementStarted;
         SwitchManager* manager;
 
         friend class SwitchManager;

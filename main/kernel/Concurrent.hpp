@@ -166,7 +166,7 @@ public:
     bool offerIn(ticks timeout, const TMessage message) {
         bool sentWithoutDropping = xQueueSend(this->queue, &message, timeout.count()) == pdTRUE;
         if (!sentWithoutDropping) {
-            printf("Overflow in queue '%s', dropping message",
+            printf("Overflow in queue '%s', dropping message\n",
                 this->name.c_str());
         }
         return sentWithoutDropping;

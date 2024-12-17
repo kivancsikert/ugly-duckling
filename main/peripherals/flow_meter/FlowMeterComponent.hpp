@@ -26,14 +26,15 @@ public:
         shared_ptr<MqttRoot> mqttRoot,
         InternalPinPtr pin,
         double qFactor,
-        milliseconds measurementFrequency)
+        milliseconds measurementFrequency,
+        microseconds glitchDuration)
         : Component(name, mqttRoot)
         , qFactor(qFactor) {
 
-        LOGI("Initializing flow meter on pin %s with Q = %.2f",
-            pin->getName().c_str(), qFactor);
+        LOGI("Initializing flow meter on pin %s with Q = %.2f (glitch duration = %lld us)",
+            pin->getName().c_str(), qFactor, glitchDuration.count());
 
-        counter = make_shared<PulseCounter>(pin);
+        counter = make_shared<PulseCounter>(pin, 10us);
 
         auto now = boot_clock::now();
         lastMeasurement = now;
