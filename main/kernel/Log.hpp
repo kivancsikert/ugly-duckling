@@ -75,7 +75,6 @@ public:
             esp_log_level_set(tag, ESP_LOG_INFO);
 #endif
         }
-        esp_log_level_set(Tag::PCNT, ESP_LOG_VERBOSE);
     }
 
 private:
