@@ -12,21 +12,11 @@ namespace farmhub::kernel {
 //      See https://docs.espressif.com/projects/esp-idf/en/release-v4.2/esp32/api-reference/peripherals/ledc.html#ledc-high-and-low-speed-mode
 
 // TODO Limit number of channels available
-struct PcntUnit {
-    PcntUnit(pcnt_unit_handle_t unit, InternalPinPtr pin)
+struct PulseCounterUnit {
+    PulseCounterUnit(pcnt_unit_handle_t unit, InternalPinPtr pin)
         : unit(unit)
         , pin(pin) {
     }
-
-    PcntUnit()
-        : PcntUnit(nullptr, nullptr) {
-    }
-
-    PcntUnit(const PcntUnit& other)
-        : PcntUnit(other.unit, other.pin) {
-    }
-
-    PcntUnit& operator=(const PcntUnit& other) = default;
 
     int getCount() const {
         int count;
@@ -55,13 +45,13 @@ struct PcntUnit {
     }
 
 private:
-    pcnt_unit_handle_t unit;
-    InternalPinPtr pin;
+    const pcnt_unit_handle_t unit;
+    const InternalPinPtr pin;
 };
 
 class PcntManager {
 public:
-    PcntUnit registerUnit(InternalPinPtr pin, nanoseconds maxGlitchDuration = 1000ns) {
+    shared_ptr<PulseCounterUnit> registerUnit(InternalPinPtr pin, nanoseconds maxGlitchDuration = 1000ns) {
         pcnt_unit_config_t unitConfig = {
             .low_limit = std::numeric_limits<int16_t>::min(),
             .high_limit = std::numeric_limits<int16_t>::max(),
@@ -91,7 +81,7 @@ public:
 
         LOGTD(Tag::PCNT, "Registered PCNT unit on pin %s",
             pin->getName().c_str());
-        return PcntUnit(unit, pin);
+        return make_shared<PulseCounterUnit>(unit, pin);
     }
 };
 

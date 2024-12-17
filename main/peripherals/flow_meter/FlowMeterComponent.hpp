@@ -8,7 +8,7 @@
 #include <kernel/BootClock.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
-#include <kernel/PcntManager.hpp>
+#include <kernel/PulseCounter.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/mqtt/MqttDriver.hpp>
@@ -24,7 +24,6 @@ public:
     FlowMeterComponent(
         const String& name,
         shared_ptr<MqttRoot> mqttRoot,
-        PcntManager& pcnt,
         InternalPinPtr pin,
         double qFactor,
         milliseconds measurementFrequency)
@@ -34,7 +33,7 @@ public:
         LOGI("Initializing flow meter on pin %s with Q = %.2f",
             pin->getName().c_str(), qFactor);
 
-        pcntUnit = pcnt.registerUnit(pin);
+        counter = make_shared<PulseCounter>(pin);
 
         auto now = boot_clock::now();
         lastMeasurement = now;
@@ -47,12 +46,12 @@ public:
             if (elapsed.count() > 0) {
                 lastMeasurement = now;
 
-                int16_t pulses = pcntUnit.getAndClearCount();
+                uint32_t pulses = counter->reset();
 
                 if (pulses > 0) {
                     Lock lock(updateMutex);
                     double currentVolume = pulses / this->qFactor / 60.0f;
-                    LOGV("Counted %d pulses, %.2f l/min, %.2f l",
+                    LOGV("Counted %lu pulses, %.2f l/min, %.2f l",
                         pulses, currentVolume / (elapsed.count() / 1000.0f / 60.0f), currentVolume);
                     volume += currentVolume;
                     lastSeenFlow = now;
@@ -83,7 +82,7 @@ private:
         lastPublished = lastMeasurement;
     }
 
-    PcntUnit pcntUnit;
+    shared_ptr<PulseCounter> counter;
     const double qFactor;
 
     time_point<boot_clock> lastMeasurement;
