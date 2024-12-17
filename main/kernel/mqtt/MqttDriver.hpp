@@ -661,15 +661,28 @@ private:
     }
 
     milliseconds processSubscriptions(const std::list<Subscription>& subscriptions, std::list<PendingSubscription>& pendingSubscriptions) {
+        milliseconds extendKeepAliveImmediately = milliseconds::zero();
         std::vector<esp_mqtt_topic_t> topics;
-        milliseconds extendKeepAlive = milliseconds::zero();
-        for (auto& subscription : subscriptions) {
-            LOGTV(Tag::MQTT, "Subscribing to topic '%s' (qos = %d)",
-                subscription.topic.c_str(), static_cast<int>(subscription.qos));
-            topics.emplace_back(subscription.topic.c_str(), static_cast<int>(subscription.qos));
-            extendKeepAlive = std::max(extendKeepAlive, subscription.extendKeepAlive);
-        }
+        for (auto it = subscriptions.begin(); it != subscriptions.end();) {
+            // Break up subscriptions into batches of 8
+            milliseconds extendKeepAlive = milliseconds::zero();
+            for (; it != subscriptions.end() && topics.size() < 8; it++) {
+                const auto& subscription = *it;
+                LOGTV(Tag::MQTT, "Subscribing to topic '%s' (qos = %d)",
+                    subscription.topic.c_str(), static_cast<int>(subscription.qos));
+                topics.emplace_back(subscription.topic.c_str(), static_cast<int>(subscription.qos));
+                extendKeepAlive = std::max(extendKeepAlive, subscription.extendKeepAlive);
+            }
 
+            extendKeepAliveImmediately = std::max(
+                extendKeepAliveImmediately,
+                processSubscriptionBatch(topics, extendKeepAlive, pendingSubscriptions));
+            topics.clear();
+        }
+        return extendKeepAliveImmediately;
+    }
+
+    milliseconds processSubscriptionBatch(const std::vector<esp_mqtt_topic_t>& topics, milliseconds extendKeepAlive, std::list<PendingSubscription>& pendingSubscriptions) {
         int ret = esp_mqtt_client_subscribe_multiple(client, topics.data(), topics.size());
 
         milliseconds extendKeepAliveImmediately = milliseconds::zero();
