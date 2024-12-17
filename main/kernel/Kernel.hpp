@@ -248,6 +248,10 @@ private:
         esp_http_client_config_t httpConfig = {
             .url = url.c_str(),
             .event_handler = httpEventHandler,
+            // Additional buffers to fit headers
+            // Updating directly via GitHub's release links requires these
+            .buffer_size = 4 * 1024,
+            .buffer_size_tx = 12 * 1024,
             .user_data = this,
             .crt_bundle_attach = esp_crt_bundle_attach,
             .keep_alive_enable = true,
