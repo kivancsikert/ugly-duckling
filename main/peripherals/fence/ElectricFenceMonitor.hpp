@@ -60,8 +60,8 @@ public:
         LOGI("Initializing electric fence with pins %s", pinsDescription.c_str());
 
         for (auto& pinConfig : config.pins.get()) {
-            auto unit = pcnt.registerUnit(pinConfig.pin);
-            pins.push_back({ pinConfig.voltage, unit });
+            auto unit = pcnt.registerUnit(pinConfig.pin, nanoseconds::zero());
+            pins.emplace_back(pinConfig.voltage, unit);
         }
 
         // TODO Use PCNT event callbacks instead?
