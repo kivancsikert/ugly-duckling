@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 # Define the Docker image name
-IMAGE_NAME = "espressif/idf:v5.3.1"
+IMAGE_NAME = "espressif/idf:v5.3.2"
 
 # Get environment variables (or set defaults if not present)
 UD_GEN = os.getenv("UD_GEN")
