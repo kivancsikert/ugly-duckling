@@ -31,11 +31,15 @@ struct PcntUnit {
     int getCount() const {
         int count;
         pcnt_unit_get_count(unit, &count);
+        LOGTV(Tag::PCNT, "Counted %d pulses on pin %s",
+            count, pin->getName().c_str());
         return count;
     }
 
     void clear() {
         pcnt_unit_clear_count(unit);
+        LOGTV(Tag::PCNT, "Cleared counter on pin %s",
+            pin->getName().c_str());
     }
 
     int16_t getAndClearCount() {
@@ -85,7 +89,7 @@ public:
         ESP_ERROR_CHECK(pcnt_unit_clear_count(unit));
         ESP_ERROR_CHECK(pcnt_unit_start(unit));
 
-        LOGD("Registered PCNT unit on pin %s",
+        LOGTD(Tag::PCNT, "Registered PCNT unit on pin %s",
             pin->getName().c_str());
         return PcntUnit(unit, pin);
     }
