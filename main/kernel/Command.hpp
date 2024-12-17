@@ -154,7 +154,7 @@ public:
             path.c_str());
         std::string contents = request["contents"];
         response["path"] = path;
-        size_t written = fs.write(path, contents.c_str(), contents.length());
+        size_t written = fs.writeAll(path, contents);
         response["written"] = written;
     }
 };

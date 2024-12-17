@@ -41,14 +41,8 @@ public:
         return result;
     }
 
-    bool writeAll(const std::string& path, const std::string& content) const {
-        FILE* file = fopen(resolve(path).c_str(), "w");
-        if (file == nullptr) {
-            return false;
-        }
-        size_t bytesWritten = fwrite(content.data(), 1, content.size(), file);
-        fclose(file);
-        return bytesWritten == content.size();
+    size_t writeAll(const std::string& path, const std::string& contents) const {
+        return write(path, contents.c_str(), contents.size());
     }
 
     size_t size(const std::string& path) const {
@@ -60,7 +54,7 @@ public:
     }
 
     size_t read(const std::string& path, char* buffer, size_t size) const {
-        FILE* file = open(resolve(path), "r");
+        FILE* file = open(path, "r");
         if (file == nullptr) {
             return 0;
         }
@@ -71,7 +65,7 @@ public:
     }
 
     size_t write(const std::string& path, const char* buffer, size_t size) const {
-        FILE* file = open(resolve(path), "w");
+        FILE* file = open(path, "w");
         if (file == nullptr) {
             return 0;
         }
@@ -82,8 +76,7 @@ public:
     }
 
     bool readDir(const std::string& path, std::function<void(const std::string&, size_t)> callback) const {
-        std::string resolvedPath = resolve(path);
-        DIR* dir = opendir(resolvedPath.c_str());
+        DIR* dir = opendir(resolve(path).c_str());
         if (dir == nullptr) {
             LOGTE(Tag::FS, "Failed to open directory: %s", path.c_str());
             return false;
