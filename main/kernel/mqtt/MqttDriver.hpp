@@ -139,6 +139,9 @@ public:
             .network {
                 .timeout_ms = duration_cast<milliseconds>(10s).count(),
             },
+            .buffer {
+                .size = 2048,
+            }
         };
 
         LOGTD(Tag::MQTT, "server: %s:%ld, client ID is '%s'",
@@ -661,7 +664,7 @@ private:
         milliseconds extendKeepAliveImmediately = milliseconds::zero();
         std::vector<esp_mqtt_topic_t> topics;
         for (auto it = subscriptions.begin(); it != subscriptions.end();) {
-            // Break up subscriptions into batches of 8
+            // Break up subscriptions into batches
             milliseconds extendKeepAlive = milliseconds::zero();
             for (; it != subscriptions.end() && topics.size() < 8; it++) {
                 const auto& subscription = *it;
