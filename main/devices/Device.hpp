@@ -584,15 +584,15 @@ private:
             summary.exc_task, excCause);
 
         json["version"] = summary.core_dump_version;
-        json["sha256"] = summary.app_elf_sha256;
-        json["task"] = summary.exc_task;
+        json["sha256"] = std::string((const char*) summary.app_elf_sha256);
+        json["task"] = std::string(summary.exc_task);
         json["cause"] = excCause;
 
         static constexpr size_t PANIC_REASON_SIZE = 256;
         char panicReason[PANIC_REASON_SIZE];
         if (esp_core_dump_get_panic_reason(panicReason, PANIC_REASON_SIZE) == ESP_OK) {
             LOGW("Panic reason: %s", panicReason);
-            json["panicReason"] = panicReason;
+            json["panicReason"] = std::string(panicReason);
         }
 
         auto backtraceJson = json["backtrace"].to<JsonObject>();
