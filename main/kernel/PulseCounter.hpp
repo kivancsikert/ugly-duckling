@@ -40,8 +40,6 @@ public:
         // Use the same configuration while in light sleep
         ESP_ERROR_CHECK(gpio_sleep_sel_dis(gpio));
 
-        ESP_ERROR_CHECK(rtc_gpio_wakeup_enable(gpio, GPIO_INTR_HIGH_LEVEL));
-
         // TODO Where should this be called?
         ESP_ERROR_CHECK(esp_sleep_enable_gpio_wakeup());
 
@@ -81,17 +79,30 @@ private:
     // The amount of time we wait for the end of a pulse before we consider it a timeout
     static constexpr microseconds maxHighTime = 100ms;
 
+    enum class EdgeKind {
+        Rising,
+        Falling,
+    };
+
     void runLoop() {
         std::optional<time_point<boot_clock>> lastRisingEdge;
+        EdgeKind wakeToEdge = EdgeKind::Falling;
+        EdgeKind wakeToEdgeNext = EdgeKind::Rising;
+        std::optional<PowerManagementLockGuard> preventLightSleep;
+
         while (true) {
             ticks timeout;
             if (lastRisingEdge.has_value()) {
                 auto elapsedSinceLastRisingEdge = boot_clock::now() - lastRisingEdge.value();
                 if (elapsedSinceLastRisingEdge > maxHighTime) {
+                    LOGTV(Tag::PCNT, "Timeout while waiting for falling edge on pin %s",
+                        pin->getName().c_str());
                     // We've timed out, let the device sleep again, and forget this rising edge
                     // as it was clearly not the beginning of an actual pulse
                     lastRisingEdge.reset();
                     preventLightSleep.reset();
+                    wakeToEdgeNext = EdgeKind::Falling;
+                    timeout = ticks::max();
                 } else {
                     timeout = floor<ticks>(maxHighTime - elapsedSinceLastRisingEdge);
                 }
@@ -99,10 +110,18 @@ private:
                 timeout = ticks::max();
             }
 
-            auto event = eventQueue.pollIn(timeout);
-            if (event.has_value()) {
+            // Make sure that we wake up on the correct edge next
+            if (wakeToEdge != wakeToEdgeNext) {
+                auto intrType = wakeToEdgeNext == EdgeKind::Rising
+                    ? GPIO_INTR_HIGH_LEVEL
+                    : GPIO_INTR_LOW_LEVEL;
+                ESP_ERROR_CHECK(rtc_gpio_wakeup_enable(pin->getGpio(), intrType));
+                wakeToEdge = wakeToEdgeNext;
+            }
+
+            for (auto event = eventQueue.pollIn(timeout); event.has_value(); event = eventQueue.poll()) {
                 switch (event.value()) {
-                    case PulseCounterEvent::RisingEdgeDetected:
+                    case EdgeKind::Rising:
                         if (!lastRisingEdge.has_value()) {
                             // Beginning of new pulse detected, prevent light sleep
                             // until the end of the pulse or a timeout
@@ -110,13 +129,14 @@ private:
                             preventLightSleep.emplace(PowerManager::lightSleepLock);
                         }
                         break;
-                    case PulseCounterEvent::FallingEdgeDetected:
+                    case EdgeKind::Falling:
                         if (lastRisingEdge.has_value()) {
                             // End of pulse detected, increase count and let the device sleep again
                             counter++;
                             lastRisingEdge.reset();
                             preventLightSleep.reset();
                         }
+                        wakeToEdgeNext = EdgeKind::Rising;
                         break;
                 }
             }
@@ -126,20 +146,14 @@ private:
     const InternalPinPtr pin;
     std::atomic<uint32_t> counter { 0 };
 
-    enum class PulseCounterEvent {
-        RisingEdgeDetected,
-        FallingEdgeDetected,
-    };
-
-    CopyQueue<PulseCounterEvent> eventQueue { pin->getName(), 16 };
-    std::optional<PowerManagementLockGuard> preventLightSleep;
+    CopyQueue<EdgeKind> eventQueue { pin->getName(), 16 };
 };
 
 void IRAM_ATTR PulseCounter::interruptHandler(void* arg) {
     auto self = static_cast<PulseCounter*>(arg);
     self->eventQueue.offerFromISR(self->pin->digitalRead()
-            ? PulseCounterEvent::RisingEdgeDetected
-            : PulseCounterEvent::FallingEdgeDetected);
+            ? EdgeKind::Rising
+            : EdgeKind::Falling);
 }
 
 }    // namespace farmhub::kernel
