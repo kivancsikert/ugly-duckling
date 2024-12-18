@@ -17,7 +17,45 @@
 
 namespace farmhub::kernel {
 
-class PowerManagementLockGuard;
+class PowerManagementLock {
+public:
+    PowerManagementLock(const std::string& name, esp_pm_lock_type_t type) : name(name) {
+        ESP_ERROR_CHECK(esp_pm_lock_create(type, 0, name.c_str(), &lock));
+    }
+
+    ~PowerManagementLock() {
+        ESP_ERROR_CHECK(esp_pm_lock_delete(lock));
+    }
+
+    // Delete copy constructor and assignment operator to prevent copying
+    PowerManagementLock(const PowerManagementLock&) = delete;
+    PowerManagementLock& operator=(const PowerManagementLock&) = delete;
+
+private:
+    const std::string name;
+    esp_pm_lock_handle_t lock;
+
+    friend class PowerManagementLockGuard;
+};
+
+class PowerManagementLockGuard {
+public:
+    PowerManagementLockGuard(PowerManagementLock& lock)
+        : lock(lock) {
+        ESP_ERROR_CHECK(esp_pm_lock_acquire(lock.lock));
+    }
+
+    ~PowerManagementLockGuard() {
+        ESP_ERROR_CHECK(esp_pm_lock_release(lock.lock));
+    }
+
+    // Delete copy constructor and assignment operator to prevent copying
+    PowerManagementLockGuard(const PowerManagementLockGuard&) = delete;
+    PowerManagementLockGuard& operator=(const PowerManagementLockGuard&) = delete;
+
+private:
+    PowerManagementLock& lock;
+};
 
 class PowerManager {
 public:
@@ -73,6 +111,8 @@ public:
     }
 #endif
 
+    static PowerManagementLock lightSleepLock;
+
 private:
     static bool shouldSleepWhenIdle(bool requestedSleepWhenIdle) {
         if (requestedSleepWhenIdle) {
@@ -105,44 +145,6 @@ private:
 #endif
 };
 
-class PowerManagementLock {
-public:
-    PowerManagementLock(const std::string& name, esp_pm_lock_type_t type) : name(name) {
-        ESP_ERROR_CHECK(esp_pm_lock_create(type, 0, name.c_str(), &lock));
-    }
-
-    ~PowerManagementLock() {
-        ESP_ERROR_CHECK(esp_pm_lock_delete(lock));
-    }
-
-    // Delete copy constructor and assignment operator to prevent copying
-    PowerManagementLock(const PowerManagementLock&) = delete;
-    PowerManagementLock& operator=(const PowerManagementLock&) = delete;
-
-private:
-    const std::string name;
-    esp_pm_lock_handle_t lock;
-
-    friend class PowerManagementLockGuard;
-};
-
-class PowerManagementLockGuard {
-public:
-    PowerManagementLockGuard(PowerManagementLock& lock)
-        : lock(lock) {
-        ESP_ERROR_CHECK(esp_pm_lock_acquire(lock.lock));
-    }
-
-    ~PowerManagementLockGuard() {
-        ESP_ERROR_CHECK(esp_pm_lock_release(lock.lock));
-    }
-
-    // Delete copy constructor and assignment operator to prevent copying
-    PowerManagementLockGuard(const PowerManagementLockGuard&) = delete;
-    PowerManagementLockGuard& operator=(const PowerManagementLockGuard&) = delete;
-
-private:
-    PowerManagementLock& lock;
-};
+PowerManagementLock PowerManager::lightSleepLock("light-sleep", ESP_PM_NO_LIGHT_SLEEP);
 
 }    // namespace farmhub::kernel
