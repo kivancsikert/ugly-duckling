@@ -256,7 +256,7 @@ private:
         switch (state) {
             case WatchdogState::Started:
                 LOGI("Watchdog started");
-                sleepLock.emplace(preventLightSleep);
+                sleepLock.emplace(PowerManager::noLightSleep);
                 break;
             case WatchdogState::Cancelled:
                 LOGI("Watchdog cancelled");
@@ -343,7 +343,6 @@ private:
     DoorState overrideState = DoorState::NONE;
     time_point<system_clock> overrideUntil = time_point<system_clock>::min();
 
-    PowerManagementLock preventLightSleep { name, ESP_PM_NO_LIGHT_SLEEP };
     std::optional<PowerManagementLockGuard> sleepLock;
 };
 

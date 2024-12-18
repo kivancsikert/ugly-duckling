@@ -214,11 +214,8 @@ private:
             return "";
         }
 
-#ifdef CONFIG_PM_ENABLE
         // Don't sleep while we are performing the update
-        PowerManagementLock preventLightSleep { "firmware-update", ESP_PM_NO_LIGHT_SLEEP };
-        PowerManagementLockGuard sleepLock(preventLightSleep);
-#endif
+        PowerManagementLockGuard sleepLock(PowerManager::noLightSleep);
 
         auto contents = fs.readAll(UPDATE_FILE);
         if (!contents.has_value()) {
