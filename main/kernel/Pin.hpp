@@ -112,6 +112,7 @@ public:
             .pull_up_en = mode == Mode::InputPullUp ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE,
             .pull_down_en = mode == Mode::InputPullDown ? GPIO_PULLDOWN_ENABLE : GPIO_PULLDOWN_DISABLE,
         };
+        gpio_sleep_set_direction(gpio, conf.mode);
         ESP_ERROR_CHECK(gpio_config(&conf));
     }
 
