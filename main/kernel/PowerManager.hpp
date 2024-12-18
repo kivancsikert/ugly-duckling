@@ -111,7 +111,7 @@ public:
     }
 #endif
 
-    static PowerManagementLock lightSleepLock;
+    static PowerManagementLock noLightSleep;
 
 private:
     static bool shouldSleepWhenIdle(bool requestedSleepWhenIdle) {
@@ -145,6 +145,6 @@ private:
 #endif
 };
 
-PowerManagementLock PowerManager::lightSleepLock("light-sleep", ESP_PM_NO_LIGHT_SLEEP);
+PowerManagementLock PowerManager::noLightSleep("no-light-sleep", ESP_PM_NO_LIGHT_SLEEP);
 
 }    // namespace farmhub::kernel

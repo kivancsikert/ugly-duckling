@@ -339,7 +339,7 @@ private:
     void open() {
         LOGI("Opening valve '%s'", name.c_str());
         {
-            PowerManagementLockGuard noSleep(preventLightSleep);
+            PowerManagementLockGuard sleepLock(PowerManager::noLightSleep);
             strategy.open();
         }
         setState(ValveState::OPEN);
@@ -348,7 +348,7 @@ private:
     void close() {
         LOGI("Closing valve '%s'", name.c_str());
         {
-            PowerManagementLockGuard noSleep(preventLightSleep);
+            PowerManagementLockGuard sleepLock(PowerManager::noLightSleep);
             strategy.close();
         }
         setState(ValveState::CLOSED);
@@ -388,8 +388,6 @@ private:
                 name.c_str(), static_cast<int>(state));
         }
     }
-
-    PowerManagementLock preventLightSleep { name, ESP_PM_NO_LIGHT_SLEEP };
 
     NvsStore nvs;
     ValveControlStrategy& strategy;

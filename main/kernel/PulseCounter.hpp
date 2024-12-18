@@ -88,7 +88,7 @@ private:
         std::optional<time_point<boot_clock>> lastRisingEdge;
         EdgeKind wakeToEdge = EdgeKind::Falling;
         EdgeKind wakeToEdgeNext = EdgeKind::Rising;
-        std::optional<PowerManagementLockGuard> preventLightSleep;
+        std::optional<PowerManagementLockGuard> sleepLock;
 
         while (true) {
             ticks timeout;
@@ -100,7 +100,7 @@ private:
                     // We've timed out, let the device sleep again, and forget this rising edge
                     // as it was clearly not the beginning of an actual pulse
                     lastRisingEdge.reset();
-                    preventLightSleep.reset();
+                    sleepLock.reset();
                     wakeToEdgeNext = EdgeKind::Falling;
                     timeout = ticks::max();
                 } else {
@@ -126,7 +126,7 @@ private:
                             // Beginning of new pulse detected, prevent light sleep
                             // until the end of the pulse or a timeout
                             lastRisingEdge = boot_clock::now();
-                            preventLightSleep.emplace(PowerManager::lightSleepLock);
+                            sleepLock.emplace(PowerManager::noLightSleep);
                         }
                         break;
                     case EdgeKind::Falling:
@@ -134,7 +134,7 @@ private:
                             // End of pulse detected, increase count and let the device sleep again
                             counter++;
                             lastRisingEdge.reset();
-                            preventLightSleep.reset();
+                            sleepLock.reset();
                         }
                         wakeToEdgeNext = EdgeKind::Rising;
                         break;

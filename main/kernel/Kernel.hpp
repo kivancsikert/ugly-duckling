@@ -215,7 +215,7 @@ private:
         }
 
         // Don't sleep while we are performing the update
-        PowerManagementLockGuard sleepLock(PowerManager::lightSleepLock);
+        PowerManagementLockGuard sleepLock(PowerManager::noLightSleep);
 
         auto contents = fs.readAll(UPDATE_FILE);
         if (!contents.has_value()) {
