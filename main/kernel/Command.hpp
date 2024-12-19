@@ -173,10 +173,11 @@ public:
         LOGI("Removing %s",
             path.c_str());
         response["path"] = path;
-        if (unlink(path.c_str()) == 0) {
+        int err = fs.remove(path);
+        if (err == 0) {
             response["removed"] = true;
         } else {
-            response["error"] = "File not found";
+            response["error"] = "File not found: " + std::to_string(err);
         }
     }
 };
