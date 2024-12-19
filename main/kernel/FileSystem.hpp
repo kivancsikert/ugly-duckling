@@ -75,6 +75,10 @@ public:
         return bytesWritten;
     }
 
+    int remove(const std::string& path) const {
+        return unlink(resolve(path).c_str());
+    }
+
     bool readDir(const std::string& path, std::function<void(const std::string&, size_t)> callback) const {
         DIR* dir = opendir(resolve(path).c_str());
         if (dir == nullptr) {
@@ -92,10 +96,6 @@ public:
 
         closedir(dir);
         return true;
-    }
-
-    std::string resolve(const std::string& path) const {
-        return mountPoint + path;
     }
 
     static bool format() {
@@ -117,6 +117,10 @@ public:
 private:
     FileSystem(const std::string& mountPoint)
         : mountPoint(mountPoint) {
+    }
+
+    std::string resolve(const std::string& path) const {
+        return mountPoint + path;
     }
 
     static FileSystem* initializeFileSystem() {

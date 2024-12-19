@@ -223,7 +223,10 @@ private:
         }
         JsonDocument doc;
         auto error = deserializeJson(doc, contents.value());
-        unlink(UPDATE_FILE);
+        int deleteError = fs.remove(UPDATE_FILE);
+        if (deleteError) {
+            return "Failed to delete update file";
+        }
 
         if (error) {
             return "Failed to parse update.json: " + std::string(error.c_str());
