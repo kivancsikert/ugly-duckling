@@ -18,16 +18,21 @@ typedef std::function<void(WatchdogState)> WatchdogCallback;
 
 class Watchdog {
 public:
-    Watchdog(const std::string& name, const ticks timeout, bool startImmediately, WatchdogCallback callback)
-        : timeout(timeout)
-        , callback(callback)
-        , timer(xTimerCreate(name.c_str(), timeout.count(), false, this, [](TimerHandle_t timer) {
-            LOGD("Watchdog '%s' timed out", pcTimerGetName(timer));
-            auto watchdog = static_cast<Watchdog*>(pvTimerGetTimerID(timer));
-            watchdog->callback(WatchdogState::TimedOut);
-        })) {
-        if (!timer) {
-            LOGE("Failed to create watchdog timer");
+    Watchdog(const std::string& name, const microseconds timeout, bool startImmediately, WatchdogCallback callback)
+        : name(name)
+        , timeout(timeout)
+        , callback(callback) {
+        esp_timer_create_args_t config = {
+            .callback = [](void* arg) {
+                auto watchdog = (Watchdog*) arg;
+                watchdog->callback(WatchdogState::TimedOut);
+            },
+            .arg = this,
+            .name = this->name.c_str(),
+        };
+        esp_err_t ret = esp_timer_create(&config, &timer);
+        if (ret != ESP_OK) {
+            LOGE("Failed to create watchdog timer: %s", esp_err_to_name(ret));
             esp_system_abort("Failed to create watchdog timer");
         }
         if (startImmediately) {
@@ -36,31 +41,29 @@ public:
     }
 
     ~Watchdog() {
-        xTimerDelete(timer, 0);
+        cancel();
+        esp_timer_delete(timer);
     }
 
     bool restart() {
-        if (xTimerReset(timer, 0) != pdPASS) {
-            LOGE("Failed to reset watchdog timer '%s'", pcTimerGetName(timer));
-            return false;
+        // TODO Add proper error handling
+        if (esp_timer_restart(timer, timeout.count()) == ESP_ERR_INVALID_STATE) {
+            esp_timer_start_once(timer, timeout.count());
         }
         callback(WatchdogState::Started);
         return true;
     }
 
     bool cancel() {
-        if (xTimerStop(timer, 0) != pdPASS) {
-            LOGE("Failed to stop watchdog timer '%s'", pcTimerGetName(timer));
-            return false;
-        }
-        callback(WatchdogState::Cancelled);
-        return true;
+        // TODO Add proper error handling
+        return esp_timer_stop(timer) == ESP_OK;
     }
 
 private:
-    const ticks timeout;
+    const std::string name;
+    const microseconds timeout;
     const WatchdogCallback callback;
-    const TimerHandle_t timer;
+    esp_timer_handle_t timer;
 };
 
 }    // namespace farmhub::kernel
