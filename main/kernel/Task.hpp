@@ -133,9 +133,7 @@ public:
     }
 
     bool delayUntil(ticks time) {
-        // LOGV("Task '%s' delaying until %lld ms",
-        //     pcTaskGetName(nullptr), duration_cast<milliseconds>(time).count());
-        if (xTaskDelayUntil(&lastWakeTime, time.count())) {
+        if (delayUntilAtLeast(time)) {
             return true;
         }
         auto newWakeTime = xTaskGetTickCount();
@@ -143,6 +141,12 @@ public:
             pcTaskGetName(nullptr), duration_cast<milliseconds>(ticks(newWakeTime - lastWakeTime)).count());
         lastWakeTime = newWakeTime;
         return false;
+    }
+
+    bool delayUntilAtLeast(ticks time) {
+        // LOGV("Task '%s' delaying until %lld ms",
+        //     pcTaskGetName(nullptr), duration_cast<milliseconds>(time).count());
+        return xTaskDelayUntil(&lastWakeTime, time.count());
     }
 
     /**
@@ -161,10 +165,17 @@ public:
             return time - (currentTime - ticks(lastWakeTime));
         } else {
             // 'currentTime' has surpassed our target time, indicating the delay has expired.
-            printf("Task '%s' is already past deadline by %lld ms\n",
-                pcTaskGetName(nullptr), duration_cast<milliseconds>(currentTime - ticks(lastWakeTime)).count());
+            // printf("Task '%s' is already past deadline by %lld ms\n",
+            //     pcTaskGetName(nullptr), duration_cast<milliseconds>(currentTime - ticks(lastWakeTime)).count());
             return ticks::zero();
         }
+    }
+
+    /**
+     * @brief Mark the current time as the last wake time.
+     */
+    void markWakeTime() {
+        lastWakeTime = xTaskGetTickCount();
     }
 
     void suspend() {

@@ -475,6 +475,8 @@ public:
             Retention::NoRetain, QoS::AtLeastOnce, 5s);
 
         Task::loop("telemetry", 8192, [this](Task& task) {
+            task.markWakeTime();
+
             publishTelemetry();
 
             // Signal that we are still alive
@@ -485,7 +487,9 @@ public:
             const auto interval = 1min;
             // We always wait at least this much between telemetry updates
             const auto debounceInterval = 500ms;
-            task.delayUntil(debounceInterval);
+            // Delay without updating last wake time
+            task.delay(task.ticksUntil(debounceInterval));
+
             // Allow other tasks to trigger telemetry updates
             telemetryPublishQueue.pollIn(task.ticksUntil(interval - debounceInterval));
         });
