@@ -154,10 +154,23 @@ public:
         ESP_ERROR_CHECK(adc_oneshot_del_unit(handle));
     }
 
-    int analogRead() const {
+    /**
+     * @brief Read an analog value. Returns `std::nullopt` if the read fails.
+     */
+    std::optional<int> analogRead() const {
         int value;
-        ESP_ERROR_CHECK(adc_oneshot_read(handle, channel, &value));
-        return value;
+        esp_err_t err = adc_oneshot_read(handle, channel, &value);
+        switch (err) {
+            case ESP_OK:
+                return value;
+                break;
+            case ESP_ERR_TIMEOUT:
+                return std::nullopt;
+            default:
+                ESP_ERROR_CHECK(err);
+                // Won't get this far
+                abort();
+        }
     }
 
     const std::string& getName() const {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <limits>
+
 #include <kernel/Pin.hpp>
 #include <kernel/Telemetry.hpp>
 
@@ -28,8 +30,15 @@ public:
     }
 
     float getVoltage() {
-        auto batteryLevel = analogPin.analogRead();
-        return batteryLevel * 3.3 / 4096 * voltageDividerRatio;
+        for (int trial = 0; trial < 5; trial++) {
+            auto batteryLevel = analogPin.analogRead();
+            if (!batteryLevel.has_value()) {
+                LOGE("Failed to read battery level");
+                continue;
+            }
+            return batteryLevel.value() * 3.3 / 4096 * voltageDividerRatio;
+        }
+        return std::numeric_limits<float>::quiet_NaN();
     }
 
 private:
