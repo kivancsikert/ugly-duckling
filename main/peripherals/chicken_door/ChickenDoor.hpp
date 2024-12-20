@@ -242,7 +242,7 @@ private:
                         }
                         this->publishTelemetry();
                     } else if constexpr (std::is_same_v<T, WatchdogTimeout>) {
-                        LOGE("Watchdog timeout, stopping operation");
+                        LOGE("Watchdog timed out, stopping operation");
                         operationState = OperationState::WATCHDOG_TIMEOUT;
                         motor.stop();
                         this->publishTelemetry();
@@ -255,15 +255,15 @@ private:
     void handleWatchdogEvent(WatchdogState state) {
         switch (state) {
             case WatchdogState::Started:
-                LOGI("Watchdog started");
+                LOGD("Watchdog started");
                 sleepLock.emplace(PowerManager::noLightSleep);
                 break;
             case WatchdogState::Cancelled:
-                LOGI("Watchdog cancelled");
+                LOGD("Watchdog cancelled");
                 sleepLock.reset();
                 break;
             case WatchdogState::TimedOut:
-                LOGE("Watchdog timed out");
+                LOGD("Watchdog timed out");
                 sleepLock.reset();
                 updateQueue.offer(WatchdogTimeout {});
                 break;
