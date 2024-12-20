@@ -39,13 +39,17 @@ public:
     }
 
     void populateTelemetry(JsonObject& json) override {
-        uint16_t soilMoistureValue = pin.analogRead();
+        std::optional<uint16_t> soilMoistureValue = pin.analogRead();
+        if (!soilMoistureValue.has_value()) {
+            LOGD("Failed to read soil moisture value");
+            return;
+        }
         LOGV("Soil moisture value: %d",
-            soilMoistureValue);
+            soilMoistureValue.value());
 
         const double run = waterValue - airValue;
         const double rise = 100;
-        const double delta = soilMoistureValue - airValue;
+        const double delta = soilMoistureValue.value() - airValue;
         double moisture = (delta * rise) / run;
 
         json["moisture"] = moisture;
