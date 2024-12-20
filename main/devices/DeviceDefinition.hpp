@@ -47,6 +47,7 @@ public:
 
     Property<bool> sleepWhenIdle { this, "sleepWhenIdle", false };
 
+    Property<seconds> publishInterval { this, "publishInterval", 1min };
     Property<Level> publishLogs { this, "publishLogs", Level::Info };
 
     virtual const std::string getHostname() {

@@ -482,16 +482,14 @@ public:
             // Signal that we are still alive
             kernel.watchdog.restart();
 
-            // TODO Configure these telemetry intervals
-            // Publishing interval
-            const auto interval = 1min;
             // We always wait at least this much between telemetry updates
             const auto debounceInterval = 500ms;
             // Delay without updating last wake time
             task.delay(task.ticksUntil(debounceInterval));
 
             // Allow other tasks to trigger telemetry updates
-            telemetryPublishQueue.pollIn(task.ticksUntil(interval - debounceInterval));
+            auto timeout = task.ticksUntil(deviceConfig.publishInterval.get() - debounceInterval);
+            telemetryPublishQueue.pollIn(timeout);
         });
 
         kernel.getKernelReadyState().set();
