@@ -525,13 +525,7 @@ private:
     }
 
     void reportPreviousCrashIfAny(JsonObject& json) {
-        esp_err_t errCheck = esp_core_dump_image_check();
-        if (errCheck == ESP_ERR_NOT_FOUND) {
-            LOGV("No core dump found");
-            return;
-        }
-        if (errCheck != ESP_OK) {
-            LOGE("Failed to check for core dump: %s", esp_err_to_name(errCheck));
+        if (!hasCoreDump()) {
             return;
         }
 
@@ -545,6 +539,24 @@ private:
         }
 
         ESP_ERROR_CHECK_WITHOUT_ABORT(esp_core_dump_image_erase());
+    }
+
+    bool hasCoreDump() {
+        esp_err_t err = esp_core_dump_image_check();
+        switch (err) {
+            case ESP_OK:
+                return true;
+            case ESP_ERR_NOT_FOUND:
+                LOGV("No core dump found");
+                return false;
+            case ESP_ERR_INVALID_SIZE:
+                LOGD("Invalid core dump size");
+                // Typically, this happens when no core dump has been saved yet
+                return false;
+            default:
+                LOGE("Failed to check for core dump: %s", esp_err_to_name(err));
+                return false;
+        }
     }
 
     void reportPreviousCrash(JsonObject& json, const esp_core_dump_summary_t& summary) {
