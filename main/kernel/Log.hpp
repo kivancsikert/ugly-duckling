@@ -75,6 +75,10 @@ public:
             esp_log_level_set(tag, ESP_LOG_INFO);
 #endif
         }
+#ifdef __riscv
+        // For some reason we see a lot of warnings logged on the RISC-V platform
+        esp_log_level_set("wifi", ESP_LOG_ERROR);
+#endif
     }
 
 private:
