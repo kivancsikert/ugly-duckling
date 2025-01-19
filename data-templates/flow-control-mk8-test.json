@@ -1,0 +1,8 @@
+{
+  "instance": "test-mk8-1",
+  "id": "ud0800-001",
+  "location": "bumblebee",
+  "peripherals": [
+  ],
+  "sleepWhenIdle": true
+}
