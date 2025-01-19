@@ -46,6 +46,18 @@ public:
         // Attach the ISR handler to the GPIO pin
         ESP_ERROR_CHECK(gpio_isr_handler_add(gpio, interruptHandler, this));
 
+        // Make sure we handle the state change when the device wakes up due to a GPIO interrupt
+        esp_pm_sleep_cbs_register_config_t sleepCallbackConfig = {
+            .exit_cb = [](int64_t timeSleptInUs, void* arg) {
+                if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
+                    auto self = static_cast<PulseCounter*>(arg);
+                    self->handlePotentialStateChange();
+                }
+                return ESP_OK; },
+            .exit_cb_user_arg = this,
+        };
+        ESP_ERROR_CHECK(esp_pm_light_sleep_register_cbs(&sleepCallbackConfig));
+
         LOGTD(Tag::PCNT, "Registered interrupt-based pulse counter unit on pin %s",
             pin->getName().c_str());
 
@@ -74,70 +86,74 @@ public:
     }
 
 private:
-    static void IRAM_ATTR interruptHandler(void* arg);
-
-    // The amount of time we wait for the end of a pulse before we consider it a timeout
-    static constexpr microseconds maxHighTime = 100ms;
-
     enum class EdgeKind {
         Rising,
         Falling,
     };
 
+    static void IRAM_ATTR interruptHandler(void* arg) {
+        auto self = static_cast<PulseCounter*>(arg);
+        self->handlePotentialStateChange();
+    }
+
+    IRAM_ATTR void handlePotentialStateChange() {
+        eventQueue.offerFromISR(takeSample());
+    }
+
+    IRAM_ATTR EdgeKind takeSample() {
+        return pin->digitalRead()
+            ? EdgeKind::Rising
+            : EdgeKind::Falling;
+    }
+
+    // The amount of time to keep the device awake after detecting an edge to make sure we detect the next edge, too
+    static constexpr microseconds maxKeepAwakeTime = 10ms;
+
     void runLoop() {
-        std::optional<time_point<boot_clock>> lastRisingEdge;
-        EdgeKind wakeToEdge = EdgeKind::Falling;
-        EdgeKind wakeToEdgeNext = EdgeKind::Rising;
-        std::optional<PowerManagementLockGuard> sleepLock;
+        std::optional<std::pair<PowerManagementLockGuard, time_point<boot_clock>>> sleepLock;
+        EdgeKind lastEdge = takeSample();
+        bool seenNewEdge = true;
 
         while (true) {
+            if (seenNewEdge) {
+                // Got a new edge, renew keep-alive to make sure we detect the next edge
+                sleepLock.emplace(PowerManager::noLightSleep, boot_clock::now());
+
+                // Make sure we wake up again to check for the opposing edge
+                ESP_ERROR_CHECK(rtc_gpio_wakeup_enable(
+                    pin->getGpio(),
+                    lastEdge == EdgeKind::Rising
+                        ? GPIO_INTR_LOW_LEVEL
+                        : GPIO_INTR_HIGH_LEVEL));
+            }
+
             ticks timeout;
-            if (lastRisingEdge.has_value()) {
-                auto elapsedSinceLastRisingEdge = boot_clock::now() - lastRisingEdge.value();
-                if (elapsedSinceLastRisingEdge > maxHighTime) {
+            if (sleepLock.has_value()) {
+                auto elapsedSinceSleepLock = boot_clock::now() - sleepLock.value().second;
+                if (elapsedSinceSleepLock > maxKeepAwakeTime) {
                     LOGTV(Tag::PCNT, "Timeout while waiting for falling edge on pin %s",
                         pin->getName().c_str());
-                    // We've timed out, let the device sleep again, and forget this rising edge
-                    // as it was clearly not the beginning of an actual pulse
-                    lastRisingEdge.reset();
+                    // We've timed out, let the device sleep again until the next edge
                     sleepLock.reset();
-                    wakeToEdgeNext = EdgeKind::Falling;
                     timeout = ticks::max();
                 } else {
-                    timeout = floor<ticks>(maxHighTime - elapsedSinceLastRisingEdge);
+                    // Wait at most until the sleep lock would time out
+                    timeout = floor<ticks>(maxKeepAwakeTime - elapsedSinceSleepLock);
                 }
             } else {
+                // No sleep lock, wait indefinitely for the next edge
                 timeout = ticks::max();
             }
 
-            // Make sure that we wake up on the correct edge next
-            if (wakeToEdge != wakeToEdgeNext) {
-                auto intrType = wakeToEdgeNext == EdgeKind::Rising
-                    ? GPIO_INTR_HIGH_LEVEL
-                    : GPIO_INTR_LOW_LEVEL;
-                ESP_ERROR_CHECK(rtc_gpio_wakeup_enable(pin->getGpio(), intrType));
-                wakeToEdge = wakeToEdgeNext;
-            }
-
+            seenNewEdge = false;
             for (auto event = eventQueue.pollIn(timeout); event.has_value(); event = eventQueue.poll()) {
-                switch (event.value()) {
-                    case EdgeKind::Rising:
-                        if (!lastRisingEdge.has_value()) {
-                            // Beginning of new pulse detected, prevent light sleep
-                            // until the end of the pulse or a timeout
-                            lastRisingEdge = boot_clock::now();
-                            sleepLock.emplace(PowerManager::noLightSleep);
-                        }
-                        break;
-                    case EdgeKind::Falling:
-                        if (lastRisingEdge.has_value()) {
-                            // End of pulse detected, increase count and let the device sleep again
-                            counter++;
-                            lastRisingEdge.reset();
-                            sleepLock.reset();
-                        }
-                        wakeToEdgeNext = EdgeKind::Rising;
-                        break;
+                auto edge = event.value();
+                if (edge != lastEdge) {
+                    lastEdge = edge;
+                    seenNewEdge = true;
+                    if (lastEdge == EdgeKind::Falling) {
+                        counter++;
+                    }
                 }
             }
         }
@@ -148,12 +164,5 @@ private:
 
     CopyQueue<EdgeKind> eventQueue { pin->getName(), 16 };
 };
-
-void IRAM_ATTR PulseCounter::interruptHandler(void* arg) {
-    auto self = static_cast<PulseCounter*>(arg);
-    self->eventQueue.offerFromISR(self->pin->digitalRead()
-            ? EdgeKind::Rising
-            : EdgeKind::Falling);
-}
 
 }    // namespace farmhub::kernel
