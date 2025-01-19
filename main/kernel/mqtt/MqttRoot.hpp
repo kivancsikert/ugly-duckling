@@ -18,7 +18,7 @@ public:
     }
 
     PublishStatus publish(const std::string& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_DEFAULT_PUBLISH_TIMEOUT, LogPublish log = LogPublish::Log) {
-        return mqtt.publish(fullTopic(suffix), json, retain, qos, timeout, milliseconds::zero(), log);
+        return mqtt.publish(fullTopic(suffix), json, retain, qos, timeout, log);
     }
 
     PublishStatus publish(const std::string& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_DEFAULT_PUBLISH_TIMEOUT, LogPublish log = LogPublish::Log) {
@@ -41,7 +41,7 @@ public:
         return subscribe(suffix, QoS::ExactlyOnce, [this, name, suffix, handler](const std::string&, const JsonObject& request) {
             // TODO Do exponential backoff when clear cannot be finished
             // Clear topic and wait for it to be cleared
-            auto clearStatus = mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, std::chrono::seconds { 5 }, MQTT_ALERT_AFTER_INCOMING);
+            auto clearStatus = mqtt.clear(fullTopic(suffix), Retention::Retain, QoS::ExactlyOnce, std::chrono::seconds { 5 });
             if (clearStatus != PublishStatus::Success) {
                 LOGTE(Tag::MQTT, "Failed to clear retained command topic '%s', status: %d",
                     suffix.c_str(), static_cast<int>(clearStatus));
@@ -78,8 +78,6 @@ private:
 
     MqttDriver& mqtt;
     const std::string rootTopic;
-
-    static constexpr milliseconds MQTT_ALERT_AFTER_INCOMING = 30s;
 };
 
 }    // namespace farmhub::kernel::mqtt
