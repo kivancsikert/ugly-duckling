@@ -21,9 +21,8 @@ namespace farmhub::kernel::drivers {
 
 class WiFiDriver {
 public:
-    WiFiDriver(StateSource& networkRequested, StateSource& networkConnecting, StateSource& networkReady, StateSource& configPortalRunning, const std::string& hostname, bool powerSaveMode)
-        : networkRequested(networkRequested)
-        , networkConnecting(networkConnecting)
+    WiFiDriver(StateSource& networkConnecting, StateSource& networkReady, StateSource& configPortalRunning, const std::string& hostname, bool powerSaveMode)
+        : networkConnecting(networkConnecting)
         , networkReady(networkReady)
         , configPortalRunning(configPortalRunning)
         , hostname(hostname)
@@ -109,7 +108,6 @@ private:
             case WIFI_EVENT_STA_DISCONNECTED: {
                 auto event = static_cast<wifi_event_sta_disconnected_t*>(eventData);
                 networkReady.clear();
-                networkConnecting.clear();
                 {
                     Lock lock(metadataMutex);
                     ssid.reset();
@@ -135,7 +133,6 @@ private:
             case IP_EVENT_STA_GOT_IP: {
                 auto* event = static_cast<ip_event_got_ip_t*>(eventData);
                 networkReady.set();
-                networkConnecting.clear();
                 {
                     Lock lock(metadataMutex);
                     ip = event->ip_info.ip;
@@ -161,8 +158,6 @@ private:
         switch (eventId) {
             case WIFI_PROV_START: {
                 LOGTD(Tag::WIFI, "provisioning started");
-                // Do not turn WiFi off until provisioning finishes
-                acquire();
                 break;
             }
             case WIFI_PROV_CRED_RECV: {
@@ -187,23 +182,40 @@ private:
             case WIFI_PROV_END: {
                 LOGTD(Tag::WIFI, "provisioning finished");
                 wifi_prov_mgr_deinit();
-                configPortalRunning.clear();
-                networkConnecting.clear();
-                release();
                 break;
             }
         }
     }
 
     void runLoop() {
-        int clients = 0;
         bool connected = false;
         std::optional<time_point<boot_clock>> connectingSince;
         while (true) {
+            if (!connected) {
+                if (configPortalRunning.isSet()) {
+                    // TODO Add some sort of timeout here
+                    LOGTV(Tag::WIFI, "Provisioning already running");
+                    goto handleEvents;
+                }
+                if (networkConnecting.isSet()) {
+                    if (boot_clock::now() - connectingSince.value() < WIFI_CONNECTION_TIMEOUT) {
+                        LOGTV(Tag::WIFI, "Already connecting");
+                        goto handleEvents;
+                    }
+
+                    LOGTI(Tag::WIFI, "Connection timed out, retrying");
+                    networkConnecting.clear();
+                    ensureWifiStopped();
+                }
+                connectingSince = boot_clock::now();
+                connect();
+            }
+
+        handleEvents:
             for (auto event = eventQueue.pollIn(WIFI_CHECK_INTERVAL); event.has_value(); event = eventQueue.poll()) {
                 switch (event.value()) {
                     case WiFiEvent::STARTED:
-                        if (networkRequested.isSet() && !configPortalRunning.isSet()) {
+                        if (!configPortalRunning.isSet()) {
                             esp_err_t err = esp_wifi_connect();
                             if (err != ESP_OK) {
                                 LOGTD(Tag::WIFI, "Failed to start connecting: %s, stopping", esp_err_to_name(err));
@@ -214,45 +226,16 @@ private:
                     case WiFiEvent::CONNECTED:
                         connected = true;
                         connectingSince.reset();
+                        networkConnecting.clear();
                         break;
                     case WiFiEvent::DISCONNECTED:
                         connected = false;
-                        break;
-                    case WiFiEvent::WANTS_CONNECT:
-                        clients++;
-                        break;
-                    case WiFiEvent::WANTS_DISCONNECT:
-                        clients--;
-                        break;
-                }
-            }
-
-            if (clients > 0) {
-                networkRequested.set();
-                if (!connected) {
-                    if (configPortalRunning.isSet()) {
-                        // TODO Add some sort of timeout here
-                        LOGTV(Tag::WIFI, "Provisioning already running");
-                        continue;
-                    }
-                    if (networkConnecting.isSet()) {
-                        if (boot_clock::now() - connectingSince.value() < WIFI_CONNECTION_TIMEOUT) {
-                            LOGTV(Tag::WIFI, "Already connecting");
-                            continue;
-                        }
-
-                        LOGTI(Tag::WIFI, "Connection timed out, retrying");
                         networkConnecting.clear();
-                        ensureWifiStopped();
-                    }
-                    LOGTV(Tag::WIFI, "Connecting for first client");
-                    connectingSince = boot_clock::now();
-                    connect();
-                }
-            } else {
-                networkRequested.clear();
-                if (connected) {
-                    disconnect();
+                        break;
+                    case WiFiEvent::PROVISIONING_FINISHED:
+                        networkConnecting.clear();
+                        configPortalRunning.clear();
+                        break;
                 }
             }
         }
@@ -380,17 +363,6 @@ private:
     static constexpr const char* serviceKey = nullptr;
     static constexpr const bool resetProvisioned = false;
 
-    StateSource& acquire() {
-        eventQueue.offerIn(WIFI_QUEUE_TIMEOUT, WiFiEvent::WANTS_CONNECT);
-        return networkReady;
-    }
-
-    StateSource& release() {
-        eventQueue.offerIn(WIFI_QUEUE_TIMEOUT, WiFiEvent::WANTS_DISCONNECT);
-        return networkReady;
-    }
-
-    StateSource& networkRequested;
     StateSource& networkConnecting;
     StateSource& networkReady;
     StateSource& configPortalRunning;
@@ -405,8 +377,7 @@ private:
         STARTED,
         CONNECTED,
         DISCONNECTED,
-        WANTS_CONNECT,
-        WANTS_DISCONNECT
+        PROVISIONING_FINISHED,
     };
 
     CopyQueue<WiFiEvent> eventQueue { "wifi-events", 16 };
@@ -421,54 +392,6 @@ private:
 
     std::optional<time_point<boot_clock>> wifiUpSince;
     milliseconds wifiUptimeBefore = milliseconds::zero();
-
-    friend class WiFiConnection;
-};
-
-class WiFiConnection {
-public:
-    enum class Mode {
-        Await = true,
-        NoAwait = false
-    };
-
-    WiFiConnection(WiFiDriver& driver, Mode mode = Mode::Await)
-        : driver(driver) {
-        auto networkReady = driver.acquire();
-        if (mode == Mode::NoAwait) {
-            return;
-        }
-
-        try {
-            networkReady.awaitSet();
-        } catch (...) {
-            driver.release();
-            throw;
-        }
-    }
-
-    void await() {
-        driver.networkReady.awaitSet();
-    }
-
-    bool await(const ticks timeout) const {
-        return driver.networkReady.awaitSet(timeout);
-    }
-
-    explicit operator bool() const {
-        return driver.networkReady.isSet();
-    }
-
-    ~WiFiConnection() {
-        driver.release();
-    }
-
-    // Delete copy constructor and assignment operator to prevent copying
-    WiFiConnection(const WiFiConnection&) = delete;
-    WiFiConnection& operator=(const WiFiConnection&) = delete;
-
-private:
-    WiFiDriver& driver;
 };
 
 }    // namespace farmhub::kernel::drivers
