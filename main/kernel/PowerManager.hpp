@@ -17,7 +17,8 @@ namespace farmhub::kernel {
 
 class PowerManagementLock {
 public:
-    PowerManagementLock(const std::string& name, esp_pm_lock_type_t type) : name(name) {
+    PowerManagementLock(const std::string& name, esp_pm_lock_type_t type)
+        : name(name) {
         ESP_ERROR_CHECK(esp_pm_lock_create(type, 0, name.c_str(), &lock));
     }
 
@@ -31,7 +32,7 @@ public:
 
 private:
     const std::string name;
-    esp_pm_lock_handle_t lock;
+    esp_pm_lock_handle_t lock = nullptr;
 
     friend class PowerManagementLockGuard;
 };
@@ -44,7 +45,9 @@ public:
     }
 
     ~PowerManagementLockGuard() {
-        ESP_ERROR_CHECK(esp_pm_lock_release(lock.lock));
+        if (lock.lock != nullptr) {
+            ESP_ERROR_CHECK(esp_pm_lock_release(lock.lock));
+        }
     }
 
     // Delete copy constructor and assignment operator to prevent copying
