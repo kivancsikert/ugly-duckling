@@ -6,7 +6,7 @@ include(FetchContent)
 FetchContent_Declare(
   espidflib
   GIT_REPOSITORY https://github.com/UncleRus/esp-idf-lib.git
-  GIT_TAG "0.9.4"
+  GIT_TAG "1abe2e5194b1a45c8878229ad893a058816cdd18"
 )
 FetchContent_MakeAvailable(espidflib)
 set(EXTRA_COMPONENT_DIRS ${espidflib_SOURCE_DIR}/components)
