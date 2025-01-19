@@ -4,22 +4,21 @@
 
 #include <kernel/Concurrent.hpp>
 
-// FIXME Why do we need to define these manually?
-#if CONFIG_IDF_TARGET_ESP32
-#error "ESP32 is not supported"
-#elif CONFIG_IDF_TARGET_ESP32S2
-#define MAX_CPU_FREQ_MHZ CONFIG_ESP32S2_DEFAULT_CPU_FREQ_MHZ
+#if defined(CONFIG_IDF_TARGET_ESP32S2)
+// Apparently on ESP32S2 things start to break down if we go below 80 MHz
 #define MIN_CPU_FREQ_MHZ 80
-#elif CONFIG_IDF_TARGET_ESP32S3
-#define MAX_CPU_FREQ_MHZ CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ
-#define MIN_CPU_FREQ_MHZ 40
+#elif defined(CONFIG_IDF_TARGET_ESP32S3) || defined(CONFIG_IDF_TARGET_ESP32C6)
+#define MIN_CPU_FREQ_MHZ CONFIG_XTAL_FREQ
+#else
+#error "Target not supported " CONFIG_IDF_TARGET
 #endif
 
 namespace farmhub::kernel {
 
 class PowerManagementLock {
 public:
-    PowerManagementLock(const std::string& name, esp_pm_lock_type_t type) : name(name) {
+    PowerManagementLock(const std::string& name, esp_pm_lock_type_t type)
+        : name(name) {
         ESP_ERROR_CHECK(esp_pm_lock_create(type, 0, name.c_str(), &lock));
     }
 
@@ -33,7 +32,7 @@ public:
 
 private:
     const std::string name;
-    esp_pm_lock_handle_t lock;
+    esp_pm_lock_handle_t lock = nullptr;
 
     friend class PowerManagementLockGuard;
 };
@@ -46,7 +45,9 @@ public:
     }
 
     ~PowerManagementLockGuard() {
-        ESP_ERROR_CHECK(esp_pm_lock_release(lock.lock));
+        if (lock.lock != nullptr) {
+            ESP_ERROR_CHECK(esp_pm_lock_release(lock.lock));
+        }
     }
 
     // Delete copy constructor and assignment operator to prevent copying
@@ -63,9 +64,9 @@ public:
         : sleepWhenIdle(shouldSleepWhenIdle(requestedSleepWhenIdle)) {
 
         LOGTV(Tag::PM, "Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
-            MAX_CPU_FREQ_MHZ, MIN_CPU_FREQ_MHZ, sleepWhenIdle ? "enabled" : "disabled");
+            CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ, MIN_CPU_FREQ_MHZ, sleepWhenIdle ? "enabled" : "disabled");
         esp_pm_config_t pm_config = {
-            .max_freq_mhz = MAX_CPU_FREQ_MHZ,
+            .max_freq_mhz = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
             .min_freq_mhz = MIN_CPU_FREQ_MHZ,
             .light_sleep_enable = sleepWhenIdle,
         };

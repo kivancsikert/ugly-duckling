@@ -8,6 +8,7 @@
 #include <esp_pm.h>
 #include <esp_private/esp_clk.h>
 #include <esp_wifi.h>
+#include <mbedtls/base64.h>
 
 #include <kernel/BootClock.hpp>
 #include <kernel/Command.hpp>
@@ -81,6 +82,21 @@ typedef farmhub::devices::Mk7Config TDeviceConfiguration;
  * @brief Do not boot if battery is below this threshold.
  */
 static constexpr double BATTERY_BOOT_THRESHOLD = 3.7;
+
+/**
+ * @brief Shutdown if battery drops below this threshold.
+ */
+static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 3.0;
+
+#elif defined(MK8)
+#include <devices/UglyDucklingMk8.hpp>
+typedef farmhub::devices::UglyDucklingMk8 TDeviceDefinition;
+typedef farmhub::devices::Mk8Config TDeviceConfiguration;
+
+/**
+ * @brief Do not boot if battery is below this threshold.
+ */
+static constexpr double BATTERY_BOOT_THRESHOLD = 3.2;
 
 /**
  * @brief Shutdown if battery drops below this threshold.
@@ -582,6 +598,7 @@ private:
             json["panicReason"] = std::string(panicReason);
         }
 
+#ifdef __XTENSA__
         auto backtraceJson = json["backtrace"].to<JsonObject>();
         if (summary.exc_bt_info.corrupted) {
             LOGE("Backtrace corrupted, depth %lu", summary.exc_bt_info.depth);
@@ -593,6 +610,20 @@ private:
                 framesJson.add("0x" + toHexString(frame));
             }
         }
+#else
+        size_t encodedLen = (summary.exc_bt_info.dump_size + 2) / 3 * 4 + 1;
+        unsigned char encoded[encodedLen];
+
+        size_t writtenLen = 0;
+        int ret = mbedtls_base64_encode(encoded, sizeof(encoded), &writtenLen, summary.exc_bt_info.stackdump, summary.exc_bt_info.dump_size);
+
+        if (ret == 0) {
+            encoded[writtenLen] = '\0';    // Null-terminate the output string
+            json["stackdump"] = encoded;
+        } else {
+            LOGE("Failed to encode stackdump: %d", ret);
+        }
+#endif
     }
 
     Queue<LogRecord> logRecords { "logs", 32 };

@@ -6,7 +6,7 @@ include(FetchContent)
 FetchContent_Declare(
   espidflib
   GIT_REPOSITORY https://github.com/UncleRus/esp-idf-lib.git
-  GIT_TAG "0.9.4"
+  GIT_TAG "1abe2e5194b1a45c8878229ad893a058816cdd18"
 )
 FetchContent_MakeAvailable(espidflib)
 set(EXTRA_COMPONENT_DIRS ${espidflib_SOURCE_DIR}/components)
@@ -26,11 +26,15 @@ set_property(GLOBAL PROPERTY UD_GEN_TRACKER "${UD_GEN}")
 
 if(UD_GEN STREQUAL "MK4")
     if (NOT "$ENV{IDF_TARGET}" STREQUAL "esp32s2")
-        message(FATAL_ERROR "Error: Ugly Duckling MK4 is only supported on ESP32-S2, currently IDF_TARGET = '$ENV{IDF_TARGET}'")
+        message(FATAL_ERROR "Error: Ugly Duckling ${UD_GEN} is only supported on ESP32-S2, currently IDF_TARGET = '$ENV{IDF_TARGET}'")
     endif()
 elseif(UD_GEN STREQUAL "MK5" OR UD_GEN STREQUAL "MK6" OR UD_GEN STREQUAL "MK7")
     if (NOT "$ENV{IDF_TARGET}" STREQUAL "esp32s3")
         message(FATAL_ERROR "Error: Ugly Duckling ${UD_GEN} is only supported on ESP32-S3, currently IDF_TARGET = '$ENV{IDF_TARGET}'")
+    endif()
+elseif(UD_GEN STREQUAL "MK8")
+    if (NOT "$ENV{IDF_TARGET}" STREQUAL "esp32c6")
+        message(FATAL_ERROR "Error: Ugly Duckling ${UD_GEN} is only supported on ESP32-C6, currently IDF_TARGET = '$ENV{IDF_TARGET}'")
     endif()
 else()
     message(FATAL_ERROR "Error: Unrecognized Ugly Duckling generation '${UD_GEN}'")
