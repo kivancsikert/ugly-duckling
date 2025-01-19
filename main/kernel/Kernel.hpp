@@ -161,9 +161,9 @@ private:
         } else if (networkConnectingState.isSet()) {
             // We are waiting for network connection
             newState = KernelState::NETWORK_CONNECTING;
-        } else if (networkRequestedState.isSet() && !rtcInSyncState.isSet()) {
+        } else if (!rtcInSyncState.isSet()) {
             newState = KernelState::RTC_SYNCING;
-        } else if (networkRequestedState.isSet() && !mqttReadyState.isSet()) {
+        } else if (!mqttReadyState.isSet()) {
             // We are waiting for MQTT connection
             newState = KernelState::MQTT_CONNECTING;
         } else if (!kernelReadyState.isSet()) {
@@ -240,8 +240,7 @@ private:
             farmhubVersion, url.c_str());
 
         LOGD("Waiting for network...");
-        WiFiConnection connection(wifi, WiFiConnection::Mode::NoAwait);
-        if (!connection.await(15s)) {
+        if (!networkReadyState.awaitSet(15s)) {
             return "Network not ready, aborting update";
         }
 
@@ -321,7 +320,6 @@ private:
     LedDriver& statusLed;
     KernelState state = KernelState::BOOTING;
     StateManager stateManager;
-    StateSource networkRequestedState = stateManager.createStateSource("network-requested");
     StateSource networkConnectingState = stateManager.createStateSource("network-connecting");
     StateSource networkReadyState = stateManager.createStateSource("network-ready");
     StateSource configPortalRunningState = stateManager.createStateSource("config-portal-running");
@@ -331,16 +329,16 @@ private:
     StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
 public:
-    WiFiDriver wifi { networkRequestedState, networkConnectingState, networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
+    WiFiDriver wifi { networkConnectingState, networkReadyState, configPortalRunningState, deviceConfig.getHostname(), deviceConfig.sleepWhenIdle.get() };
 
 private:
-    MdnsDriver mdns { wifi, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
-    RtcDriver rtc { wifi, mdns, deviceConfig.ntp.get(), rtcInSyncState };
+    MdnsDriver mdns { networkReadyState, deviceConfig.getHostname(), "ugly-duckling", version, mdnsReadyState };
+    RtcDriver rtc { networkReadyState, mdns, deviceConfig.ntp.get(), rtcInSyncState };
 
     std::string httpUpdateResult;
 
 public:
-    MqttDriver mqtt { wifi, mdns, mqttConfig, deviceConfig.instance.get(), deviceConfig.sleepWhenIdle.get(), mqttReadyState };
+    MqttDriver mqtt { networkReadyState, mdns, mqttConfig, deviceConfig.instance.get(), deviceConfig.sleepWhenIdle.get(), mqttReadyState };
     SwitchManager switches;
     I2CManager i2c;
 };

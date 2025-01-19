@@ -11,7 +11,6 @@
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
-#include <kernel/drivers/WiFiDriver.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -36,8 +35,8 @@ public:
         Property<std::string> host { this, "host", "" };
     };
 
-    RtcDriver(WiFiDriver& wifi, MdnsDriver& mdns, const Config& ntpConfig, StateSource& rtcInSync)
-        : wifi(wifi)
+    RtcDriver(State& networkReady, MdnsDriver& mdns, const Config& ntpConfig, StateSource& rtcInSync)
+        : networkReady(networkReady)
         , mdns(mdns)
         , ntpConfig(ntpConfig)
         , rtcInSync(rtcInSync) {
@@ -47,10 +46,10 @@ public:
             rtcInSync.set();
         }
 
-        Task::run("ntp-sync", 4096, [this, &wifi](Task& task) {
+        Task::run("ntp-sync", 4096, [this, &networkReady](Task& task) {
             while (true) {
                 {
-                    WiFiConnection connection(wifi);
+                    networkReady.awaitSet();
                     if (updateTime()) {
                         trustMdnsCache = true;
                     } else {
@@ -145,7 +144,7 @@ private:
         }
     }
 
-    WiFiDriver& wifi;
+    State& networkReady;
     MdnsDriver& mdns;
     const Config& ntpConfig;
     StateSource& rtcInSync;

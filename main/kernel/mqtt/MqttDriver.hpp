@@ -16,7 +16,6 @@
 #include <kernel/State.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
-#include <kernel/drivers/WiFiDriver.hpp>
 
 using namespace std::chrono_literals;
 using namespace farmhub::kernel;
@@ -71,13 +70,13 @@ public:
     };
 
     MqttDriver(
-        WiFiDriver& wifi,
+        State& networkReady,
         MdnsDriver& mdns,
         const Config& config,
         const std::string& instanceName,
         bool powerSaveMode,
         StateSource& mqttReady)
-        : wifi(wifi)
+        : networkReady(networkReady)
         , mdns(mdns)
         , configHostname(config.host.get())
         , configPort(config.port.get())
@@ -510,12 +509,7 @@ private:
     }
 
     void connect(bool startCleanSession) {
-        // TODO Do not block on WiFi connection
-        if (!wifiConnection.has_value()) {
-            LOGTV(Tag::MQTT, "Connecting to WiFi...");
-            wifiConnection.emplace(wifi);
-            LOGTV(Tag::MQTT, "Connected to WiFi");
-        }
+        networkReady.awaitSet();
 
         stopClient();
 
@@ -532,7 +526,6 @@ private:
         LOGTD(Tag::MQTT, "Disconnecting from MQTT server");
         ESP_ERROR_CHECK(esp_mqtt_client_disconnect(client));
         stopClient();
-        wifiConnection.reset();
     }
 
     void stopClient() {
@@ -746,8 +739,7 @@ private:
         return "ugly-duckling-" + instanceName;
     }
 
-    WiFiDriver& wifi;
-    std::optional<WiFiConnection> wifiConnection;
+    State& networkReady;
     MdnsDriver& mdns;
     bool trustMdnsCache = true;
 
