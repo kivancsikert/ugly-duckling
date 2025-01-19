@@ -295,6 +295,8 @@ private:
                 LOGTV(Tag::WIFI, "Enabling power save mode, listen interval: %d",
                     listenInterval);
                 ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
+                ESP_ERROR_CHECK(esp_sleep_enable_wifi_wakeup());
+                ESP_ERROR_CHECK(esp_sleep_enable_wifi_beacon_wakeup());
                 config.sta.listen_interval = listenInterval;
             }
 
