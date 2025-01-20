@@ -99,13 +99,6 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
 
-    Task::loop("memory", 4096, [](Task& task) {
-        auto freeHeap = esp_get_free_heap_size();
-        auto minFreeHeap = esp_get_minimum_free_heap_size();
-        printf("Free heap: %lu, min free heap: %lu\n", freeHeap, minFreeHeap);
-        Task::delay(ticks(1s));
-    });
-
     new farmhub::devices::Device();
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
