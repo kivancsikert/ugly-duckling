@@ -26,18 +26,11 @@ def parse_and_run_addr2line(line):
         process_addresses(addresses)
 
 def process_addresses(addresses):
-    # Prepare the addr2line command
-    cmd = ["xtensa-esp32-elf-addr2line", "-f", "-e", "build/ugly-duckling.elf"] + addresses
+    cmd = ["xtensa-esp32-elf-addr2line", "--pretty-print", "--demangle", "--basenames", "--functions", "--exe", "build/ugly-duckling.elf"] + addresses
     try:
-        # Run the addr2line command
         result = subprocess.run(cmd, text=True, capture_output=True)
-        # Split output into lines
-        lines = result.stdout.strip().splitlines()
-        # Process lines in pairs
-        for i in range(0, len(lines), 2):
-            function_name = lines[i].strip() if i < len(lines) else "unknown"
-            source_info = lines[i + 1].strip() if i + 1 < len(lines) else "unknown"
-            print(f"  -- {source_info} -- {function_name}")
+        for line in result.stdout.strip().splitlines():
+            print(f"  -- ${line}")
     except Exception as e:
         print(f"Error running addr2line: {e}")
 
