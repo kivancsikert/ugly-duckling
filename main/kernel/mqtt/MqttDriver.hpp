@@ -180,11 +180,6 @@ public:
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
 
 private:
-    struct PendingMessage {
-        const int messageId;
-        const TaskHandle_t waitingTask;
-    };
-
     struct PendingSubscription {
         const int messageId;
         const time_point<boot_clock> subscribedAt;
@@ -317,7 +312,6 @@ private:
         Connecting,
         Connected,
     };
-
     class PendingMessages {
     public:
         bool waitOn(int messageId, TaskHandle_t waitingTask) {
@@ -334,7 +328,7 @@ private:
 
             // Record pending task
             Lock lock(mutex);
-            messages.emplace_back(messageId, waitingTask);
+            messages[messageId] = waitingTask;
             return true;
         }
 
@@ -344,17 +338,13 @@ private:
             }
 
             Lock lock(mutex);
-            bool handled;
-            messages.remove_if([&](const auto& message) {
-                if (message.messageId == messageId) {
-                    notifyWaitingTask(message.waitingTask, success);
-                    handled = true;
-                    return true;
-                } else {
-                    return false;
-                }
-            });
-            return handled;
+            auto it = messages.find(messageId);
+            if (it != messages.end()) {
+                notifyWaitingTask(it->second, success);
+                messages.erase(it);
+                return true;
+            }
+            return false;
         }
 
         bool cancelWaitingOn(TaskHandle_t waitingTask) {
@@ -364,28 +354,28 @@ private:
 
             Lock lock(mutex);
             bool removed = false;
-            messages.remove_if([&](const auto& message) {
-                if (message.waitingTask == waitingTask) {
+            for (auto it = messages.begin(); it != messages.end();) {
+                if (it->second == waitingTask) {
+                    it = messages.erase(it);
                     removed = true;
-                    return true;
                 } else {
-                    return false;
+                    ++it;
                 }
-            });
+            }
             return removed;
         }
 
         void clear() {
             Lock lock(mutex);
-            for (auto& message : messages) {
-                notifyWaitingTask(message.waitingTask, false);
+            for (auto& [messageId, waitingTask] : messages) {
+                notifyWaitingTask(waitingTask, false);
             }
             messages.clear();
         }
 
     private:
         Mutex mutex;
-        std::list<PendingMessage> messages;
+        std::unordered_map<int, TaskHandle_t> messages;
     };
 
     void runEventLoop(Task& task) {
