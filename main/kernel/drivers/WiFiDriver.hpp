@@ -291,17 +291,19 @@ private:
         wifiUpSince = boot_clock::now();
         if (!stationStarted.isSet()) {
             if (powerSaveMode) {
-                auto listenInterval = 50;
-                LOGTV(Tag::WIFI, "Enabling power save mode, listen interval: %d",
-                    listenInterval);
+                auto listenInterval = 20;
+                LOGTV(Tag::WIFI, "Enabling power save mode, listen interval: %d DTIM beacons (%d ms)",
+                    listenInterval, listenInterval * 100);
+                config.sta.listen_interval = listenInterval;
                 ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
 #ifdef SOC_PM_SUPPORT_WIFI_WAKEUP
+                LOGTV(Tag::WIFI, "Enabling wake on WiFi");
                 ESP_ERROR_CHECK(esp_sleep_enable_wifi_wakeup());
 #endif
 #ifdef SOC_PM_SUPPORT_BEACON_WAKEUP
+                LOGTV(Tag::WIFI, "Enabling wake on WiFi beacon");
                 ESP_ERROR_CHECK(esp_sleep_enable_wifi_beacon_wakeup());
 #endif
-                config.sta.listen_interval = listenInterval;
             }
 
             LOGTD(Tag::WIFI, "Starting station");
