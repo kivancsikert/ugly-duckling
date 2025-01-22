@@ -365,7 +365,10 @@ public:
     }
 
     void populateTelemetry(JsonObject& json) override {
-        json["voltage"] = kernel.getBatteryVoltage();
+        auto voltage = kernel.getBatteryVoltage();
+        if (voltage > 0) {
+            json["voltage"] = voltage;
+        }
     }
 
 private:
