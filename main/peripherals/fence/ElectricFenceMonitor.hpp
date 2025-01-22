@@ -45,6 +45,7 @@ public:
     ElectricFenceMonitorComponent(
         const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
+        PulseCounterManager& pulseCounterManager,
         const ElectricFenceMonitorDeviceConfig& config)
         : Component(name, mqttRoot) {
 
@@ -57,7 +58,7 @@ public:
         LOGI("Initializing electric fence with pins %s", pinsDescription.c_str());
 
         for (auto& pinConfig : config.pins.get()) {
-            auto unit = make_shared<PulseCounter>(pinConfig.pin);
+            auto unit = pulseCounterManager.create(pinConfig.pin);
             pins.emplace_back(pinConfig.voltage, unit);
         }
 
@@ -98,9 +99,13 @@ private:
 class ElectricFenceMonitor
     : public Peripheral<EmptyConfiguration> {
 public:
-    ElectricFenceMonitor(const std::string& name, shared_ptr<MqttRoot> mqttRoot, const ElectricFenceMonitorDeviceConfig& config)
+    ElectricFenceMonitor(
+        const std::string& name,
+        shared_ptr<MqttRoot> mqttRoot,
+        PulseCounterManager& pulseCounterManager,
+        const ElectricFenceMonitorDeviceConfig& config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , monitor(name, mqttRoot, config) {
+        , monitor(name, mqttRoot, pulseCounterManager, config) {
     }
 
     void populateTelemetry(JsonObject& telemetryJson) override {
@@ -119,7 +124,7 @@ public:
     }
 
     unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const ElectricFenceMonitorDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
-        return std::make_unique<ElectricFenceMonitor>(name, mqttRoot, deviceConfig);
+        return std::make_unique<ElectricFenceMonitor>(name, mqttRoot, services.pulseCounterManager, deviceConfig);
     }
 };
 

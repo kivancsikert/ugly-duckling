@@ -18,9 +18,15 @@ namespace farmhub::peripherals::flow_meter {
 class FlowMeter
     : public Peripheral<EmptyConfiguration> {
 public:
-    FlowMeter(const std::string& name, shared_ptr<MqttRoot> mqttRoot, InternalPinPtr pin, double qFactor, milliseconds measurementFrequency)
+    FlowMeter(
+        const std::string& name,
+        shared_ptr<MqttRoot> mqttRoot,
+        PulseCounterManager& pulseCounterManager,
+        InternalPinPtr pin,
+        double qFactor,
+        milliseconds measurementFrequency)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , flowMeter(name, mqttRoot, pin, qFactor, measurementFrequency) {
+        , flowMeter(name, mqttRoot, pulseCounterManager, pin, qFactor, measurementFrequency) {
     }
 
     void populateTelemetry(JsonObject& telemetryJson) override {
@@ -39,7 +45,7 @@ public:
     }
 
     unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const FlowMeterDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
-        return make_unique<FlowMeter>(name, mqttRoot, deviceConfig.pin.get(), deviceConfig.qFactor.get(), deviceConfig.measurementFrequency.get());
+        return make_unique<FlowMeter>(name, mqttRoot, services.pulseCounterManager, deviceConfig.pin.get(), deviceConfig.qFactor.get(), deviceConfig.measurementFrequency.get());
     }
 };
 

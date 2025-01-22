@@ -30,6 +30,7 @@ public:
     FlowControl(
         const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
+        PulseCounterManager& pulseCounterManager,
         ValveControlStrategy& strategy,
         InternalPinPtr pin,
         double qFactor,
@@ -38,7 +39,7 @@ public:
         , valve(name, strategy, mqttRoot, [this]() {
             publishTelemetry();
         })
-        , flowMeter(name, mqttRoot, pin, qFactor, measurementFrequency) {
+        , flowMeter(name, mqttRoot, pulseCounterManager, pin, qFactor, measurementFrequency) {
     }
 
     void configure(const FlowControlConfig& config) override {
@@ -89,6 +90,7 @@ public:
         return make_unique<FlowControl>(
             name,
             mqttRoot,
+            services.pulseCounterManager,
 
             *strategy,
 

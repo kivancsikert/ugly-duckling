@@ -8,6 +8,7 @@
 #include <kernel/Kernel.hpp>
 #include <kernel/Log.hpp>
 #include <kernel/PcntManager.hpp>
+#include <kernel/PulseCounter.hpp>
 #include <kernel/PwmManager.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -96,6 +97,7 @@ public:
 public:
     LedDriver statusLed;
     PcntManager pcnt;
+    PulseCounterManager pulseCounterManager;
     PwmManager pwm;
     const InternalPinPtr bootPin;
 

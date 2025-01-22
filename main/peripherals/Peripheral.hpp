@@ -8,6 +8,7 @@
 #include <kernel/I2CManager.hpp>
 #include <kernel/Named.hpp>
 #include <kernel/PcntManager.hpp>
+#include <kernel/PulseCounter.hpp>
 #include <kernel/PwmManager.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/SwitchManager.hpp>
@@ -103,6 +104,7 @@ public:
 struct PeripheralServices {
     I2CManager& i2c;
     PcntManager& pcntManager;
+    PulseCounterManager& pulseCounterManager;
     PwmManager& pwmManager;
     SwitchManager& switches;
 };
@@ -173,10 +175,11 @@ public:
     PeripheralManager(
         I2CManager& i2c,
         PcntManager& pcntManager,
+        PulseCounterManager& pulseCounterManager,
         PwmManager& pwmManager,
         SwitchManager& switchManager,
         const shared_ptr<MqttRoot> mqttDeviceRoot)
-        : services({ i2c, pcntManager, pwmManager, switchManager })
+        : services({ i2c, pcntManager, pulseCounterManager, pwmManager, switchManager })
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 

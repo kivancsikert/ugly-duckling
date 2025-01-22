@@ -633,7 +633,7 @@ private:
     TDeviceConfiguration& deviceConfig = deviceDefinition.config;
 
     shared_ptr<MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig.instance.get());
-    PeripheralManager peripheralManager { kernel.i2c, deviceDefinition.pcnt, deviceDefinition.pwm, kernel.switches, mqttDeviceRoot };
+    PeripheralManager peripheralManager { kernel.i2c, deviceDefinition.pcnt, deviceDefinition.pulseCounterManager, deviceDefinition.pwm, kernel.switches, mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };
