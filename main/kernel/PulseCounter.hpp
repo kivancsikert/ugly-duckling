@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <list>
 #include <memory>
 
 #include <driver/gpio.h>
@@ -13,6 +14,8 @@
 #include <kernel/PowerManager.hpp>
 
 namespace farmhub::kernel {
+
+class PulseCounterManager;
 
 /**
  * Interrupt-based pulse-counter for low-frequency signals.
@@ -45,18 +48,6 @@ public:
 
         // Attach the ISR handler to the GPIO pin
         ESP_ERROR_CHECK(gpio_isr_handler_add(gpio, interruptHandler, this));
-
-        // Make sure we handle the state change when the device wakes up due to a GPIO interrupt
-        esp_pm_sleep_cbs_register_config_t sleepCallbackConfig = {
-            .exit_cb = [](int64_t timeSleptInUs, void* arg) {
-                if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
-                    auto self = static_cast<PulseCounter*>(arg);
-                    self->handlePotentialStateChange();
-                }
-                return ESP_OK; },
-            .exit_cb_user_arg = this,
-        };
-        ESP_ERROR_CHECK(esp_pm_light_sleep_register_cbs(&sleepCallbackConfig));
 
         LOGTD(Tag::PCNT, "Registered interrupt-based pulse counter unit on pin %s",
             pin->getName().c_str());
@@ -120,7 +111,7 @@ private:
                 sleepLock.emplace(PowerManager::noLightSleep, boot_clock::now());
 
                 // Make sure we wake up again to check for the opposing edge
-                ESP_ERROR_CHECK(rtc_gpio_wakeup_enable(
+                ESP_ERROR_CHECK(gpio_wakeup_enable(
                     pin->getGpio(),
                     lastEdge == EdgeKind::Rising
                         ? GPIO_INTR_LOW_LEVEL
@@ -163,6 +154,39 @@ private:
     std::atomic<uint32_t> counter { 0 };
 
     CopyQueue<EdgeKind> eventQueue { pin->getName(), 16 };
+
+    friend class PulseCounterManager;
+};
+
+class PulseCounterManager {
+public:
+    std::shared_ptr<PulseCounter> create(InternalPinPtr pin) {
+        if (!initialized) {
+            initialized = true;
+
+            // Make sure we handle any state changes when the device wakes up due to a GPIO interrupt
+            esp_pm_sleep_cbs_register_config_t sleepCallbackConfig = {
+                .exit_cb = [](int64_t timeSleptInUs, void* arg) {
+                if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
+                    auto self = static_cast<PulseCounterManager*>(arg);
+                    for (auto& counter : self->counters) {
+                        counter->handlePotentialStateChange();
+                    }
+                }
+                return ESP_OK; },
+                .exit_cb_user_arg = this,
+            };
+            ESP_ERROR_CHECK(esp_pm_light_sleep_register_cbs(&sleepCallbackConfig));
+        }
+
+        auto counter = std::make_shared<PulseCounter>(pin);
+        counters.push_back(counter);
+        return counter;
+    }
+
+private:
+    bool initialized = false;
+    std::list<std::shared_ptr<PulseCounter>> counters;
 };
 
 }    // namespace farmhub::kernel

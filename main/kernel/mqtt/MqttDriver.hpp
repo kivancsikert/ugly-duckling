@@ -531,17 +531,17 @@ private:
     void handleMqttEvent(int eventId, esp_mqtt_event_handle_t event) {
         switch (eventId) {
             case MQTT_EVENT_BEFORE_CONNECT: {
-                LOGTV(Tag::MQTT, "Before connecting to MQTT server");
+                LOGTD(Tag::MQTT, "Connecting to MQTT server %s:%lu", hostname.c_str(), port);
                 break;
             }
             case MQTT_EVENT_CONNECTED: {
-                LOGTV(Tag::MQTT, "Connected to MQTT server");
+                LOGTD(Tag::MQTT, "Connected to MQTT server");
                 mqttReady.set();
                 eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Connected { (bool) event->session_present });
                 break;
             }
             case MQTT_EVENT_DISCONNECTED: {
-                LOGTV(Tag::MQTT, "Disconnected from MQTT server");
+                LOGTD(Tag::MQTT, "Disconnected from MQTT server");
                 mqttReady.clear();
                 eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Disconnected {});
                 break;

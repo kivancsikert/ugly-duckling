@@ -227,10 +227,12 @@ private:
                         connected = true;
                         connectingSince.reset();
                         networkConnecting.clear();
+                        LOGTD(Tag::WIFI, "Connected to the network");
                         break;
                     case WiFiEvent::DISCONNECTED:
                         connected = false;
                         networkConnecting.clear();
+                        LOGTD(Tag::WIFI, "Disconnected from the network");
                         break;
                     case WiFiEvent::PROVISIONING_FINISHED:
                         networkConnecting.clear();
@@ -260,11 +262,11 @@ private:
         if (provisioned) {
             wifi_config_t wifiConfig;
             ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifiConfig));
-            LOGTD(Tag::WIFI, "Connecting using stored credentials to %s",
+            LOGTI(Tag::WIFI, "Connecting using stored credentials to %s",
                 wifiConfig.sta.ssid);
             connectToStation(wifiConfig);
         } else {
-            LOGTD(Tag::WIFI, "No stored credentials, starting provisioning");
+            LOGTI(Tag::WIFI, "No stored credentials, starting provisioning");
             configPortalRunning.set();
             startProvisioning();
         }
