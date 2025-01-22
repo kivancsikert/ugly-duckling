@@ -281,6 +281,7 @@ private:
         uint32_t status = ulTaskNotifyTake(pdTRUE, timeout.count());
         switch (status) {
             case 0:
+                pendingMessages.cancelWaitingOn(waitingTask);
                 return PublishStatus::TimeOut;
             case PUBLISH_SUCCESS:
                 return PublishStatus::Success;
@@ -317,6 +318,76 @@ private:
         Connected,
     };
 
+    class PendingMessages {
+    public:
+        bool waitOn(int messageId, TaskHandle_t waitingTask) {
+            if (waitingTask == nullptr) {
+                // Nothing is waiting
+                return false;
+            }
+
+            if (messageId == 0) {
+                // Notify tasks waiting on QoS 0 messages immediately
+                notifyWaitingTask(waitingTask, true);
+                return false;
+            }
+
+            // Record pending task
+            Lock lock(mutex);
+            messages.emplace_back(messageId, waitingTask);
+            return true;
+        }
+
+        bool handlePublished(int messageId, bool success) {
+            if (messageId == 0) {
+                return false;
+            }
+
+            Lock lock(mutex);
+            bool handled;
+            messages.remove_if([&](const auto& message) {
+                if (message.messageId == messageId) {
+                    notifyWaitingTask(message.waitingTask, success);
+                    handled = true;
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+            return handled;
+        }
+
+        bool cancelWaitingOn(TaskHandle_t waitingTask) {
+            if (waitingTask == nullptr) {
+                return false;
+            }
+
+            Lock lock(mutex);
+            bool removed = false;
+            messages.remove_if([&](const auto& message) {
+                if (message.waitingTask == waitingTask) {
+                    removed = true;
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+            return removed;
+        }
+
+        void clear() {
+            Lock lock(mutex);
+            for (auto& message : messages) {
+                notifyWaitingTask(message.waitingTask, false);
+            }
+            messages.clear();
+        }
+
+    private:
+        Mutex mutex;
+        std::list<PendingMessage> messages;
+    };
+
     void runEventLoop(Task& task) {
         // We are not yet connected
         auto state = MqttState::Disconnected;
@@ -326,7 +397,6 @@ private:
         auto nextSessionShouldBeClean = true;
 
         // List of messages we are waiting on
-        std::list<PendingMessage> pendingMessages;
         std::list<PendingSubscription> pendingSubscriptions;
 
         while (true) {
@@ -390,23 +460,13 @@ private:
                             stopClient();
 
                             // Clear pending messages and notify waiting tasks
-                            for (auto& message : pendingMessages) {
-                                notifyWaitingTask(message.waitingTask, false);
-                            }
                             pendingMessages.clear();
 
                             // Clear pending subscriptions
                             pendingSubscriptions.clear();
                         } else if constexpr (std::is_same_v<T, MessagePublished>) {
                             LOGTV(Tag::MQTT, "Processing message published: %d", arg.messageId);
-                            pendingMessages.remove_if([&](const auto& pendingMessage) {
-                                if (pendingMessage.messageId == arg.messageId) {
-                                    notifyWaitingTask(pendingMessage.waitingTask, arg.success);
-                                    return true;
-                                } else {
-                                    return false;
-                                }
-                            });
+                            pendingMessages.handlePublished(arg.messageId, arg.success);
                         } else if constexpr (std::is_same_v<T, Subscribed>) {
                             LOGTV(Tag::MQTT, "Processing subscribed event: %d", arg.messageId);
                             pendingSubscriptions.remove_if([&](const auto& pendingSubscription) {
@@ -415,7 +475,7 @@ private:
                         } else if constexpr (std::is_same_v<T, OutgoingMessage>) {
                             LOGTV(Tag::MQTT, "Processing outgoing message to %s",
                                 arg.topic.c_str());
-                            processOutgoingMessage(arg, pendingMessages);
+                            processOutgoingMessage(arg);
                         } else if constexpr (std::is_same_v<T, Subscription>) {
                             LOGTV(Tag::MQTT, "Processing subscription");
                             subscriptions.push_back(arg);
@@ -528,7 +588,7 @@ private:
         }
     }
 
-    void notifyWaitingTask(TaskHandle_t task, bool success) {
+    static void notifyWaitingTask(TaskHandle_t task, bool success) {
         if (task != nullptr) {
             uint32_t status = success ? PUBLISH_SUCCESS : PUBLISH_FAILED;
             xTaskNotify(task, status, eSetValueWithOverwrite);
@@ -541,7 +601,7 @@ private:
         }
     }
 
-    void processOutgoingMessage(const OutgoingMessage message, std::list<PendingMessage>& pendingMessages) {
+    void processOutgoingMessage(const OutgoingMessage& message) {
         int ret = esp_mqtt_client_enqueue(
             client,
             message.topic.c_str(),
@@ -563,15 +623,7 @@ private:
                     message.topic.c_str(), message.payload.length(), messageId);
             }
 #endif
-            if (message.waitingTask != nullptr) {
-                if (messageId == 0) {
-                    // Notify tasks waiting on QoS 0 messages immediately
-                    notifyWaitingTask(message.waitingTask, true);
-                } else {
-                    // Record pending task
-                    pendingMessages.emplace_back(messageId, message.waitingTask);
-                }
-            }
+            pendingMessages.waitOn(messageId, message.waitingTask);
         }
     }
 
@@ -673,6 +725,7 @@ private:
     Queue<IncomingMessage> incomingQueue;
     // TODO Use a map instead
     std::list<Subscription> subscriptions;
+    PendingMessages pendingMessages;
 
     static constexpr uint32_t PUBLISH_SUCCESS = 1;
     static constexpr uint32_t PUBLISH_FAILED = 2;
