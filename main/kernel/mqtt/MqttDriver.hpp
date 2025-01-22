@@ -373,6 +373,13 @@ private:
             messages.clear();
         }
 
+        static void notifyWaitingTask(TaskHandle_t task, bool success) {
+            if (task != nullptr) {
+                uint32_t status = success ? PUBLISH_SUCCESS : PUBLISH_FAILED;
+                xTaskNotify(task, status, eSetValueWithOverwrite);
+            }
+        }
+
     private:
         Mutex mutex;
         std::unordered_map<int, TaskHandle_t> messages;
@@ -578,13 +585,6 @@ private:
         }
     }
 
-    static void notifyWaitingTask(TaskHandle_t task, bool success) {
-        if (task != nullptr) {
-            uint32_t status = success ? PUBLISH_SUCCESS : PUBLISH_FAILED;
-            xTaskNotify(task, status, eSetValueWithOverwrite);
-        }
-    }
-
     static void logErrorIfNonZero(const char* message, int error) {
         if (error != 0) {
             LOGTE(Tag::MQTT, " - %s: 0x%x", message, error);
@@ -604,7 +604,7 @@ private:
         if (ret < 0) {
             LOGTD(Tag::MQTT, "Error publishing to '%s': %s",
                 message.topic.c_str(), ret == -2 ? "outbox full" : "failure");
-            notifyWaitingTask(message.waitingTask, false);
+            PendingMessages::notifyWaitingTask(message.waitingTask, false);
         } else {
             auto messageId = ret;
 #ifdef DUMP_MQTT
