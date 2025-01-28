@@ -46,7 +46,7 @@ public:
 
     ArrayProperty<JsonAsString> peripherals { this, "peripherals" };
 
-    Property<bool> sleepWhenIdle { this, "sleepWhenIdle", false };
+    Property<bool> sleepWhenIdle { this, "sleepWhenIdle", true };
 
     Property<seconds> publishInterval { this, "publishInterval", 1min };
     Property<Level> publishLogs { this, "publishLogs", Level::Info };

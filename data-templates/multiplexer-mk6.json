@@ -18,6 +18,5 @@
         "pin": "relay:0"
       }
     }
-  ],
-  "sleepWhenIdle": true
+  ]
 }
