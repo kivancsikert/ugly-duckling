@@ -68,7 +68,6 @@ This describes the device and its peripherals.
     "ntp": {
         "host": "pool.ntp.org", // NTP server host name, optional
     },
-    "sleepWhenIdle": true, // whether the device should sleep when idle, defaults to false
     "peripherals": [
       {
         "type": "chicken-door",
