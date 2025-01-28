@@ -278,7 +278,7 @@ private:
         bool open = openSwitch.isEngaged();
         bool close = closedSwitch.isEngaged();
         if (open && close) {
-            LOGE("Both open and close switches are engaged");
+            LOGD("Both open and close switches are engaged");
             return DoorState::NONE;
         } else if (open) {
             return DoorState::OPEN;
