@@ -1,9 +1,12 @@
 #pragma once
 
+#include <concepts>
 #include <list>
 #include <memory>
 
 #include <ArduinoJson.h>
+
+#include <devices/DeviceConfiguration.hpp>
 
 #include <kernel/Kernel.hpp>
 #include <kernel/Log.hpp>
@@ -30,36 +33,7 @@ using namespace farmhub::peripherals::environment;
 
 namespace farmhub::devices {
 
-class DeviceConfiguration : public ConfigurationSection {
-public:
-    DeviceConfiguration(const std::string& defaultModel)
-        : model(this, "model", defaultModel)
-        , instance(this, "instance", getMacAddress()) {
-    }
-
-    Property<std::string> model;
-    Property<std::string> id { this, "id", "UNIDENTIFIED" };
-    Property<std::string> instance;
-    Property<std::string> location { this, "location" };
-
-    NamedConfigurationEntry<RtcDriver::Config> ntp { this, "ntp" };
-
-    ArrayProperty<JsonAsString> peripherals { this, "peripherals" };
-
-    Property<bool> sleepWhenIdle { this, "sleepWhenIdle", true };
-
-    Property<seconds> publishInterval { this, "publishInterval", 1min };
-    Property<Level> publishLogs { this, "publishLogs", Level::Info };
-
-    virtual const std::string getHostname() {
-        std::string hostname = instance.get();
-        std::replace(hostname.begin(), hostname.end(), ':', '-');
-        std::erase(hostname, '?');
-        return hostname;
-    }
-};
-
-template <typename TDeviceConfiguration>
+template <std::derived_from<DeviceConfiguration> TDeviceConfiguration>
 class DeviceDefinition {
 public:
     DeviceDefinition(PinPtr statusPin, InternalPinPtr bootPin)

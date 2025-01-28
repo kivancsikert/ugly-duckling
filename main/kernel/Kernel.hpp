@@ -1,21 +1,24 @@
 #pragma once
 
 #include <chrono>
+#include <concepts>
 #include <functional>
 #include <optional>
 
 #include <esp_crt_bundle.h>
 #include <esp_http_client.h>
 #include <esp_https_ota.h>
-#include <esp_mac.h>
 #include <esp_system.h>
 
 #include <nvs_flash.h>
 
 #include <freertos/FreeRTOS.h>
 
+#include <devices/DeviceConfiguration.hpp>
+
 #include <kernel/FileSystem.hpp>
 #include <kernel/I2CManager.hpp>
+#include <kernel/NetworkUtil.hpp>
 #include <kernel/PowerManager.hpp>
 #include <kernel/StateManager.hpp>
 #include <kernel/Watchdog.hpp>
@@ -28,40 +31,17 @@
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
+using namespace farmhub::devices;
 using namespace farmhub::kernel::drivers;
 using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::kernel {
 
-template <typename TConfiguration>
-class Kernel;
-
 static RTC_DATA_ATTR int bootCount = 0;
 
 static constexpr const char* UPDATE_FILE = "/update.json";
 
-// TODO Move this to a separate file
-static const std::string& getMacAddress() {
-    static std::string macAddress;
-    if (macAddress.length() == 0) {
-        uint8_t rawMac[6];
-        for (int i = 0; i < 6; i++) {
-            rawMac[i] = 0;
-        }
-        if (esp_read_mac(rawMac, ESP_MAC_WIFI_STA) != ESP_OK) {
-            macAddress = "??:??:??:??:??:??:??:??";
-        } else {
-            char mac[24];
-            sprintf(mac, "%02x:%02x:%02x:%02x:%02x:%02x",
-                rawMac[0], rawMac[1], rawMac[2], rawMac[3],
-                rawMac[4], rawMac[5]);
-            macAddress = mac;
-        }
-    }
-    return macAddress;
-}
-
-template <typename TDeviceConfiguration>
+template <std::derived_from<DeviceConfiguration> TDeviceConfiguration>
 class Kernel {
 public:
     Kernel(TDeviceConfiguration& deviceConfig, MqttDriver::Config& mqttConfig, LedDriver& statusLed)
