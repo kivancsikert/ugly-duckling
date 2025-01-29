@@ -96,7 +96,11 @@ public:
     }
 
     static std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) {
-        return std::make_shared<AnalogBatteryDriver>(pins::BATTERY, 1.2424);
+        return std::make_shared<AnalogBatteryDriver>(pins::BATTERY, 1.2424, BatteryParameters {
+            .maximumVoltage = 4.1,
+            .bootThreshold = 3.8,
+            .shutdownThreshold = 3.4,
+        });
     }
 
     void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {

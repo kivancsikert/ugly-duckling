@@ -89,7 +89,11 @@ public:
     }
 
     static std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) {
-        return std::make_shared<Bq27220Driver>(i2c, pins::SDA, pins::SCL);
+        return std::make_shared<Bq27220Driver>(i2c, pins::SDA, pins::SCL, BatteryParameters {
+            .maximumVoltage = 4.1,
+            .bootThreshold = 3.7,
+            .shutdownThreshold = 3.0,
+        });
     }
 
     void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {

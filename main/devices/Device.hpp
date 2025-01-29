@@ -31,77 +31,22 @@ using namespace farmhub::kernel::mqtt;
 #include <devices/UglyDucklingMk4.hpp>
 typedef farmhub::devices::UglyDucklingMk4 TDeviceDefinition;
 typedef farmhub::devices::Mk4Config TDeviceConfiguration;
-
-/**
- * @brief Do not boot if battery is below this threshold.
- */
-static constexpr double BATTERY_BOOT_THRESHOLD = 0;
-
-/**
- * @brief Shutdown if battery drops below this threshold.
- */
-static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 0;
-
 #elif defined(MK5)
 #include <devices/UglyDucklingMk5.hpp>
 typedef farmhub::devices::UglyDucklingMk5 TDeviceDefinition;
 typedef farmhub::devices::Mk5Config TDeviceConfiguration;
-
-/**
- * @brief Do not boot if battery is below this threshold.
- */
-static constexpr double BATTERY_BOOT_THRESHOLD = 0;
-
-/**
- * @brief Shutdown if battery drops below this threshold.
- */
-static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 0;
-
 #elif defined(MK6)
 #include <devices/UglyDucklingMk6.hpp>
 typedef farmhub::devices::UglyDucklingMk6 TDeviceDefinition;
 typedef farmhub::devices::Mk6Config TDeviceConfiguration;
-
-/**
- * @brief Do not boot if battery is below this threshold.
- */
-static constexpr double BATTERY_BOOT_THRESHOLD = 3.9;
-
-/**
- * @brief Shutdown if battery drops below this threshold.
- */
-static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 3.6;
-
 #elif defined(MK7)
 #include <devices/UglyDucklingMk7.hpp>
 typedef farmhub::devices::UglyDucklingMk7 TDeviceDefinition;
 typedef farmhub::devices::Mk7Config TDeviceConfiguration;
-
-/**
- * @brief Do not boot if battery is below this threshold.
- */
-static constexpr double BATTERY_BOOT_THRESHOLD = 3.7;
-
-/**
- * @brief Shutdown if battery drops below this threshold.
- */
-static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 3.0;
-
 #elif defined(MK8)
 #include <devices/UglyDucklingMk8.hpp>
 typedef farmhub::devices::UglyDucklingMk8 TDeviceDefinition;
 typedef farmhub::devices::Mk8Config TDeviceConfiguration;
-
-/**
- * @brief Do not boot if battery is below this threshold.
- */
-static constexpr double BATTERY_BOOT_THRESHOLD = 3.2;
-
-/**
- * @brief Shutdown if battery drops below this threshold.
- */
-static constexpr double BATTERY_SHUTDOWN_THRESHOLD = 3.0;
-
 #else
 #error "No device defined"
 #endif

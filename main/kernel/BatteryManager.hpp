@@ -31,10 +31,8 @@ class BatteryManager : public TelemetryProvider {
 public:
     BatteryManager(
         std::shared_ptr<BatteryDriver> battery,
-        double batteryShutdownThreshold,
         std::shared_ptr<ShutdownManager> shutdownManager)
         : battery(battery)
-        , batteryShutdownThreshold(batteryShutdownThreshold)
         , shutdownManager(shutdownManager) {
         Task::loop("battery", 2560, [this](Task& task) {
             checkBatteryVoltage(task);
@@ -55,9 +53,9 @@ private:
         batteryVoltage.record(currentVoltage);
         auto voltage = batteryVoltage.getAverage();
 
-        if (voltage != 0.0 && voltage < batteryShutdownThreshold) {
+        if (voltage != 0.0 && voltage < battery->parameters.shutdownThreshold) {
             LOGI("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
-                voltage, batteryShutdownThreshold, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
+                voltage, battery->parameters.shutdownThreshold, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
 
             // TODO Publish all MQTT messages, then shut down WiFi, and _then_ start shutting down peripherals
             //      Doing so would result in less of a power spike, which can be important if the battery is already low
@@ -69,7 +67,6 @@ private:
     };
 
     const std::shared_ptr<BatteryDriver> battery;
-    const double batteryShutdownThreshold;
     const std::shared_ptr<ShutdownManager> shutdownManager;
 
     MovingAverage<double> batteryVoltage { 5 };

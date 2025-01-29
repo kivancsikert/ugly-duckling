@@ -85,13 +85,13 @@ extern "C" void app_main() {
     auto i2c = std::make_shared<I2CManager>();
     auto battery = TDeviceDefinition::createBatteryDriver(i2c);
     if (battery != nullptr) {
-        // If the battery voltage is below threshold, we should not boot yet.
+        // If the battery voltage is below the device's threshold, we should not boot yet.
         // This is to prevent the device from booting and immediately shutting down
         // due to the high current draw of the boot process.
         auto voltage = battery->getVoltage();
-        if (voltage != 0.0 && voltage < BATTERY_BOOT_THRESHOLD) {
+        if (voltage != 0.0 && voltage < battery->parameters.bootThreshold) {
             ESP_LOGW("battery", "Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
-                voltage, BATTERY_BOOT_THRESHOLD);
+                voltage, battery->parameters.bootThreshold);
             enterLowPowerDeepSleep();
         }
     }
@@ -129,7 +129,7 @@ extern "C" void app_main() {
     auto shutdownManager = std::make_shared<ShutdownManager>();
     std::shared_ptr<BatteryManager> batteryManager;
     if (battery != nullptr) {
-        batteryManager = std::make_shared<BatteryManager>(battery, BATTERY_SHUTDOWN_THRESHOLD, shutdownManager);
+        batteryManager = std::make_shared<BatteryManager>(battery, shutdownManager);
     }
 
     auto mqttConfig = std::make_shared<MqttDriver::Config>();
