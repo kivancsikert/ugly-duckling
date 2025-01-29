@@ -7,8 +7,8 @@
 #include <memory>
 #include <string>
 
-#include <esp_app_desc.h>
 #include <driver/gpio.h>
+#include <esp_app_desc.h>
 
 static const char* const farmhubVersion = esp_app_get_description()->version;
 
@@ -100,9 +100,10 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
 
-    std::shared_ptr<TDeviceDefinition> deviceDefinition = std::make_shared<TDeviceDefinition>();
+    auto deviceDefinition = std::make_shared<TDeviceDefinition>();
+    auto kernel = std::make_shared<Kernel<TDeviceConfiguration>>(deviceDefinition->config, deviceDefinition->mqttConfig, deviceDefinition->statusLed);
 
-    new farmhub::devices::Device(deviceDefinition);
+    new farmhub::devices::Device(deviceDefinition, kernel);
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
     Task::loop("task-heaps", 4096, [](Task& task) {
