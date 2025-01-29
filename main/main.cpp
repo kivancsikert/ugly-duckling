@@ -150,17 +150,17 @@ extern "C" void app_main() {
 
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
 
-    // Reboots if update is successful
-    handleHttpUpdate(fs, wifi);
-
-    // Enable power saving for WiFi if we don't need to do HTTP update
-    wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
-
     auto shutdownManager = std::make_shared<ShutdownManager>();
     std::shared_ptr<BatteryManager> batteryManager;
     if (battery != nullptr) {
         batteryManager = std::make_shared<BatteryManager>(battery, shutdownManager);
     }
+
+    // Reboots if update is successful
+    handleHttpUpdate(fs, wifi);
+
+    // Enable power saving for WiFi if we don't need to do HTTP update
+    wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
 
     auto mqttConfig = std::make_shared<MqttDriver::Config>();
     // TODO This should just be a "load()" call
