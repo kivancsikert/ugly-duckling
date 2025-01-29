@@ -56,7 +56,7 @@ namespace farmhub::devices {
 #ifdef FARMHUB_DEBUG
 class ConsolePrinter {
 public:
-    ConsolePrinter(const std::shared_ptr<BatteryDriver> battery, WiFiDriver& wifi)
+    ConsolePrinter(const std::shared_ptr<BatteryManager> battery, WiFiDriver& wifi)
         : battery(battery)
         , wifi(wifi) {
         status.reserve(256);
@@ -140,7 +140,7 @@ private:
 
     int counter;
     std::string status;
-    const std::shared_ptr<BatteryDriver> battery;
+    const std::shared_ptr<BatteryManager> battery;
     WiFiDriver& wifi;
 };
 #endif
@@ -205,9 +205,11 @@ public:
     ConfiguredKernel(
         Queue<LogRecord>& logRecords,
         std::shared_ptr<TDeviceConfiguration> deviceConfig,
+        std::shared_ptr<BatteryManager> battery,
         std::shared_ptr<Kernel> kernel)
         : kernel(kernel)
-        , consoleProvider(logRecords, deviceConfig->publishLogs.get()) {
+        , consoleProvider(logRecords, deviceConfig->publishLogs.get())
+        , battery(battery) {
 
         LOGD("   ______                   _    _       _");
         LOGD("  |  ____|                 | |  | |     | |");
@@ -220,6 +222,7 @@ public:
 
     const std::shared_ptr<Kernel> kernel;
     ConsoleProvider consoleProvider;
+    const std::shared_ptr<BatteryManager> battery;
 
 private:
 #ifdef FARMHUB_DEBUG
@@ -238,7 +241,7 @@ public:
         , instance(deviceConfig->instance.get())
         , deviceDefinition(deviceDefinition)
         , kernel(kernel)
-        , configuredKernel(logRecords, deviceConfig, kernel) {
+        , configuredKernel(logRecords, deviceConfig, battery, kernel) {
         kernel->switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 15s) {
                 LOGI("Factory reset triggered after %lld ms", duration.count());

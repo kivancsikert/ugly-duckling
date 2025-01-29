@@ -39,8 +39,12 @@ public:
         });
     }
 
+    float getVoltage() {
+        return batteryVoltage.getAverage();
+    }
+
     void populateTelemetry(JsonObject& json) override {
-        auto voltage = batteryVoltage.getAverage();
+        auto voltage = getVoltage();
         if (voltage > 0) {
             json["voltage"] = voltage;
         }
