@@ -16,8 +16,6 @@ using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
-using std::make_unique;
-using std::unique_ptr;
 
 namespace farmhub::peripherals::flow_control {
 
@@ -29,8 +27,8 @@ class FlowControl : public Peripheral<FlowControlConfig> {
 public:
     FlowControl(
         const std::string& name,
-        shared_ptr<MqttRoot> mqttRoot,
-        PulseCounterManager& pulseCounterManager,
+        std::shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<PulseCounterManager> pulseCounterManager,
         ValveControlStrategy& strategy,
         InternalPinPtr pin,
         double qFactor,
@@ -42,8 +40,8 @@ public:
         , flowMeter(name, mqttRoot, pulseCounterManager, pin, qFactor, measurementFrequency) {
     }
 
-    void configure(const FlowControlConfig& config) override {
-        valve.setSchedules(config.schedule.get());
+    void configure(const std::shared_ptr<FlowControlConfig> config) override {
+        valve.setSchedules(config->schedule.get());
     }
 
     void populateTelemetry(JsonObject& telemetryJson) override {
@@ -83,20 +81,20 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
-        auto strategy = deviceConfig.valve.get().createValveControlStrategy(this);
+    std::unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const std::shared_ptr<FlowControlDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+        auto strategy = deviceConfig->valve.get()->createValveControlStrategy(this);
 
-        auto flowMeterConfig = deviceConfig.flowMeter.get();
-        return make_unique<FlowControl>(
+        auto flowMeterConfig = deviceConfig->flowMeter.get();
+        return std::make_unique<FlowControl>(
             name,
             mqttRoot,
             services.pulseCounterManager,
 
             *strategy,
 
-            flowMeterConfig.pin.get(),
-            flowMeterConfig.qFactor.get(),
-            flowMeterConfig.measurementFrequency.get());
+            flowMeterConfig->pin.get(),
+            flowMeterConfig->qFactor.get(),
+            flowMeterConfig->measurementFrequency.get());
     }
 
 private:

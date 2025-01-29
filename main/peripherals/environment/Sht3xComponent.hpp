@@ -23,11 +23,11 @@ public:
     Sht3xComponent(
         const std::string& name,
         const std::string& sensorType,
-        shared_ptr<MqttRoot> mqttRoot,
-        I2CManager& i2c,
+        std::shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<I2CManager> i2c,
         I2CConfig config)
         : Component(name, mqttRoot)
-        , bus(i2c.getBusFor(config)) {
+        , bus(i2c->getBusFor(config)) {
 
         // TODO Add commands to soft/hard reset the sensor
         // TODO Add configuration for fast / slow measurement
@@ -55,7 +55,7 @@ public:
     }
 
 private:
-    shared_ptr<I2CBus> bus;
+    std::shared_ptr<I2CBus> bus;
     sht3x_t sensor {};
 };
 

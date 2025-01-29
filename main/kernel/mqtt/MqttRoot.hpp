@@ -13,8 +13,8 @@ public:
         , rootTopic(rootTopic) {
     }
 
-    shared_ptr<MqttRoot> forSuffix(const std::string& suffix) {
-        return make_shared<MqttRoot>(mqtt, rootTopic + "/" + suffix);
+    std::shared_ptr<MqttRoot> forSuffix(const std::string& suffix) {
+        return std::make_shared<MqttRoot>(mqtt, rootTopic + "/" + suffix);
     }
 
     PublishStatus publish(const std::string& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_DEFAULT_PUBLISH_TIMEOUT, LogPublish log = LogPublish::Log) {

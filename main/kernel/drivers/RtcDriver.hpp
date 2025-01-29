@@ -35,7 +35,7 @@ public:
         Property<std::string> host { this, "host", "" };
     };
 
-    RtcDriver(State& networkReady, MdnsDriver& mdns, const Config& ntpConfig, StateSource& rtcInSync)
+    RtcDriver(State& networkReady, std::shared_ptr<MdnsDriver> mdns, const std::shared_ptr<Config> ntpConfig, StateSource& rtcInSync)
         : networkReady(networkReady)
         , mdns(mdns)
         , ntpConfig(ntpConfig)
@@ -76,6 +76,10 @@ public:
         return now > limit;
     }
 
+    State& getInSync() {
+        return rtcInSync;
+    }
+
 private:
     bool updateTime() {
         esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
@@ -91,13 +95,13 @@ private:
         LOGTI(Tag::RTC, "using default NTP server for Wokwi");
 #else
         // TODO Check this
-        if (ntpConfig.host.get().length() > 0) {
+        if (ntpConfig->host.get().length() > 0) {
             LOGTD(Tag::RTC, "using NTP server %s from configuration",
-                ntpConfig.host.get().c_str());
-            esp_sntp_setservername(0, ntpConfig.host.get().c_str());
+                ntpConfig->host.get().c_str());
+            esp_sntp_setservername(0, ntpConfig->host.get().c_str());
         } else {
             MdnsRecord ntpServer;
-            if (mdns.lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
+            if (mdns->lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
                 LOGTD(Tag::RTC, "using NTP server %s from mDNS",
                     ntpServer.toString().c_str());
                 esp_sntp_setserver(0, (const ip_addr_t*) &ntpServer.ip);
@@ -145,8 +149,8 @@ private:
     }
 
     State& networkReady;
-    MdnsDriver& mdns;
-    const Config& ntpConfig;
+    const std::shared_ptr<MdnsDriver> mdns;
+    const std::shared_ptr<Config> ntpConfig;
     StateSource& rtcInSync;
 
     bool trustMdnsCache = true;

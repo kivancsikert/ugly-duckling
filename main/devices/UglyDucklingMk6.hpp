@@ -84,20 +84,23 @@ public:
     Property<PinPtr> motorNSleepPin { this, "motorNSleepPin", pins::IOC2 };
 };
 
-class UglyDucklingMk6 : public DeviceDefinition<Mk6Config> {
+class UglyDucklingMk6 : public DeviceDefinition {
 public:
-    UglyDucklingMk6()
-        : DeviceDefinition<Mk6Config>(
-              pins::STATUS,
-              pins::BOOT) {
+    UglyDucklingMk6(std::shared_ptr<Mk6Config> config)
+        : DeviceDefinition(pins::STATUS, pins::BOOT)
+        , motorDriver(pwm, pins::AIN1, pins::AIN2, pins::BIN1, pins::BIN2, pins::NFault, config->motorNSleepPin.get()) {
         // Switch off strapping pin
         // TODO: Add a LED driver instead
         pins::LEDA_RED->pinMode(Pin::Mode::Output);
         pins::LEDA_RED->digitalWrite(1);
     }
 
-    virtual std::shared_ptr<BatteryDriver> createBatteryDriver(I2CManager& i2c) override {
-        return std::make_shared<AnalogBatteryDriver>(pins::BATTERY, 1.2424);
+    static std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) {
+        return std::make_shared<AnalogBatteryDriver>(pins::BATTERY, 1.2424, BatteryParameters {
+            .maximumVoltage = 4.1,
+            .bootThreshold = 3.8,
+            .shutdownThreshold = 3.4,
+        });
     }
 
     void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
@@ -107,17 +110,9 @@ public:
         peripheralManager.registerFactory(chickenDoorFactory);
     }
 
-    LedDriver secondaryStatusLed { "status-2", pins::STATUS2 };
+    std::shared_ptr<LedDriver> secondaryStatusLed { std::make_shared<LedDriver>("status-2", pins::STATUS2) };
 
-    Drv8833Driver motorDriver {
-        pwm,
-        pins::AIN1,
-        pins::AIN2,
-        pins::BIN1,
-        pins::BIN2,
-        pins::NFault,
-        config.motorNSleepPin.get()
-    };
+    Drv8833Driver motorDriver;
 
     const ServiceRef<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
     const ServiceRef<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };

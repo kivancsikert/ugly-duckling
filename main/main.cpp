@@ -4,14 +4,20 @@
 
 #include <atomic>
 #include <chrono>
+#include <memory>
 #include <string>
 
-#include <esp_app_desc.h>
 #include <driver/gpio.h>
+#include <esp_app_desc.h>
 
 static const char* const farmhubVersion = esp_app_get_description()->version;
 
+#include <kernel/BatteryManager.hpp>
+#include <kernel/Console.hpp>
+#include <kernel/HttpUpdate.hpp>
 #include <kernel/Log.hpp>
+
+using namespace farmhub::kernel;
 
 #ifdef CONFIG_HEAP_TRACING
 #include <esp_heap_trace.h>
@@ -80,6 +86,20 @@ static void dumpPerTaskHeapInfo() {
 #include <devices/Device.hpp>
 
 extern "C" void app_main() {
+    auto i2c = std::make_shared<I2CManager>();
+    auto battery = TDeviceDefinition::createBatteryDriver(i2c);
+    if (battery != nullptr) {
+        // If the battery voltage is below the device's threshold, we should not boot yet.
+        // This is to prevent the device from booting and immediately shutting down
+        // due to the high current draw of the boot process.
+        auto voltage = battery->getVoltage();
+        if (voltage != 0.0 && voltage < battery->parameters.bootThreshold) {
+            ESP_LOGW("battery", "Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
+                voltage, battery->parameters.bootThreshold);
+            enterLowPowerDeepSleep();
+        }
+    }
+
     Log::init();
 
     // Initialize NVS
@@ -99,7 +119,71 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
 
-    new farmhub::devices::Device();
+    auto fs = FileSystem::get();
+
+    auto deviceConfig = std::make_shared<TDeviceConfiguration>();
+    // TODO This should just be a "load()" call
+    ConfigurationFile<TDeviceConfiguration> deviceConfigFile(fs, "/device-config.json", deviceConfig);
+
+    auto powerManager = std::make_shared<PowerManager>(deviceConfig->sleepWhenIdle.get());
+
+    // Don't sleep while we are booting up to make the process as fast as possible
+    PowerManagementLockGuard sleepLock(PowerManager::noLightSleep);
+
+    auto logRecords = std::make_shared<Queue<LogRecord>>("logs", 32);
+    ConsoleProvider::init(logRecords, deviceConfig->publishLogs.get());
+
+    LOGD("   ______                   _    _       _");
+    LOGD("  |  ____|                 | |  | |     | |");
+    LOGD("  | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__");
+    LOGD("  |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\");
+    LOGD("  | | | (_| | |  | | | | | | |  | | |_| | |_) |");
+    LOGD("  |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s", farmhubVersion);
+    LOGD("  ");
+
+    StateManager stateManager;
+    auto networkConnectingState = stateManager.createStateSource("network-connecting");
+    auto networkReadyState = stateManager.createStateSource("network-ready");
+    auto configPortalRunningState = stateManager.createStateSource("config-portal-running");
+    auto wifi = std::make_shared<WiFiDriver>(
+        networkConnectingState,
+        networkReadyState,
+        configPortalRunningState,
+        deviceConfig->getHostname());
+
+    auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
+
+    auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
+
+    auto shutdownManager = std::make_shared<ShutdownManager>();
+    std::shared_ptr<BatteryManager> batteryManager;
+    if (battery != nullptr) {
+        batteryManager = std::make_shared<BatteryManager>(battery, shutdownManager);
+    }
+
+    auto mdnsReadyState = stateManager.createStateSource("mdns-ready");
+    auto mdns = std::make_shared<MdnsDriver>(wifi->getNetworkReady(), deviceConfig->getHostname(), "ugly-duckling", farmhubVersion, mdnsReadyState);
+
+    // Reboots if update is successful
+    handleHttpUpdate(fs, wifi);
+
+    auto mqttConfig = std::make_shared<MqttDriver::Config>();
+    // TODO This should just be a "load()" call
+    ConfigurationFile<MqttDriver::Config> mqttConfigFile(fs, "/mqtt-config.json", mqttConfig);
+
+    auto mqttReadyState = stateManager.createStateSource("mqtt-ready");
+    auto mqtt = std::make_shared<MqttDriver>(wifi->getNetworkReady(), mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState);
+
+    // Init real time clock
+    auto rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
+    auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState);
+
+    auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
+
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, kernel);
+
+    // Enable power saving once we are done initializing
+    wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
     Task::loop("task-heaps", 4096, [](Task& task) {

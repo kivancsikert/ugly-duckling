@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <ArduinoJson.h>
 
 #include <esp_log.h>
@@ -14,6 +16,11 @@ enum class Level {
     Info = 4,
     Debug = 5,
     Verbose = 6,
+};
+
+struct LogRecord {
+    const Level level;
+    const std::string message;
 };
 
 class Tag {

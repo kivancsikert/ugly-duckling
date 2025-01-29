@@ -18,10 +18,6 @@
 #include <peripherals/valve/ValveScheduler.hpp>
 
 using namespace std::chrono;
-using std::make_unique;
-using std::move;
-using std::unique_ptr;
-
 using namespace farmhub::kernel::drivers;
 using namespace farmhub::peripherals;
 
@@ -33,15 +29,15 @@ public:
     Valve(
         const std::string& name,
         ValveControlStrategy& strategy,
-        shared_ptr<MqttRoot> mqttRoot)
+        std::shared_ptr<MqttRoot> mqttRoot)
         : Peripheral<ValveConfig>(name, mqttRoot)
         , valve(name, strategy, mqttRoot, [this]() {
             publishTelemetry();
         }) {
     }
 
-    void configure(const ValveConfig& config) override {
-        valve.setSchedules(config.schedule.get());
+    void configure(const std::shared_ptr<ValveConfig> config) override {
+        valve.setSchedules(config->schedule.get());
     }
 
     void populateTelemetry(JsonObject& telemetry) override {
@@ -67,9 +63,9 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
-        auto strategy = deviceConfig.createValveControlStrategy(this);
-        return make_unique<Valve>(name, *strategy, mqttRoot);
+    std::unique_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ValveDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+        auto strategy = deviceConfig->createValveControlStrategy(this);
+        return std::make_unique<Valve>(name, *strategy, mqttRoot);
     }
 };
 

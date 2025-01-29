@@ -9,8 +9,13 @@ namespace farmhub::kernel::drivers {
 
 class Bq27220Driver : public BatteryDriver {
 public:
-    Bq27220Driver(I2CManager& i2c, InternalPinPtr sda, InternalPinPtr scl, const uint8_t address = 0x55)
-        : device(i2c.createDevice("battery:bq27220", sda, scl, address)) {
+    Bq27220Driver(std::shared_ptr<I2CManager> i2c, InternalPinPtr sda, InternalPinPtr scl, const BatteryParameters& parameters)
+        : Bq27220Driver(i2c, sda, scl, 0x55, parameters) {
+    }
+
+    Bq27220Driver(std::shared_ptr<I2CManager> i2c, InternalPinPtr sda, InternalPinPtr scl, const uint8_t address, const BatteryParameters& parameters)
+        : BatteryDriver(parameters)
+        , device(i2c->createDevice("battery:bq27220", sda, scl, address)) {
         LOGI("Initializing BQ27220 driver on SDA %s, SCL %s",
             sda->getName().c_str(), scl->getName().c_str());
 
@@ -38,15 +43,15 @@ public:
         return device->readRegWord(0x06) * 0.1 - 273.2;
     }
 
-protected:
-    void populateTelemetry(JsonObject& json) override {
-        BatteryDriver::populateTelemetry(json);
-        json["current"] = getCurrent();
-        auto status = device->readRegWord(0x0A);
-        json["status"] = status;
-        json["charging"] = (status & 0x0001) == 0;
-        json["temperature"] = getTemperature();
-    }
+    // protected:
+    //     void populateTelemetry(JsonObject& json) override {
+    //         BatteryDriver::populateTelemetry(json);
+    //         json["current"] = getCurrent();
+    //         auto status = device->readRegWord(0x0A);
+    //         json["status"] = status;
+    //         json["charging"] = (status & 0x0001) == 0;
+    //         json["temperature"] = getTemperature();
+    //     }
 
 private:
     int16_t readSigned(uint8_t reg) {
@@ -58,7 +63,7 @@ private:
         return device->readRegByte(0x40) | (device->readRegByte(0x41) << 8);
     }
 
-    shared_ptr<I2CDevice> device;
+    std::shared_ptr<I2CDevice> device;
 };
 
 }    // namespace farmhub::kernel::drivers

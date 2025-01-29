@@ -4,7 +4,7 @@
 
 namespace farmhub::kernel {
 
-template <typename T>
+template <std::floating_point T>
 class MovingAverage {
 public:
     explicit MovingAverage(std::size_t maxMeasurements)

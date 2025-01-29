@@ -82,16 +82,18 @@ public:
     }
 };
 
-class UglyDucklingMk7 : public DeviceDefinition<Mk7Config> {
+class UglyDucklingMk7 : public DeviceDefinition {
 public:
-    UglyDucklingMk7()
-        : DeviceDefinition<Mk7Config>(
-              pins::STATUS,
-              pins::BOOT) {
+    UglyDucklingMk7(std::shared_ptr<Mk7Config> config)
+        : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
-    virtual std::shared_ptr<BatteryDriver> createBatteryDriver(I2CManager& i2c) override {
-        return std::make_shared<Bq27220Driver>(i2c, pins::SDA, pins::SCL);
+    static std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) {
+        return std::make_shared<Bq27220Driver>(i2c, pins::SDA, pins::SCL, BatteryParameters {
+            .maximumVoltage = 4.1,
+            .bootThreshold = 3.7,
+            .shutdownThreshold = 3.0,
+        });
     }
 
     void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
@@ -101,7 +103,7 @@ public:
         peripheralManager.registerFactory(chickenDoorFactory);
     }
 
-    LedDriver secondaryStatusLed { "status-2", pins::STATUS2 };
+    std::shared_ptr<LedDriver> secondaryStatusLed { std::make_shared<LedDriver>("status-2", pins::STATUS2) };
 
     Drv8833Driver motorDriver {
         pwm,

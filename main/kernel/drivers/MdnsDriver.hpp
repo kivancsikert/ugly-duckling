@@ -92,6 +92,10 @@ public:
         return result;
     }
 
+    State& getMdnsReady() {
+        return mdnsReady;
+    }
+
 private:
     bool lookupServiceUnderMutex(const std::string& serviceName, const std::string& port, MdnsRecord& record, bool loadFromCache, milliseconds timeout) {
         // TODO Use a callback and retry if cached entry doesn't work

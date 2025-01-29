@@ -46,7 +46,7 @@ private:
 
 class PcntManager {
 public:
-    shared_ptr<PulseCounterUnit> registerUnit(InternalPinPtr pin, nanoseconds maxGlitchDuration = 1000ns) {
+    std::shared_ptr<PulseCounterUnit> registerUnit(InternalPinPtr pin, nanoseconds maxGlitchDuration = 1000ns) {
         pcnt_unit_config_t unitConfig = {
             .low_limit = std::numeric_limits<int16_t>::min(),
             .high_limit = std::numeric_limits<int16_t>::max(),
@@ -76,7 +76,7 @@ public:
 
         LOGTD(Tag::PCNT, "Registered PCNT unit on pin %s",
             pin->getName().c_str());
-        return make_shared<PulseCounterUnit>(unit, pin);
+        return std::make_shared<PulseCounterUnit>(unit, pin);
     }
 };
 

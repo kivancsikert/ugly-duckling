@@ -1,8 +1,8 @@
 #pragma once
 
-#include <kernel/Pin.hpp>
 #include <kernel/Component.hpp>
 #include <kernel/Configuration.hpp>
+#include <kernel/Pin.hpp>
 
 namespace farmhub::peripherals::multiplexer {
 
@@ -16,11 +16,11 @@ class Xl9535Component
 public:
     Xl9535Component(
         const std::string& name,
-        shared_ptr<MqttRoot> mqttRoot,
-        I2CManager& i2c,
+        std::shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<I2CManager> i2c,
         I2CConfig config)
         : Component(name, mqttRoot)
-        , device(i2c.createDevice(name, config)) {
+        , device(i2c->createDevice(name, config)) {
         LOGI("Initializing XL9535 multiplexer with %s",
             config.toString().c_str());
     }
@@ -74,7 +74,7 @@ private:
         device->writeRegByte(0x03, output >> 8);
     }
 
-    shared_ptr<I2CDevice> device;
+    std::shared_ptr<I2CDevice> device;
 
     uint16_t polarity = 0;
     uint16_t direction = 0xFFFF;
@@ -109,7 +109,7 @@ private:
 class Xl9535
     : public Peripheral<EmptyConfiguration> {
 public:
-    Xl9535(const std::string& name, shared_ptr<MqttRoot> mqttRoot, I2CManager& i2c, I2CConfig config)
+    Xl9535(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<I2CManager> i2c, I2CConfig config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , component(name, mqttRoot, i2c, config) {
 
@@ -134,8 +134,8 @@ public:
         : PeripheralFactory<Xl9535DeviceConfig, EmptyConfiguration>("multiplexer:xl9535") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const Xl9535DeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
-        return make_unique<Xl9535>(name, mqttRoot, services.i2c, deviceConfig.parse());
+    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Xl9535DeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+        return std::make_unique<Xl9535>(name, mqttRoot, services.i2c, deviceConfig->parse());
     }
 };
 

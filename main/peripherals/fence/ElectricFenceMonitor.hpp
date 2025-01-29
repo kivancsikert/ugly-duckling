@@ -44,25 +44,25 @@ class ElectricFenceMonitorComponent
 public:
     ElectricFenceMonitorComponent(
         const std::string& name,
-        shared_ptr<MqttRoot> mqttRoot,
-        PulseCounterManager& pulseCounterManager,
-        const ElectricFenceMonitorDeviceConfig& config)
+        std::shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<PulseCounterManager> pulseCounterManager,
+        const std::shared_ptr<ElectricFenceMonitorDeviceConfig> config)
         : Component(name, mqttRoot) {
 
         std::string pinsDescription;
-        for (auto& pinConfig : config.pins.get()) {
+        for (auto& pinConfig : config->pins.get()) {
             if (pinsDescription.length() > 0)
                 pinsDescription += ", ";
             pinsDescription += pinConfig.pin->getName() + "=" + std::to_string(pinConfig.voltage) + "V";
         }
         LOGI("Initializing electric fence with pins %s", pinsDescription.c_str());
 
-        for (auto& pinConfig : config.pins.get()) {
-            auto unit = pulseCounterManager.create(pinConfig.pin);
+        for (auto& pinConfig : config->pins.get()) {
+            auto unit = pulseCounterManager->create(pinConfig.pin);
             pins.emplace_back(pinConfig.voltage, unit);
         }
 
-        auto measurementFrequency = config.measurementFrequency.get();
+        auto measurementFrequency = config->measurementFrequency.get();
         Task::loop(name, 3172, [this, measurementFrequency](Task& task) {
             uint16_t lastVoltage = 0;
             for (auto& pin : pins) {
@@ -90,7 +90,7 @@ private:
 
     struct FencePin {
         uint16_t voltage;
-        shared_ptr<PulseCounter> counter;
+        std::shared_ptr<PulseCounter> counter;
     };
 
     std::list<FencePin> pins;
@@ -101,9 +101,9 @@ class ElectricFenceMonitor
 public:
     ElectricFenceMonitor(
         const std::string& name,
-        shared_ptr<MqttRoot> mqttRoot,
-        PulseCounterManager& pulseCounterManager,
-        const ElectricFenceMonitorDeviceConfig& config)
+        std::shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<PulseCounterManager> pulseCounterManager,
+        const std::shared_ptr<ElectricFenceMonitorDeviceConfig> config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , monitor(name, mqttRoot, pulseCounterManager, config) {
     }
@@ -123,7 +123,7 @@ public:
         : PeripheralFactory<ElectricFenceMonitorDeviceConfig, EmptyConfiguration>("electric-fence") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const ElectricFenceMonitorDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<ElectricFenceMonitorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         return std::make_unique<ElectricFenceMonitor>(name, mqttRoot, services.pulseCounterManager, deviceConfig);
     }
 };

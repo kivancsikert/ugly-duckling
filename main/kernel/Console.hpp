@@ -1,13 +1,9 @@
 #pragma once
 
 #include <kernel/Log.hpp>
+#include <kernel/Concurrent.hpp>
 
 namespace farmhub::kernel {
-
-struct LogRecord {
-    Level level;
-    std::string message;
-};
 
 #define FARMHUB_LOG_COLOR_BLACK "30"
 #define FARMHUB_LOG_COLOR_RED "31"
@@ -20,26 +16,21 @@ struct LogRecord {
 #define FARMHUB_LOG_BOLD(COLOR) "\033[1;" COLOR "m"
 #define FARMHUB_LOG_RESET_COLOR "\033[0m"
 
-class ConsoleProvider;
-
-static ConsoleProvider* consoleProvider;
-
 class ConsoleProvider {
 public:
-    ConsoleProvider(Queue<LogRecord>& logRecords, Level recordedLevel)
-        : logRecords(logRecords)
-        , recordedLevel(recordedLevel) {
-        consoleProvider = this;
-        originalVprintf = esp_log_set_vprintf(ConsoleProvider::processLogFunc);
+    static void init(std::shared_ptr<Queue<LogRecord>> logRecords, Level recordedLevel) {
+        ConsoleProvider::logRecords = logRecords;
+        ConsoleProvider::recordedLevel = recordedLevel;
+        ConsoleProvider::originalVprintf = esp_log_set_vprintf(ConsoleProvider::processLogFunc);
     }
 
 private:
     static int processLogFunc(const char* format, va_list args) {
-        std::string message = consoleProvider->renderMessage(format, args);
-        return consoleProvider->processLog(message);
+        std::string message = renderMessage(format, args);
+        return processLog(message);
     }
 
-    int processLog(const std::string& message) {
+    static int processLog(const std::string& message) {
         if (message.empty()) {
             return 0;
         }
@@ -62,10 +53,10 @@ private:
         }
     }
 
-    int processLogLine(const std::string& message) {
+    static int processLogLine(const std::string& message) {
         Level level = getLevel(message);
         if (level <= recordedLevel) {
-            logRecords.offer(level, message);
+            logRecords->offer(level, message);
         }
 
         int count = 0;
@@ -109,7 +100,7 @@ private:
         return count;
     }
 
-    std::string renderMessage(const char* format, va_list args) {
+    static std::string renderMessage(const char* format, va_list args) {
         int length;
         {
             std::lock_guard<std::mutex> lock(bufferMutex);
@@ -152,15 +143,23 @@ private:
         }
     }
 
-    vprintf_like_t originalVprintf;
-    Queue<LogRecord>& logRecords;
-    const Level recordedLevel;
-    std::mutex bufferMutex;
+    static vprintf_like_t originalVprintf;
+    static std::shared_ptr<Queue<LogRecord>> logRecords;
+    static Level recordedLevel;
+    static std::mutex bufferMutex;
     static constexpr size_t BUFFER_SIZE = 128;
-    char buffer[BUFFER_SIZE];
+    static char buffer[];
 
-    std::mutex partialMessageMutex;
-    std::string partialMessage;
+    static std::mutex partialMessageMutex;
+    static std::string partialMessage;
 };
+
+vprintf_like_t ConsoleProvider::originalVprintf;
+std::shared_ptr<Queue<LogRecord>> ConsoleProvider::logRecords;
+Level ConsoleProvider::recordedLevel;
+std::mutex ConsoleProvider::bufferMutex;
+char ConsoleProvider::buffer[BUFFER_SIZE];
+std::mutex ConsoleProvider::partialMessageMutex;
+std::string ConsoleProvider::partialMessage;
 
 }    // namespace farmhub::kernel
