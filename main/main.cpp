@@ -144,8 +144,7 @@ extern "C" void app_main() {
         networkConnectingState,
         networkReadyState,
         configPortalRunningState,
-        deviceConfig->getHostname(),
-        deviceConfig->sleepWhenIdle.get());
+        deviceConfig->getHostname());
 
     auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
 
@@ -153,6 +152,9 @@ extern "C" void app_main() {
 
     // Reboots if update is successful
     handleHttpUpdate(fs, wifi);
+
+    // Enable power saving for WiFi if we don't need to do HTTP update
+    wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
 
     auto shutdownManager = std::make_shared<ShutdownManager>();
     std::shared_ptr<BatteryManager> batteryManager;

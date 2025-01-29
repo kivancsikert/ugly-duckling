@@ -25,13 +25,11 @@ public:
         StateSource& networkConnecting,
         StateSource& networkReady,
         StateSource& configPortalRunning,
-        const std::string& hostname,
-        bool powerSaveMode)
+        const std::string& hostname)
         : networkConnecting(networkConnecting)
         , networkReady(networkReady)
         , configPortalRunning(configPortalRunning)
-        , hostname(hostname)
-        , powerSaveMode(powerSaveMode) {
+        , hostname(hostname) {
         LOGTD(Tag::WIFI, "Registering WiFi handlers");
 
         // Initialize TCP/IP adapter and event loop
@@ -54,6 +52,12 @@ public:
         Task::run("wifi-driver", 4096, [this](Task&) {
             runLoop();
         });
+    }
+
+    void setPowerSaveMode(bool enable) {
+        ESP_ERROR_CHECK(esp_wifi_set_ps(enable
+                ? WIFI_PS_MAX_MODEM
+                : WIFI_PS_MIN_MODEM));
     }
 
     std::optional<std::string> getSsid() {
@@ -290,15 +294,6 @@ private:
 #endif
     }
 
-    void disconnect() {
-        if (powerSaveMode) {
-            LOGTV(Tag::WIFI, "No more clients, shutting down radio to conserve power");
-            ensureWifiStopped();
-        } else {
-            LOGTV(Tag::WIFI, "No more clients, but staying online because not saving power");
-        }
-    }
-
     milliseconds currentWifiUptime() {
         if (!wifiUpSince.has_value()) {
             return milliseconds::zero();
@@ -309,21 +304,18 @@ private:
     void ensureWifiStationStarted(wifi_config_t& config) {
         wifiUpSince = boot_clock::now();
         if (!stationStarted.isSet()) {
-            if (powerSaveMode) {
-                auto listenInterval = 20;
-                LOGTV(Tag::WIFI, "Enabling power save mode, listen interval: %d DTIM beacons (%d ms)",
-                    listenInterval, listenInterval * 100);
-                config.sta.listen_interval = listenInterval;
-                ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
+            auto listenInterval = 20;
+            LOGTV(Tag::WIFI, "Enabling power save mode, listen interval: %d DTIM beacons (%d ms)",
+                listenInterval, listenInterval * 100);
+            config.sta.listen_interval = listenInterval;
 #ifdef SOC_PM_SUPPORT_WIFI_WAKEUP
-                LOGTV(Tag::WIFI, "Enabling wake on WiFi");
-                ESP_ERROR_CHECK(esp_sleep_enable_wifi_wakeup());
+            LOGTV(Tag::WIFI, "Enabling wake on WiFi");
+            ESP_ERROR_CHECK(esp_sleep_enable_wifi_wakeup());
 #endif
 #ifdef SOC_PM_SUPPORT_BEACON_WAKEUP
-                LOGTV(Tag::WIFI, "Enabling wake on WiFi beacon");
-                ESP_ERROR_CHECK(esp_sleep_enable_wifi_beacon_wakeup());
+            LOGTV(Tag::WIFI, "Enabling wake on WiFi beacon");
+            ESP_ERROR_CHECK(esp_sleep_enable_wifi_beacon_wakeup());
 #endif
-            }
 
             LOGTD(Tag::WIFI, "Starting station");
             ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
@@ -394,7 +386,6 @@ private:
     StateSource& networkReady;
     StateSource& configPortalRunning;
     const std::string hostname;
-    const bool powerSaveMode;
 
     StateManager internalStates;
     bool wifiInitialized = false;
