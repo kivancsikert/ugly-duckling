@@ -46,14 +46,15 @@ public:
         std::shared_ptr<ShutdownManager> shutdownManager,
         std::shared_ptr<I2CManager> i2c,
         std::shared_ptr<WiFiDriver> wifi,
-        std::shared_ptr<MdnsDriver> mdns)
+        std::shared_ptr<MdnsDriver> mdns,
+        std::shared_ptr<RtcDriver> rtc)
         : version(farmhubVersion)
         , statusLed(statusLed)
         , shutdownManager(shutdownManager)
         , powerManager(deviceConfig->sleepWhenIdle.get())
         , wifi(wifi)
         , mdns(mdns)
-        , rtc(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState)
+        , rtc(rtc)
         , mqtt(std::make_shared<MqttDriver>(wifi->getNetworkReady(), mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState))
         , i2c(i2c) {
 
@@ -69,7 +70,7 @@ public:
     }
 
     const State& getRtcInSyncState() const {
-        return rtcInSyncState;
+        return rtc->getInSync();
     }
 
     const StateSource& getKernelReadyState() {
@@ -138,7 +139,7 @@ private:
         } else if (wifi->getNetworkConnecting().isSet()) {
             // We are waiting for network connection
             newState = KernelState::NETWORK_CONNECTING;
-        } else if (!rtcInSyncState.isSet()) {
+        } else if (!rtc->getInSync().isSet()) {
             newState = KernelState::RTC_SYNCING;
         } else if (!mqttReadyState.isSet()) {
             // We are waiting for MQTT connection
@@ -204,7 +205,6 @@ public:
 private:
     KernelState state = KernelState::BOOTING;
     StateManager stateManager;
-    StateSource rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
     StateSource mqttReadyState = stateManager.createStateSource("mqtt-ready");
     StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
@@ -213,7 +213,7 @@ public:
 
 private:
     const std::shared_ptr<MdnsDriver> mdns;
-    RtcDriver rtc;
+    const std::shared_ptr<RtcDriver> rtc;
 
     std::string httpUpdateResult;
 

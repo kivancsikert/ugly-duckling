@@ -76,6 +76,10 @@ public:
         return now > limit;
     }
 
+    State& getInSync() {
+        return rtcInSync;
+    }
+
 private:
     bool updateTime() {
         esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
