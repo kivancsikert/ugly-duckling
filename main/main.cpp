@@ -162,9 +162,6 @@ extern "C" void app_main() {
     // Reboots if update is successful
     handleHttpUpdate(fs, wifi);
 
-    // Enable power saving for WiFi if we don't need to do HTTP update
-    wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
-
     auto mqttConfig = std::make_shared<MqttDriver::Config>();
     // TODO This should just be a "load()" call
     ConfigurationFile<MqttDriver::Config> mqttConfigFile(fs, "/mqtt-config.json", mqttConfig);
@@ -179,6 +176,9 @@ extern "C" void app_main() {
     auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
 
     new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, kernel);
+
+    // Enable power saving for WiFi only when we are done initializing
+    wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
     Task::loop("task-heaps", 4096, [](Task& task) {
