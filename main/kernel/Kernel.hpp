@@ -41,14 +41,16 @@ static RTC_DATA_ATTR int bootCount = 0;
 
 static constexpr const char* UPDATE_FILE = "/update.json";
 
-template <std::derived_from<DeviceConfiguration> TDeviceConfiguration>
 class Kernel {
 public:
-    Kernel(std::shared_ptr<TDeviceConfiguration> deviceConfig, std::shared_ptr<MqttDriver::Config> mqttConfig, std::shared_ptr<LedDriver> statusLed)
+    Kernel(std::shared_ptr<DeviceConfiguration> deviceConfig, std::shared_ptr<MqttDriver::Config> mqttConfig, std::shared_ptr<LedDriver> statusLed)
         : version(farmhubVersion)
-        , deviceConfig(deviceConfig)
-        , mqttConfig(mqttConfig)
-        , statusLed(statusLed) {
+        , statusLed(statusLed)
+        , powerManager(deviceConfig->sleepWhenIdle.get())
+        , wifi(networkConnectingState, networkReadyState, configPortalRunningState, deviceConfig->getHostname(), deviceConfig->sleepWhenIdle.get())
+        , mdns(networkReadyState, deviceConfig->getHostname(), "ugly-duckling", version, mdnsReadyState)
+        , rtc(networkReadyState, mdns, deviceConfig->ntp.get(), rtcInSyncState)
+        , mqtt(networkReadyState, mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState) {
 
         LOGI("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
             version.c_str(),
@@ -281,8 +283,6 @@ private:
         return ESP_OK;
     }
 
-    std::shared_ptr<TDeviceConfiguration> deviceConfig;
-    std::shared_ptr<MqttDriver::Config> mqttConfig;
     std::shared_ptr<LedDriver> statusLed;
 
 public:
@@ -294,7 +294,7 @@ public:
                            }
                        } };
 
-    PowerManager powerManager { deviceConfig->sleepWhenIdle.get() };
+    PowerManager powerManager;
 
 private:
     KernelState state = KernelState::BOOTING;
@@ -308,16 +308,16 @@ private:
     StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
 public:
-    WiFiDriver wifi { networkConnectingState, networkReadyState, configPortalRunningState, deviceConfig->getHostname(), deviceConfig->sleepWhenIdle.get() };
+    WiFiDriver wifi;
 
 private:
-    MdnsDriver mdns { networkReadyState, deviceConfig->getHostname(), "ugly-duckling", version, mdnsReadyState };
-    RtcDriver rtc { networkReadyState, mdns, deviceConfig->ntp.get(), rtcInSyncState };
+    MdnsDriver mdns;
+    RtcDriver rtc;
 
     std::string httpUpdateResult;
 
 public:
-    MqttDriver mqtt { networkReadyState, mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState };
+    MqttDriver mqtt;
     SwitchManager switches;
     I2CManager i2c;
 };

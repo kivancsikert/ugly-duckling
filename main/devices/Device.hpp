@@ -261,7 +261,7 @@ public:
     ConfiguredKernel(
         Queue<LogRecord>& logRecords,
         std::shared_ptr<TDeviceDefinition> deviceDefinition,
-        std::shared_ptr<Kernel<TDeviceConfiguration>> kernel)
+        std::shared_ptr<Kernel> kernel)
         : deviceDefinition(deviceDefinition)
         , kernel(kernel)
         , consoleProvider(logRecords, deviceDefinition->config->publishLogs.get())
@@ -300,7 +300,7 @@ public:
     }
 
     const std::shared_ptr<TDeviceDefinition> deviceDefinition;
-    const std::shared_ptr<Kernel<TDeviceConfiguration>> kernel;
+    const std::shared_ptr<Kernel> kernel;
     ConsoleProvider consoleProvider;
     const shared_ptr<BatteryDriver> battery;
 
@@ -382,7 +382,7 @@ private:
 
 class Device {
 public:
-    Device(std::shared_ptr<TDeviceDefinition> deviceDefinition, std::shared_ptr<Kernel<TDeviceConfiguration>> kernel)
+    Device(std::shared_ptr<TDeviceDefinition> deviceDefinition, std::shared_ptr<Kernel> kernel)
     : deviceDefinition(deviceDefinition)
     , kernel(kernel) {
         kernel->switches.onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
@@ -639,7 +639,7 @@ private:
     Queue<LogRecord> logRecords { "logs", 32 };
     const std::shared_ptr<TDeviceDefinition> deviceDefinition;
     const std::shared_ptr<TDeviceConfiguration> deviceConfig = deviceDefinition->config;
-    const std::shared_ptr<Kernel<TDeviceConfiguration>> kernel;
+    const std::shared_ptr<Kernel> kernel;
     ConfiguredKernel configuredKernel { logRecords, deviceDefinition, kernel };
 
     shared_ptr<MqttRoot> mqttDeviceRoot = kernel->mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig->instance.get());

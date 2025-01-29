@@ -101,7 +101,7 @@ extern "C" void app_main() {
 #endif
 
     auto deviceDefinition = std::make_shared<TDeviceDefinition>();
-    auto kernel = std::make_shared<Kernel<TDeviceConfiguration>>(deviceDefinition->config, deviceDefinition->mqttConfig, deviceDefinition->statusLed);
+    auto kernel = std::make_shared<Kernel>(deviceDefinition->config, deviceDefinition->mqttConfig, deviceDefinition->statusLed);
 
     new farmhub::devices::Device(deviceDefinition, kernel);
 
