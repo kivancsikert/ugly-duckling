@@ -21,7 +21,7 @@ public:
     FlowMeter(
         const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
-        PulseCounterManager& pulseCounterManager,
+        std::shared_ptr<PulseCounterManager> pulseCounterManager,
         InternalPinPtr pin,
         double qFactor,
         milliseconds measurementFrequency)
@@ -44,7 +44,7 @@ public:
         : PeripheralFactory<FlowMeterDeviceConfig, EmptyConfiguration>("flow-meter") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<FlowMeterDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<FlowMeterDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         return make_unique<FlowMeter>(name, mqttRoot, services.pulseCounterManager, deviceConfig->pin.get(), deviceConfig->qFactor.get(), deviceConfig->measurementFrequency.get());
     }
 };

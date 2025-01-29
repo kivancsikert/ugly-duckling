@@ -23,7 +23,7 @@ public:
     FlowMeterComponent(
         const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
-        PulseCounterManager& pulseCounterManager,
+        std::shared_ptr<PulseCounterManager> pulseCounterManager,
         InternalPinPtr pin,
         double qFactor,
         milliseconds measurementFrequency)
@@ -33,7 +33,7 @@ public:
         LOGI("Initializing flow meter on pin %s with Q = %.2f",
             pin->getName().c_str(), qFactor);
 
-        counter = pulseCounterManager.create(pin);
+        counter = pulseCounterManager->create(pin);
 
         auto now = boot_clock::now();
         lastMeasurement = now;

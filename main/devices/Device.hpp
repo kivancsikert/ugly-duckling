@@ -390,7 +390,7 @@ public:
         , deviceDefinition(deviceDefinition)
         , kernel(kernel)
         , configuredKernel(logRecords, deviceConfig, deviceDefinition->createBatteryDriver(kernel->i2c), kernel) {
-        kernel->switches.onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
+        kernel->switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 15s) {
                 LOGI("Factory reset triggered after %lld ms", duration.count());
                 this->kernel->performFactoryReset(true);
@@ -647,7 +647,7 @@ private:
     const std::shared_ptr<Kernel> kernel;
     ConfiguredKernel configuredKernel;
 
-    shared_ptr<MqttRoot> mqttDeviceRoot = kernel->mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + instance);
+    shared_ptr<MqttRoot> mqttDeviceRoot = kernel->mqtt->forRoot(locationPrefix() + "devices/ugly-duckling/" + instance);
     PeripheralManager peripheralManager { kernel->i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, kernel->switches, mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;

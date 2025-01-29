@@ -88,7 +88,7 @@ public:
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
-    virtual std::shared_ptr<BatteryDriver> createBatteryDriver(I2CManager& i2c) override {
+    virtual std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) override {
         return std::make_shared<Bq27220Driver>(i2c, pins::SDA, pins::SCL);
     }
 

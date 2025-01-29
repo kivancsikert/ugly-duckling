@@ -102,11 +102,11 @@ public:
 };
 
 struct PeripheralServices {
-    I2CManager& i2c;
-    PcntManager& pcntManager;
-    PulseCounterManager& pulseCounterManager;
-    PwmManager& pwmManager;
-    SwitchManager& switches;
+    const std::shared_ptr<I2CManager> i2c;
+    const std::shared_ptr<PcntManager> pcntManager;
+    const std::shared_ptr<PulseCounterManager> pulseCounterManager;
+    const std::shared_ptr<PwmManager> pwmManager;
+    const std::shared_ptr<SwitchManager> switches;
 };
 
 class PeripheralFactoryBase {
@@ -116,7 +116,7 @@ public:
         , peripheralType(peripheralType) {
     }
 
-    virtual unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) = 0;
+    virtual unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services, JsonObject& initConfigJson) = 0;
 
     const std::string factoryType;
     const std::string peripheralType;
@@ -135,7 +135,7 @@ public:
         , deviceConfigArgs(std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
-    unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services, JsonObject& initConfigJson) override {
+    unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services, JsonObject& initConfigJson) override {
         std::shared_ptr<TConfig> config = std::make_shared<TConfig>();
         // Use short prefix because SPIFFS has a 32 character limit
         std::shared_ptr<ConfigurationFile<TConfig>> configFile = std::make_shared<ConfigurationFile<TConfig>>(FileSystem::get(), "/p/" + name, config);
@@ -162,7 +162,7 @@ public:
         return peripheral;
     }
 
-    virtual unique_ptr<Peripheral<TConfig>> createPeripheral(const std::string& name, const std::shared_ptr<TDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) = 0;
+    virtual unique_ptr<Peripheral<TConfig>> createPeripheral(const std::string& name, const std::shared_ptr<TDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) = 0;
 
 private:
     std::tuple<TDeviceConfigArgs...> deviceConfigArgs;
@@ -174,11 +174,11 @@ class PeripheralManager
     : public TelemetryPublisher {
 public:
     PeripheralManager(
-        I2CManager& i2c,
-        PcntManager& pcntManager,
-        PulseCounterManager& pulseCounterManager,
-        PwmManager& pwmManager,
-        SwitchManager& switchManager,
+        std::shared_ptr<I2CManager> i2c,
+        std::shared_ptr<PcntManager> pcntManager,
+        std::shared_ptr<PulseCounterManager> pulseCounterManager,
+        std::shared_ptr<PwmManager> pwmManager,
+        std::shared_ptr<SwitchManager> switchManager,
         const shared_ptr<MqttRoot> mqttDeviceRoot)
         : services({ i2c, pcntManager, pulseCounterManager, pwmManager, switchManager })
         , mqttDeviceRoot(mqttDeviceRoot) {
@@ -286,7 +286,6 @@ private:
         Stopped
     };
 
-    // TODO Make this immutable somehow
     PeripheralServices services;
 
     const shared_ptr<MqttRoot> mqttDeviceRoot;

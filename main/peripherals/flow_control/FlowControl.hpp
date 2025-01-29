@@ -30,7 +30,7 @@ public:
     FlowControl(
         const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
-        PulseCounterManager& pulseCounterManager,
+        std::shared_ptr<PulseCounterManager> pulseCounterManager,
         ValveControlStrategy& strategy,
         InternalPinPtr pin,
         double qFactor,
@@ -83,7 +83,7 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const std::shared_ptr<FlowControlDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const std::shared_ptr<FlowControlDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         auto strategy = deviceConfig->valve.get()->createValveControlStrategy(this);
 
         auto flowMeterConfig = deviceConfig->flowMeter.get();

@@ -37,12 +37,12 @@ public:
     Tsl2591Component(
         const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
-        I2CManager& i2c,
+        std::shared_ptr<I2CManager> i2c,
         I2CConfig config,
         seconds measurementFrequency,
         seconds latencyInterval)
         : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval)
-        , bus(i2c.getBusFor(config)) {
+        , bus(i2c->getBusFor(config)) {
 
         LOGI("Initializing TSL2591 light sensor with %s",
             config.toString().c_str());
@@ -83,7 +83,7 @@ public:
     Tsl2591(
         const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
-        I2CManager& i2c,
+        std::shared_ptr<I2CManager> i2c,
         const I2CConfig& config,
         seconds measurementFrequency,
         seconds latencyInterval)
@@ -106,7 +106,7 @@ public:
         : PeripheralFactory<Tsl2591DeviceConfig, EmptyConfiguration>("light-sensor:tsl2591", "light-sensor") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Tsl2591DeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Tsl2591DeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         I2CConfig i2cConfig = deviceConfig->parse(TSL2591_ADDR);
         return std::make_unique<Tsl2591>(name, mqttRoot, services.i2c, i2cConfig, deviceConfig->measurementFrequency.get(), deviceConfig->latencyInterval.get());
     }

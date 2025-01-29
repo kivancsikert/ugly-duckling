@@ -63,7 +63,7 @@ public:
         return {};
     }
 
-    virtual std::shared_ptr<BatteryDriver> createBatteryDriver(I2CManager& i2c) {
+    virtual std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) {
         return nullptr;
     }
 
@@ -71,9 +71,9 @@ public:
     const PinPtr statusPin;
     const InternalPinPtr bootPin;
 
-    PcntManager pcnt;
-    PulseCounterManager pulseCounterManager;
-    PwmManager pwm;
+    const std::shared_ptr<PcntManager> pcnt { std::make_shared<PcntManager>() };
+    const std::shared_ptr<PulseCounterManager> pulseCounterManager { std::make_shared<PulseCounterManager>() };
+    const std::shared_ptr<PwmManager> pwm { std::make_shared<PwmManager>() };
 
 private:
     I2CEnvironmentFactory<Sht3xComponent> sht3xFactory { "sht3x", 0x44 /* Also supports 0x45 */ };

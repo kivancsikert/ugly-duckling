@@ -95,7 +95,7 @@ public:
         pins::LEDA_RED->digitalWrite(1);
     }
 
-    virtual std::shared_ptr<BatteryDriver> createBatteryDriver(I2CManager& i2c) override {
+    virtual std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) override {
         return std::make_shared<AnalogBatteryDriver>(pins::BATTERY, 1.2424);
     }
 

@@ -25,7 +25,7 @@ private:
 public:
     // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
     Drv8801Driver(
-        PwmManager& pwm,
+        std::shared_ptr<PwmManager> pwm,
         PinPtr enablePin,
         InternalPinPtr phasePin,
         PinPtr mode1Pin,
@@ -34,7 +34,7 @@ public:
         PinPtr faultPin,
         PinPtr sleepPin)
         : enablePin(enablePin)
-        , phaseChannel(pwm.registerPin(phasePin, PWM_FREQ, PWM_RESOLUTION))
+        , phaseChannel(pwm->registerPin(phasePin, PWM_FREQ, PWM_RESOLUTION))
         , currentPin(currentPin)
         , faultPin(faultPin)
         , sleepPin(sleepPin) {

@@ -89,7 +89,7 @@ public:
     ChickenDoorComponent(
         const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
-        SwitchManager& switches,
+        std::shared_ptr<SwitchManager> switches,
         PwmMotorDriver& motor,
         TLightSensorComponent& lightSensor,
         InternalPinPtr openPin,
@@ -99,13 +99,13 @@ public:
         : Component(name, mqttRoot)
         , motor(motor)
         , lightSensor(lightSensor)
-        , openSwitch(switches.registerHandler(
+        , openSwitch(switches->registerHandler(
               name + ":open",
               openPin,
               SwitchMode::PullUp,
               [this](const Switch&) { updateState(); },
               [this](const Switch&, milliseconds) { updateState(); }))
-        , closedSwitch(switches.registerHandler(
+        , closedSwitch(switches->registerHandler(
               name + ":closed",
               closedPin,
               SwitchMode::PullUp,
@@ -351,10 +351,10 @@ class ChickenDoor
 public:
     ChickenDoor(
         const std::string& name,
-        shared_ptr<MqttRoot> mqttRoot,
-        I2CManager& i2c,
+        std::shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<I2CManager> i2c,
         uint8_t lightSensorAddress,
-        SwitchManager& switches,
+        std::shared_ptr<SwitchManager> switches,
         PwmMotorDriver& motor,
         const std::shared_ptr<ChickenDoorDeviceConfig> config)
         : Peripheral<ChickenDoorConfig>(name, mqttRoot)
@@ -398,7 +398,7 @@ public:
     NoLightSensorComponent(
         const std::string& name,
         shared_ptr<MqttRoot> mqttRoot,
-        I2CManager& i2c,
+        std::shared_ptr<I2CManager> i2c,
         I2CConfig config,
         seconds measurementFrequency,
         seconds latencyInterval)
@@ -421,7 +421,7 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ChickenDoorDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ChickenDoorDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         PwmMotorDriver& motor = findMotor(deviceConfig->motor.get());
         auto lightSensorType = deviceConfig->lightSensor.get()->type.get();
         try {

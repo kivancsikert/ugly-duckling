@@ -25,7 +25,7 @@ public:
         const std::string& name,
         const std::string& sensorType,
         shared_ptr<MqttRoot> mqttRoot,
-        I2CManager& i2c,
+        std::shared_ptr<I2CManager> i2c,
         I2CConfig config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , component(name, sensorType, mqttRoot, i2c, config) {
@@ -49,7 +49,7 @@ public:
         , defaultAddress(defaultAddress) {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<I2CDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<I2CDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         auto i2cConfig = deviceConfig->parse(defaultAddress);
         LOGI("Creating %s sensor %s with %s",
             sensorType.c_str(), name.c_str(), i2cConfig.toString().c_str());

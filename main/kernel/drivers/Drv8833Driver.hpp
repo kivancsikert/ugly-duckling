@@ -20,7 +20,7 @@ class Drv8833Driver {
 public:
     // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
     Drv8833Driver(
-        PwmManager& pwm,
+        std::shared_ptr<PwmManager> pwm,
         InternalPinPtr ain1Pin,
         InternalPinPtr ain2Pin,
         InternalPinPtr bin1Pin,
@@ -65,13 +65,13 @@ private:
     public:
         Drv8833MotorDriver(
             Drv8833Driver* driver,
-            PwmManager& pwm,
+            std::shared_ptr<PwmManager> pwm,
             InternalPinPtr in1Pin,
             InternalPinPtr in2Pin,
             bool canSleep)
             : driver(driver)
-            , in1Channel(pwm.registerPin(in1Pin, PWM_FREQ, PWM_RESOLUTION))
-            , in2Channel(pwm.registerPin(in2Pin, PWM_FREQ, PWM_RESOLUTION))
+            , in1Channel(pwm->registerPin(in1Pin, PWM_FREQ, PWM_RESOLUTION))
+            , in2Channel(pwm->registerPin(in2Pin, PWM_FREQ, PWM_RESOLUTION))
             , sleeping(canSleep) {
         }
 

@@ -9,8 +9,8 @@ namespace farmhub::kernel::drivers {
 
 class Bq27220Driver : public BatteryDriver {
 public:
-    Bq27220Driver(I2CManager& i2c, InternalPinPtr sda, InternalPinPtr scl, const uint8_t address = 0x55)
-        : device(i2c.createDevice("battery:bq27220", sda, scl, address)) {
+    Bq27220Driver(std::shared_ptr<I2CManager> i2c, InternalPinPtr sda, InternalPinPtr scl, const uint8_t address = 0x55)
+        : device(i2c->createDevice("battery:bq27220", sda, scl, address)) {
         LOGI("Initializing BQ27220 driver on SDA %s, SCL %s",
             sda->getName().c_str(), scl->getName().c_str());
 

@@ -50,7 +50,7 @@ public:
         , wifi(networkConnectingState, networkReadyState, configPortalRunningState, deviceConfig->getHostname(), deviceConfig->sleepWhenIdle.get())
         , mdns(networkReadyState, deviceConfig->getHostname(), "ugly-duckling", version, mdnsReadyState)
         , rtc(networkReadyState, mdns, deviceConfig->ntp.get(), rtcInSyncState)
-        , mqtt(networkReadyState, mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState) {
+        , mqtt(std::make_shared<MqttDriver>(networkReadyState, mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState)) {
 
         LOGI("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
             version.c_str(),
@@ -317,9 +317,9 @@ private:
     std::string httpUpdateResult;
 
 public:
-    MqttDriver mqtt;
-    SwitchManager switches;
-    I2CManager i2c;
+    const std::shared_ptr<MqttDriver> mqtt;
+    const std::shared_ptr<SwitchManager> switches = std::make_shared<SwitchManager>();
+    const std::shared_ptr<I2CManager> i2c = std::make_shared<I2CManager>();
 };
 
 }    // namespace farmhub::kernel
