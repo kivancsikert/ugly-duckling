@@ -46,16 +46,19 @@ public:
     }
 
     template <typename... Args>
+    requires std::constructible_from<TMessage, Args...>
     void put(Args&&... args) {
         while (!offerIn(ticks::max(), std::forward<Args>(args)...)) { }
     }
 
     template <typename... Args>
+    requires std::constructible_from<TMessage, Args...>
     bool offer(Args&&... args) {
         return offerIn(ticks::zero(), std::forward<Args>(args)...);
     }
 
     template <typename... Args>
+    requires std::constructible_from<TMessage, Args...>
     bool offerIn(ticks timeout, Args&&... args) {
         TMessage* copy = new TMessage(std::forward<Args>(args)...);
         bool sentWithoutDropping = xQueueSend(this->queue, &copy, timeout.count()) == pdTRUE;

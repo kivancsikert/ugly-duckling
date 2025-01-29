@@ -72,7 +72,7 @@ private:
     const size_t telemetrySize;
 };
 
-template <typename TConfig>
+template <std::derived_from<ConfigurationSection> TConfig>
 class Peripheral
     : public PeripheralBase {
 public:

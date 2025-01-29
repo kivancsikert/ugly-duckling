@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <memory>
 
 #include <kernel/Configuration.hpp>
@@ -16,7 +17,7 @@ using std::unique_ptr;
 
 namespace farmhub::peripherals::environment {
 
-template <typename TComponent>
+template <std::derived_from<Component> TComponent>
 class Environment
     : public Peripheral<EmptyConfiguration> {
 public:
@@ -38,7 +39,7 @@ private:
     TComponent component;
 };
 
-template <typename TComponent>
+template <std::derived_from<Component> TComponent>
 class I2CEnvironmentFactory
     : public PeripheralFactory<I2CDeviceConfig, EmptyConfiguration> {
 public:

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <concepts>
 #include <limits>
 #include <list>
 #include <variant>
@@ -80,7 +81,7 @@ public:
     Property<double> closeLevel { this, "closeLevel", 10 };
 };
 
-template <typename TLightSensorComponent>
+template <std::derived_from<LightSensorComponent> TLightSensorComponent>
 class ChickenDoorComponent
     : public Component,
       public TelemetryProvider {
@@ -198,9 +199,7 @@ private:
                     static_cast<int>(currentState), lightSensor.getCurrentLevel());
                 watchdog.cancel();
                 motor.stop();
-                mqttRoot->publish("events/state", [=](JsonObject& json) {
-                    json["state"] = currentState;
-                }, Retention::NoRetain, QoS::AtLeastOnce);
+                mqttRoot->publish("events/state", [=](JsonObject& json) { json["state"] = currentState; }, Retention::NoRetain, QoS::AtLeastOnce);
             }
         }
 
@@ -346,7 +345,7 @@ private:
     std::optional<PowerManagementLockGuard> sleepLock;
 };
 
-template <typename TLightSensorComponent>
+template <std::derived_from<LightSensorComponent> TLightSensorComponent>
 class ChickenDoor
     : public Peripheral<ChickenDoorConfig> {
 public:
