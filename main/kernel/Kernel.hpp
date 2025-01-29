@@ -45,13 +45,14 @@ public:
         std::shared_ptr<LedDriver> statusLed,
         std::shared_ptr<ShutdownManager> shutdownManager,
         std::shared_ptr<I2CManager> i2c,
-        std::shared_ptr<WiFiDriver> wifi)
+        std::shared_ptr<WiFiDriver> wifi,
+        std::shared_ptr<MdnsDriver> mdns)
         : version(farmhubVersion)
         , statusLed(statusLed)
         , shutdownManager(shutdownManager)
         , powerManager(deviceConfig->sleepWhenIdle.get())
         , wifi(wifi)
-        , mdns(wifi->getNetworkReady(), deviceConfig->getHostname(), "ugly-duckling", version, mdnsReadyState)
+        , mdns(mdns)
         , rtc(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState)
         , mqtt(std::make_shared<MqttDriver>(wifi->getNetworkReady(), mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState))
         , i2c(i2c) {
@@ -204,7 +205,6 @@ private:
     KernelState state = KernelState::BOOTING;
     StateManager stateManager;
     StateSource rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
-    StateSource mdnsReadyState = stateManager.createStateSource("mdns-ready");
     StateSource mqttReadyState = stateManager.createStateSource("mqtt-ready");
     StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
@@ -212,7 +212,7 @@ public:
     const std::shared_ptr<WiFiDriver> wifi;
 
 private:
-    MdnsDriver mdns;
+    const std::shared_ptr<MdnsDriver> mdns;
     RtcDriver rtc;
 
     std::string httpUpdateResult;

@@ -68,7 +68,7 @@ public:
 
     MqttDriver(
         State& networkReady,
-        MdnsDriver& mdns,
+        std::shared_ptr<MdnsDriver> mdns,
         const std::shared_ptr<Config> config,
         const std::string& instanceName,
         bool powerSaveMode,
@@ -108,7 +108,7 @@ public:
             port = 1883;
 #else
             MdnsRecord mqttServer;
-            while (!mdns.lookupService("mqtt", "tcp", mqttServer, trustMdnsCache)) {
+            while (!mdns->lookupService("mqtt", "tcp", mqttServer, trustMdnsCache)) {
                 LOGTE(Tag::MQTT, "Failed to lookup MQTT server from mDNS");
                 trustMdnsCache = false;
                 Task::delay(5s);
@@ -690,7 +690,7 @@ private:
     }
 
     State& networkReady;
-    MdnsDriver& mdns;
+    const std::shared_ptr<MdnsDriver> mdns;
     bool trustMdnsCache = true;
 
     const std::string configHostname;

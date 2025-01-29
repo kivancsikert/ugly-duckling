@@ -35,7 +35,7 @@ public:
         Property<std::string> host { this, "host", "" };
     };
 
-    RtcDriver(State& networkReady, MdnsDriver& mdns, const std::shared_ptr<Config> ntpConfig, StateSource& rtcInSync)
+    RtcDriver(State& networkReady, std::shared_ptr<MdnsDriver> mdns, const std::shared_ptr<Config> ntpConfig, StateSource& rtcInSync)
         : networkReady(networkReady)
         , mdns(mdns)
         , ntpConfig(ntpConfig)
@@ -97,7 +97,7 @@ private:
             esp_sntp_setservername(0, ntpConfig->host.get().c_str());
         } else {
             MdnsRecord ntpServer;
-            if (mdns.lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
+            if (mdns->lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
                 LOGTD(Tag::RTC, "using NTP server %s from mDNS",
                     ntpServer.toString().c_str());
                 esp_sntp_setserver(0, (const ip_addr_t*) &ntpServer.ip);
@@ -145,7 +145,7 @@ private:
     }
 
     State& networkReady;
-    MdnsDriver& mdns;
+    const std::shared_ptr<MdnsDriver> mdns;
     const std::shared_ptr<Config> ntpConfig;
     StateSource& rtcInSync;
 

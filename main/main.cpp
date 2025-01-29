@@ -140,7 +140,7 @@ extern "C" void app_main() {
     StateSource networkConnectingState = stateManager.createStateSource("network-connecting");
     StateSource networkReadyState = stateManager.createStateSource("network-ready");
     StateSource configPortalRunningState = stateManager.createStateSource("config-portal-running");
-    std::shared_ptr<WiFiDriver> wifi = std::make_shared<WiFiDriver>(
+    auto wifi = std::make_shared<WiFiDriver>(
         networkConnectingState,
         networkReadyState,
         configPortalRunningState,
@@ -156,6 +156,9 @@ extern "C" void app_main() {
         batteryManager = std::make_shared<BatteryManager>(battery, shutdownManager);
     }
 
+    StateSource mdnsReadyState = stateManager.createStateSource("mdns-ready");
+    auto mdns = std::make_shared<MdnsDriver>(wifi->getNetworkReady(), deviceConfig->getHostname(), "ugly-duckling", farmhubVersion, mdnsReadyState);
+
     // Reboots if update is successful
     handleHttpUpdate(fs, wifi);
 
@@ -166,7 +169,7 @@ extern "C" void app_main() {
     // TODO This should just be a "load()" call
     ConfigurationFile<MqttDriver::Config> mqttConfigFile(fs, "/mqtt-config.json", mqttConfig);
 
-    auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c, wifi);
+    auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c, wifi, mdns);
 
     new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, kernel);
 
