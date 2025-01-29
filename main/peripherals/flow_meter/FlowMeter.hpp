@@ -11,8 +11,7 @@
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
-using std::make_unique;
-using std::unique_ptr;
+
 namespace farmhub::peripherals::flow_meter {
 
 class FlowMeter
@@ -20,7 +19,7 @@ class FlowMeter
 public:
     FlowMeter(
         const std::string& name,
-        shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<MqttRoot> mqttRoot,
         std::shared_ptr<PulseCounterManager> pulseCounterManager,
         InternalPinPtr pin,
         double qFactor,
@@ -44,8 +43,8 @@ public:
         : PeripheralFactory<FlowMeterDeviceConfig, EmptyConfiguration>("flow-meter") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<FlowMeterDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
-        return make_unique<FlowMeter>(name, mqttRoot, services.pulseCounterManager, deviceConfig->pin.get(), deviceConfig->qFactor.get(), deviceConfig->measurementFrequency.get());
+    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<FlowMeterDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+        return std::make_unique<FlowMeter>(name, mqttRoot, services.pulseCounterManager, deviceConfig->pin.get(), deviceConfig->qFactor.get(), deviceConfig->measurementFrequency.get());
     }
 };
 

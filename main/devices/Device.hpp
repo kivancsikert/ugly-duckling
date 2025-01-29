@@ -23,7 +23,6 @@
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
-using std::shared_ptr;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 using namespace farmhub::kernel::mqtt;
@@ -112,7 +111,7 @@ namespace farmhub::devices {
 #ifdef FARMHUB_DEBUG
 class ConsolePrinter {
 public:
-    ConsolePrinter(const shared_ptr<BatteryDriver> battery, WiFiDriver& wifi)
+    ConsolePrinter(const std::shared_ptr<BatteryDriver> battery, WiFiDriver& wifi)
         : battery(battery)
         , wifi(wifi) {
         status.reserve(256);
@@ -242,7 +241,7 @@ private:
 
 class MqttTelemetryPublisher : public TelemetryPublisher {
 public:
-    MqttTelemetryPublisher(shared_ptr<MqttRoot> mqttRoot, TelemetryCollector& telemetryCollector)
+    MqttTelemetryPublisher(std::shared_ptr<MqttRoot> mqttRoot, TelemetryCollector& telemetryCollector)
         : mqttRoot(mqttRoot)
         , telemetryCollector(telemetryCollector) {
     }
@@ -252,7 +251,7 @@ public:
     }
 
 private:
-    shared_ptr<MqttRoot> mqttRoot;
+    std::shared_ptr<MqttRoot> mqttRoot;
     TelemetryCollector& telemetryCollector;
 };
 
@@ -552,7 +551,7 @@ private:
     const std::shared_ptr<Kernel> kernel;
     ConfiguredKernel configuredKernel;
 
-    shared_ptr<MqttRoot> mqttDeviceRoot = kernel->mqtt->forRoot(locationPrefix() + "devices/ugly-duckling/" + instance);
+    std::shared_ptr<MqttRoot> mqttDeviceRoot = kernel->mqtt->forRoot(locationPrefix() + "devices/ugly-duckling/" + instance);
     PeripheralManager peripheralManager { kernel->i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, kernel->switches, mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;

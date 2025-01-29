@@ -14,10 +14,6 @@
 #include <kernel/drivers/SwitchManager.hpp>
 #include <kernel/mqtt/MqttRoot.hpp>
 
-using std::move;
-using std::shared_ptr;
-using std::unique_ptr;
-
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 using namespace farmhub::kernel::mqtt;
@@ -30,7 +26,7 @@ class PeripheralBase
     : public TelemetryProvider,
       public Named {
 public:
-    PeripheralBase(const std::string& name, shared_ptr<MqttRoot> mqttRoot, size_t telemetrySize = 2048)
+    PeripheralBase(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot, size_t telemetrySize = 2048)
         : Named(name)
         , mqttRoot(mqttRoot)
         , telemetrySize(telemetrySize) {
@@ -66,7 +62,7 @@ public:
     }
 
 protected:
-    shared_ptr<MqttRoot> mqttRoot;
+    std::shared_ptr<MqttRoot> mqttRoot;
 
 private:
     const size_t telemetrySize;
@@ -76,7 +72,7 @@ template <std::derived_from<ConfigurationSection> TConfig>
 class Peripheral
     : public PeripheralBase {
 public:
-    Peripheral(const std::string& name, shared_ptr<MqttRoot> mqttRoot)
+    Peripheral(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot)
         : PeripheralBase(name, mqttRoot) {
     }
 
@@ -116,7 +112,7 @@ public:
         , peripheralType(peripheralType) {
     }
 
-    virtual unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services, JsonObject& initConfigJson) = 0;
+    virtual std::unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services, JsonObject& initConfigJson) = 0;
 
     const std::string factoryType;
     const std::string peripheralType;
@@ -135,7 +131,7 @@ public:
         , deviceConfigArgs(std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
-    unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services, JsonObject& initConfigJson) override {
+    std::unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services, JsonObject& initConfigJson) override {
         std::shared_ptr<TConfig> config = std::make_shared<TConfig>();
         // Use short prefix because SPIFFS has a 32 character limit
         std::shared_ptr<ConfigurationFile<TConfig>> configFile = std::make_shared<ConfigurationFile<TConfig>>(FileSystem::get(), "/p/" + name, config);
@@ -154,7 +150,7 @@ public:
         },
             deviceConfigArgs);
         deviceConfig->loadFromString(jsonConfig);
-        unique_ptr<Peripheral<TConfig>> peripheral = createPeripheral(name, deviceConfig, mqttRoot, services);
+        std::unique_ptr<Peripheral<TConfig>> peripheral = createPeripheral(name, deviceConfig, mqttRoot, services);
         peripheral->configure(config);
 
         // Store configuration in init message
@@ -162,7 +158,7 @@ public:
         return peripheral;
     }
 
-    virtual unique_ptr<Peripheral<TConfig>> createPeripheral(const std::string& name, const std::shared_ptr<TDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) = 0;
+    virtual std::unique_ptr<Peripheral<TConfig>> createPeripheral(const std::string& name, const std::shared_ptr<TDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) = 0;
 
 private:
     std::tuple<TDeviceConfigArgs...> deviceConfigArgs;
@@ -179,7 +175,7 @@ public:
         std::shared_ptr<PulseCounterManager> pulseCounterManager,
         std::shared_ptr<PwmManager> pwmManager,
         std::shared_ptr<SwitchManager> switchManager,
-        const shared_ptr<MqttRoot> mqttDeviceRoot)
+        const std::shared_ptr<MqttRoot> mqttDeviceRoot)
         : services({ i2c, pcntManager, pulseCounterManager, pwmManager, switchManager })
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
@@ -215,7 +211,7 @@ public:
             }
             JsonDocument initConfigDoc;
             JsonObject initConfigJson = initConfigDoc.to<JsonObject>();
-            unique_ptr<PeripheralBase> peripheral = createPeripheral(name, type, deviceConfig->params.get().get(), initConfigJson);
+            std::unique_ptr<PeripheralBase> peripheral = createPeripheral(name, type, deviceConfig->params.get().get(), initConfigJson);
             initJson["config"].to<JsonObject>().set(initConfigJson);
             peripherals.push_back(move(peripheral));
 
@@ -268,7 +264,7 @@ private:
         Property<JsonAsString> params { this, "params" };
     };
 
-    unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& factoryType, const std::string& configJson, JsonObject& initConfigJson) {
+    std::unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& factoryType, const std::string& configJson, JsonObject& initConfigJson) {
         LOGD("Creating peripheral '%s' with factory '%s'",
             name.c_str(), factoryType.c_str());
         auto it = factories.find(factoryType);
@@ -276,7 +272,7 @@ private:
             throw PeripheralCreationException("Factory not found: '" + factoryType + "'");
         }
         const std::string& peripheralType = it->second.get().peripheralType;
-        shared_ptr<MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
+        std::shared_ptr<MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
         PeripheralFactoryBase& factory = it->second.get();
         return factory.createPeripheral(name, configJson, mqttRoot, services, initConfigJson);
     }
@@ -288,13 +284,13 @@ private:
 
     PeripheralServices services;
 
-    const shared_ptr<MqttRoot> mqttDeviceRoot;
+    const std::shared_ptr<MqttRoot> mqttDeviceRoot;
 
     // TODO Use an unordered_map?
     std::map<std::string, std::reference_wrapper<PeripheralFactoryBase>> factories;
     Mutex stateMutex;
     State state = State::Running;
-    std::list<unique_ptr<PeripheralBase>> peripherals;
+    std::list<std::unique_ptr<PeripheralBase>> peripherals;
 };
 
 }    // namespace farmhub::peripherals

@@ -12,8 +12,7 @@
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
-using std::make_unique;
-using std::unique_ptr;
+
 namespace farmhub::peripherals::environment {
 
 /**
@@ -27,7 +26,7 @@ class Ds18B20SoilSensorComponent
 public:
     Ds18B20SoilSensorComponent(
         const std::string& name,
-        shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<MqttRoot> mqttRoot,
         InternalPinPtr pin)
         : Component(name, mqttRoot)
         , pin(pin) {
@@ -68,7 +67,7 @@ private:
 class Ds18B20SoilSensor
     : public Peripheral<EmptyConfiguration> {
 public:
-    Ds18B20SoilSensor(const std::string& name, shared_ptr<MqttRoot> mqttRoot, InternalPinPtr pin)
+    Ds18B20SoilSensor(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot, InternalPinPtr pin)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , sensor(name, mqttRoot, pin) {
     }
@@ -88,8 +87,8 @@ public:
         : PeripheralFactory<SinglePinDeviceConfig, EmptyConfiguration>("environment:ds18b20", "environment") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SinglePinDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
-        return make_unique<Ds18B20SoilSensor>(name, mqttRoot, deviceConfig->pin.get());
+    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SinglePinDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+        return std::make_unique<Ds18B20SoilSensor>(name, mqttRoot, deviceConfig->pin.get());
     }
 };
 

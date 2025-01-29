@@ -58,7 +58,7 @@ private:
         return device->readRegByte(0x40) | (device->readRegByte(0x41) << 8);
     }
 
-    shared_ptr<I2CDevice> device;
+    std::shared_ptr<I2CDevice> device;
 };
 
 }    // namespace farmhub::kernel::drivers

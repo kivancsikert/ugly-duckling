@@ -26,7 +26,7 @@ public:
     Sht2xComponent(
         const std::string& name,
         const std::string& sensorType,
-        shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<MqttRoot> mqttRoot,
         std::shared_ptr<I2CManager> i2c,
         const I2CConfig& config)
         : Component(name, mqttRoot)
@@ -70,7 +70,7 @@ private:
         }
     }
 
-    shared_ptr<I2CBus> bus;
+    std::shared_ptr<I2CBus> bus;
     i2c_dev_t sensor {};
 };
 

@@ -84,7 +84,7 @@ public:
 
 class UglyDucklingMk7 : public DeviceDefinition {
 public:
-    UglyDucklingMk7(shared_ptr<Mk7Config> config)
+    UglyDucklingMk7(std::shared_ptr<Mk7Config> config)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
@@ -99,7 +99,7 @@ public:
         peripheralManager.registerFactory(chickenDoorFactory);
     }
 
-    shared_ptr<LedDriver> secondaryStatusLed { make_shared<LedDriver>("status-2", pins::STATUS2) };
+    std::shared_ptr<LedDriver> secondaryStatusLed { std::make_shared<LedDriver>("status-2", pins::STATUS2) };
 
     Drv8833Driver motorDriver {
         pwm,

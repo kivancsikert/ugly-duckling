@@ -26,7 +26,7 @@ class LightSensorComponent
 public:
     LightSensorComponent(
         const std::string& name,
-        shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<MqttRoot> mqttRoot,
         seconds measurementFrequency,
         seconds latencyInterval)
         : Component(name, mqttRoot)

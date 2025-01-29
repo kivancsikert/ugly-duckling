@@ -9,12 +9,12 @@ namespace farmhub::kernel {
 
 class Component : public Named {
 protected:
-    Component(const std::string& name, shared_ptr<MqttRoot> mqttRoot)
+    Component(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot)
         : Named(name)
         , mqttRoot(mqttRoot) {
     }
 
-    shared_ptr<MqttRoot> mqttRoot;
+    std::shared_ptr<MqttRoot> mqttRoot;
 };
 
 }    // namespace farmhub::kernel

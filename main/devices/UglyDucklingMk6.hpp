@@ -86,7 +86,7 @@ public:
 
 class UglyDucklingMk6 : public DeviceDefinition {
 public:
-    UglyDucklingMk6(shared_ptr<Mk6Config> config)
+    UglyDucklingMk6(std::shared_ptr<Mk6Config> config)
         : DeviceDefinition(pins::STATUS, pins::BOOT)
         , motorDriver(pwm, pins::AIN1, pins::AIN2, pins::BIN1, pins::BIN2, pins::NFault, config->motorNSleepPin.get()) {
         // Switch off strapping pin
@@ -106,7 +106,7 @@ public:
         peripheralManager.registerFactory(chickenDoorFactory);
     }
 
-    shared_ptr<LedDriver> secondaryStatusLed { make_shared<LedDriver>("status-2", pins::STATUS2) };
+    std::shared_ptr<LedDriver> secondaryStatusLed { std::make_shared<LedDriver>("status-2", pins::STATUS2) };
 
     Drv8833Driver motorDriver;
 

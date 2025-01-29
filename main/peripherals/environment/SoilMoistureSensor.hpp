@@ -27,7 +27,7 @@ class SoilMoistureSensorComponent
 public:
     SoilMoistureSensorComponent(
         const std::string& name,
-        shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<MqttRoot> mqttRoot,
         const std::shared_ptr<SoilMoistureSensorDeviceConfig> config)
         : Component(name, mqttRoot)
         , airValue(config->air.get())
@@ -64,7 +64,7 @@ private:
 class SoilMoistureSensor
     : public Peripheral<EmptyConfiguration> {
 public:
-    SoilMoistureSensor(const std::string& name, shared_ptr<MqttRoot> mqttRoot, const std::shared_ptr<SoilMoistureSensorDeviceConfig> config)
+    SoilMoistureSensor(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot, const std::shared_ptr<SoilMoistureSensorDeviceConfig> config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , sensor(name, mqttRoot, config) {
     }
@@ -84,7 +84,7 @@ public:
         : PeripheralFactory<SoilMoistureSensorDeviceConfig, EmptyConfiguration>("environment:soil-moisture", "environment") {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SoilMoistureSensorDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SoilMoistureSensorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         return std::make_unique<SoilMoistureSensor>(name, mqttRoot, deviceConfig);
     }
 };

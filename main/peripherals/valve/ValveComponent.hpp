@@ -21,10 +21,6 @@
 #include <peripherals/valve/ValveScheduler.hpp>
 
 using namespace std::chrono;
-using std::make_unique;
-using std::move;
-using std::unique_ptr;
-
 using namespace farmhub::kernel::drivers;
 using namespace farmhub::peripherals;
 
@@ -201,7 +197,7 @@ public:
     ValveComponent(
         const std::string& name,
         ValveControlStrategy& strategy,
-        shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<MqttRoot> mqttRoot,
         std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
         , nvs(name)

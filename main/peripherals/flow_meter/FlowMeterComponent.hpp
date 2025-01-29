@@ -22,7 +22,7 @@ class FlowMeterComponent
 public:
     FlowMeterComponent(
         const std::string& name,
-        shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<MqttRoot> mqttRoot,
         std::shared_ptr<PulseCounterManager> pulseCounterManager,
         InternalPinPtr pin,
         double qFactor,
@@ -82,7 +82,7 @@ private:
         lastPublished = lastMeasurement;
     }
 
-    shared_ptr<PulseCounter> counter;
+    std::shared_ptr<PulseCounter> counter;
     const double qFactor;
 
     time_point<boot_clock> lastMeasurement;

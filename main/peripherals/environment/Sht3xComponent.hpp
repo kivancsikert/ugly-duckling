@@ -23,7 +23,7 @@ public:
     Sht3xComponent(
         const std::string& name,
         const std::string& sensorType,
-        shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<MqttRoot> mqttRoot,
         std::shared_ptr<I2CManager> i2c,
         I2CConfig config)
         : Component(name, mqttRoot)
@@ -55,7 +55,7 @@ public:
     }
 
 private:
-    shared_ptr<I2CBus> bus;
+    std::shared_ptr<I2CBus> bus;
     sht3x_t sensor {};
 };
 

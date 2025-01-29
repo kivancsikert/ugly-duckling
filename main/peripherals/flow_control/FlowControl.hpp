@@ -16,8 +16,6 @@ using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
-using std::make_unique;
-using std::unique_ptr;
 
 namespace farmhub::peripherals::flow_control {
 
@@ -29,7 +27,7 @@ class FlowControl : public Peripheral<FlowControlConfig> {
 public:
     FlowControl(
         const std::string& name,
-        shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<MqttRoot> mqttRoot,
         std::shared_ptr<PulseCounterManager> pulseCounterManager,
         ValveControlStrategy& strategy,
         InternalPinPtr pin,
@@ -83,11 +81,11 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const std::shared_ptr<FlowControlDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    std::unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const std::shared_ptr<FlowControlDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         auto strategy = deviceConfig->valve.get()->createValveControlStrategy(this);
 
         auto flowMeterConfig = deviceConfig->flowMeter.get();
-        return make_unique<FlowControl>(
+        return std::make_unique<FlowControl>(
             name,
             mqttRoot,
             services.pulseCounterManager,

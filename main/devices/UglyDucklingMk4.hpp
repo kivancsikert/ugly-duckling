@@ -55,7 +55,7 @@ static InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43);
 
 class UglyDucklingMk4 : public DeviceDefinition {
 public:
-    UglyDucklingMk4(shared_ptr<Mk4Config> config)
+    UglyDucklingMk4(std::shared_ptr<Mk4Config> config)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 

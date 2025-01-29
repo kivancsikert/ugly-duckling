@@ -29,7 +29,7 @@ public:
 
 class UglyDucklingMk8 : public DeviceDefinition {
 public:
-    UglyDucklingMk8(shared_ptr<Mk8Config> config)
+    UglyDucklingMk8(std::shared_ptr<Mk8Config> config)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 

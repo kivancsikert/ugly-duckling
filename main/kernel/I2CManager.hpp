@@ -10,8 +10,6 @@
 
 namespace farmhub::kernel {
 
-using std::shared_ptr;
-
 using farmhub::kernel::PinPtr;
 
 using GpioPair = std::pair<PinPtr, PinPtr>;
@@ -36,7 +34,7 @@ public:
 
 class I2CDevice {
 public:
-    I2CDevice(const std::string& name, shared_ptr<I2CBus> bus, uint8_t address)
+    I2CDevice(const std::string& name, std::shared_ptr<I2CBus> bus, uint8_t address)
         : name(name)
         , bus(bus)
         , address(address)
@@ -97,7 +95,7 @@ public:
 
 private:
     const std::string name;
-    const shared_ptr<I2CBus> bus;
+    const std::shared_ptr<I2CBus> bus;
     const uint8_t address;
     i2c_dev_t device;
 };
@@ -113,11 +111,11 @@ public:
         ESP_ERROR_CHECK(i2cdev_done());
     }
 
-    shared_ptr<I2CDevice> createDevice(const std::string& name, const I2CConfig& config) {
+    std::shared_ptr<I2CDevice> createDevice(const std::string& name, const I2CConfig& config) {
         return createDevice(name, config.sda, config.scl, config.address);
     }
 
-    shared_ptr<I2CDevice> createDevice(const std::string& name, InternalPinPtr sda, InternalPinPtr scl, uint8_t address) {
+    std::shared_ptr<I2CDevice> createDevice(const std::string& name, InternalPinPtr sda, InternalPinPtr scl, uint8_t address) {
         auto device = std::make_shared<I2CDevice>(name, getBusFor(sda, scl), address);
         LOGI("Created I2C device %s at address 0x%02x",
             name.c_str(), address);
@@ -130,11 +128,11 @@ public:
         return device;
     }
 
-    shared_ptr<I2CBus> getBusFor(const I2CConfig& config) {
+    std::shared_ptr<I2CBus> getBusFor(const I2CConfig& config) {
         return getBusFor(config.sda, config.scl);
     }
 
-    shared_ptr<I2CBus> getBusFor(InternalPinPtr sda, InternalPinPtr scl) {
+    std::shared_ptr<I2CBus> getBusFor(InternalPinPtr sda, InternalPinPtr scl) {
         Lock lock(mutex);
         for (auto bus : buses) {
             if (bus->sda == sda && bus->scl == scl) {
@@ -158,7 +156,7 @@ private:
     static constexpr size_t BUS_COUNT = 2;
 
     Mutex mutex;
-    std::vector<shared_ptr<I2CBus>> buses;
+    std::vector<std::shared_ptr<I2CBus>> buses;
 };
 
 }    // namespace farmhub::kernel

@@ -111,7 +111,7 @@ extern "C" void app_main() {
     // TODO Move battery check before initializing file system
     auto i2c = std::make_shared<I2CManager>();
     auto battery = deviceDefinition->createBatteryDriver(i2c);
-    shared_ptr<BatteryManager> batteryManager;
+    std::shared_ptr<BatteryManager> batteryManager;
     if (battery != nullptr) {
         // If the battery voltage is below threshold, we should not boot yet.
         // This is to prevent the device from booting and immediately shutting down

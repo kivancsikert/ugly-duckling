@@ -77,7 +77,7 @@ static InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43);
 
 class UglyDucklingMk5 : public DeviceDefinition {
 public:
-    UglyDucklingMk5(shared_ptr<Mk5Config> config)
+    UglyDucklingMk5(std::shared_ptr<Mk5Config> config)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 

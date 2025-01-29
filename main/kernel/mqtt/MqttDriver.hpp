@@ -19,9 +19,6 @@
 
 using namespace std::chrono_literals;
 using namespace farmhub::kernel;
-using std::make_shared;
-using std::shared_ptr;
-
 using namespace farmhub::kernel::drivers;
 
 namespace farmhub::kernel::mqtt {
@@ -167,8 +164,8 @@ public:
         }
     }
 
-    shared_ptr<MqttRoot> forRoot(const std::string& topic) {
-        return make_shared<MqttRoot>(*this, topic);
+    std::shared_ptr<MqttRoot> forRoot(const std::string& topic) {
+        return std::make_shared<MqttRoot>(*this, topic);
     }
 
     // TODO Review these values

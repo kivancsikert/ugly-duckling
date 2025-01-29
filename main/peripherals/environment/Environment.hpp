@@ -12,8 +12,6 @@
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
-using std::make_unique;
-using std::unique_ptr;
 
 namespace farmhub::peripherals::environment {
 
@@ -24,7 +22,7 @@ public:
     Environment(
         const std::string& name,
         const std::string& sensorType,
-        shared_ptr<MqttRoot> mqttRoot,
+        std::shared_ptr<MqttRoot> mqttRoot,
         std::shared_ptr<I2CManager> i2c,
         I2CConfig config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
@@ -49,11 +47,11 @@ public:
         , defaultAddress(defaultAddress) {
     }
 
-    unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<I2CDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<I2CDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         auto i2cConfig = deviceConfig->parse(defaultAddress);
         LOGI("Creating %s sensor %s with %s",
             sensorType.c_str(), name.c_str(), i2cConfig.toString().c_str());
-        return make_unique<Environment<TComponent>>(name, sensorType, mqttRoot, services.i2c, i2cConfig);
+        return std::make_unique<Environment<TComponent>>(name, sensorType, mqttRoot, services.i2c, i2cConfig);
     }
 
 private:
