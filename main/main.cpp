@@ -127,9 +127,6 @@ extern "C" void app_main() {
 
     auto powerManager = std::make_shared<PowerManager>(deviceConfig->sleepWhenIdle.get());
 
-    // Don't sleep while we are booting up to make the process as fast as possible
-    PowerManagementLockGuard sleepLock(PowerManager::noLightSleep);
-
     auto logRecords = std::make_shared<Queue<LogRecord>>("logs", 32);
     ConsoleProvider::init(logRecords, deviceConfig->publishLogs.get());
 
