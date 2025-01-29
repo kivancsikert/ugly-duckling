@@ -10,7 +10,6 @@
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/Log.hpp>
-#include <kernel/PowerManager.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
 
 namespace farmhub::kernel {
@@ -54,9 +53,6 @@ static void handleHttpUpdate(FileSystem& fs, std::shared_ptr<WiFiDriver> wifi) {
         LOGV("No update file found, not updating");
         return;
     }
-
-    // Don't sleep while we are performing the update
-    PowerManagementLockGuard sleepLock(PowerManager::noLightSleep);
 
     auto contents = fs.readAll(UPDATE_FILE);
     if (!contents.has_value()) {

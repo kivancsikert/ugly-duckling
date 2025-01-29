@@ -76,19 +76,19 @@ private:
 
 class PowerManagementTelemetryProvider : public TelemetryProvider {
 public:
-    PowerManagementTelemetryProvider(PowerManager& powerManager)
+    PowerManagementTelemetryProvider(std::shared_ptr<PowerManager> powerManager)
         : powerManager(powerManager) {
     }
 
     void populateTelemetry(JsonObject& json) override {
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
-        json["sleep-time"] = powerManager.getLightSleepTime().count();
-        json["sleep-count"] = powerManager.getLightSleepCount();
+        json["sleep-time"] = powerManager->getLightSleepTime().count();
+        json["sleep-count"] = powerManager->getLightSleepCount();
 #endif
     }
 
 private:
-    PowerManager& powerManager;
+    const std::shared_ptr<PowerManager> powerManager;
 };
 
 class MqttTelemetryPublisher : public TelemetryPublisher {
@@ -113,6 +113,7 @@ public:
         const std::shared_ptr<TDeviceConfiguration> deviceConfig,
         const std::shared_ptr<TDeviceDefinition> deviceDefinition,
         std::shared_ptr<BatteryManager> battery,
+        std::shared_ptr<PowerManager> powerManager,
         std::shared_ptr<Kernel> kernel)
         : location(deviceConfig->location.get())
         , instance(deviceConfig->instance.get())
@@ -147,7 +148,7 @@ public:
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
         deviceTelemetryCollector.registerProvider("memory", std::make_shared<MemoryTelemetryProvider>());
 #endif
-        deviceTelemetryCollector.registerProvider("pm", std::make_shared<PowerManagementTelemetryProvider>(kernel->powerManager));
+        deviceTelemetryCollector.registerProvider("pm", std::make_shared<PowerManagementTelemetryProvider>(powerManager));
 
         deviceDefinition->registerPeripheralFactories(peripheralManager);
 
@@ -233,7 +234,7 @@ public:
                 json["time"] = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
                 json["state"] = static_cast<int>(initState);
                 json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
-                json["sleepWhenIdle"] = kernel->powerManager.sleepWhenIdle;
+                json["sleepWhenIdle"] = powerManager->sleepWhenIdle;
 
                 reportPreviousCrashIfAny(json);
             },

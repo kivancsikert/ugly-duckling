@@ -52,7 +52,6 @@ public:
         : version(farmhubVersion)
         , statusLed(statusLed)
         , shutdownManager(shutdownManager)
-        , powerManager(deviceConfig->sleepWhenIdle.get())
         , wifi(wifi)
         , mdns(mdns)
         , rtc(rtc)
@@ -200,8 +199,6 @@ public:
                                esp_system_abort("Watchdog timed out");
                            }
                        } };
-
-    PowerManager powerManager;
 
 private:
     KernelState state = KernelState::BOOTING;

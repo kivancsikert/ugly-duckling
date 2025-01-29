@@ -125,6 +125,11 @@ extern "C" void app_main() {
     // TODO This should just be a "load()" call
     ConfigurationFile<TDeviceConfiguration> deviceConfigFile(fs, "/device-config.json", deviceConfig);
 
+    auto powerManager = std::make_shared<PowerManager>(deviceConfig->sleepWhenIdle.get());
+
+    // Don't sleep while we are booting up to make the process as fast as possible
+    PowerManagementLockGuard sleepLock(PowerManager::noLightSleep);
+
     auto logRecords = std::make_shared<Queue<LogRecord>>("logs", 32);
     ConsoleProvider::init(logRecords, deviceConfig->publishLogs.get());
 
@@ -175,9 +180,9 @@ extern "C" void app_main() {
 
     auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, kernel);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, kernel);
 
-    // Enable power saving for WiFi only when we are done initializing
+    // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
