@@ -62,16 +62,16 @@ public:
 
 class WiFiTelemetryProvider : public TelemetryProvider {
 public:
-    WiFiTelemetryProvider(WiFiDriver& wifi)
+    WiFiTelemetryProvider(const std::shared_ptr<WiFiDriver> wifi)
         : wifi(wifi) {
     }
 
     void populateTelemetry(JsonObject& json) override {
-        json["uptime"] = wifi.getUptime().count();
+        json["uptime"] = wifi->getUptime().count();
     }
 
 private:
-    WiFiDriver& wifi;
+    const std::shared_ptr<WiFiDriver> wifi;
 };
 
 class PowerManagementTelemetryProvider : public TelemetryProvider {
@@ -266,8 +266,8 @@ public:
             deviceConfig->model.get().c_str(),
             deviceConfig->instance.get().c_str(),
             deviceConfig->getHostname().c_str(),
-            kernel->wifi.getIp().value_or("<no-ip>").c_str(),
-            kernel->wifi.getSsid().value_or("<no-ssid>").c_str(),
+            kernel->wifi->getIp().value_or("<no-ip>").c_str(),
+            kernel->wifi->getSsid().value_or("<no-ssid>").c_str(),
             duration_cast<seconds>(system_clock::now().time_since_epoch()).count());
     }
 

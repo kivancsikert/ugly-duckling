@@ -20,8 +20,8 @@
 #include <kernel/I2CManager.hpp>
 #include <kernel/NetworkUtil.hpp>
 #include <kernel/PowerManager.hpp>
-#include <kernel/StateManager.hpp>
 #include <kernel/ShutdownManager.hpp>
+#include <kernel/StateManager.hpp>
 #include <kernel/Watchdog.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
@@ -49,15 +49,16 @@ public:
         std::shared_ptr<MqttDriver::Config> mqttConfig,
         std::shared_ptr<LedDriver> statusLed,
         std::shared_ptr<ShutdownManager> shutdownManager,
-        std::shared_ptr<I2CManager> i2c)
+        std::shared_ptr<I2CManager> i2c,
+        std::shared_ptr<WiFiDriver> wifi)
         : version(farmhubVersion)
         , statusLed(statusLed)
         , shutdownManager(shutdownManager)
         , powerManager(deviceConfig->sleepWhenIdle.get())
-        , wifi(networkConnectingState, networkReadyState, configPortalRunningState, deviceConfig->getHostname(), deviceConfig->sleepWhenIdle.get())
-        , mdns(networkReadyState, deviceConfig->getHostname(), "ugly-duckling", version, mdnsReadyState)
-        , rtc(networkReadyState, mdns, deviceConfig->ntp.get(), rtcInSyncState)
-        , mqtt(std::make_shared<MqttDriver>(networkReadyState, mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState))
+        , wifi(wifi)
+        , mdns(wifi->getNetworkReady(), deviceConfig->getHostname(), "ugly-duckling", version, mdnsReadyState)
+        , rtc(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState)
+        , mqtt(std::make_shared<MqttDriver>(wifi->getNetworkReady(), mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState))
         , i2c(i2c) {
 
         LOGI("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
@@ -75,10 +76,6 @@ public:
             LOGE("HTTP update failed because: %s",
                 httpUpdateResult.c_str());
         }
-    }
-
-    const State& getNetworkReadyState() const {
-        return networkReadyState;
     }
 
     const State& getRtcInSyncState() const {
@@ -145,10 +142,10 @@ private:
 
     void updateState() {
         KernelState newState;
-        if (configPortalRunningState.isSet()) {
+        if (wifi->getConfigPortalRunning().isSet()) {
             // We are waiting for the user to configure the network
             newState = KernelState::NETWORK_CONFIGURING;
-        } else if (networkConnectingState.isSet()) {
+        } else if (wifi->getNetworkConnecting().isSet()) {
             // We are waiting for network connection
             newState = KernelState::NETWORK_CONNECTING;
         } else if (!rtcInSyncState.isSet()) {
@@ -159,7 +156,7 @@ private:
         } else if (!kernelReadyState.isSet()) {
             // We are waiting for init to finish
             newState = KernelState::INIT_FINISHING;
-        } else if (networkReadyState.isSet()) {
+        } else if (wifi->getNetworkReady().isSet()) {
             newState = KernelState::TRANSMITTING;
         } else {
             newState = KernelState::IDLE;
@@ -230,7 +227,7 @@ private:
             farmhubVersion, url.c_str());
 
         LOGD("Waiting for network...");
-        if (!networkReadyState.awaitSet(15s)) {
+        if (!wifi->getNetworkReady().awaitSet(15s)) {
             return "Network not ready, aborting update";
         }
 
@@ -309,16 +306,13 @@ public:
 private:
     KernelState state = KernelState::BOOTING;
     StateManager stateManager;
-    StateSource networkConnectingState = stateManager.createStateSource("network-connecting");
-    StateSource networkReadyState = stateManager.createStateSource("network-ready");
-    StateSource configPortalRunningState = stateManager.createStateSource("config-portal-running");
     StateSource rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
     StateSource mdnsReadyState = stateManager.createStateSource("mdns-ready");
     StateSource mqttReadyState = stateManager.createStateSource("mqtt-ready");
     StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
 public:
-    WiFiDriver wifi;
+    const std::shared_ptr<WiFiDriver> wifi;
 
 private:
     MdnsDriver mdns;

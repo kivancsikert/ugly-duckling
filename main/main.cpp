@@ -133,6 +133,17 @@ extern "C" void app_main() {
     LOGD("  |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s", farmhubVersion);
     LOGD("  ");
 
+    StateManager stateManager;
+    StateSource networkConnectingState = stateManager.createStateSource("network-connecting");
+    StateSource networkReadyState = stateManager.createStateSource("network-ready");
+    StateSource configPortalRunningState = stateManager.createStateSource("config-portal-running");
+    std::shared_ptr<WiFiDriver> wifi = std::make_shared<WiFiDriver>(
+        networkConnectingState,
+        networkReadyState,
+        configPortalRunningState,
+        deviceConfig->getHostname(),
+        deviceConfig->sleepWhenIdle.get());
+
     auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
 
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
@@ -149,7 +160,7 @@ extern "C" void app_main() {
     // TODO This should just be a "load()" call
     ConfigurationFile<MqttDriver::Config> mqttConfigFile(fs, "/mqtt-config.json", mqttConfig);
 
-    auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c);
+    auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c, wifi);
 
     new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, kernel);
 

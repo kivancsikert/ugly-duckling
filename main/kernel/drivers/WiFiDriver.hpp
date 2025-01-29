@@ -21,7 +21,12 @@ namespace farmhub::kernel::drivers {
 
 class WiFiDriver {
 public:
-    WiFiDriver(StateSource& networkConnecting, StateSource& networkReady, StateSource& configPortalRunning, const std::string& hostname, bool powerSaveMode)
+    WiFiDriver(
+        StateSource& networkConnecting,
+        StateSource& networkReady,
+        StateSource& configPortalRunning,
+        const std::string& hostname,
+        bool powerSaveMode)
         : networkConnecting(networkConnecting)
         , networkReady(networkReady)
         , configPortalRunning(configPortalRunning)
@@ -67,6 +72,18 @@ public:
 
     milliseconds getUptime() {
         return wifiUptimeBefore + currentWifiUptime();
+    }
+
+    State& getNetworkConnecting() {
+        return networkConnecting;
+    }
+
+    State& getNetworkReady() {
+        return networkReady;
+    }
+
+    State& getConfigPortalRunning() {
+        return configPortalRunning;
     }
 
 private:
