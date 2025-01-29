@@ -158,9 +158,9 @@ public:
         }
     }
 
-    void configure(const ChickenDoorConfig& config) {
-        openLevel = config.openLevel.get();
-        closeLevel = config.closeLevel.get();
+    void configure(const std::shared_ptr<ChickenDoorConfig> config) {
+        openLevel = config->openLevel.get();
+        closeLevel = config->closeLevel.get();
         LOGI("Configured chicken door %s to close at %.2f lux, and open at %.2f lux",
             name.c_str(), closeLevel, openLevel);
     }
@@ -357,24 +357,24 @@ public:
         uint8_t lightSensorAddress,
         SwitchManager& switches,
         PwmMotorDriver& motor,
-        const ChickenDoorDeviceConfig& config)
+        const std::shared_ptr<ChickenDoorDeviceConfig> config)
         : Peripheral<ChickenDoorConfig>(name, mqttRoot)
         , lightSensor(
               name + ":light",
               mqttRoot,
               i2c,
-              config.lightSensor.get().parse(lightSensorAddress),
-              config.lightSensor.get().measurementFrequency.get(),
-              config.lightSensor.get().latencyInterval.get())
+              config->lightSensor.get()->parse(lightSensorAddress),
+              config->lightSensor.get()->measurementFrequency.get(),
+              config->lightSensor.get()->latencyInterval.get())
         , doorComponent(
               name,
               mqttRoot,
               switches,
               motor,
               lightSensor,
-              config.openPin.get(),
-              config.closedPin.get(),
-              config.movementTimeout.get(),
+              config->openPin.get(),
+              config->closedPin.get(),
+              config->movementTimeout.get(),
               [this]() {
                   publishTelemetry();
               }) {
@@ -385,7 +385,7 @@ public:
         doorComponent.populateTelemetry(telemetryJson);
     }
 
-    void configure(const ChickenDoorConfig& config) override {
+    void configure(const std::shared_ptr<ChickenDoorConfig> config) override {
         doorComponent.configure(config);
     }
 
@@ -422,9 +422,9 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const std::string& name, const ChickenDoorDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
-        PwmMotorDriver& motor = findMotor(deviceConfig.motor.get());
-        auto lightSensorType = deviceConfig.lightSensor.get().type.get();
+    unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ChickenDoorDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+        PwmMotorDriver& motor = findMotor(deviceConfig->motor.get());
+        auto lightSensorType = deviceConfig->lightSensor.get()->type.get();
         try {
             if (lightSensorType == "bh1750") {
                 return std::make_unique<ChickenDoor<Bh1750Component>>(name, mqttRoot, services.i2c, 0x23, services.switches, motor, deviceConfig);

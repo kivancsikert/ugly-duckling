@@ -28,7 +28,7 @@ public:
         const std::string& sensorType,
         shared_ptr<MqttRoot> mqttRoot,
         I2CManager& i2c,
-        I2CConfig config)
+        const I2CConfig& config)
         : Component(name, mqttRoot)
         , bus(i2c.getBusFor(config)) {
 

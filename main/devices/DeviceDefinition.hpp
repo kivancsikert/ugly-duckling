@@ -75,15 +75,13 @@ public:
     PwmManager pwm;
     const InternalPinPtr bootPin;
 
-private:
-    ConfigurationFile<TDeviceConfiguration> configFile { FileSystem::get(), "/device-config.json" };
-    ConfigurationFile<MqttDriver::Config> mqttConfigFile { FileSystem::get(), "/mqtt-config.json" };
-
-public:
-    TDeviceConfiguration& config = configFile.config;
-    MqttDriver::Config& mqttConfig = mqttConfigFile.config;
+    std::shared_ptr<TDeviceConfiguration> config = std::make_shared<TDeviceConfiguration>();
+    std::shared_ptr<MqttDriver::Config> mqttConfig = std::make_shared<MqttDriver::Config>();
 
 private:
+    ConfigurationFile<TDeviceConfiguration> configFile { FileSystem::get(), "/device-config.json", config };
+    ConfigurationFile<MqttDriver::Config> mqttConfigFile { FileSystem::get(), "/mqtt-config.json", mqttConfig };
+
     I2CEnvironmentFactory<Sht3xComponent> sht3xFactory { "sht3x", 0x44 /* Also supports 0x45 */ };
     // TODO Unify these two factories
     I2CEnvironmentFactory<Sht2xComponent> sht2xFactory { "sht2x", 0x40 /* Not configurable */ };

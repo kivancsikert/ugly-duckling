@@ -116,7 +116,7 @@ public:
         pins::BIN1,
         pins::BIN2,
         pins::NFault,
-        config.motorNSleepPin.get()
+        config->motorNSleepPin.get()
     };
 
     const ServiceRef<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };

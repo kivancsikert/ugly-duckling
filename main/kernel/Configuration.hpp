@@ -4,6 +4,7 @@
 #include <concepts>
 #include <functional>
 #include <list>
+#include <memory>
 
 #include <ArduinoJson.h>
 
@@ -139,17 +140,22 @@ class EmptyConfiguration : public ConfigurationSection { };
 template <std::derived_from<ConfigurationEntry> TDelegateEntry>
 class NamedConfigurationEntry : public ConfigurationEntry {
 public:
-    template <typename... Args>
-    NamedConfigurationEntry(ConfigurationSection* parent, const std::string& name, Args&&... args)
+    NamedConfigurationEntry(ConfigurationSection* parent, const std::string& name, std::shared_ptr<TDelegateEntry> delegate)
         : name(name)
-        , delegate(std::forward<Args>(args)...) {
+        , delegate(delegate) {
         parent->add(*this);
+    }
+
+    template <typename... Args>
+    requires std::constructible_from<TDelegateEntry, Args...>
+    NamedConfigurationEntry(ConfigurationSection* parent, const std::string& name, Args&&... args)
+        : NamedConfigurationEntry(parent, name, std::make_shared<TDelegateEntry>(std::forward<Args>(args)...)) {
     }
 
     void load(const JsonObject& json) override {
         if (json[name].is<JsonVariant>()) {
             namePresentAtLoad = true;
-            delegate.load(json[name]);
+            delegate->load(json[name]);
         } else {
             reset();
         }
@@ -158,26 +164,26 @@ public:
     void store(JsonObject& json, bool inlineDefaults) const override {
         if (inlineDefaults || hasValue()) {
             auto section = json[name].to<JsonObject>();
-            delegate.store(section, inlineDefaults);
+            delegate->store(section, inlineDefaults);
         }
     }
 
     bool hasValue() const override {
-        return namePresentAtLoad || delegate.hasValue();
+        return namePresentAtLoad || delegate->hasValue();
     }
 
     void reset() override {
         namePresentAtLoad = false;
-        delegate.reset();
+        delegate->reset();
     }
 
-    const TDelegateEntry& get() const {
+    const std::shared_ptr<TDelegateEntry> get() const {
         return delegate;
     }
 
 private:
     const std::string name;
-    TDelegateEntry delegate;
+    const std::shared_ptr<TDelegateEntry> delegate;
     bool namePresentAtLoad = false;
 };
 
@@ -279,8 +285,9 @@ private:
 template <std::derived_from<ConfigurationSection> TConfiguration>
 class ConfigurationFile {
 public:
-    ConfigurationFile(const FileSystem& fs, const std::string& path)
-        : path(path) {
+    ConfigurationFile(const FileSystem& fs, const std::string& path, std::shared_ptr<TConfiguration> config)
+        : path(path)
+        , config(config) {
         if (!fs.exists(path)) {
             LOGD("The configuration file '%s' was not found, falling back to defaults",
                 path.c_str());
@@ -317,11 +324,11 @@ public:
     }
 
     void reset() {
-        config.reset();
+        config->reset();
     }
 
     void update(const JsonObject& json) {
-        config.load(json);
+        config->load(json);
 
         for (auto& callback : callbacks) {
             callback(json);
@@ -333,7 +340,7 @@ public:
     }
 
     void store(JsonObject& json, bool inlineDefaults) const {
-        config.store(json, inlineDefaults);
+        config->store(json, inlineDefaults);
     }
 
     std::string toString(bool includeDefaults = true) {
@@ -345,10 +352,9 @@ public:
         return jsonString;
     }
 
-    TConfiguration config;
-
 private:
     const std::string path;
+    std::shared_ptr<TConfiguration> config;
     std::list<std::function<void(const JsonObject&)>> callbacks;
 };
 

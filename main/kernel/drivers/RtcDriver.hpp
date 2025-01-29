@@ -35,7 +35,7 @@ public:
         Property<std::string> host { this, "host", "" };
     };
 
-    RtcDriver(State& networkReady, MdnsDriver& mdns, const Config& ntpConfig, StateSource& rtcInSync)
+    RtcDriver(State& networkReady, MdnsDriver& mdns, const std::shared_ptr<Config> ntpConfig, StateSource& rtcInSync)
         : networkReady(networkReady)
         , mdns(mdns)
         , ntpConfig(ntpConfig)
@@ -91,10 +91,10 @@ private:
         LOGTI(Tag::RTC, "using default NTP server for Wokwi");
 #else
         // TODO Check this
-        if (ntpConfig.host.get().length() > 0) {
+        if (ntpConfig->host.get().length() > 0) {
             LOGTD(Tag::RTC, "using NTP server %s from configuration",
-                ntpConfig.host.get().c_str());
-            esp_sntp_setservername(0, ntpConfig.host.get().c_str());
+                ntpConfig->host.get().c_str());
+            esp_sntp_setservername(0, ntpConfig->host.get().c_str());
         } else {
             MdnsRecord ntpServer;
             if (mdns.lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
@@ -146,7 +146,7 @@ private:
 
     State& networkReady;
     MdnsDriver& mdns;
-    const Config& ntpConfig;
+    const std::shared_ptr<Config> ntpConfig;
     StateSource& rtcInSync;
 
     bool trustMdnsCache = true;

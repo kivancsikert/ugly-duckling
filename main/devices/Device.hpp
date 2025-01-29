@@ -259,7 +259,7 @@ private:
 class ConfiguredKernel {
 public:
     ConfiguredKernel(Queue<LogRecord>& logRecords)
-        : consoleProvider(logRecords, deviceDefinition.config.publishLogs.get())
+        : consoleProvider(logRecords, deviceDefinition.config->publishLogs.get())
         , battery(deviceDefinition.createBatteryDriver(kernel.i2c)) {
         if (battery != nullptr) {
             // If the battery voltage is below threshold, we should not boot yet.
@@ -421,7 +421,7 @@ public:
 
         Task::loop("mqtt:log", 3072, [this](Task& task) {
             logRecords.take([&](const LogRecord& record) {
-                if (record.level > deviceConfig.publishLogs.get()) {
+                if (record.level > deviceConfig->publishLogs.get()) {
                     return;
                 }
                 auto length = record.message.length();
@@ -455,7 +455,7 @@ public:
             peripheralManager.createPeripheral(peripheralConfig, peripheralsInitJson);
         }
 
-        auto& peripheralsConfig = deviceConfig.peripherals.get();
+        auto& peripheralsConfig = deviceConfig->peripherals.get();
         LOGI("Loading configuration for %d user-configured peripherals",
             peripheralsConfig.size());
         bool peripheralError = false;
@@ -472,12 +472,12 @@ public:
             [&](JsonObject& json) {
                 // TODO Remove redundant mentions of "ugly-duckling"
                 json["type"] = "ugly-duckling";
-                json["model"] = deviceConfig.model.get();
-                json["id"] = deviceConfig.id.get();
-                json["instance"] = deviceConfig.instance.get();
+                json["model"] = deviceConfig->model.get();
+                json["id"] = deviceConfig->id.get();
+                json["instance"] = deviceConfig->instance.get();
                 json["mac"] = getMacAddress();
                 auto device = json["deviceConfig"].to<JsonObject>();
-                deviceConfig.store(device, false);
+                deviceConfig->store(device, false);
                 // TODO Remove redundant mentions of "ugly-duckling"
                 json["app"] = "ugly-duckling";
                 json["version"] = kernel.version;
@@ -507,7 +507,7 @@ public:
             task.delay(task.ticksUntil(debounceInterval));
 
             // Allow other tasks to trigger telemetry updates
-            auto timeout = task.ticksUntil(deviceConfig.publishInterval.get() - debounceInterval);
+            auto timeout = task.ticksUntil(deviceConfig->publishInterval.get() - debounceInterval);
             telemetryPublishQueue.pollIn(timeout);
         });
 
@@ -516,9 +516,9 @@ public:
         LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
             duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count() / 1000.0,
             kernel.version.c_str(),
-            deviceConfig.model.get().c_str(),
-            deviceConfig.instance.get().c_str(),
-            deviceConfig.getHostname().c_str(),
+            deviceConfig->model.get().c_str(),
+            deviceConfig->instance.get().c_str(),
+            deviceConfig->getHostname().c_str(),
             kernel.wifi.getIp().value_or("<no-ip>").c_str(),
             kernel.wifi.getSsid().value_or("<no-ssid>").c_str(),
             duration_cast<seconds>(system_clock::now().time_since_epoch()).count());
@@ -536,8 +536,8 @@ private:
     }
 
     std::string locationPrefix() {
-        if (deviceConfig.location.hasValue()) {
-            return deviceConfig.location.get() + "/";
+        if (deviceConfig->location.hasValue()) {
+            return deviceConfig->location.get() + "/";
         } else {
             return "";
         }
@@ -633,9 +633,9 @@ private:
     ConfiguredKernel configuredKernel { logRecords };
     Kernel<TDeviceConfiguration>& kernel = configuredKernel.kernel;
     TDeviceDefinition& deviceDefinition = configuredKernel.deviceDefinition;
-    TDeviceConfiguration& deviceConfig = deviceDefinition.config;
+    std::shared_ptr<TDeviceConfiguration> deviceConfig = deviceDefinition.config;
 
-    shared_ptr<MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig.instance.get());
+    shared_ptr<MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig->instance.get());
     PeripheralManager peripheralManager { kernel.i2c, deviceDefinition.pcnt, deviceDefinition.pulseCounterManager, deviceDefinition.pwm, kernel.switches, mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;

@@ -72,22 +72,22 @@ public:
     MqttDriver(
         State& networkReady,
         MdnsDriver& mdns,
-        const Config& config,
+        const std::shared_ptr<Config> config,
         const std::string& instanceName,
         bool powerSaveMode,
         StateSource& mqttReady)
         : networkReady(networkReady)
         , mdns(mdns)
-        , configHostname(config.host.get())
-        , configPort(config.port.get())
-        , configServerCert(joinStrings(config.serverCert.get()))
-        , configClientCert(joinStrings(config.clientCert.get()))
-        , configClientKey(joinStrings(config.clientKey.get()))
-        , clientId(getClientId(config.clientId.get(), instanceName))
+        , configHostname(config->host.get())
+        , configPort(config->port.get())
+        , configServerCert(joinStrings(config->serverCert.get()))
+        , configClientCert(joinStrings(config->clientCert.get()))
+        , configClientKey(joinStrings(config->clientKey.get()))
+        , clientId(getClientId(config->clientId.get(), instanceName))
         , powerSaveMode(powerSaveMode)
         , mqttReady(mqttReady)
-        , eventQueue("mqtt-outgoing", config.queueSize.get())
-        , incomingQueue("mqtt-incoming", config.queueSize.get()) {
+        , eventQueue("mqtt-outgoing", config->queueSize.get())
+        , incomingQueue("mqtt-incoming", config->queueSize.get()) {
 
         Task::run("mqtt", 5120, [this](Task& task) {
             configMqttClient(mqttConfig);

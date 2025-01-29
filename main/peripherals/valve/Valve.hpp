@@ -40,8 +40,8 @@ public:
         }) {
     }
 
-    void configure(const ValveConfig& config) override {
-        valve.setSchedules(config.schedule.get());
+    void configure(const std::shared_ptr<ValveConfig> config) override {
+        valve.setSchedules(config->schedule.get());
     }
 
     void populateTelemetry(JsonObject& telemetry) override {
@@ -67,8 +67,8 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const ValveDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
-        auto strategy = deviceConfig.createValveControlStrategy(this);
+    unique_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ValveDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+        auto strategy = deviceConfig->createValveControlStrategy(this);
         return make_unique<Valve>(name, *strategy, mqttRoot);
     }
 };

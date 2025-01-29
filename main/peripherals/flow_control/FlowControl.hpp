@@ -42,8 +42,8 @@ public:
         , flowMeter(name, mqttRoot, pulseCounterManager, pin, qFactor, measurementFrequency) {
     }
 
-    void configure(const FlowControlConfig& config) override {
-        valve.setSchedules(config.schedule.get());
+    void configure(const std::shared_ptr<FlowControlConfig> config) override {
+        valve.setSchedules(config->schedule.get());
     }
 
     void populateTelemetry(JsonObject& telemetryJson) override {
@@ -83,10 +83,10 @@ public:
         , Motorized(motors) {
     }
 
-    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const FlowControlDeviceConfig& deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
-        auto strategy = deviceConfig.valve.get().createValveControlStrategy(this);
+    unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const std::shared_ptr<FlowControlDeviceConfig> deviceConfig, shared_ptr<MqttRoot> mqttRoot, PeripheralServices& services) override {
+        auto strategy = deviceConfig->valve.get()->createValveControlStrategy(this);
 
-        auto flowMeterConfig = deviceConfig.flowMeter.get();
+        auto flowMeterConfig = deviceConfig->flowMeter.get();
         return make_unique<FlowControl>(
             name,
             mqttRoot,
@@ -94,9 +94,9 @@ public:
 
             *strategy,
 
-            flowMeterConfig.pin.get(),
-            flowMeterConfig.qFactor.get(),
-            flowMeterConfig.measurementFrequency.get());
+            flowMeterConfig->pin.get(),
+            flowMeterConfig->qFactor.get(),
+            flowMeterConfig->measurementFrequency.get());
     }
 
 private:
