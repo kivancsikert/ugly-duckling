@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+#include <concepts>
 #include <functional>
 #include <list>
 
@@ -134,7 +136,7 @@ private:
 
 class EmptyConfiguration : public ConfigurationSection { };
 
-template <typename TDelegate>
+template <std::derived_from<ConfigurationEntry> TDelegateEntry>
 class NamedConfigurationEntry : public ConfigurationEntry {
 public:
     template <typename... Args>
@@ -169,13 +171,13 @@ public:
         delegate.reset();
     }
 
-    const TDelegate& get() const {
+    const TDelegateEntry& get() const {
         return delegate;
     }
 
 private:
     const std::string name;
-    TDelegate delegate;
+    TDelegateEntry delegate;
     bool namePresentAtLoad = false;
 };
 
@@ -274,7 +276,7 @@ private:
     std::list<T> entries;
 };
 
-template <typename TConfiguration>
+template <std::derived_from<ConfigurationSection> TConfiguration>
 class ConfigurationFile {
 public:
     ConfigurationFile(const FileSystem& fs, const std::string& path)
@@ -356,14 +358,18 @@ namespace std::chrono {
 
 using namespace std::chrono;
 
-template <typename Duration>
-bool convertToJson(const Duration& src, JsonVariant dst) {
+template <typename T>
+concept Duration = requires { typename T::rep; typename T::period; }
+    && std::is_same_v<T, std::chrono::duration<typename T::rep, typename T::period>>;
+
+template <Duration D>
+bool convertToJson(const D& src, JsonVariant dst) {
     return dst.set(src.count());
 }
 
-template <typename Duration>
-void convertFromJson(JsonVariantConst src, Duration& dst) {
-    dst = Duration { src.as<uint64_t>() };
+template <Duration D>
+void convertFromJson(JsonVariantConst src, D& dst) {
+    dst = D { src.as<uint64_t>() };
 }
 
 }    // namespace std::chrono
