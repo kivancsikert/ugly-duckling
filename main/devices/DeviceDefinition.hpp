@@ -63,7 +63,7 @@ public:
         return {};
     }
 
-    virtual std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) {
+    static std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) {
         return nullptr;
     }
 

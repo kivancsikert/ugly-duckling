@@ -110,7 +110,7 @@ extern "C" void app_main() {
 
     // TODO Move battery check before initializing file system
     auto i2c = std::make_shared<I2CManager>();
-    auto battery = deviceDefinition->createBatteryDriver(i2c);
+    auto battery = TDeviceDefinition::createBatteryDriver(i2c);
     std::shared_ptr<BatteryManager> batteryManager;
     if (battery != nullptr) {
         // If the battery voltage is below threshold, we should not boot yet.
