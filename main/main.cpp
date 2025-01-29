@@ -169,11 +169,14 @@ extern "C" void app_main() {
     // TODO This should just be a "load()" call
     ConfigurationFile<MqttDriver::Config> mqttConfigFile(fs, "/mqtt-config.json", mqttConfig);
 
+    auto mqttReadyState = stateManager.createStateSource("mqtt-ready");
+    auto mqtt = std::make_shared<MqttDriver>(wifi->getNetworkReady(), mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState);
+
     // Init real time clock
     auto rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
     auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState);
 
-    auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc);
+    auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
 
     new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, kernel);
 

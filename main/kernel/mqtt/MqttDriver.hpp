@@ -72,7 +72,7 @@ public:
         const std::shared_ptr<Config> config,
         const std::string& instanceName,
         bool powerSaveMode,
-        StateSource& mqttReady)
+        StateSource& ready)
         : networkReady(networkReady)
         , mdns(mdns)
         , configHostname(config->host.get())
@@ -82,7 +82,7 @@ public:
         , configClientKey(joinStrings(config->clientKey.get()))
         , clientId(getClientId(config->clientId.get(), instanceName))
         , powerSaveMode(powerSaveMode)
-        , mqttReady(mqttReady)
+        , ready(ready)
         , eventQueue("mqtt-outgoing", config->queueSize.get())
         , incomingQueue("mqtt-incoming", config->queueSize.get()) {
 
@@ -99,6 +99,10 @@ public:
                 processIncomingMessage(message);
             });
         });
+    }
+
+    State& getReady() {
+        return ready;
     }
 
     void configMqttClient(esp_mqtt_client_config_t& config) {
@@ -418,7 +422,7 @@ private:
                 case MqttState::Connecting:
                     if (now - connectionStarted > MQTT_CONNECTION_TIMEOUT) {
                         LOGTE(Tag::MQTT, "Connecting to MQTT server timed out");
-                        mqttReady.clear();
+                        ready.clear();
                         disconnect();
                         // Make sure we re-lookup the server address when we retry
                         trustMdnsCache = false;
@@ -502,7 +506,7 @@ private:
     }
 
     void disconnect() {
-        mqttReady.clear();
+        ready.clear();
         LOGTD(Tag::MQTT, "Disconnecting from MQTT server");
         ESP_ERROR_CHECK(esp_mqtt_client_disconnect(client));
         stopClient();
@@ -533,13 +537,13 @@ private:
             }
             case MQTT_EVENT_CONNECTED: {
                 LOGTD(Tag::MQTT, "Connected to MQTT server");
-                mqttReady.set();
+                ready.set();
                 eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Connected { (bool) event->session_present });
                 break;
             }
             case MQTT_EVENT_DISCONNECTED: {
                 LOGTD(Tag::MQTT, "Disconnected from MQTT server");
-                mqttReady.clear();
+                ready.clear();
                 eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Disconnected {});
                 break;
             }
@@ -701,7 +705,7 @@ private:
     const std::string clientId;
 
     const bool powerSaveMode;
-    StateSource& mqttReady;
+    StateSource& ready;
 
     std::string hostname;
     uint32_t port;

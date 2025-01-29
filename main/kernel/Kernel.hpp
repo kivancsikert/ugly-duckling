@@ -47,7 +47,8 @@ public:
         std::shared_ptr<I2CManager> i2c,
         std::shared_ptr<WiFiDriver> wifi,
         std::shared_ptr<MdnsDriver> mdns,
-        std::shared_ptr<RtcDriver> rtc)
+        std::shared_ptr<RtcDriver> rtc,
+        std::shared_ptr<MqttDriver> mqtt)
         : version(farmhubVersion)
         , statusLed(statusLed)
         , shutdownManager(shutdownManager)
@@ -55,7 +56,7 @@ public:
         , wifi(wifi)
         , mdns(mdns)
         , rtc(rtc)
-        , mqtt(std::make_shared<MqttDriver>(wifi->getNetworkReady(), mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState))
+        , mqtt(mqtt)
         , i2c(i2c) {
 
         LOGI("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
@@ -141,7 +142,7 @@ private:
             newState = KernelState::NETWORK_CONNECTING;
         } else if (!rtc->getInSync().isSet()) {
             newState = KernelState::RTC_SYNCING;
-        } else if (!mqttReadyState.isSet()) {
+        } else if (!mqtt->getReady().isSet()) {
             // We are waiting for MQTT connection
             newState = KernelState::MQTT_CONNECTING;
         } else if (!kernelReadyState.isSet()) {
@@ -205,7 +206,6 @@ public:
 private:
     KernelState state = KernelState::BOOTING;
     StateManager stateManager;
-    StateSource mqttReadyState = stateManager.createStateSource("mqtt-ready");
     StateSource kernelReadyState = stateManager.createStateSource("kernel-ready");
 
 public:
