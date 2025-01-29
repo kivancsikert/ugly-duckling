@@ -5,9 +5,6 @@
 #include <functional>
 #include <optional>
 
-#include <esp_crt_bundle.h>
-#include <esp_http_client.h>
-#include <esp_https_ota.h>
 #include <esp_system.h>
 
 #include <nvs_flash.h>
@@ -17,7 +14,6 @@
 #include <devices/DeviceConfiguration.hpp>
 
 #include <kernel/FileSystem.hpp>
-#include <kernel/HttpUpdate.hpp>
 #include <kernel/I2CManager.hpp>
 #include <kernel/NetworkUtil.hpp>
 #include <kernel/PowerManager.hpp>
@@ -69,12 +65,6 @@ public:
 
         // TODO Allocate less memory when FARMHUB_DEBUG is disabled
         Task::loop("status-update", 3072, [this](Task&) { updateState(); });
-
-        httpUpdateResult = handleHttpUpdate(fs, wifi);
-        if (!httpUpdateResult.empty()) {
-            LOGE("HTTP update failed because: %s",
-                httpUpdateResult.c_str());
-        }
     }
 
     const State& getRtcInSyncState() const {

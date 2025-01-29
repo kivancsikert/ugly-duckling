@@ -4,6 +4,10 @@
 
 #include <ArduinoJson.h>
 
+#include <esp_crt_bundle.h>
+#include <esp_http_client.h>
+#include <esp_https_ota.h>
+
 #include <kernel/FileSystem.hpp>
 #include <kernel/Log.hpp>
 #include <kernel/PowerManager.hpp>
@@ -44,11 +48,11 @@ static esp_err_t httpEventHandler(esp_http_client_event_t* event) {
     return ESP_OK;
 }
 
-static std::string handleHttpUpdate(FileSystem& fs, std::shared_ptr<WiFiDriver> wifi) {
+static void handleHttpUpdate(FileSystem& fs, std::shared_ptr<WiFiDriver> wifi) {
     // Do we need to update?
     if (!fs.exists(UPDATE_FILE)) {
-        // No update file, nothing to do
-        return "";
+        LOGV("No update file found, not updating");
+        return;
     }
 
     // Don't sleep while we are performing the update
@@ -56,21 +60,24 @@ static std::string handleHttpUpdate(FileSystem& fs, std::shared_ptr<WiFiDriver> 
 
     auto contents = fs.readAll(UPDATE_FILE);
     if (!contents.has_value()) {
-        return "Failed to read update file";
+        LOGE("Failed to read update file");
     }
     JsonDocument doc;
     auto error = deserializeJson(doc, contents.value());
     int deleteError = fs.remove(UPDATE_FILE);
     if (deleteError) {
-        return "Failed to delete update file";
+        LOGE("Failed to delete update file");
+        return;
     }
 
     if (error) {
-        return "Failed to parse update.json: " + std::string(error.c_str());
+        LOGE("Failed to parse update.json: %s", error.c_str());
+        return;
     }
     std::string url = doc["url"];
     if (url.empty()) {
-        return "Command contains empty url";
+        LOGE("Update command contains empty url");
+        return;
     }
 
     LOGI("Updating from version %s via URL %s",
@@ -78,7 +85,8 @@ static std::string handleHttpUpdate(FileSystem& fs, std::shared_ptr<WiFiDriver> 
 
     LOGD("Waiting for network...");
     if (!wifi->getNetworkReady().awaitSet(15s)) {
-        return "Network not ready, aborting update";
+        LOGE("Network not ready, aborting update");
+        return;
     }
 
     esp_http_client_config_t httpConfig = {
@@ -103,7 +111,7 @@ static std::string handleHttpUpdate(FileSystem& fs, std::shared_ptr<WiFiDriver> 
     } else {
         LOGE("Update failed (%s), continuing with regular boot",
             esp_err_to_name(ret));
-        return std::string("Firmware upgrade failed: ") + esp_err_to_name(ret);
+        return;
     }
 }
 

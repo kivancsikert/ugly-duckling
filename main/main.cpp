@@ -14,7 +14,10 @@ static const char* const farmhubVersion = esp_app_get_description()->version;
 
 #include <kernel/BatteryManager.hpp>
 #include <kernel/Console.hpp>
+#include <kernel/HttpUpdate.hpp>
 #include <kernel/Log.hpp>
+
+using namespace farmhub::kernel;
 
 #ifdef CONFIG_HEAP_TRACING
 #include <esp_heap_trace.h>
@@ -148,7 +151,8 @@ extern "C" void app_main() {
 
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
 
-    // TODO Handle HTTP update here
+    // Reboots if update is successful
+    handleHttpUpdate(fs, wifi);
 
     auto shutdownManager = std::make_shared<ShutdownManager>();
     std::shared_ptr<BatteryManager> batteryManager;
