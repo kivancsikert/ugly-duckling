@@ -180,7 +180,7 @@ extern "C" void app_main() {
 
     auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, kernel);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, logRecords, kernel);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
