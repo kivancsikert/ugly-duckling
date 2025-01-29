@@ -12,8 +12,9 @@
 
 static const char* const farmhubVersion = esp_app_get_description()->version;
 
-#include <kernel/Log.hpp>
 #include <kernel/BatteryManager.hpp>
+#include <kernel/Console.hpp>
+#include <kernel/Log.hpp>
 
 #ifdef CONFIG_HEAP_TRACING
 #include <esp_heap_trace.h>
@@ -120,6 +121,10 @@ extern "C" void app_main() {
     auto deviceConfig = std::make_shared<TDeviceConfiguration>();
     // TODO This should just be a "load()" call
     ConfigurationFile<TDeviceConfiguration> deviceConfigFile(fs, "/device-config.json", deviceConfig);
+
+    auto logRecords = std::make_shared<Queue<LogRecord>>("logs", 32);
+    ConsoleProvider::init(logRecords, deviceConfig->publishLogs.get());
+
     auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
 
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);

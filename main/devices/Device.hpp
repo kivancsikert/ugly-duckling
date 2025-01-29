@@ -13,7 +13,6 @@
 #include <kernel/BootClock.hpp>
 #include <kernel/Command.hpp>
 #include <kernel/Concurrent.hpp>
-#include <kernel/Console.hpp>
 #include <kernel/Kernel.hpp>
 #include <kernel/Strings.hpp>
 #include <kernel/Task.hpp>
@@ -203,12 +202,10 @@ private:
 class ConfiguredKernel {
 public:
     ConfiguredKernel(
-        Queue<LogRecord>& logRecords,
         std::shared_ptr<TDeviceConfiguration> deviceConfig,
         std::shared_ptr<BatteryManager> battery,
         std::shared_ptr<Kernel> kernel)
         : kernel(kernel)
-        , consoleProvider(logRecords, deviceConfig->publishLogs.get())
         , battery(battery) {
 
         LOGD("   ______                   _    _       _");
@@ -221,7 +218,6 @@ public:
     }
 
     const std::shared_ptr<Kernel> kernel;
-    ConsoleProvider consoleProvider;
     const std::shared_ptr<BatteryManager> battery;
 
 private:
@@ -241,7 +237,7 @@ public:
         , instance(deviceConfig->instance.get())
         , deviceDefinition(deviceDefinition)
         , kernel(kernel)
-        , configuredKernel(logRecords, deviceConfig, battery, kernel) {
+        , configuredKernel(deviceConfig, battery, kernel) {
         kernel->switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 15s) {
                 LOGI("Factory reset triggered after %lld ms", duration.count());

@@ -6,6 +6,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include <kernel/Log.hpp>
 #include <kernel/Time.hpp>
 
 using namespace std::chrono;
