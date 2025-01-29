@@ -100,8 +100,14 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
 
+    auto fs = FileSystem::get();
+
+    auto mqttConfig = std::make_shared<MqttDriver::Config>();
+    // TODO This should just be a "load()" call
+    ConfigurationFile<MqttDriver::Config> mqttConfigFile(fs, "/mqtt-config.json", mqttConfig);
+
     auto deviceDefinition = std::make_shared<TDeviceDefinition>();
-    auto kernel = std::make_shared<Kernel>(deviceDefinition->config, deviceDefinition->mqttConfig, deviceDefinition->statusLed);
+    auto kernel = std::make_shared<Kernel>(deviceDefinition->config, mqttConfig, deviceDefinition->statusLed);
 
     new farmhub::devices::Device(deviceDefinition, kernel);
 

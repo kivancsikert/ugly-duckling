@@ -76,11 +76,9 @@ public:
     const InternalPinPtr bootPin;
 
     std::shared_ptr<TDeviceConfiguration> config = std::make_shared<TDeviceConfiguration>();
-    std::shared_ptr<MqttDriver::Config> mqttConfig = std::make_shared<MqttDriver::Config>();
 
 private:
     ConfigurationFile<TDeviceConfiguration> configFile { FileSystem::get(), "/device-config.json", config };
-    ConfigurationFile<MqttDriver::Config> mqttConfigFile { FileSystem::get(), "/mqtt-config.json", mqttConfig };
 
     I2CEnvironmentFactory<Sht3xComponent> sht3xFactory { "sht3x", 0x44 /* Also supports 0x45 */ };
     // TODO Unify these two factories
