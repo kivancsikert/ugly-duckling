@@ -258,9 +258,10 @@ private:
 
 class ConfiguredKernel {
 public:
-    ConfiguredKernel(Queue<LogRecord>& logRecords)
-        : consoleProvider(logRecords, deviceDefinition.config->publishLogs.get())
-        , battery(deviceDefinition.createBatteryDriver(kernel.i2c)) {
+    ConfiguredKernel(Queue<LogRecord>& logRecords, std::shared_ptr<TDeviceDefinition> deviceDefinition)
+        : deviceDefinition(deviceDefinition)
+        , consoleProvider(logRecords, deviceDefinition->config->publishLogs.get())
+        , battery(deviceDefinition->createBatteryDriver(kernel.i2c)) {
         if (battery != nullptr) {
             // If the battery voltage is below threshold, we should not boot yet.
             // This is to prevent the device from booting and immediately shutting down
@@ -294,9 +295,9 @@ public:
         return batteryVoltage.getAverage();
     }
 
-    TDeviceDefinition deviceDefinition;
+    const std::shared_ptr<TDeviceDefinition> deviceDefinition;
     ConsoleProvider consoleProvider;
-    Kernel<TDeviceConfiguration> kernel { deviceDefinition.config, deviceDefinition.mqttConfig, deviceDefinition.statusLed };
+    Kernel<TDeviceConfiguration> kernel { deviceDefinition->config, deviceDefinition->mqttConfig, deviceDefinition->statusLed };
     const shared_ptr<BatteryDriver> battery;
 
 private:
@@ -377,8 +378,9 @@ private:
 
 class Device {
 public:
-    Device() {
-        kernel.switches.onReleased("factory-reset", deviceDefinition.bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
+    Device(std::shared_ptr<TDeviceDefinition> deviceDefinition)
+    : deviceDefinition(deviceDefinition) {
+        kernel.switches.onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 15s) {
                 LOGI("Factory reset triggered after %lld ms", duration.count());
                 kernel.performFactoryReset(true);
@@ -405,7 +407,7 @@ public:
 #endif
         deviceTelemetryCollector.registerProvider("pm", std::make_shared<PowerManagementTelemetryProvider>(kernel.powerManager));
 
-        deviceDefinition.registerPeripheralFactories(peripheralManager);
+        deviceDefinition->registerPeripheralFactories(peripheralManager);
 
         mqttDeviceRoot->registerCommand(echoCommand);
         mqttDeviceRoot->registerCommand(pingCommand);
@@ -448,7 +450,7 @@ public:
         JsonDocument peripheralsInitDoc;
         JsonArray peripheralsInitJson = peripheralsInitDoc.to<JsonArray>();
 
-        auto builtInPeripheralsConfig = deviceDefinition.getBuiltInPeripherals();
+        auto builtInPeripheralsConfig = deviceDefinition->getBuiltInPeripherals();
         LOGD("Loading configuration for %d built-in peripherals",
             builtInPeripheralsConfig.size());
         for (auto& peripheralConfig : builtInPeripheralsConfig) {
@@ -630,13 +632,13 @@ private:
     }
 
     Queue<LogRecord> logRecords { "logs", 32 };
-    ConfiguredKernel configuredKernel { logRecords };
+    const std::shared_ptr<TDeviceDefinition> deviceDefinition;
+    const std::shared_ptr<TDeviceConfiguration> deviceConfig = deviceDefinition->config;
+    ConfiguredKernel configuredKernel { logRecords, deviceDefinition };
     Kernel<TDeviceConfiguration>& kernel = configuredKernel.kernel;
-    TDeviceDefinition& deviceDefinition = configuredKernel.deviceDefinition;
-    std::shared_ptr<TDeviceConfiguration> deviceConfig = deviceDefinition.config;
 
     shared_ptr<MqttRoot> mqttDeviceRoot = kernel.mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig->instance.get());
-    PeripheralManager peripheralManager { kernel.i2c, deviceDefinition.pcnt, deviceDefinition.pulseCounterManager, deviceDefinition.pwm, kernel.switches, mqttDeviceRoot };
+    PeripheralManager peripheralManager { kernel.i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, kernel.switches, mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };

@@ -107,7 +107,7 @@ public:
         peripheralManager.registerFactory(chickenDoorFactory);
     }
 
-    LedDriver secondaryStatusLed { "status-2", pins::STATUS2 };
+    shared_ptr<LedDriver> secondaryStatusLed { make_shared<LedDriver>("status-2", pins::STATUS2) };
 
     Drv8833Driver motorDriver {
         pwm,

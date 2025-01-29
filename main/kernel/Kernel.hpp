@@ -44,7 +44,7 @@ static constexpr const char* UPDATE_FILE = "/update.json";
 template <std::derived_from<DeviceConfiguration> TDeviceConfiguration>
 class Kernel {
 public:
-    Kernel(std::shared_ptr<TDeviceConfiguration> deviceConfig, std::shared_ptr<MqttDriver::Config> mqttConfig, LedDriver& statusLed)
+    Kernel(std::shared_ptr<TDeviceConfiguration> deviceConfig, std::shared_ptr<MqttDriver::Config> mqttConfig, std::shared_ptr<LedDriver> statusLed)
         : version(farmhubVersion)
         , deviceConfig(deviceConfig)
         , mqttConfig(mqttConfig)
@@ -94,17 +94,17 @@ public:
     void performFactoryReset(bool completeReset) {
         LOGI("Performing factory reset");
 
-        statusLed.turnOn();
+        statusLed->turnOn();
         Task::delay(1s);
-        statusLed.turnOff();
+        statusLed->turnOff();
         Task::delay(1s);
-        statusLed.turnOn();
+        statusLed->turnOn();
 
         if (completeReset) {
             Task::delay(1s);
-            statusLed.turnOff();
+            statusLed->turnOff();
             Task::delay(1s);
-            statusLed.turnOn();
+            statusLed->turnOn();
 
             LOGI(" - Deleting the file system...");
             FileSystem::format();
@@ -161,28 +161,28 @@ private:
             state = newState;
             switch (newState) {
                 case KernelState::BOOTING:
-                    statusLed.turnOff();
+                    statusLed->turnOff();
                     break;
                 case KernelState::NETWORK_CONNECTING:
-                    statusLed.blink(200ms);
+                    statusLed->blink(200ms);
                     break;
                 case KernelState::NETWORK_CONFIGURING:
-                    statusLed.blinkPattern({ 100ms, -100ms, 100ms, -100ms, 100ms, -500ms });
+                    statusLed->blinkPattern({ 100ms, -100ms, 100ms, -100ms, 100ms, -500ms });
                     break;
                 case KernelState::RTC_SYNCING:
-                    statusLed.blink(500ms);
+                    statusLed->blink(500ms);
                     break;
                 case KernelState::MQTT_CONNECTING:
-                    statusLed.blink(1000ms);
+                    statusLed->blink(1000ms);
                     break;
                 case KernelState::INIT_FINISHING:
-                    statusLed.blink(1500ms);
+                    statusLed->blink(1500ms);
                     break;
                 case KernelState::TRANSMITTING:
-                    statusLed.turnOff();
+                    statusLed->turnOff();
                     break;
                 case KernelState::IDLE:
-                    statusLed.turnOff();
+                    statusLed->turnOff();
                     break;
             };
         }
@@ -282,6 +282,8 @@ private:
     }
 
     std::shared_ptr<TDeviceConfiguration> deviceConfig;
+    std::shared_ptr<MqttDriver::Config> mqttConfig;
+    std::shared_ptr<LedDriver> statusLed;
 
 public:
     // TODO Make this configurable
@@ -295,9 +297,6 @@ public:
     PowerManager powerManager { deviceConfig->sleepWhenIdle.get() };
 
 private:
-    std::shared_ptr<MqttDriver::Config> mqttConfig;
-
-    LedDriver& statusLed;
     KernelState state = KernelState::BOOTING;
     StateManager stateManager;
     StateSource networkConnectingState = stateManager.createStateSource("network-connecting");

@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <memory>
 #include <string>
 
 #include <esp_app_desc.h>
@@ -99,7 +100,9 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
 
-    new farmhub::devices::Device();
+    std::shared_ptr<TDeviceDefinition> deviceDefinition = std::make_shared<TDeviceDefinition>();
+
+    new farmhub::devices::Device(deviceDefinition);
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
     Task::loop("task-heaps", 4096, [](Task& task) {

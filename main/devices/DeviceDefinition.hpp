@@ -37,7 +37,7 @@ template <std::derived_from<DeviceConfiguration> TDeviceConfiguration>
 class DeviceDefinition {
 public:
     DeviceDefinition(PinPtr statusPin, InternalPinPtr bootPin)
-        : statusLed("status", statusPin)
+        : statusLed(make_shared<LedDriver>("status", statusPin))
         , bootPin(bootPin) {
     }
 
@@ -69,7 +69,7 @@ public:
     }
 
 public:
-    LedDriver statusLed;
+    std::shared_ptr<LedDriver> statusLed;
     PcntManager pcnt;
     PulseCounterManager pulseCounterManager;
     PwmManager pwm;
