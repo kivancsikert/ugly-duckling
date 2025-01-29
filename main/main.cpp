@@ -82,6 +82,20 @@ static void dumpPerTaskHeapInfo() {
 #include <devices/Device.hpp>
 
 extern "C" void app_main() {
+    auto i2c = std::make_shared<I2CManager>();
+    auto battery = TDeviceDefinition::createBatteryDriver(i2c);
+    if (battery != nullptr) {
+        // If the battery voltage is below threshold, we should not boot yet.
+        // This is to prevent the device from booting and immediately shutting down
+        // due to the high current draw of the boot process.
+        auto voltage = battery->getVoltage();
+        if (voltage != 0.0 && voltage < BATTERY_BOOT_THRESHOLD) {
+            ESP_LOGW("battery", "Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
+                voltage, BATTERY_BOOT_THRESHOLD);
+            enterLowPowerDeepSleep();
+        }
+    }
+
     Log::init();
 
     // Initialize NVS
@@ -108,27 +122,12 @@ extern "C" void app_main() {
     ConfigurationFile<TDeviceConfiguration> deviceConfigFile(fs, "/device-config.json", deviceConfig);
     auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
 
-    // TODO Move battery check before initializing file system
-    auto i2c = std::make_shared<I2CManager>();
-    auto battery = TDeviceDefinition::createBatteryDriver(i2c);
-    std::shared_ptr<BatteryManager> batteryManager;
-    if (battery != nullptr) {
-        // If the battery voltage is below threshold, we should not boot yet.
-        // This is to prevent the device from booting and immediately shutting down
-        // due to the high current draw of the boot process.
-        auto voltage = battery->getVoltage();
-        if (voltage != 0.0 && voltage < BATTERY_BOOT_THRESHOLD) {
-            ESP_LOGW("battery", "Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
-                voltage, BATTERY_BOOT_THRESHOLD);
-            enterLowPowerDeepSleep();
-        }
-    }
-
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
 
     // TODO Handle HTTP update here
 
     auto shutdownManager = std::make_shared<ShutdownManager>();
+    std::shared_ptr<BatteryManager> batteryManager;
     if (battery != nullptr) {
         batteryManager = std::make_shared<BatteryManager>(battery, BATTERY_SHUTDOWN_THRESHOLD, shutdownManager);
     }
