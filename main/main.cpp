@@ -125,6 +125,14 @@ extern "C" void app_main() {
     auto logRecords = std::make_shared<Queue<LogRecord>>("logs", 32);
     ConsoleProvider::init(logRecords, deviceConfig->publishLogs.get());
 
+    LOGD("   ______                   _    _       _");
+    LOGD("  |  ____|                 | |  | |     | |");
+    LOGD("  | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__");
+    LOGD("  |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\");
+    LOGD("  | | | (_| | |  | | | | | | |  | | |_| | |_) |");
+    LOGD("  |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s", farmhubVersion);
+    LOGD("  ");
+
     auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
 
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);

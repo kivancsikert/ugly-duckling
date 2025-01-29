@@ -207,14 +207,6 @@ public:
         std::shared_ptr<Kernel> kernel)
         : kernel(kernel)
         , battery(battery) {
-
-        LOGD("   ______                   _    _       _");
-        LOGD("  |  ____|                 | |  | |     | |");
-        LOGD("  | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__");
-        LOGD("  |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\");
-        LOGD("  | | | (_| | |  | | | | | | |  | | |_| | |_) |");
-        LOGD("  |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s", farmhubVersion);
-        LOGD("  ");
     }
 
     const std::shared_ptr<Kernel> kernel;
