@@ -82,12 +82,10 @@ public:
     }
 };
 
-class UglyDucklingMk7 : public DeviceDefinition<Mk7Config> {
+class UglyDucklingMk7 : public DeviceDefinition {
 public:
-    UglyDucklingMk7()
-        : DeviceDefinition<Mk7Config>(
-              pins::STATUS,
-              pins::BOOT) {
+    UglyDucklingMk7(shared_ptr<Mk7Config> config)
+        : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
     virtual std::shared_ptr<BatteryDriver> createBatteryDriver(I2CManager& i2c) override {

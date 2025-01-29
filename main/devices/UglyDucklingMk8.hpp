@@ -27,12 +27,10 @@ public:
     }
 };
 
-class UglyDucklingMk8 : public DeviceDefinition<Mk8Config> {
+class UglyDucklingMk8 : public DeviceDefinition {
 public:
-    UglyDucklingMk8()
-        : DeviceDefinition<Mk8Config>(
-              pins::STATUS,
-              pins::BOOT) {
+    UglyDucklingMk8(shared_ptr<Mk8Config> config)
+        : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
     void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {

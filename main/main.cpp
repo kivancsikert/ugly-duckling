@@ -100,19 +100,24 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
 
-    auto deviceDefinition = std::make_shared<TDeviceDefinition>();
+    auto fs = FileSystem::get();
+
+    auto deviceConfig = std::make_shared<TDeviceConfiguration>();
+    // TODO This should just be a "load()" call
+    ConfigurationFile<TDeviceConfiguration> deviceConfigFile(fs, "/device-config.json", deviceConfig);
+
+    auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
 
     // TODO Handle HTTP update here
 
-    auto fs = FileSystem::get();
     auto mqttConfig = std::make_shared<MqttDriver::Config>();
     // TODO This should just be a "load()" call
     ConfigurationFile<MqttDriver::Config> mqttConfigFile(fs, "/mqtt-config.json", mqttConfig);
 
-    auto kernel = std::make_shared<Kernel>(deviceDefinition->config, mqttConfig, statusLed);
+    auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed);
 
-    new farmhub::devices::Device(deviceDefinition, kernel);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, kernel);
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
     Task::loop("task-heaps", 4096, [](Task& task) {

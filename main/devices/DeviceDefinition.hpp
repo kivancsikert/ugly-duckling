@@ -33,7 +33,6 @@ using namespace farmhub::peripherals::environment;
 
 namespace farmhub::devices {
 
-template <std::derived_from<DeviceConfiguration> TDeviceConfiguration>
 class DeviceDefinition {
 public:
     DeviceDefinition(PinPtr statusPin, InternalPinPtr bootPin)
@@ -75,11 +74,8 @@ public:
     PcntManager pcnt;
     PulseCounterManager pulseCounterManager;
     PwmManager pwm;
-    std::shared_ptr<TDeviceConfiguration> config = std::make_shared<TDeviceConfiguration>();
 
 private:
-    ConfigurationFile<TDeviceConfiguration> configFile { FileSystem::get(), "/device-config.json", config };
-
     I2CEnvironmentFactory<Sht3xComponent> sht3xFactory { "sht3x", 0x44 /* Also supports 0x45 */ };
     // TODO Unify these two factories
     I2CEnvironmentFactory<Sht2xComponent> sht2xFactory { "sht2x", 0x40 /* Not configurable */ };

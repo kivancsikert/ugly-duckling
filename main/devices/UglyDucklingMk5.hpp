@@ -75,12 +75,10 @@ static InternalPinPtr RXD0 = InternalPin::registerPin("RXD0", GPIO_NUM_44);
 static InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43);
 }    // namespace pins
 
-class UglyDucklingMk5 : public DeviceDefinition<Mk5Config> {
+class UglyDucklingMk5 : public DeviceDefinition {
 public:
-    UglyDucklingMk5()
-        : DeviceDefinition<Mk5Config>(
-              pins::STATUS,
-              pins::BOOT) {
+    UglyDucklingMk5(shared_ptr<Mk5Config> config)
+        : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
     void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {

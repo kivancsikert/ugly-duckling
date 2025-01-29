@@ -84,12 +84,11 @@ public:
     Property<PinPtr> motorNSleepPin { this, "motorNSleepPin", pins::IOC2 };
 };
 
-class UglyDucklingMk6 : public DeviceDefinition<Mk6Config> {
+class UglyDucklingMk6 : public DeviceDefinition {
 public:
-    UglyDucklingMk6()
-        : DeviceDefinition<Mk6Config>(
-              pins::STATUS,
-              pins::BOOT) {
+    UglyDucklingMk6(shared_ptr<Mk6Config> config)
+        : DeviceDefinition(pins::STATUS, pins::BOOT)
+        , motorDriver(pwm, pins::AIN1, pins::AIN2, pins::BIN1, pins::BIN2, pins::NFault, config->motorNSleepPin.get()) {
         // Switch off strapping pin
         // TODO: Add a LED driver instead
         pins::LEDA_RED->pinMode(Pin::Mode::Output);
@@ -109,15 +108,7 @@ public:
 
     shared_ptr<LedDriver> secondaryStatusLed { make_shared<LedDriver>("status-2", pins::STATUS2) };
 
-    Drv8833Driver motorDriver {
-        pwm,
-        pins::AIN1,
-        pins::AIN2,
-        pins::BIN1,
-        pins::BIN2,
-        pins::NFault,
-        config->motorNSleepPin.get()
-    };
+    Drv8833Driver motorDriver;
 
     const ServiceRef<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
     const ServiceRef<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };

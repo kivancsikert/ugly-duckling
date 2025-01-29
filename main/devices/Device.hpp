@@ -260,12 +260,12 @@ class ConfiguredKernel {
 public:
     ConfiguredKernel(
         Queue<LogRecord>& logRecords,
-        std::shared_ptr<TDeviceDefinition> deviceDefinition,
+        std::shared_ptr<TDeviceConfiguration> deviceConfig,
+        std::shared_ptr<BatteryDriver> battery,
         std::shared_ptr<Kernel> kernel)
-        : deviceDefinition(deviceDefinition)
-        , kernel(kernel)
-        , consoleProvider(logRecords, deviceDefinition->config->publishLogs.get())
-        , battery(deviceDefinition->createBatteryDriver(kernel->i2c)) {
+        : kernel(kernel)
+        , consoleProvider(logRecords, deviceConfig->publishLogs.get())
+        , battery(battery) {
         if (battery != nullptr) {
             // If the battery voltage is below threshold, we should not boot yet.
             // This is to prevent the device from booting and immediately shutting down
@@ -299,7 +299,6 @@ public:
         return batteryVoltage.getAverage();
     }
 
-    const std::shared_ptr<TDeviceDefinition> deviceDefinition;
     const std::shared_ptr<Kernel> kernel;
     ConsoleProvider consoleProvider;
     const shared_ptr<BatteryDriver> battery;
@@ -382,9 +381,15 @@ private:
 
 class Device {
 public:
-    Device(std::shared_ptr<TDeviceDefinition> deviceDefinition, std::shared_ptr<Kernel> kernel)
-    : deviceDefinition(deviceDefinition)
-    , kernel(kernel) {
+    Device(
+        const std::shared_ptr<TDeviceConfiguration> deviceConfig,
+        const std::shared_ptr<TDeviceDefinition> deviceDefinition,
+        std::shared_ptr<Kernel> kernel)
+        : location(deviceConfig->location.get())
+        , instance(deviceConfig->instance.get())
+        , deviceDefinition(deviceDefinition)
+        , kernel(kernel)
+        , configuredKernel(logRecords, deviceConfig, deviceDefinition->createBatteryDriver(kernel->i2c), kernel) {
         kernel->switches.onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 15s) {
                 LOGI("Factory reset triggered after %lld ms", duration.count());
@@ -426,9 +431,11 @@ public:
         mqttDeviceRoot->registerCommand(fileRemoveCommand);
         mqttDeviceRoot->registerCommand(httpUpdateCommand);
 
-        Task::loop("mqtt:log", 3072, [this](Task& task) {
+        auto publishLogs = deviceConfig->publishLogs.get();
+
+        Task::loop("mqtt:log", 3072, [this, publishLogs](Task& task) {
             logRecords.take([&](const LogRecord& record) {
-                if (record.level > deviceConfig->publishLogs.get()) {
+                if (record.level > publishLogs) {
                     return;
                 }
                 auto length = record.message.length();
@@ -500,7 +507,8 @@ public:
             },
             Retention::NoRetain, QoS::AtLeastOnce, 5s);
 
-        Task::loop("telemetry", 8192, [this](Task& task) {
+        auto publishInterval = deviceConfig->publishInterval.get();
+        Task::loop("telemetry", 8192, [this, publishInterval](Task& task) {
             task.markWakeTime();
 
             publishTelemetry();
@@ -514,7 +522,7 @@ public:
             task.delay(task.ticksUntil(debounceInterval));
 
             // Allow other tasks to trigger telemetry updates
-            auto timeout = task.ticksUntil(deviceConfig->publishInterval.get() - debounceInterval);
+            auto timeout = task.ticksUntil(publishInterval - debounceInterval);
             telemetryPublishQueue.pollIn(timeout);
         });
 
@@ -543,11 +551,7 @@ private:
     }
 
     std::string locationPrefix() {
-        if (deviceConfig->location.hasValue()) {
-            return deviceConfig->location.get() + "/";
-        } else {
-            return "";
-        }
+        return location.empty() ? "" : location + "/";
     }
 
     void reportPreviousCrashIfAny(JsonObject& json) {
@@ -637,12 +641,13 @@ private:
     }
 
     Queue<LogRecord> logRecords { "logs", 32 };
+    const std::string location;
+    const std::string instance;
     const std::shared_ptr<TDeviceDefinition> deviceDefinition;
-    const std::shared_ptr<TDeviceConfiguration> deviceConfig = deviceDefinition->config;
     const std::shared_ptr<Kernel> kernel;
-    ConfiguredKernel configuredKernel { logRecords, deviceDefinition, kernel };
+    ConfiguredKernel configuredKernel;
 
-    shared_ptr<MqttRoot> mqttDeviceRoot = kernel->mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + deviceConfig->instance.get());
+    shared_ptr<MqttRoot> mqttDeviceRoot = kernel->mqtt.forRoot(locationPrefix() + "devices/ugly-duckling/" + instance);
     PeripheralManager peripheralManager { kernel->i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, kernel->switches, mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;
