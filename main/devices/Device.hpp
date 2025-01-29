@@ -267,16 +267,6 @@ public:
         , consoleProvider(logRecords, deviceConfig->publishLogs.get())
         , battery(battery) {
         if (battery != nullptr) {
-            // If the battery voltage is below threshold, we should not boot yet.
-            // This is to prevent the device from booting and immediately shutting down
-            // due to the high current draw of the boot process.
-            auto voltage = battery->getVoltage();
-            if (voltage != 0.0 && voltage < BATTERY_BOOT_THRESHOLD) {
-                ESP_LOGW("battery", "Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
-                    voltage, BATTERY_BOOT_THRESHOLD);
-                enterLowPowerDeepSleep();
-            }
-
             Task::loop("battery", 2560, [this](Task& task) {
                 checkBatteryVoltage(task);
             });
@@ -334,20 +324,8 @@ private:
         }
     }
 
-    [[noreturn]] inline void enterLowPowerDeepSleep() {
-        printf("Entering low power deep sleep\n");
-        esp_deep_sleep(duration_cast<microseconds>(LOW_POWER_SLEEP_CHECK_INTERVAL).count());
-        // Signal to the compiler that we are not returning for real
-        abort();
-    }
-
     MovingAverage<double> batteryVoltage { 5 };
     std::list<std::function<void()>> shutdownListeners;
-
-    /**
-     * @brief Time to wait between battery checks.
-     */
-    static constexpr auto LOW_POWER_SLEEP_CHECK_INTERVAL = 10s;
 
     /**
      * @brief How often we check the battery voltage while in operation.
@@ -384,12 +362,13 @@ public:
     Device(
         const std::shared_ptr<TDeviceConfiguration> deviceConfig,
         const std::shared_ptr<TDeviceDefinition> deviceDefinition,
+        std::shared_ptr<BatteryDriver> battery,
         std::shared_ptr<Kernel> kernel)
         : location(deviceConfig->location.get())
         , instance(deviceConfig->instance.get())
         , deviceDefinition(deviceDefinition)
         , kernel(kernel)
-        , configuredKernel(logRecords, deviceConfig, deviceDefinition->createBatteryDriver(kernel->i2c), kernel) {
+        , configuredKernel(logRecords, deviceConfig, battery, kernel) {
         kernel->switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 15s) {
                 LOGI("Factory reset triggered after %lld ms", duration.count());

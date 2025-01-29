@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <limits>
 
 #include <kernel/Pin.hpp>
@@ -8,6 +9,18 @@
 using farmhub::kernel::PinPtr;
 
 namespace farmhub::kernel::drivers {
+
+/**
+ * @brief Time to wait between battery checks.
+ */
+static constexpr microseconds LOW_POWER_SLEEP_CHECK_INTERVAL = 10s;
+
+[[noreturn]] inline void enterLowPowerDeepSleep() {
+    printf("Entering low power deep sleep\n");
+    esp_deep_sleep(duration_cast<microseconds>(LOW_POWER_SLEEP_CHECK_INTERVAL).count());
+    // Signal to the compiler that we are not returning for real
+    abort();
+}
 
 class BatteryDriver : public TelemetryProvider {
 public:

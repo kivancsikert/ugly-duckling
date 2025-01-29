@@ -107,8 +107,23 @@ extern "C" void app_main() {
     auto deviceConfig = std::make_shared<TDeviceConfiguration>();
     // TODO This should just be a "load()" call
     ConfigurationFile<TDeviceConfiguration> deviceConfigFile(fs, "/device-config.json", deviceConfig);
-
     auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
+
+    auto battery = deviceDefinition->createBatteryDriver(i2c);
+    if (battery != nullptr) {
+        // If the battery voltage is below threshold, we should not boot yet.
+        // This is to prevent the device from booting and immediately shutting down
+        // due to the high current draw of the boot process.
+        auto voltage = battery->getVoltage();
+        if (voltage != 0.0 && voltage < BATTERY_BOOT_THRESHOLD) {
+            ESP_LOGW("battery", "Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
+                voltage, BATTERY_BOOT_THRESHOLD);
+            enterLowPowerDeepSleep();
+        }
+
+        // TODO Move the battery check task here
+    }
+
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
 
     // TODO Handle HTTP update here
@@ -119,7 +134,7 @@ extern "C" void app_main() {
 
     auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, i2c);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, kernel);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, battery, kernel);
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
     Task::loop("task-heaps", 4096, [](Task& task) {
