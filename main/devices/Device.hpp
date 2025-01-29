@@ -114,6 +114,7 @@ public:
         const std::shared_ptr<TDeviceDefinition> deviceDefinition,
         std::shared_ptr<BatteryManager> battery,
         std::shared_ptr<PowerManager> powerManager,
+        std::shared_ptr<Queue<LogRecord>> logRecords,
         std::shared_ptr<Kernel> kernel)
         : location(deviceConfig->location.get())
         , instance(deviceConfig->instance.get())
@@ -166,8 +167,8 @@ public:
 
         auto publishLogs = deviceConfig->publishLogs.get();
 
-        Task::loop("mqtt:log", 3072, [this, publishLogs](Task& task) {
-            logRecords.take([&](const LogRecord& record) {
+        Task::loop("mqtt:log", 3072, [this, publishLogs, logRecords](Task& task) {
+            logRecords->take([&](const LogRecord& record) {
                 if (record.level > publishLogs) {
                     return;
                 }
@@ -373,7 +374,6 @@ private:
 #endif
     }
 
-    Queue<LogRecord> logRecords { "logs", 32 };
     const std::string location;
     const std::string instance;
     const std::shared_ptr<TDeviceDefinition> deviceDefinition;
