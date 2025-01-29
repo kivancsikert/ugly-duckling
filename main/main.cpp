@@ -13,6 +13,7 @@
 static const char* const farmhubVersion = esp_app_get_description()->version;
 
 #include <kernel/Log.hpp>
+#include <kernel/BatteryManager.hpp>
 
 #ifdef CONFIG_HEAP_TRACING
 #include <esp_heap_trace.h>
@@ -100,8 +101,6 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
 
-    auto i2c = std::make_shared<I2CManager>();
-
     auto fs = FileSystem::get();
 
     auto deviceConfig = std::make_shared<TDeviceConfiguration>();
@@ -109,7 +108,10 @@ extern "C" void app_main() {
     ConfigurationFile<TDeviceConfiguration> deviceConfigFile(fs, "/device-config.json", deviceConfig);
     auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
 
+    // TODO Move battery check before initializing file system
+    auto i2c = std::make_shared<I2CManager>();
     auto battery = deviceDefinition->createBatteryDriver(i2c);
+    shared_ptr<BatteryManager> batteryManager;
     if (battery != nullptr) {
         // If the battery voltage is below threshold, we should not boot yet.
         // This is to prevent the device from booting and immediately shutting down
@@ -120,21 +122,24 @@ extern "C" void app_main() {
                 voltage, BATTERY_BOOT_THRESHOLD);
             enterLowPowerDeepSleep();
         }
-
-        // TODO Move the battery check task here
     }
 
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
 
     // TODO Handle HTTP update here
 
+    auto shutdownManager = std::make_shared<ShutdownManager>();
+    if (battery != nullptr) {
+        batteryManager = std::make_shared<BatteryManager>(battery, BATTERY_SHUTDOWN_THRESHOLD, shutdownManager);
+    }
+
     auto mqttConfig = std::make_shared<MqttDriver::Config>();
     // TODO This should just be a "load()" call
     ConfigurationFile<MqttDriver::Config> mqttConfigFile(fs, "/mqtt-config.json", mqttConfig);
 
-    auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, i2c);
+    auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, battery, kernel);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, kernel);
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
     Task::loop("task-heaps", 4096, [](Task& task) {

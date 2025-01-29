@@ -21,6 +21,7 @@
 #include <kernel/NetworkUtil.hpp>
 #include <kernel/PowerManager.hpp>
 #include <kernel/StateManager.hpp>
+#include <kernel/ShutdownManager.hpp>
 #include <kernel/Watchdog.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 #include <kernel/drivers/MdnsDriver.hpp>
@@ -47,9 +48,11 @@ public:
         std::shared_ptr<DeviceConfiguration> deviceConfig,
         std::shared_ptr<MqttDriver::Config> mqttConfig,
         std::shared_ptr<LedDriver> statusLed,
+        std::shared_ptr<ShutdownManager> shutdownManager,
         std::shared_ptr<I2CManager> i2c)
         : version(farmhubVersion)
         , statusLed(statusLed)
+        , shutdownManager(shutdownManager)
         , powerManager(deviceConfig->sleepWhenIdle.get())
         , wifi(networkConnectingState, networkReadyState, configPortalRunningState, deviceConfig->getHostname(), deviceConfig->sleepWhenIdle.get())
         , mdns(networkReadyState, deviceConfig->getHostname(), "ugly-duckling", version, mdnsReadyState)
@@ -288,9 +291,11 @@ private:
         return ESP_OK;
     }
 
-    std::shared_ptr<LedDriver> statusLed;
+    const std::shared_ptr<LedDriver> statusLed;
 
 public:
+    const std::shared_ptr<ShutdownManager> shutdownManager;
+
     // TODO Make this configurable
     Watchdog watchdog { "watchdog", 5min, true, [](WatchdogState state) {
                            if (state == WatchdogState::TimedOut) {

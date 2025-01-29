@@ -38,15 +38,15 @@ public:
         return device->readRegWord(0x06) * 0.1 - 273.2;
     }
 
-protected:
-    void populateTelemetry(JsonObject& json) override {
-        BatteryDriver::populateTelemetry(json);
-        json["current"] = getCurrent();
-        auto status = device->readRegWord(0x0A);
-        json["status"] = status;
-        json["charging"] = (status & 0x0001) == 0;
-        json["temperature"] = getTemperature();
-    }
+// protected:
+//     void populateTelemetry(JsonObject& json) override {
+//         BatteryDriver::populateTelemetry(json);
+//         json["current"] = getCurrent();
+//         auto status = device->readRegWord(0x0A);
+//         json["status"] = status;
+//         json["charging"] = (status & 0x0001) == 0;
+//         json["temperature"] = getTemperature();
+//     }
 
 private:
     int16_t readSigned(uint8_t reg) {

@@ -261,16 +261,9 @@ public:
     ConfiguredKernel(
         Queue<LogRecord>& logRecords,
         std::shared_ptr<TDeviceConfiguration> deviceConfig,
-        std::shared_ptr<BatteryDriver> battery,
         std::shared_ptr<Kernel> kernel)
         : kernel(kernel)
-        , consoleProvider(logRecords, deviceConfig->publishLogs.get())
-        , battery(battery) {
-        if (battery != nullptr) {
-            Task::loop("battery", 2560, [this](Task& task) {
-                checkBatteryVoltage(task);
-            });
-        }
+        , consoleProvider(logRecords, deviceConfig->publishLogs.get()) {
 
         LOGD("   ______                   _    _       _");
         LOGD("  |  ____|                 | |  | |     | |");
@@ -281,80 +274,13 @@ public:
         LOGD("  ");
     }
 
-    void registerShutdownListener(std::function<void()> listener) {
-        shutdownListeners.push_back(listener);
-    }
-
-    double getBatteryVoltage() {
-        return batteryVoltage.getAverage();
-    }
-
     const std::shared_ptr<Kernel> kernel;
     ConsoleProvider consoleProvider;
-    const shared_ptr<BatteryDriver> battery;
 
 private:
 #ifdef FARMHUB_DEBUG
     ConsolePrinter consolePrinter { battery, kernel->wifi };
 #endif
-
-    void checkBatteryVoltage(Task& task) {
-        task.delayUntil(LOW_POWER_CHECK_INTERVAL);
-        auto currentVoltage = battery->getVoltage();
-        batteryVoltage.record(currentVoltage);
-        auto voltage = batteryVoltage.getAverage();
-
-        if (voltage != 0.0 && voltage < BATTERY_SHUTDOWN_THRESHOLD) {
-            LOGI("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
-                voltage, BATTERY_SHUTDOWN_THRESHOLD, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
-
-            // TODO Publish all MQTT messages, then shut down WiFi, and _then_ start shutting down peripherals
-            //      Doing so would result in less of a power spike, which can be important if the battery is already low
-
-            // Run in separate task to allocate enough stack
-            Task::run("shutdown", 8192, [&](Task& task) {
-                // Notify all shutdown listeners
-                for (auto& listener : shutdownListeners) {
-                    listener();
-                }
-                printf("Shutdown process finished\n");
-            });
-            Task::delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
-            enterLowPowerDeepSleep();
-        }
-    }
-
-    MovingAverage<double> batteryVoltage { 5 };
-    std::list<std::function<void()>> shutdownListeners;
-
-    /**
-     * @brief How often we check the battery voltage while in operation.
-     *
-     * We use a prime number to avoid synchronizing with other tasks.
-     */
-    static constexpr auto LOW_POWER_CHECK_INTERVAL = 10313ms;
-
-    /**
-     * @brief Time to wait for shutdown process to finish before going to deep sleep.
-     */
-    static constexpr auto LOW_BATTERY_SHUTDOWN_TIMEOUT = 10s;
-};
-
-class BatteryTelemetryProvider : public TelemetryProvider {
-public:
-    BatteryTelemetryProvider(ConfiguredKernel& kernel)
-        : kernel(kernel) {
-    }
-
-    void populateTelemetry(JsonObject& json) override {
-        auto voltage = kernel.getBatteryVoltage();
-        if (voltage > 0) {
-            json["voltage"] = voltage;
-        }
-    }
-
-private:
-    ConfiguredKernel& kernel;
 };
 
 class Device {
@@ -362,13 +288,13 @@ public:
     Device(
         const std::shared_ptr<TDeviceConfiguration> deviceConfig,
         const std::shared_ptr<TDeviceDefinition> deviceDefinition,
-        std::shared_ptr<BatteryDriver> battery,
+        std::shared_ptr<BatteryManager> battery,
         std::shared_ptr<Kernel> kernel)
         : location(deviceConfig->location.get())
         , instance(deviceConfig->instance.get())
         , deviceDefinition(deviceDefinition)
         , kernel(kernel)
-        , configuredKernel(logRecords, deviceConfig, battery, kernel) {
+        , configuredKernel(logRecords, deviceConfig, kernel) {
         kernel->switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 15s) {
                 LOGI("Factory reset triggered after %lld ms", duration.count());
@@ -379,9 +305,9 @@ public:
             }
         });
 
-        if (configuredKernel.battery != nullptr) {
-            deviceTelemetryCollector.registerProvider("battery", std::make_shared<BatteryTelemetryProvider>(configuredKernel));
-            configuredKernel.registerShutdownListener([this]() {
+        if (battery != nullptr) {
+            deviceTelemetryCollector.registerProvider("battery", battery);
+            kernel->shutdownManager->registerShutdownListener([this]() {
                 peripheralManager.shutdown();
             });
             LOGI("Battery configured");
