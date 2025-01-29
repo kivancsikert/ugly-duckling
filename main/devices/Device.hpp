@@ -199,25 +199,6 @@ private:
     TelemetryCollector& telemetryCollector;
 };
 
-class ConfiguredKernel {
-public:
-    ConfiguredKernel(
-        std::shared_ptr<TDeviceConfiguration> deviceConfig,
-        std::shared_ptr<BatteryManager> battery,
-        std::shared_ptr<Kernel> kernel)
-        : kernel(kernel)
-        , battery(battery) {
-    }
-
-    const std::shared_ptr<Kernel> kernel;
-    const std::shared_ptr<BatteryManager> battery;
-
-private:
-#ifdef FARMHUB_DEBUG
-    ConsolePrinter consolePrinter { battery, kernel->wifi };
-#endif
-};
-
 class Device {
 public:
     Device(
@@ -229,7 +210,10 @@ public:
         , instance(deviceConfig->instance.get())
         , deviceDefinition(deviceDefinition)
         , kernel(kernel)
-        , configuredKernel(deviceConfig, battery, kernel) {
+#ifdef FARMHUB_DEBUG
+        , consolePrinter(battery, kernel->wifi)
+#endif
+    {
         kernel->switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
             if (duration >= 15s) {
                 LOGI("Factory reset triggered after %lld ms", duration.count());
@@ -485,7 +469,10 @@ private:
     const std::string instance;
     const std::shared_ptr<TDeviceDefinition> deviceDefinition;
     const std::shared_ptr<Kernel> kernel;
-    ConfiguredKernel configuredKernel;
+
+#ifdef FARMHUB_DEBUG
+    ConsolePrinter consolePrinter;
+#endif
 
     std::shared_ptr<MqttRoot> mqttDeviceRoot = kernel->mqtt->forRoot(locationPrefix() + "devices/ugly-duckling/" + instance);
     PeripheralManager peripheralManager { kernel->i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, kernel->switches, mqttDeviceRoot };
