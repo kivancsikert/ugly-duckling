@@ -114,12 +114,11 @@ public:
         const std::shared_ptr<TDeviceDefinition> deviceDefinition,
         std::shared_ptr<BatteryManager> battery,
         std::shared_ptr<PowerManager> powerManager,
-        std::shared_ptr<Queue<LogRecord>> logRecords,
-        std::shared_ptr<Kernel> kernel)
-        : location(deviceConfig->location.get())
-        , instance(deviceConfig->instance.get())
-        , deviceDefinition(deviceDefinition)
+        std::shared_ptr<Kernel> kernel,
+        std::shared_ptr<MqttRoot> mqttDeviceRoot)
+        : deviceDefinition(deviceDefinition)
         , kernel(kernel)
+        , mqttDeviceRoot(mqttDeviceRoot)
 #ifdef FARMHUB_DEBUG
         , debugConsole(battery, kernel->wifi)
 #endif
@@ -164,31 +163,6 @@ public:
         mqttDeviceRoot->registerCommand(fileWriteCommand);
         mqttDeviceRoot->registerCommand(fileRemoveCommand);
         mqttDeviceRoot->registerCommand(httpUpdateCommand);
-
-        auto publishLogs = deviceConfig->publishLogs.get();
-
-        Task::loop("mqtt:log", 3072, [this, publishLogs, logRecords](Task& task) {
-            logRecords->take([&](const LogRecord& record) {
-                if (record.level > publishLogs) {
-                    return;
-                }
-                auto length = record.message.length();
-                // Remove the level prefix
-                auto messageStart = 2;
-                // Remove trailing newline
-                auto messageEnd = record.message[length - 1] == '\n'
-                    ? length - 1
-                    : length;
-                std::string message = record.message.substr(messageStart, messageEnd - messageStart);
-
-                mqttDeviceRoot->publish(
-                    "log", [&](JsonObject& json) {
-                        json["level"] = record.level;
-                        json["message"] = message;
-                    },
-                    Retention::NoRetain, QoS::AtLeastOnce, 2s, LogPublish::Silent);
-            });
-        });
 
         // We want RTC to be in sync before we start setting up peripherals
         kernel->getRtcInSyncState().awaitSet();
@@ -284,10 +258,6 @@ private:
         peripheralManager.publishTelemetry();
     }
 
-    std::string locationPrefix() {
-        return location.empty() ? "" : location + "/";
-    }
-
     void reportPreviousCrashIfAny(JsonObject& json) {
         if (!hasCoreDump()) {
             return;
@@ -374,16 +344,14 @@ private:
 #endif
     }
 
-    const std::string location;
-    const std::string instance;
     const std::shared_ptr<TDeviceDefinition> deviceDefinition;
     const std::shared_ptr<Kernel> kernel;
+    const std::shared_ptr<MqttRoot> mqttDeviceRoot;
 
 #ifdef FARMHUB_DEBUG
     DebugConsole debugConsole;
 #endif
 
-    std::shared_ptr<MqttRoot> mqttDeviceRoot = kernel->mqtt->forRoot(locationPrefix() + "devices/ugly-duckling/" + instance);
     PeripheralManager peripheralManager { kernel->i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, kernel->switches, mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;

@@ -16,6 +16,7 @@ static const char* const farmhubVersion = esp_app_get_description()->version;
 #include <kernel/Console.hpp>
 #include <kernel/HttpUpdate.hpp>
 #include <kernel/Log.hpp>
+#include <kernel/mqtt/MqttLog.hpp>
 
 using namespace farmhub::kernel;
 
@@ -161,8 +162,9 @@ extern "C" void app_main() {
     auto mdnsReadyState = stateManager.createStateSource("mdns-ready");
     auto mdns = std::make_shared<MdnsDriver>(wifi->getNetworkReady(), deviceConfig->getHostname(), "ugly-duckling", farmhubVersion, mdnsReadyState);
 
-    // Reboots if update is successful
-    handleHttpUpdate(fs, wifi);
+    // Init real time clock
+    auto rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
+    auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState);
 
     auto mqttConfig = std::make_shared<MqttDriver::Config>();
     // TODO This should just be a "load()" call
@@ -171,13 +173,18 @@ extern "C" void app_main() {
     auto mqttReadyState = stateManager.createStateSource("mqtt-ready");
     auto mqtt = std::make_shared<MqttDriver>(wifi->getNetworkReady(), mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState);
 
-    // Init real time clock
-    auto rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
-    auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState);
+    auto location = deviceConfig->location.get();
+    auto instance = deviceConfig->instance.get();
+    auto mqttRoot = mqtt->forRoot((location.empty() ? "" : location + "/") + "devices/ugly-duckling/" + instance);
 
-    auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
+    MqttLog::init(deviceConfig->publishLogs.get(), logRecords, mqttRoot);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, logRecords, kernel);
+    // Reboots if update is successful
+    handleHttpUpdate(fs, wifi);
+
+    auto kernel = std::make_shared<Kernel>(deviceConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
+
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, kernel, mqttRoot);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
