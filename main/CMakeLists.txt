@@ -6,6 +6,11 @@ idf_component_register(
     EMBED_TXTFILES "${CMAKE_SOURCE_DIR}/partitions.csv"
 )
 
+component_compile_options(-Wall)
+component_compile_options(-Wextra)
+component_compile_options(-Wunused)
+component_compile_options(-Werror)
+
 if(NOT DEFINED WOKWI)
     set(WOKWI "$ENV{WOKWI}")
 endif()
