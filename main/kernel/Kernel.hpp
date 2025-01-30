@@ -76,18 +76,6 @@ public:
         return kernelReadyState;
     }
 
-    const std::string& getHttpUpdateResult() const {
-        return httpUpdateResult;
-    }
-
-    void prepareUpdate(const std::string& url) {
-        JsonDocument doc;
-        doc["url"] = url;
-        std::string content;
-        serializeJson(doc, content);
-        fs.writeAll(UPDATE_FILE, content);
-    }
-
     void performFactoryReset(bool completeReset) {
         LOGI("Performing factory reset");
 
@@ -210,8 +198,6 @@ public:
 private:
     const std::shared_ptr<MdnsDriver> mdns;
     const std::shared_ptr<RtcDriver> rtc;
-
-    std::string httpUpdateResult;
 
 public:
     const std::shared_ptr<MqttDriver> mqtt;

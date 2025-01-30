@@ -369,7 +369,11 @@ private:
     FileWriteCommand fileWriteCommand { fs };
     FileRemoveCommand fileRemoveCommand { fs };
     HttpUpdateCommand httpUpdateCommand { [this](const std::string& url) {
-        kernel->prepareUpdate(url);
+        JsonDocument doc;
+        doc["url"] = url;
+        std::string content;
+        serializeJson(doc, content);
+        fs.writeAll(UPDATE_FILE, content);
     } };
 
     CopyQueue<bool> telemetryPublishQueue { "telemetry-publish", 1 };
