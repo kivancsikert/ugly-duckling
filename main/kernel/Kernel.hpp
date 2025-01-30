@@ -47,8 +47,7 @@ public:
         std::shared_ptr<WiFiDriver> wifi,
         std::shared_ptr<MdnsDriver> mdns,
         std::shared_ptr<RtcDriver> rtc,
-        std::shared_ptr<MqttDriver> mqtt,
-        std::shared_ptr<SwitchManager> switches)
+        std::shared_ptr<MqttDriver> mqtt)
         : version(farmhubVersion)
         , statusLed(statusLed)
         , shutdownManager(shutdownManager)
@@ -56,7 +55,6 @@ public:
         , mdns(mdns)
         , rtc(rtc)
         , mqtt(mqtt)
-        , switches(switches)
         , i2c(i2c) {
 
         LOGI("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
@@ -177,7 +175,6 @@ private:
 
 public:
     const std::shared_ptr<MqttDriver> mqtt;
-    const std::shared_ptr<SwitchManager> switches;
     const std::shared_ptr<I2CManager> i2c;
 };
 

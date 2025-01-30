@@ -33,7 +33,7 @@ public:
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
-    void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
+    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) override {
     }
 };
 

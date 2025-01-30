@@ -40,20 +40,20 @@ public:
         , bootPin(bootPin) {
     }
 
-    virtual void registerPeripheralFactories(PeripheralManager& peripheralManager) {
-        peripheralManager.registerFactory(sht3xFactory);
-        peripheralManager.registerFactory(sht2xFactory);
-        peripheralManager.registerFactory(htu2xFactory);
-        peripheralManager.registerFactory(ds18b20SoilSensorFactory);
-        peripheralManager.registerFactory(soilMoistureSensorFactory);
-        peripheralManager.registerFactory(electricFenceMonitorFactory);
-        peripheralManager.registerFactory(bh1750Factory);
-        peripheralManager.registerFactory(tsl2591Factory);
-        peripheralManager.registerFactory(xl9535Factory);
+    virtual void registerPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) {
+        peripheralManager->registerFactory(sht3xFactory);
+        peripheralManager->registerFactory(sht2xFactory);
+        peripheralManager->registerFactory(htu2xFactory);
+        peripheralManager->registerFactory(ds18b20SoilSensorFactory);
+        peripheralManager->registerFactory(soilMoistureSensorFactory);
+        peripheralManager->registerFactory(electricFenceMonitorFactory);
+        peripheralManager->registerFactory(bh1750Factory);
+        peripheralManager->registerFactory(tsl2591Factory);
+        peripheralManager->registerFactory(xl9535Factory);
         registerDeviceSpecificPeripheralFactories(peripheralManager);
     }
 
-    virtual void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) {
+    virtual void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) {
     }
 
     /**

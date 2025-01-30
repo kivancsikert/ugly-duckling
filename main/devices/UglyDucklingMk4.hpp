@@ -59,11 +59,11 @@ public:
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
-    void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
-        peripheralManager.registerFactory(valveFactory);
-        peripheralManager.registerFactory(flowMeterFactory);
-        peripheralManager.registerFactory(flowControlFactory);
-        peripheralManager.registerFactory(chickenDoorFactory);
+    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) override {
+        peripheralManager->registerFactory(valveFactory);
+        peripheralManager->registerFactory(flowMeterFactory);
+        peripheralManager->registerFactory(flowControlFactory);
+        peripheralManager->registerFactory(chickenDoorFactory);
     }
 
     std::list<std::string> getBuiltInPeripherals() override {

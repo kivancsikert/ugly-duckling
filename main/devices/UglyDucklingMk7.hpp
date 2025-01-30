@@ -96,11 +96,11 @@ public:
         });
     }
 
-    void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
-        peripheralManager.registerFactory(valveFactory);
-        peripheralManager.registerFactory(flowMeterFactory);
-        peripheralManager.registerFactory(flowControlFactory);
-        peripheralManager.registerFactory(chickenDoorFactory);
+    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) override {
+        peripheralManager->registerFactory(valveFactory);
+        peripheralManager->registerFactory(flowMeterFactory);
+        peripheralManager->registerFactory(flowControlFactory);
+        peripheralManager->registerFactory(chickenDoorFactory);
     }
 
     std::shared_ptr<LedDriver> secondaryStatusLed { std::make_shared<LedDriver>("status-2", pins::STATUS2) };

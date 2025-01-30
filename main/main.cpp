@@ -218,9 +218,12 @@ extern "C" void app_main() {
     // Reboots if update is successful
     handleHttpUpdate(fs, wifi);
 
-    auto kernel = std::make_shared<Kernel>(deviceConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt, switches);
+    auto kernel = std::make_shared<Kernel>(deviceConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, kernel, mqttRoot);
+    auto peripheralManager = std::make_shared<PeripheralManager>(i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, switches, mqttRoot);
+    deviceDefinition->registerPeripheralFactories(peripheralManager);
+
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, kernel, mqttRoot, peripheralManager);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());

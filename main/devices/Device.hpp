@@ -115,18 +115,20 @@ public:
         std::shared_ptr<BatteryManager> battery,
         std::shared_ptr<PowerManager> powerManager,
         std::shared_ptr<Kernel> kernel,
-        std::shared_ptr<MqttRoot> mqttDeviceRoot)
+        std::shared_ptr<MqttRoot> mqttDeviceRoot,
+        std::shared_ptr<PeripheralManager> peripheralManager)
         : deviceDefinition(deviceDefinition)
         , kernel(kernel)
         , mqttDeviceRoot(mqttDeviceRoot)
+        , peripheralManager(peripheralManager)
 #ifdef FARMHUB_DEBUG
         , debugConsole(battery, kernel->wifi)
 #endif
     {
         if (battery != nullptr) {
             deviceTelemetryCollector.registerProvider("battery", battery);
-            kernel->shutdownManager->registerShutdownListener([this]() {
-                peripheralManager.shutdown();
+            kernel->shutdownManager->registerShutdownListener([peripheralManager]() {
+                peripheralManager->shutdown();
             });
             LOGI("Battery configured");
         } else {
@@ -139,8 +141,6 @@ public:
         deviceTelemetryCollector.registerProvider("memory", std::make_shared<MemoryTelemetryProvider>());
 #endif
         deviceTelemetryCollector.registerProvider("pm", std::make_shared<PowerManagementTelemetryProvider>(powerManager));
-
-        deviceDefinition->registerPeripheralFactories(peripheralManager);
 
         mqttDeviceRoot->registerCommand(echoCommand);
         mqttDeviceRoot->registerCommand(pingCommand);
@@ -164,7 +164,7 @@ public:
         LOGD("Loading configuration for %d built-in peripherals",
             builtInPeripheralsConfig.size());
         for (auto& peripheralConfig : builtInPeripheralsConfig) {
-            peripheralManager.createPeripheral(peripheralConfig, peripheralsInitJson);
+            peripheralManager->createPeripheral(peripheralConfig, peripheralsInitJson);
         }
 
         auto& peripheralsConfig = deviceConfig->peripherals.get();
@@ -172,7 +172,7 @@ public:
             peripheralsConfig.size());
         bool peripheralError = false;
         for (auto& peripheralConfig : peripheralsConfig) {
-            if (!peripheralManager.createPeripheral(peripheralConfig.get(), peripheralsInitJson)) {
+            if (!peripheralManager->createPeripheral(peripheralConfig.get(), peripheralsInitJson)) {
                 peripheralError = true;
             }
         }
@@ -245,7 +245,7 @@ private:
 
     void publishTelemetry() {
         deviceTelemetryPublisher.publishTelemetry();
-        peripheralManager.publishTelemetry();
+        peripheralManager->publishTelemetry();
     }
 
     void reportPreviousCrashIfAny(JsonObject& json) {
@@ -337,12 +337,11 @@ private:
     const std::shared_ptr<TDeviceDefinition> deviceDefinition;
     const std::shared_ptr<Kernel> kernel;
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
+    const std::shared_ptr<PeripheralManager> peripheralManager;
 
 #ifdef FARMHUB_DEBUG
     DebugConsole debugConsole;
 #endif
-
-    PeripheralManager peripheralManager { kernel->i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, kernel->switches, mqttDeviceRoot };
 
     TelemetryCollector deviceTelemetryCollector;
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };
