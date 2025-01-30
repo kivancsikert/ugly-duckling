@@ -171,13 +171,17 @@ extern "C" void app_main() {
     auto mqttReadyState = stateManager.createStateSource("mqtt-ready");
     auto mqtt = std::make_shared<MqttDriver>(wifi->getNetworkReady(), mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState);
 
+    auto location = deviceConfig->location.get();
+    auto instance = deviceConfig->instance.get();
+    auto mqttRoot = mqtt->forRoot((location.empty() ? "" : location + "/") + "devices/ugly-duckling/" + instance);
+
     // Init real time clock
     auto rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
     auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState);
 
     auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, logRecords, kernel);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, logRecords, kernel, mqttRoot);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
