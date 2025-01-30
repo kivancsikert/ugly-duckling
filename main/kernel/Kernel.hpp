@@ -41,7 +41,6 @@ class Kernel {
 public:
     Kernel(
         std::shared_ptr<DeviceConfiguration> deviceConfig,
-        std::shared_ptr<MqttDriver::Config> mqttConfig,
         std::shared_ptr<LedDriver> statusLed,
         std::shared_ptr<ShutdownManager> shutdownManager,
         std::shared_ptr<I2CManager> i2c,

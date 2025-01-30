@@ -179,7 +179,7 @@ extern "C" void app_main() {
     auto rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
     auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState);
 
-    auto kernel = std::make_shared<Kernel>(deviceConfig, mqttConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
+    auto kernel = std::make_shared<Kernel>(deviceConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
 
     new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, logRecords, kernel, mqttRoot);
 
