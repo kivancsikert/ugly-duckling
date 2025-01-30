@@ -6,7 +6,6 @@
 #include <esp_core_dump.h>
 #include <esp_netif.h>
 #include <esp_pm.h>
-#include <esp_private/esp_clk.h>
 #include <esp_wifi.h>
 #include <mbedtls/base64.h>
 
@@ -121,9 +120,6 @@ public:
         , kernel(kernel)
         , mqttDeviceRoot(mqttDeviceRoot)
         , peripheralManager(peripheralManager)
-#ifdef FARMHUB_DEBUG
-        , debugConsole(battery, kernel->wifi)
-#endif
     {
         if (battery != nullptr) {
             deviceTelemetryCollector.registerProvider("battery", battery);
@@ -338,10 +334,6 @@ private:
     const std::shared_ptr<Kernel> kernel;
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
     const std::shared_ptr<PeripheralManager> peripheralManager;
-
-#ifdef FARMHUB_DEBUG
-    DebugConsole debugConsole;
-#endif
 
     TelemetryCollector deviceTelemetryCollector;
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };

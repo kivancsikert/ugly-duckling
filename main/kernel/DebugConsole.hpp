@@ -1,5 +1,7 @@
 #pragma once
 
+#include <esp_private/esp_clk.h>
+
 #include <kernel/BatteryManager.hpp>
 #include <kernel/Strings.hpp>
 #include <kernel/drivers/RtcDriver.hpp>

@@ -14,6 +14,7 @@ static const char* const farmhubVersion = esp_app_get_description()->version;
 
 #include <kernel/BatteryManager.hpp>
 #include <kernel/Console.hpp>
+#include <kernel/DebugConsole.hpp>
 #include <kernel/HttpUpdate.hpp>
 #include <kernel/Log.hpp>
 #include <kernel/mqtt/MqttLog.hpp>
@@ -194,6 +195,10 @@ extern "C" void app_main() {
     if (battery != nullptr) {
         batteryManager = std::make_shared<BatteryManager>(battery, shutdownManager);
     }
+
+#ifdef FARMHUB_DEBUG
+    new DebugConsole(batteryManager, wifi);
+#endif
 
     auto mdnsReadyState = stateManager.createStateSource("mdns-ready");
     auto mdns = std::make_shared<MdnsDriver>(wifi->getNetworkReady(), deviceConfig->getHostname(), "ugly-duckling", farmhubVersion, mdnsReadyState);
