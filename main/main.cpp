@@ -166,9 +166,6 @@ extern "C" void app_main() {
     auto rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
     auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState);
 
-    // Reboots if update is successful
-    handleHttpUpdate(fs, wifi);
-
     auto mqttConfig = std::make_shared<MqttDriver::Config>();
     // TODO This should just be a "load()" call
     ConfigurationFile<MqttDriver::Config> mqttConfigFile(fs, "/mqtt-config.json", mqttConfig);
@@ -181,6 +178,9 @@ extern "C" void app_main() {
     auto mqttRoot = mqtt->forRoot((location.empty() ? "" : location + "/") + "devices/ugly-duckling/" + instance);
 
     MqttLog::init(deviceConfig->publishLogs.get(), logRecords, mqttRoot);
+
+    // Reboots if update is successful
+    handleHttpUpdate(fs, wifi);
 
     auto kernel = std::make_shared<Kernel>(deviceConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
 
