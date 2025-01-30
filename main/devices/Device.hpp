@@ -116,9 +116,7 @@ public:
         std::shared_ptr<PowerManager> powerManager,
         std::shared_ptr<Kernel> kernel,
         std::shared_ptr<MqttRoot> mqttDeviceRoot)
-        : location(deviceConfig->location.get())
-        , instance(deviceConfig->instance.get())
-        , deviceDefinition(deviceDefinition)
+        : deviceDefinition(deviceDefinition)
         , kernel(kernel)
         , mqttDeviceRoot(mqttDeviceRoot)
 #ifdef FARMHUB_DEBUG
@@ -260,10 +258,6 @@ private:
         peripheralManager.publishTelemetry();
     }
 
-    std::string locationPrefix() {
-        return location.empty() ? "" : location + "/";
-    }
-
     void reportPreviousCrashIfAny(JsonObject& json) {
         if (!hasCoreDump()) {
             return;
@@ -350,8 +344,6 @@ private:
 #endif
     }
 
-    const std::string location;
-    const std::string instance;
     const std::shared_ptr<TDeviceDefinition> deviceDefinition;
     const std::shared_ptr<Kernel> kernel;
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
