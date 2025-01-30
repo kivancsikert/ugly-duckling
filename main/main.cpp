@@ -16,6 +16,7 @@ static const char* const farmhubVersion = esp_app_get_description()->version;
 #include <kernel/Console.hpp>
 #include <kernel/HttpUpdate.hpp>
 #include <kernel/Log.hpp>
+#include <kernel/mqtt/MqttLog.hpp>
 
 using namespace farmhub::kernel;
 
@@ -175,13 +176,15 @@ extern "C" void app_main() {
     auto instance = deviceConfig->instance.get();
     auto mqttRoot = mqtt->forRoot((location.empty() ? "" : location + "/") + "devices/ugly-duckling/" + instance);
 
+    MqttLog::init(deviceConfig->publishLogs.get(), logRecords, mqttRoot);
+
     // Init real time clock
     auto rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
     auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState);
 
     auto kernel = std::make_shared<Kernel>(deviceConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, logRecords, kernel, mqttRoot);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, kernel, mqttRoot);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());

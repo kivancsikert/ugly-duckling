@@ -114,7 +114,6 @@ public:
         const std::shared_ptr<TDeviceDefinition> deviceDefinition,
         std::shared_ptr<BatteryManager> battery,
         std::shared_ptr<PowerManager> powerManager,
-        std::shared_ptr<Queue<LogRecord>> logRecords,
         std::shared_ptr<Kernel> kernel,
         std::shared_ptr<MqttRoot> mqttDeviceRoot)
         : location(deviceConfig->location.get())
@@ -166,31 +165,6 @@ public:
         mqttDeviceRoot->registerCommand(fileWriteCommand);
         mqttDeviceRoot->registerCommand(fileRemoveCommand);
         mqttDeviceRoot->registerCommand(httpUpdateCommand);
-
-        auto publishLogs = deviceConfig->publishLogs.get();
-
-        Task::loop("mqtt:log", 3072, [this, publishLogs, logRecords, mqttDeviceRoot](Task& task) {
-            logRecords->take([&](const LogRecord& record) {
-                if (record.level > publishLogs) {
-                    return;
-                }
-                auto length = record.message.length();
-                // Remove the level prefix
-                auto messageStart = 2;
-                // Remove trailing newline
-                auto messageEnd = record.message[length - 1] == '\n'
-                    ? length - 1
-                    : length;
-                std::string message = record.message.substr(messageStart, messageEnd - messageStart);
-
-                mqttDeviceRoot->publish(
-                    "log", [&](JsonObject& json) {
-                        json["level"] = record.level;
-                        json["message"] = message;
-                    },
-                    Retention::NoRetain, QoS::AtLeastOnce, 2s, LogPublish::Silent);
-            });
-        });
 
         // We want RTC to be in sync before we start setting up peripherals
         kernel->getRtcInSyncState().awaitSet();
