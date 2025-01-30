@@ -147,6 +147,13 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
 
+    auto watchdog = std::make_shared<Watchdog>("watchdog", 5min, true, [](WatchdogState state) {
+        if (state == WatchdogState::TimedOut) {
+            LOGE("Watchdog timed out");
+            esp_system_abort("Watchdog timed out");
+        }
+    });
+
     auto fs = FileSystem::get();
 
     auto deviceConfig = std::make_shared<TDeviceConfiguration>();
@@ -221,14 +228,14 @@ extern "C" void app_main() {
     MqttLog::init(deviceConfig->publishLogs.get(), logRecords, mqttRoot);
 
     // Reboots if update is successful
-    handleHttpUpdate(fs, wifi);
+    handleHttpUpdate(fs, wifi, watchdog);
 
     auto kernel = std::make_shared<Kernel>(deviceConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
 
     auto peripheralManager = std::make_shared<PeripheralManager>(i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, switches, mqttRoot);
     deviceDefinition->registerPeripheralFactories(peripheralManager);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, kernel, mqttRoot, peripheralManager);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, watchdog, powerManager, kernel, mqttRoot, peripheralManager);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());

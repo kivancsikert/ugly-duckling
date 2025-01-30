@@ -112,6 +112,7 @@ public:
         const std::shared_ptr<TDeviceConfiguration> deviceConfig,
         const std::shared_ptr<TDeviceDefinition> deviceDefinition,
         std::shared_ptr<BatteryManager> battery,
+        std::shared_ptr<Watchdog> watchdog,
         std::shared_ptr<PowerManager> powerManager,
         std::shared_ptr<Kernel> kernel,
         std::shared_ptr<MqttRoot> mqttDeviceRoot,
@@ -202,13 +203,13 @@ public:
             Retention::NoRetain, QoS::AtLeastOnce, 5s);
 
         auto publishInterval = deviceConfig->publishInterval.get();
-        Task::loop("telemetry", 8192, [this, publishInterval](Task& task) {
+        Task::loop("telemetry", 8192, [this, publishInterval, watchdog](Task& task) {
             task.markWakeTime();
 
             publishTelemetry();
 
             // Signal that we are still alive
-            this->kernel->watchdog.restart();
+            watchdog->restart();
 
             // We always wait at least this much between telemetry updates
             const auto debounceInterval = 500ms;

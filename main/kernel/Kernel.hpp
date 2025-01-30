@@ -153,14 +153,6 @@ private:
 public:
     const std::shared_ptr<ShutdownManager> shutdownManager;
 
-    // TODO Make this configurable
-    Watchdog watchdog { "watchdog", 5min, true, [](WatchdogState state) {
-                           if (state == WatchdogState::TimedOut) {
-                               LOGE("Watchdog timed out");
-                               esp_system_abort("Watchdog timed out");
-                           }
-                       } };
-
 private:
     KernelState state = KernelState::BOOTING;
     StateManager stateManager;

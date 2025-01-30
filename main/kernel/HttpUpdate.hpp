@@ -10,6 +10,7 @@
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/Log.hpp>
+#include <kernel/Watchdog.hpp>
 #include <kernel/drivers/WiFiDriver.hpp>
 
 namespace farmhub::kernel {
@@ -17,6 +18,7 @@ namespace farmhub::kernel {
 static constexpr const char* UPDATE_FILE = "/update.json";
 
 static esp_err_t httpEventHandler(esp_http_client_event_t* event) {
+    auto watchdog = static_cast<Watchdog*>(event->user_data);
     switch (event->event_id) {
         case HTTP_EVENT_ERROR:
             LOGE("HTTP error, status code: %d",
@@ -33,6 +35,8 @@ static esp_err_t httpEventHandler(esp_http_client_event_t* event) {
             break;
         case HTTP_EVENT_ON_DATA:
             LOGD("HTTP data: %d bytes", event->data_len);
+            // Keep running while we are receiving data
+            watchdog->restart();
             break;
         case HTTP_EVENT_ON_FINISH:
             LOGD("HTTP finished");
@@ -47,7 +51,7 @@ static esp_err_t httpEventHandler(esp_http_client_event_t* event) {
     return ESP_OK;
 }
 
-static void handleHttpUpdate(FileSystem& fs, std::shared_ptr<WiFiDriver> wifi) {
+static void handleHttpUpdate(FileSystem& fs, std::shared_ptr<WiFiDriver> wifi, std::shared_ptr<Watchdog> watchdog) {
     // Do we need to update?
     if (!fs.exists(UPDATE_FILE)) {
         LOGV("No update file found, not updating");
@@ -92,7 +96,7 @@ static void handleHttpUpdate(FileSystem& fs, std::shared_ptr<WiFiDriver> wifi) {
         // Updating directly via GitHub's release links requires these
         .buffer_size = 4 * 1024,
         .buffer_size_tx = 12 * 1024,
-        .user_data = nullptr,
+        .user_data = watchdog.get(),
         .crt_bundle_attach = esp_crt_bundle_attach,
         .keep_alive_enable = true,
     };
