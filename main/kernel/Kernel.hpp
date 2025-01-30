@@ -17,7 +17,6 @@
 #include <kernel/I2CManager.hpp>
 #include <kernel/NetworkUtil.hpp>
 #include <kernel/PowerManager.hpp>
-#include <kernel/ShutdownManager.hpp>
 #include <kernel/StateManager.hpp>
 #include <kernel/Watchdog.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -40,30 +39,16 @@ static RTC_DATA_ATTR int bootCount = 0;
 class Kernel {
 public:
     Kernel(
-        std::shared_ptr<DeviceConfiguration> deviceConfig,
         std::shared_ptr<LedDriver> statusLed,
-        std::shared_ptr<ShutdownManager> shutdownManager,
-        std::shared_ptr<I2CManager> i2c,
         std::shared_ptr<WiFiDriver> wifi,
         std::shared_ptr<MdnsDriver> mdns,
         std::shared_ptr<RtcDriver> rtc,
         std::shared_ptr<MqttDriver> mqtt)
-        : version(farmhubVersion)
-        , statusLed(statusLed)
-        , shutdownManager(shutdownManager)
+        : statusLed(statusLed)
         , wifi(wifi)
         , mdns(mdns)
         , rtc(rtc)
-        , mqtt(mqtt)
-        , i2c(i2c) {
-
-        LOGI("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
-            version.c_str(),
-            deviceConfig->model.get().c_str(),
-            deviceConfig->instance.get().c_str(),
-            deviceConfig->getHostname().c_str(),
-            getMacAddress().c_str());
-
+        , mqtt(mqtt) {
         // TODO Allocate less memory when FARMHUB_DEBUG is disabled
         Task::loop("status-update", 3072, [this](Task&) { updateState(); });
     }
@@ -75,8 +60,6 @@ public:
     const StateSource& getKernelReadyState() {
         return kernelReadyState;
     }
-
-    const std::string version;
 
     FileSystem& fs { FileSystem::get() };
 
@@ -150,9 +133,6 @@ private:
 
     const std::shared_ptr<LedDriver> statusLed;
 
-public:
-    const std::shared_ptr<ShutdownManager> shutdownManager;
-
 private:
     KernelState state = KernelState::BOOTING;
     StateManager stateManager;
@@ -164,10 +144,7 @@ public:
 private:
     const std::shared_ptr<MdnsDriver> mdns;
     const std::shared_ptr<RtcDriver> rtc;
-
-public:
     const std::shared_ptr<MqttDriver> mqtt;
-    const std::shared_ptr<I2CManager> i2c;
 };
 
 }    // namespace farmhub::kernel

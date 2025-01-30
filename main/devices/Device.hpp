@@ -115,6 +115,7 @@ public:
         std::shared_ptr<Watchdog> watchdog,
         std::shared_ptr<PowerManager> powerManager,
         std::shared_ptr<Kernel> kernel,
+        std::shared_ptr<ShutdownManager> shutdownManager,
         std::shared_ptr<MqttRoot> mqttDeviceRoot,
         std::shared_ptr<PeripheralManager> peripheralManager)
         : deviceDefinition(deviceDefinition)
@@ -124,7 +125,7 @@ public:
     {
         if (battery != nullptr) {
             deviceTelemetryCollector.registerProvider("battery", battery);
-            kernel->shutdownManager->registerShutdownListener([peripheralManager]() {
+            shutdownManager->registerShutdownListener([peripheralManager]() {
                 peripheralManager->shutdown();
             });
             LOGI("Battery configured");
@@ -189,7 +190,7 @@ public:
                 deviceConfig->store(device, false);
                 // TODO Remove redundant mentions of "ugly-duckling"
                 json["app"] = "ugly-duckling";
-                json["version"] = kernel->version;
+                json["version"] = farmhubVersion;
                 json["reset"] = esp_reset_reason();
                 json["wakeup"] = esp_sleep_get_wakeup_cause();
                 json["bootCount"] = bootCount++;
@@ -220,18 +221,6 @@ public:
             auto timeout = task.ticksUntil(publishInterval - debounceInterval);
             telemetryPublishQueue.pollIn(timeout);
         });
-
-        kernel->getKernelReadyState().set();
-
-        LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
-            duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count() / 1000.0,
-            kernel->version.c_str(),
-            deviceConfig->model.get().c_str(),
-            deviceConfig->instance.get().c_str(),
-            deviceConfig->getHostname().c_str(),
-            kernel->wifi->getIp().value_or("<no-ip>").c_str(),
-            kernel->wifi->getSsid().value_or("<no-ssid>").c_str(),
-            duration_cast<seconds>(system_clock::now().time_since_epoch()).count());
     }
 
 private:

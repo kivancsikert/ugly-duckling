@@ -172,6 +172,12 @@ extern "C" void app_main() {
     LOGD("  | | | (_| | |  | | | | | | |  | | |_| | |_) |");
     LOGD("  |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s", farmhubVersion);
     LOGD("  ");
+    LOGI("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
+        farmhubVersion,
+        deviceConfig->model.get().c_str(),
+        deviceConfig->instance.get().c_str(),
+        deviceConfig->getHostname().c_str(),
+        getMacAddress().c_str());
 
     StateManager stateManager;
     auto networkConnectingState = stateManager.createStateSource("network-connecting");
@@ -230,15 +236,27 @@ extern "C" void app_main() {
     // Reboots if update is successful
     handleHttpUpdate(fs, wifi, watchdog);
 
-    auto kernel = std::make_shared<Kernel>(deviceConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
+    auto kernel = std::make_shared<Kernel>(statusLed, wifi, mdns, rtc, mqtt);
 
     auto peripheralManager = std::make_shared<PeripheralManager>(i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, switches, mqttRoot);
     deviceDefinition->registerPeripheralFactories(peripheralManager);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, watchdog, powerManager, kernel, mqttRoot, peripheralManager);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, watchdog, powerManager, kernel, shutdownManager, mqttRoot, peripheralManager);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
+
+    kernel->getKernelReadyState().set();
+
+    LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
+        duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count() / 1000.0,
+        farmhubVersion,
+        deviceConfig->model.get().c_str(),
+        deviceConfig->instance.get().c_str(),
+        deviceConfig->getHostname().c_str(),
+        wifi->getIp().value_or("<no-ip>").c_str(),
+        wifi->getSsid().value_or("<no-ssid>").c_str(),
+        duration_cast<seconds>(system_clock::now().time_since_epoch()).count());
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
     Task::loop("task-heaps", 4096, [](Task& task) {
