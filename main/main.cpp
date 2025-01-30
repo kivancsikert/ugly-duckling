@@ -162,6 +162,10 @@ extern "C" void app_main() {
     auto mdnsReadyState = stateManager.createStateSource("mdns-ready");
     auto mdns = std::make_shared<MdnsDriver>(wifi->getNetworkReady(), deviceConfig->getHostname(), "ugly-duckling", farmhubVersion, mdnsReadyState);
 
+    // Init real time clock
+    auto rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
+    auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState);
+
     // Reboots if update is successful
     handleHttpUpdate(fs, wifi);
 
@@ -177,10 +181,6 @@ extern "C" void app_main() {
     auto mqttRoot = mqtt->forRoot((location.empty() ? "" : location + "/") + "devices/ugly-duckling/" + instance);
 
     MqttLog::init(deviceConfig->publishLogs.get(), logRecords, mqttRoot);
-
-    // Init real time clock
-    auto rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
-    auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState);
 
     auto kernel = std::make_shared<Kernel>(deviceConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
 
