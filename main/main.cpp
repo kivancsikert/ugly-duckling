@@ -86,6 +86,32 @@ static void dumpPerTaskHeapInfo() {
 
 #include <devices/Device.hpp>
 
+void performFactoryReset(std::shared_ptr<LedDriver> statusLed, bool completeReset) {
+    LOGI("Performing factory reset");
+
+    statusLed->turnOn();
+    Task::delay(1s);
+    statusLed->turnOff();
+    Task::delay(1s);
+    statusLed->turnOn();
+
+    if (completeReset) {
+        Task::delay(1s);
+        statusLed->turnOff();
+        Task::delay(1s);
+        statusLed->turnOn();
+
+        LOGI(" - Deleting the file system...");
+        FileSystem::format();
+    }
+
+    LOGI(" - Clearing NVS...");
+    nvs_flash_erase();
+
+    LOGI(" - Restarting...");
+    esp_restart();
+}
+
 extern "C" void app_main() {
     auto i2c = std::make_shared<I2CManager>();
     auto battery = TDeviceDefinition::createBatteryDriver(i2c);
@@ -150,8 +176,18 @@ extern "C" void app_main() {
         deviceConfig->getHostname());
 
     auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
-
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
+    auto switches = std::make_shared<SwitchManager>();
+
+    switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [statusLed](const Switch&, milliseconds duration) {
+        if (duration >= 15s) {
+            LOGI("Factory reset triggered after %lld ms", duration.count());
+            performFactoryReset(statusLed, true);
+        } else if (duration >= 5s) {
+            LOGI("WiFi reset triggered after %lld ms", duration.count());
+            performFactoryReset(statusLed, false);
+        }
+    });
 
     auto shutdownManager = std::make_shared<ShutdownManager>();
     std::shared_ptr<BatteryManager> batteryManager;
@@ -182,7 +218,7 @@ extern "C" void app_main() {
     // Reboots if update is successful
     handleHttpUpdate(fs, wifi);
 
-    auto kernel = std::make_shared<Kernel>(deviceConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt);
+    auto kernel = std::make_shared<Kernel>(deviceConfig, statusLed, shutdownManager, i2c, wifi, mdns, rtc, mqtt, switches);
 
     new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, powerManager, kernel, mqttRoot);
 

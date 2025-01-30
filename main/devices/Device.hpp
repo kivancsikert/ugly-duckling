@@ -123,16 +123,6 @@ public:
         , debugConsole(battery, kernel->wifi)
 #endif
     {
-        kernel->switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [this](const Switch&, milliseconds duration) {
-            if (duration >= 15s) {
-                LOGI("Factory reset triggered after %lld ms", duration.count());
-                this->kernel->performFactoryReset(true);
-            } else if (duration >= 5s) {
-                LOGI("WiFi reset triggered after %lld ms", duration.count());
-                this->kernel->performFactoryReset(false);
-            }
-        });
-
         if (battery != nullptr) {
             deviceTelemetryCollector.registerProvider("battery", battery);
             kernel->shutdownManager->registerShutdownListener([this]() {

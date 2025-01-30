@@ -47,7 +47,8 @@ public:
         std::shared_ptr<WiFiDriver> wifi,
         std::shared_ptr<MdnsDriver> mdns,
         std::shared_ptr<RtcDriver> rtc,
-        std::shared_ptr<MqttDriver> mqtt)
+        std::shared_ptr<MqttDriver> mqtt,
+        std::shared_ptr<SwitchManager> switches)
         : version(farmhubVersion)
         , statusLed(statusLed)
         , shutdownManager(shutdownManager)
@@ -55,6 +56,7 @@ public:
         , mdns(mdns)
         , rtc(rtc)
         , mqtt(mqtt)
+        , switches(switches)
         , i2c(i2c) {
 
         LOGI("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
@@ -74,32 +76,6 @@ public:
 
     const StateSource& getKernelReadyState() {
         return kernelReadyState;
-    }
-
-    void performFactoryReset(bool completeReset) {
-        LOGI("Performing factory reset");
-
-        statusLed->turnOn();
-        Task::delay(1s);
-        statusLed->turnOff();
-        Task::delay(1s);
-        statusLed->turnOn();
-
-        if (completeReset) {
-            Task::delay(1s);
-            statusLed->turnOff();
-            Task::delay(1s);
-            statusLed->turnOn();
-
-            LOGI(" - Deleting the file system...");
-            FileSystem::format();
-        }
-
-        LOGI(" - Clearing NVS...");
-        nvs_flash_erase();
-
-        LOGI(" - Restarting...");
-        esp_restart();
     }
 
     const std::string version;
@@ -201,7 +177,7 @@ private:
 
 public:
     const std::shared_ptr<MqttDriver> mqtt;
-    const std::shared_ptr<SwitchManager> switches = std::make_shared<SwitchManager>();
+    const std::shared_ptr<SwitchManager> switches;
     const std::shared_ptr<I2CManager> i2c;
 };
 
