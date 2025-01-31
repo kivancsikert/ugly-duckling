@@ -16,7 +16,7 @@ public:
         : motors(motors) {
     }
 
-    std::shared_ptr<PwmMotorDriver> findMotor(const std::string& motorName) {
+    std::shared_ptr<PwmMotorDriver> findMotor(const std::string& motorName) const {
         // If there's only one motor and no name is specified, use it
         if (motorName.empty() && motors.size() == 1) {
             return motors.begin()->second;
