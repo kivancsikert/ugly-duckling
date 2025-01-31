@@ -10,7 +10,6 @@
 #include <esp_event.h>
 #include <mqtt_client.h>
 
-#include <kernel/Command.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/Configuration.hpp>
 #include <kernel/State.hpp>

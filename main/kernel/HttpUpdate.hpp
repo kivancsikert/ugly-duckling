@@ -51,7 +51,7 @@ static esp_err_t httpEventHandler(esp_http_client_event_t* event) {
     return ESP_OK;
 }
 
-static void performHttpUpdateIfNecessary(std::shared_ptr<FileSystem> fs, std::shared_ptr<WiFiDriver> wifi, std::shared_ptr<Watchdog> watchdog) {
+static void performPendingHttpUpdateIfNecessary(std::shared_ptr<FileSystem> fs, std::shared_ptr<WiFiDriver> wifi, std::shared_ptr<Watchdog> watchdog) {
     // Do we need to update?
     if (!fs->exists(UPDATE_FILE)) {
         LOGV("No update file found, not updating");

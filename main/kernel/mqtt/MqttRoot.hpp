@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <memory>
 
 #include <kernel/mqtt/MqttDriver.hpp>
 
@@ -45,12 +46,6 @@ public:
             if (response.size() > 0) {
                 publish("responses/" + name, responseDoc, Retention::NoRetain, QoS::ExactlyOnce);
             }
-        });
-    }
-
-    void registerCommand(Command& command) {
-        registerCommand(command.name, [&](const JsonObject& request, JsonObject& response) {
-            command.handle(request, response);
         });
     }
 

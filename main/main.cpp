@@ -163,6 +163,103 @@ std::shared_ptr<MqttRoot> initMqtt(std::shared_ptr<ModuleStates> states, std::sh
     return std::make_shared<MqttRoot>(mqtt, (location.empty() ? "" : location + "/") + "devices/ugly-duckling/" + instance);
 }
 
+void registerBasicCommands(std::shared_ptr<MqttRoot> mqttRoot) {
+    mqttRoot->registerCommand("restart", [](const JsonObject&, JsonObject&) {
+        printf("Restarting...\n");
+        fflush(stdout);
+        fsync(fileno(stdout));
+        esp_restart();
+    });
+    mqttRoot->registerCommand("sleep", [](const JsonObject& request, JsonObject& response) {
+        seconds duration = seconds(request["duration"].as<long>());
+        esp_sleep_enable_timer_wakeup(((microseconds) duration).count());
+        LOGI("Sleeping for %lld seconds in light sleep mode",
+            duration.count());
+        esp_deep_sleep_start();
+    });
+}
+
+void registerFileCommands(std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<FileSystem> fs) {
+    mqttRoot->registerCommand("files/list", [fs](const JsonObject&, JsonObject& response) {
+        JsonArray files = response["files"].to<JsonArray>();
+        fs->readDir("/", [&](const std::string& name, off_t size) {
+            JsonObject file = files.add<JsonObject>();
+            file["name"] = name;
+            file["size"] = size;
+        });
+    });
+    mqttRoot->registerCommand("files/read", [fs](const JsonObject& request, JsonObject& response) {
+        std::string path = request["path"];
+        if (!path.starts_with("/")) {
+            path = "/" + path;
+        }
+        LOGI("Reading %s",
+            path.c_str());
+        response["path"] = path;
+        if (fs->exists(path)) {
+            response["size"] = fs->size(path);
+            auto contents = fs->readAll(path);
+            if (contents.has_value()) {
+                response["contents"] = contents.value();
+            }
+        } else {
+            response["error"] = "File not found";
+        }
+    });
+    mqttRoot->registerCommand("files/write", [fs](const JsonObject& request, JsonObject& response) {
+        std::string path = request["path"];
+        if (!path.starts_with("/")) {
+            path = "/" + path;
+        }
+        LOGI("Writing %s",
+            path.c_str());
+        std::string contents = request["contents"];
+        response["path"] = path;
+        size_t written = fs->writeAll(path, contents);
+        response["written"] = written;
+    });
+    mqttRoot->registerCommand("files/remove", [fs](const JsonObject& request, JsonObject& response) {
+        std::string path = request["path"];
+        if (!path.starts_with("/")) {
+            path = "/" + path;
+        }
+        LOGI("Removing %s",
+            path.c_str());
+        response["path"] = path;
+        int err = fs->remove(path);
+        if (err == 0) {
+            response["removed"] = true;
+        } else {
+            response["error"] = "File not found: " + std::to_string(err);
+        }
+    });
+}
+
+void registerHttpUpdateCommand(std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<FileSystem> fs) {
+    mqttRoot->registerCommand("update", [fs](const JsonObject& request, JsonObject& response) {
+        if (!request["url"].is<std::string>()) {
+            response["failure"] = "Command contains no URL";
+            return;
+        }
+        std::string url = request["url"];
+        if (url.length() == 0) {
+            response["failure"] = "Command contains empty url";
+            return;
+        }
+        JsonDocument doc;
+        doc["url"] = url;
+        std::string content;
+        serializeJson(doc, content);
+        fs->writeAll(UPDATE_FILE, content);
+        response["success"] = true;
+        Task::run("update", 3072, [](Task& task) {
+            LOGI("Restarting in 5 seconds to apply update");
+            Task::delay(5s);
+            esp_restart();
+        });
+    });
+}
+
 extern "C" void app_main() {
     auto i2c = std::make_shared<I2CManager>();
     auto battery = initBattery(i2c);
@@ -252,9 +349,12 @@ extern "C" void app_main() {
     auto mqttConfig = loadConfig<MqttDriver::Config>(fs, "/mqtt-config.json");
     auto mqttRoot = initMqtt(states, mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->location.get());
     MqttLog::init(deviceConfig->publishLogs.get(), logRecords, mqttRoot);
+    registerBasicCommands(mqttRoot);
+    registerFileCommands(mqttRoot, fs);
 
     // Handle any pending HTTP update (will reboot if update was required and was successful)
-    performHttpUpdateIfNecessary(fs, wifi, watchdog);
+    registerHttpUpdateCommand(mqttRoot, fs);
+    performPendingHttpUpdateIfNecessary(fs, wifi, watchdog);
 
     // Init peripherals
     auto peripheralManager = std::make_shared<PeripheralManager>(fs, i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, switches, mqttRoot);
@@ -262,6 +362,13 @@ extern "C" void app_main() {
         peripheralManager->shutdown();
     });
     deviceDefinition->registerPeripheralFactories(peripheralManager);
+
+    // Init telemetry
+    auto telemetryPublishQueue = std::make_shared<CopyQueue<bool>>("telemetry-publish", 1);
+    mqttRoot->registerCommand("ping", [telemetryPublishQueue](const JsonObject&, JsonObject& response) {
+        telemetryPublishQueue->offer(true);
+        response["pong"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
+    });
 
     auto deviceTelemetryCollector = std::make_shared<TelemetryCollector>();
     auto deviceTelemetryPublisher = std::make_shared<MqttTelemetryPublisher>(mqttRoot, deviceTelemetryCollector);
@@ -274,7 +381,7 @@ extern "C" void app_main() {
 #endif
     deviceTelemetryCollector->registerProvider("pm", std::make_shared<PowerManagementTelemetryProvider>(powerManager));
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, mqttRoot, peripheralManager, deviceTelemetryPublisher, states->rtcInSync);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, mqttRoot, peripheralManager, deviceTelemetryPublisher, telemetryPublishQueue, states->rtcInSync);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());

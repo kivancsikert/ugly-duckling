@@ -8,7 +8,6 @@
 #include <esp_wifi.h>
 
 #include <kernel/BootClock.hpp>
-#include <kernel/Command.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/CrashManager.hpp>
 #include <kernel/DebugConsole.hpp>
@@ -104,21 +103,11 @@ public:
         const std::shared_ptr<MqttRoot> mqttDeviceRoot,
         const std::shared_ptr<PeripheralManager> peripheralManager,
         const std::shared_ptr<TelemetryPublisher> deviceTelemetryPublisher,
+        const std::shared_ptr<CopyQueue<bool>> telemetryPublishQueue,
         const State& rtcInSync)
         : deviceDefinition(deviceDefinition)
         , fs(fs)
         , mqttDeviceRoot(mqttDeviceRoot) {
-        mqttDeviceRoot->registerCommand(echoCommand);
-        mqttDeviceRoot->registerCommand(pingCommand);
-        // TODO Add reset-wifi command
-        // mqttDeviceRoot->registerCommand(resetWifiCommand);
-        mqttDeviceRoot->registerCommand(restartCommand);
-        mqttDeviceRoot->registerCommand(sleepCommand);
-        mqttDeviceRoot->registerCommand(fileListCommand);
-        mqttDeviceRoot->registerCommand(fileReadCommand);
-        mqttDeviceRoot->registerCommand(fileWriteCommand);
-        mqttDeviceRoot->registerCommand(fileRemoveCommand);
-        mqttDeviceRoot->registerCommand(httpUpdateCommand);
 
         // We want RTC to be in sync before we start setting up peripherals
         rtcInSync.awaitSet();
@@ -172,7 +161,7 @@ public:
             Retention::NoRetain, QoS::AtLeastOnce, 5s);
 
         auto publishInterval = deviceConfig->publishInterval.get();
-        Task::loop("telemetry", 8192, [this, publishInterval, watchdog, peripheralManager, deviceTelemetryPublisher](Task& task) {
+        Task::loop("telemetry", 8192, [this, publishInterval, watchdog, peripheralManager, deviceTelemetryPublisher, telemetryPublishQueue](Task& task) {
             task.markWakeTime();
 
             deviceTelemetryPublisher->publishTelemetry();
@@ -188,7 +177,7 @@ public:
 
             // Allow other tasks to trigger telemetry updates
             auto timeout = task.ticksUntil(publishInterval - debounceInterval);
-            telemetryPublishQueue.pollIn(timeout);
+            telemetryPublishQueue->pollIn(timeout);
         });
     }
 
@@ -201,27 +190,6 @@ private:
     const std::shared_ptr<TDeviceDefinition> deviceDefinition;
     const std::shared_ptr<FileSystem> fs;
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
-
-    PingCommand pingCommand { [this]() {
-        telemetryPublishQueue.offer(true);
-    } };
-
-    EchoCommand echoCommand;
-    RestartCommand restartCommand;
-    SleepCommand sleepCommand;
-    FileListCommand fileListCommand { fs };
-    FileReadCommand fileReadCommand { fs };
-    FileWriteCommand fileWriteCommand { fs };
-    FileRemoveCommand fileRemoveCommand { fs };
-    HttpUpdateCommand httpUpdateCommand { [this](const std::string& url) {
-        JsonDocument doc;
-        doc["url"] = url;
-        std::string content;
-        serializeJson(doc, content);
-        fs->writeAll(UPDATE_FILE, content);
-    } };
-
-    CopyQueue<bool> telemetryPublishQueue { "telemetry-publish", 1 };
 };
 
 }    // namespace farmhub::devices
