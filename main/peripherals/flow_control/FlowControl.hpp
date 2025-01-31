@@ -29,12 +29,12 @@ public:
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
         std::shared_ptr<PulseCounterManager> pulseCounterManager,
-        ValveControlStrategy& strategy,
+        std::unique_ptr<ValveControlStrategy> strategy,
         InternalPinPtr pin,
         double qFactor,
         milliseconds measurementFrequency)
         : Peripheral<FlowControlConfig>(name, mqttRoot)
-        , valve(name, strategy, mqttRoot, [this]() {
+        , valve(name, std::move(strategy), mqttRoot, [this]() {
             publishTelemetry();
         })
         , flowMeter(name, mqttRoot, pulseCounterManager, pin, qFactor, measurementFrequency) {
@@ -90,7 +90,7 @@ public:
             mqttRoot,
             services.pulseCounterManager,
 
-            *strategy,
+            std::move(strategy),
 
             flowMeterConfig->pin.get(),
             flowMeterConfig->qFactor.get(),

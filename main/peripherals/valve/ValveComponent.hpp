@@ -195,19 +195,19 @@ class ValveComponent : public Component {
 public:
     ValveComponent(
         const std::string& name,
-        ValveControlStrategy& strategy,
+        std::unique_ptr<ValveControlStrategy> _strategy,
         std::shared_ptr<MqttRoot> mqttRoot,
         std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
         , nvs(name)
-        , strategy(strategy)
+        , strategy(std::move(_strategy))
         , publishTelemetry(publishTelemetry) {
 
         LOGI("Creating valve '%s' with strategy %s",
-            name.c_str(), strategy.describe().c_str());
+            name.c_str(), strategy->describe().c_str());
 
         ValveState initState;
-        switch (strategy.getDefaultState()) {
+        switch (strategy->getDefaultState()) {
             case ValveState::OPEN:
                 LOGI("Assuming valve '%s' is open by default",
                     name.c_str());
@@ -260,7 +260,7 @@ public:
             if (overrideState != ValveState::NONE) {
                 update = { overrideState, overrideUntil.load() - now };
             } else {
-                update = ValveScheduler::getStateUpdate(schedules, now, this->strategy.getDefaultState());
+                update = ValveScheduler::getStateUpdate(schedules, now, this->strategy->getDefaultState());
                 // If there are no schedules nor default state for the valve, close it
                 if (update.state == ValveState::NONE) {
                     update.state = ValveState::CLOSED;
@@ -335,7 +335,7 @@ private:
         LOGI("Opening valve '%s'", name.c_str());
         {
             PowerManagementLockGuard sleepLock(PowerManager::noLightSleep);
-            strategy.open();
+            strategy->open();
         }
         setState(ValveState::OPEN);
     }
@@ -344,7 +344,7 @@ private:
         LOGI("Closing valve '%s'", name.c_str());
         {
             PowerManagementLockGuard sleepLock(PowerManager::noLightSleep);
-            strategy.close();
+            strategy->close();
         }
         setState(ValveState::CLOSED);
     }
@@ -385,7 +385,7 @@ private:
     }
 
     NvsStore nvs;
-    ValveControlStrategy& strategy;
+    const std::unique_ptr<ValveControlStrategy> strategy;
     std::function<void()> publishTelemetry;
 
     ValveState state = ValveState::NONE;

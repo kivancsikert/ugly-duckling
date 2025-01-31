@@ -71,10 +71,10 @@ public:
      */
     Property<milliseconds> switchDuration { this, "switchDuration", 500ms };
 
-    ValveControlStrategy* createValveControlStrategy(Motorized* motorOwner) const {
+    std::unique_ptr<ValveControlStrategy> createValveControlStrategy(Motorized* motorOwner) const {
         PinPtr pin = this->pin.get();
         if (pin != nullptr) {
-            return new LatchingPinValveControlStrategy(pin);
+            return std::make_unique<LatchingPinValveControlStrategy>(pin);
         }
 
         std::shared_ptr<PwmMotorDriver> motor = motorOwner->findMotor(this->motor.get());
@@ -84,11 +84,11 @@ public:
 
         switch (this->strategy.get()) {
             case ValveControlStrategyType::NormallyOpen:
-                return new NormallyOpenMotorValveControlStrategy(motor, switchDuration, holdDuty);
+                return std::make_unique<NormallyOpenMotorValveControlStrategy>(motor, switchDuration, holdDuty);
             case ValveControlStrategyType::NormallyClosed:
-                return new NormallyClosedMotorValveControlStrategy(motor, switchDuration, holdDuty);
+                return std::make_unique<NormallyClosedMotorValveControlStrategy>(motor, switchDuration, holdDuty);
             case ValveControlStrategyType::Latching:
-                return new LatchingMotorValveControlStrategy(motor, switchDuration, holdDuty);
+                return std::make_unique<LatchingMotorValveControlStrategy>(motor, switchDuration, holdDuty);
             default:
                 throw PeripheralCreationException("unknown strategy");
         }
