@@ -1,7 +1,6 @@
 #pragma once
 
 #include <kernel/FileSystem.hpp>
-#include <kernel/Kernel.hpp>
 #include <kernel/Pin.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/LedDriver.hpp>

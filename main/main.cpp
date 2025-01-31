@@ -16,8 +16,11 @@ static const char* const farmhubVersion = esp_app_get_description()->version;
 #include <kernel/Console.hpp>
 #include <kernel/DebugConsole.hpp>
 #include <kernel/HttpUpdate.hpp>
+#include <kernel/KernelStatus.hpp>
 #include <kernel/Log.hpp>
 #include <kernel/mqtt/MqttLog.hpp>
+
+#include <devices/Device.hpp>
 
 using namespace farmhub::kernel;
 
@@ -84,8 +87,6 @@ static void dumpPerTaskHeapInfo() {
     printf("\n\n");
 }
 #endif
-
-#include <devices/Device.hpp>
 
 void performFactoryReset(std::shared_ptr<LedDriver> statusLed, bool completeReset) {
     LOGI("Performing factory reset");
@@ -179,20 +180,19 @@ extern "C" void app_main() {
         deviceConfig->getHostname().c_str(),
         getMacAddress().c_str());
 
-    StateManager stateManager;
-    auto networkConnectingState = stateManager.createStateSource("network-connecting");
-    auto networkReadyState = stateManager.createStateSource("network-ready");
-    auto configPortalRunningState = stateManager.createStateSource("config-portal-running");
+    auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
+
+    auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
+    auto states = std::make_shared<ModuleStates>();
+    KernelStatusTask::init(statusLed, states);
+
     auto wifi = std::make_shared<WiFiDriver>(
-        networkConnectingState,
-        networkReadyState,
-        configPortalRunningState,
+        states->networkConnecting,
+        states->networkReady,
+        states->configPortalRunning,
         deviceConfig->getHostname());
 
-    auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
-    auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
     auto switches = std::make_shared<SwitchManager>();
-
     switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [statusLed](const Switch&, milliseconds duration) {
         if (duration >= 15s) {
             LOGI("Factory reset triggered after %lld ms", duration.count());
@@ -213,19 +213,16 @@ extern "C" void app_main() {
     new DebugConsole(batteryManager, wifi);
 #endif
 
-    auto mdnsReadyState = stateManager.createStateSource("mdns-ready");
-    auto mdns = std::make_shared<MdnsDriver>(wifi->getNetworkReady(), deviceConfig->getHostname(), "ugly-duckling", farmhubVersion, mdnsReadyState);
+    auto mdns = std::make_shared<MdnsDriver>(wifi->getNetworkReady(), deviceConfig->getHostname(), "ugly-duckling", farmhubVersion, states->mdnsReady);
 
     // Init real time clock
-    auto rtcInSyncState = stateManager.createStateSource("rtc-in-sync");
-    auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), rtcInSyncState);
+    auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), states->rtcInSync);
 
     auto mqttConfig = std::make_shared<MqttDriver::Config>();
     // TODO This should just be a "load()" call
     ConfigurationFile<MqttDriver::Config> mqttConfigFile(fs, "/mqtt-config.json", mqttConfig);
 
-    auto mqttReadyState = stateManager.createStateSource("mqtt-ready");
-    auto mqtt = std::make_shared<MqttDriver>(wifi->getNetworkReady(), mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), mqttReadyState);
+    auto mqtt = std::make_shared<MqttDriver>(wifi->getNetworkReady(), mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), states->mqttReady);
 
     auto location = deviceConfig->location.get();
     auto instance = deviceConfig->instance.get();
@@ -236,17 +233,15 @@ extern "C" void app_main() {
     // Reboots if update is successful
     handleHttpUpdate(fs, wifi, watchdog);
 
-    auto kernel = std::make_shared<Kernel>(statusLed, wifi, mdns, rtc, mqtt);
-
     auto peripheralManager = std::make_shared<PeripheralManager>(fs, i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, switches, mqttRoot);
     deviceDefinition->registerPeripheralFactories(peripheralManager);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, shutdownManager, mqttRoot, peripheralManager, kernel->getRtcInSyncState());
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, shutdownManager, mqttRoot, peripheralManager, states->rtcInSync);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
 
-    kernel->getKernelReadyState().set();
+    states->kernelReady.set();
 
     LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
         duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count() / 1000.0,

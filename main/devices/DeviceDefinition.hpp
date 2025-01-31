@@ -8,7 +8,6 @@
 
 #include <devices/DeviceConfiguration.hpp>
 
-#include <kernel/Kernel.hpp>
 #include <kernel/Log.hpp>
 #include <kernel/PcntManager.hpp>
 #include <kernel/PulseCounter.hpp>

@@ -13,7 +13,6 @@
 #include <kernel/Command.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/DebugConsole.hpp>
-#include <kernel/Kernel.hpp>
 #include <kernel/Strings.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/mqtt/MqttDriver.hpp>
