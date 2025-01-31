@@ -114,8 +114,7 @@ void performFactoryReset(std::shared_ptr<LedDriver> statusLed, bool completeRese
     esp_restart();
 }
 
-extern "C" void app_main() {
-    auto i2c = std::make_shared<I2CManager>();
+std::shared_ptr<BatteryDriver> initBattery(std::shared_ptr<I2CManager> i2c) {
     auto battery = TDeviceDefinition::createBatteryDriver(i2c);
     if (battery != nullptr) {
         // If the battery voltage is below the device's threshold, we should not boot yet.
@@ -128,10 +127,10 @@ extern "C" void app_main() {
             enterLowPowerDeepSleep();
         }
     }
+    return battery;
+}
 
-    Log::init();
-
-    // Initialize NVS
+void initNvsFlash() {
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         // NVS partition was truncated and needs to be erased
@@ -140,6 +139,32 @@ extern "C" void app_main() {
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
+}
+
+std::shared_ptr<Watchdog> initWatchdog() {
+    return std::make_shared<Watchdog>("watchdog", 5min, true, [](WatchdogState state) {
+        if (state == WatchdogState::TimedOut) {
+            LOGE("Watchdog timed out");
+            esp_system_abort("Watchdog timed out");
+        }
+    });
+}
+
+template <std::derived_from<ConfigurationSection> TConfiguration>
+std::shared_ptr<TConfiguration> loadConfig(std::shared_ptr<FileSystem> fs, const std::string& path) {
+    auto config = std::make_shared<TConfiguration>();
+    // TODO This should just be a "load()" call
+    ConfigurationFile<TConfiguration> configFile(fs, path, config);
+    return config;
+}
+
+extern "C" void app_main() {
+    auto i2c = std::make_shared<I2CManager>();
+    auto battery = initBattery(i2c);
+
+    Log::init();
+
+    initNvsFlash();
 
     // Install GPIO ISR service
     gpio_install_isr_service(0);
@@ -148,18 +173,11 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
 
-    auto watchdog = std::make_shared<Watchdog>("watchdog", 5min, true, [](WatchdogState state) {
-        if (state == WatchdogState::TimedOut) {
-            LOGE("Watchdog timed out");
-            esp_system_abort("Watchdog timed out");
-        }
-    });
+    auto watchdog = initWatchdog();
 
     auto fs = std::make_shared<FileSystem>();
 
-    auto deviceConfig = std::make_shared<TDeviceConfiguration>();
-    // TODO This should just be a "load()" call
-    ConfigurationFile<TDeviceConfiguration> deviceConfigFile(fs, "/device-config.json", deviceConfig);
+    auto deviceConfig = loadConfig<TDeviceConfiguration>(fs, "/device-config.json");
 
     auto powerManager = std::make_shared<PowerManager>(deviceConfig->sleepWhenIdle.get());
 
