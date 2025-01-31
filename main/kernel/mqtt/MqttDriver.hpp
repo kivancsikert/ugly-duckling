@@ -92,7 +92,7 @@ public:
             runEventLoop(task);
         });
         Task::loop("mqtt:incoming", 4096, [this](Task& task) {
-            incomingQueue.take([&](const IncomingMessage& message) {
+            incomingQueue.take([this](const IncomingMessage& message) {
                 processIncomingMessage(message);
             });
         });

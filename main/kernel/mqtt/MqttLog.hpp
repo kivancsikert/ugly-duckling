@@ -24,8 +24,8 @@ public:
                 std::string message = record.message.substr(messageStart, messageEnd - messageStart);
 
                 mqttRoot->publish(
-                    "log", [&](JsonObject& json) {
-                        json["level"] = record.level;
+                    "log", [level = record.level, message](JsonObject& json) {
+                        json["level"] = level;
                         json["message"] = message;
                     },
                     Retention::NoRetain, QoS::AtLeastOnce, 2s, LogPublish::Silent);

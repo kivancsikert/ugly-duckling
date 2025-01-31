@@ -122,7 +122,7 @@ public:
         switch (ret) {
             case ESP_OK: {
                 LOGTI(Tag::FS, "SPIFFS partition '%s' mounted successfully", PARTITION);
-                readDir("/", [&](const std::string& name, size_t size) {
+                readDir("/", [](const std::string& name, size_t size) {
                     LOGTI(Tag::FS, " - %s (%u bytes)", name.c_str(), size);
                 });
                 break;

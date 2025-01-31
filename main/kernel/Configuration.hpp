@@ -313,7 +313,7 @@ public:
             LOGI("Effective configuration for '%s': %s",
                 path.c_str(), toString().c_str());
         }
-        onUpdate([&fs, path](const JsonObject& json) {
+        onUpdate([fs, path](const JsonObject& json) {
             std::string contents;
             serializeJson(json, contents);
             bool success = fs->writeAll(path, contents);

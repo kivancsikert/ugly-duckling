@@ -182,7 +182,7 @@ void registerBasicCommands(std::shared_ptr<MqttRoot> mqttRoot) {
 void registerFileCommands(std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<FileSystem> fs) {
     mqttRoot->registerCommand("files/list", [fs](const JsonObject&, JsonObject& response) {
         JsonArray files = response["files"].to<JsonArray>();
-        fs->readDir("/", [&](const std::string& name, off_t size) {
+        fs->readDir("/", [files](const std::string& name, off_t size) {
             JsonObject file = files.add<JsonObject>();
             file["name"] = name;
             file["size"] = size;
