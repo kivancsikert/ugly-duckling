@@ -22,6 +22,8 @@ static const char* const farmhubVersion = esp_app_get_description()->version;
 
 #include <devices/Device.hpp>
 
+#include <peripherals/Peripheral.hpp>
+
 using namespace farmhub::kernel;
 
 #ifdef CONFIG_HEAP_TRACING
@@ -286,6 +288,11 @@ void initTelemetryPublishTask(
     });
 }
 
+enum class InitState {
+    Success = 0,
+    PeripheralError = 1,
+};
+
 extern "C" void app_main() {
     auto i2c = std::make_shared<I2CManager>();
     auto battery = initBattery(i2c);
@@ -410,12 +417,59 @@ extern "C" void app_main() {
     // We want RTC to be in sync before we start setting up peripherals
     states->rtcInSync.awaitSet();
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, mqttRoot, peripheralManager);
+    // Init peripherals
+    JsonDocument peripheralsInitDoc;
+    auto peripheralsInitJson = peripheralsInitDoc.to<JsonArray>();
+    InitState initState = InitState::Success;
+
+    auto builtInPeripheralsConfig = deviceDefinition->getBuiltInPeripherals();
+    LOGD("Loading configuration for %d built-in peripherals",
+        builtInPeripheralsConfig.size());
+    for (auto& peripheralConfig : builtInPeripheralsConfig) {
+        if (!peripheralManager->createPeripheral(peripheralConfig, peripheralsInitJson)) {
+            initState = InitState::PeripheralError;
+        }
+    }
+
+    auto& peripheralsConfig = deviceConfig->peripherals.get();
+    LOGI("Loading configuration for %d user-configured peripherals",
+        peripheralsConfig.size());
+    for (auto& peripheralConfig : peripheralsConfig) {
+        if (!peripheralManager->createPeripheral(peripheralConfig.get(), peripheralsInitJson)) {
+            initState = InitState::PeripheralError;
+        }
+    }
 
     initTelemetryPublishTask(deviceConfig->publishInterval.get(), watchdog, peripheralManager, deviceTelemetryPublisher, telemetryPublishQueue);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
+
+    mqttRoot->publish(
+        "init",
+        [deviceConfig, initState, peripheralsInitJson, powerManager](JsonObject& json) {
+            // TODO Remove redundant mentions of "ugly-duckling"
+            json["type"] = "ugly-duckling";
+            json["model"] = deviceConfig->model.get();
+            json["id"] = deviceConfig->id.get();
+            json["instance"] = deviceConfig->instance.get();
+            json["mac"] = getMacAddress();
+            auto device = json["deviceConfig"].to<JsonObject>();
+            deviceConfig->store(device, false);
+            // TODO Remove redundant mentions of "ugly-duckling"
+            json["app"] = "ugly-duckling";
+            json["version"] = farmhubVersion;
+            json["reset"] = esp_reset_reason();
+            json["wakeup"] = esp_sleep_get_wakeup_cause();
+            json["bootCount"] = bootCount++;
+            json["time"] = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
+            json["state"] = static_cast<int>(initState);
+            json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
+            json["sleepWhenIdle"] = powerManager->sleepWhenIdle;
+
+            CrashManager::reportPreviousCrashIfAny(json);
+        },
+        Retention::NoRetain, QoS::AtLeastOnce, 5s);
 
     states->kernelReady.set();
 
