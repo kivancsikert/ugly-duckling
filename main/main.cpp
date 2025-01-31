@@ -241,7 +241,7 @@ extern "C" void app_main() {
     auto peripheralManager = std::make_shared<PeripheralManager>(fs, i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, switches, mqttRoot);
     deviceDefinition->registerPeripheralFactories(peripheralManager);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, batteryManager, watchdog, powerManager, kernel, shutdownManager, mqttRoot, peripheralManager);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, shutdownManager, mqttRoot, peripheralManager, kernel->getRtcInSyncState());
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());

@@ -111,17 +111,17 @@ public:
     Device(
         const std::shared_ptr<TDeviceConfiguration> deviceConfig,
         const std::shared_ptr<TDeviceDefinition> deviceDefinition,
-        std::shared_ptr<FileSystem> fs,
-        std::shared_ptr<BatteryManager> battery,
-        std::shared_ptr<Watchdog> watchdog,
-        std::shared_ptr<PowerManager> powerManager,
-        std::shared_ptr<Kernel> kernel,
-        std::shared_ptr<ShutdownManager> shutdownManager,
-        std::shared_ptr<MqttRoot> mqttDeviceRoot,
-        std::shared_ptr<PeripheralManager> peripheralManager)
+        const std::shared_ptr<FileSystem> fs,
+        const std::shared_ptr<WiFiDriver> wifi,
+        const std::shared_ptr<BatteryManager> battery,
+        const std::shared_ptr<Watchdog> watchdog,
+        const std::shared_ptr<PowerManager> powerManager,
+        const std::shared_ptr<ShutdownManager> shutdownManager,
+        const std::shared_ptr<MqttRoot> mqttDeviceRoot,
+        const std::shared_ptr<PeripheralManager> peripheralManager,
+        const State& rtcInSync)
         : deviceDefinition(deviceDefinition)
         , fs(fs)
-        , kernel(kernel)
         , mqttDeviceRoot(mqttDeviceRoot)
         , peripheralManager(peripheralManager)
     {
@@ -135,7 +135,7 @@ public:
             LOGI("No battery configured");
         }
 
-        deviceTelemetryCollector.registerProvider("wifi", std::make_shared<WiFiTelemetryProvider>(kernel->wifi));
+        deviceTelemetryCollector.registerProvider("wifi", std::make_shared<WiFiTelemetryProvider>(wifi));
 
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
         deviceTelemetryCollector.registerProvider("memory", std::make_shared<MemoryTelemetryProvider>());
@@ -155,7 +155,7 @@ public:
         mqttDeviceRoot->registerCommand(httpUpdateCommand);
 
         // We want RTC to be in sync before we start setting up peripherals
-        kernel->getRtcInSyncState().awaitSet();
+        rtcInSync.awaitSet();
 
         JsonDocument peripheralsInitDoc;
         JsonArray peripheralsInitJson = peripheralsInitDoc.to<JsonArray>();
@@ -324,7 +324,6 @@ private:
 
     const std::shared_ptr<TDeviceDefinition> deviceDefinition;
     const std::shared_ptr<FileSystem> fs;
-    const std::shared_ptr<Kernel> kernel;
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
     const std::shared_ptr<PeripheralManager> peripheralManager;
 
