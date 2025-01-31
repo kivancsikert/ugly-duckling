@@ -9,6 +9,7 @@ idf_component_register(
 component_compile_options(-Wall)
 component_compile_options(-Wextra)
 component_compile_options(-Wunused)
+component_compile_options(-Wreturn-local-addr)
 component_compile_options(-Werror)
 
 if(NOT DEFINED WOKWI)

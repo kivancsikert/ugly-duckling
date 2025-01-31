@@ -6,7 +6,6 @@
 
 #include <ArduinoJson.h>
 
-#include <kernel/Service.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
@@ -28,10 +27,10 @@ class Valve
 public:
     Valve(
         const std::string& name,
-        ValveControlStrategy& strategy,
+        std::unique_ptr<ValveControlStrategy> strategy,
         std::shared_ptr<MqttRoot> mqttRoot)
         : Peripheral<ValveConfig>(name, mqttRoot)
-        , valve(name, strategy, mqttRoot, [this]() {
+        , valve(name, std::move(strategy), mqttRoot, [this]() {
             publishTelemetry();
         }) {
     }
@@ -57,7 +56,7 @@ class ValveFactory
       protected Motorized {
 public:
     ValveFactory(
-        const std::list<ServiceRef<PwmMotorDriver>>& motors,
+        const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
         ValveControlStrategyType defaultStrategy)
         : PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType>("valve", defaultStrategy)
         , Motorized(motors) {
@@ -65,7 +64,7 @@ public:
 
     std::unique_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ValveDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         auto strategy = deviceConfig->createValveControlStrategy(this);
-        return std::make_unique<Valve>(name, *strategy, mqttRoot);
+        return std::make_unique<Valve>(name, std::move(strategy), mqttRoot);
     }
 };
 

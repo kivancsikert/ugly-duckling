@@ -2,7 +2,6 @@
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/Pin.hpp>
-#include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/Drv8801Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -52,17 +51,10 @@ static InternalPinPtr RXD0 = InternalPin::registerPin("RXD0", GPIO_NUM_44);
 static InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43);
 }    // namespace pins
 
-class UglyDucklingMk4 : public DeviceDefinition {
+class UglyDucklingMk4 : public DeviceDefinition<Mk4Config> {
 public:
     UglyDucklingMk4(std::shared_ptr<Mk4Config> config)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
-    }
-
-    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) override {
-        peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::NormallyClosed));
-        peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
-        peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::NormallyClosed));
-        peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
     }
 
     std::list<std::string> getBuiltInPeripherals() override {
@@ -80,19 +72,25 @@ public:
         };
     }
 
-    Drv8801Driver motorDriver {
-        pwm,
-        pins::VALVE_EN,
-        pins::VALVE_PH,
-        pins::VALVE_MODE1,
-        pins::VALVE_MODE2,
-        pins::VALVE_CURRENT,
-        pins::VALVE_FAULT,
-        pins::VALVE_SLEEP
-    };
+protected:
+    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<Mk4Config> deviceConfig) override {
+        auto motor = std::make_shared<Drv8801Driver>(
+            services.pwmManager,
+            pins::VALVE_EN,
+            pins::VALVE_PH,
+            pins::VALVE_MODE1,
+            pins::VALVE_MODE2,
+            pins::VALVE_CURRENT,
+            pins::VALVE_FAULT,
+            pins::VALVE_SLEEP);
 
-    const ServiceRef<PwmMotorDriver> motor { "motor", motorDriver };
-    const std::list<ServiceRef<PwmMotorDriver>> motors { motor };
+        std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "default", motor } };
+
+        peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::NormallyClosed));
+        peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
+        peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::NormallyClosed));
+        peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
+    }
 };
 
 }    // namespace farmhub::devices

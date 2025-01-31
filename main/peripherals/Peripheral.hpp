@@ -171,14 +171,10 @@ class PeripheralManager
 public:
     PeripheralManager(
         std::shared_ptr<FileSystem> fs,
-        std::shared_ptr<I2CManager> i2c,
-        std::shared_ptr<PcntManager> pcntManager,
-        std::shared_ptr<PulseCounterManager> pulseCounterManager,
-        std::shared_ptr<PwmManager> pwmManager,
-        std::shared_ptr<SwitchManager> switchManager,
+        PeripheralServices services,
         const std::shared_ptr<MqttRoot> mqttDeviceRoot)
         : fs(fs)
-        , services({ i2c, pcntManager, pulseCounterManager, pwmManager, switchManager })
+        , services(services)
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 
@@ -284,9 +280,7 @@ private:
     };
 
     const std::shared_ptr<FileSystem> fs;
-
-    PeripheralServices services;
-
+    const PeripheralServices services;
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
 
     // TODO Use an unordered_map?

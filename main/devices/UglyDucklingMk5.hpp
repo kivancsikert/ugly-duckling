@@ -2,7 +2,6 @@
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/Pin.hpp>
-#include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/Drv8874Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -74,40 +73,39 @@ static InternalPinPtr RXD0 = InternalPin::registerPin("RXD0", GPIO_NUM_44);
 static InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43);
 }    // namespace pins
 
-class UglyDucklingMk5 : public DeviceDefinition {
+class UglyDucklingMk5 : public DeviceDefinition<Mk5Config> {
 public:
     UglyDucklingMk5(std::shared_ptr<Mk5Config> config)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
-    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) override {
+protected:
+    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<Mk5Config> deviceConfig) override {
+        auto motorA = std::make_shared<Drv8874Driver>(
+            services.pwmManager,
+            pins::AIN1,
+            pins::AIN2,
+            pins::AIPROPI,
+            pins::NFault,
+            pins::NSLEEP
+        );
+
+        auto motorB = std::make_shared<Drv8874Driver>(
+            services.pwmManager,
+            pins::BIN1,
+            pins::BIN2,
+            pins::BIPROPI,
+            pins::NFault,
+            pins::NSLEEP
+        );
+
+        std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a",  motorA }, { "b",  motorB } };
+
         peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
         peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
     }
-
-    Drv8874Driver motorADriver {
-        pwm,
-        pins::AIN1,
-        pins::AIN2,
-        pins::AIPROPI,
-        pins::NFault,
-        pins::NSLEEP
-    };
-
-    Drv8874Driver motorBDriver {
-        pwm,
-        pins::BIN1,
-        pins::BIN2,
-        pins::AIPROPI,
-        pins::NFault,
-        pins::NSLEEP
-    };
-
-    const ServiceRef<PwmMotorDriver> motorA { "a", motorADriver };
-    const ServiceRef<PwmMotorDriver> motorB { "b", motorBDriver };
-    const std::list<ServiceRef<PwmMotorDriver>> motors { motorA, motorB };
 };
 
 }}    // namespace farmhub::devices

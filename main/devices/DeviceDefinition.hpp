@@ -32,6 +32,7 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::devices {
 
+template <std::derived_from<DeviceConfiguration> TDeviceConfiguration>
 class DeviceDefinition {
 public:
     DeviceDefinition(PinPtr statusPin, InternalPinPtr bootPin)
@@ -39,7 +40,7 @@ public:
         , bootPin(bootPin) {
     }
 
-    virtual void registerPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) {
+    virtual void registerPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<TDeviceConfiguration> deviceConfig) {
         peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht3xComponent>>("sht3x", 0x44 /* Also supports 0x45 */));
         // TODO Unify these two factories
         peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht2xComponent>>("sht2x", 0x40 /* Not configurable */));
@@ -55,10 +56,7 @@ public:
 
         peripheralManager->registerFactory(std::make_unique<multiplexer::Xl9535Factory>());
 
-        registerDeviceSpecificPeripheralFactories(peripheralManager);
-    }
-
-    virtual void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) {
+        registerDeviceSpecificPeripheralFactories(peripheralManager, services, deviceConfig);
     }
 
     /**
@@ -72,13 +70,12 @@ public:
         return nullptr;
     }
 
-public:
     const PinPtr statusPin;
     const InternalPinPtr bootPin;
 
-    const std::shared_ptr<PcntManager> pcnt { std::make_shared<PcntManager>() };
-    const std::shared_ptr<PulseCounterManager> pulseCounterManager { std::make_shared<PulseCounterManager>() };
-    const std::shared_ptr<PwmManager> pwm { std::make_shared<PwmManager>() };
+protected:
+    virtual void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<TDeviceConfiguration> deviceConfig) {
+    }
 };
 
 }    // namespace farmhub::devices

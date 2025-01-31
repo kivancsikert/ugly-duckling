@@ -90,7 +90,7 @@ public:
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
         std::shared_ptr<SwitchManager> switches,
-        PwmMotorDriver& motor,
+        std::shared_ptr<PwmMotorDriver> motor,
         TLightSensorComponent& lightSensor,
         InternalPinPtr openPin,
         InternalPinPtr closedPin,
@@ -121,7 +121,7 @@ public:
         LOGI("Initializing chicken door %s, open switch %s, close switch %s",
             name.c_str(), openSwitch.getPin()->getName().c_str(), closedSwitch.getPin()->getName().c_str());
 
-        motor.stop();
+        motor->stop();
 
         mqttRoot->registerCommand("override", [this](const JsonObject& request, JsonObject& response) {
             DoorState overrideState = request["state"].as<DoorState>();
@@ -184,13 +184,13 @@ private:
             }
             switch (targetState) {
                 case DoorState::OPEN:
-                    motor.drive(MotorPhase::FORWARD, 1);
+                    motor->drive(MotorPhase::FORWARD, 1);
                     break;
                 case DoorState::CLOSED:
-                    motor.drive(MotorPhase::REVERSE, 1);
+                    motor->drive(MotorPhase::REVERSE, 1);
                     break;
                 default:
-                    motor.stop();
+                    motor->stop();
                     break;
             }
         } else {
@@ -198,7 +198,7 @@ private:
                 LOGV("Reached state %d (light level %.2f)",
                     static_cast<int>(currentState), lightSensor.getCurrentLevel());
                 watchdog.cancel();
-                motor.stop();
+                motor->stop();
                 mqttRoot->publish("events/state", [=](JsonObject& json) { json["state"] = currentState; }, Retention::NoRetain, QoS::AtLeastOnce);
             }
         }
@@ -243,7 +243,7 @@ private:
                     } else if constexpr (std::is_same_v<T, WatchdogTimeout>) {
                         LOGE("Watchdog timed out, stopping operation");
                         operationState = OperationState::WATCHDOG_TIMEOUT;
-                        motor.stop();
+                        motor->stop();
                         this->publishTelemetry();
                     }
                 },
@@ -310,7 +310,7 @@ private:
         }
     }
 
-    PwmMotorDriver& motor;
+    const std::shared_ptr<PwmMotorDriver> motor;
     TLightSensorComponent& lightSensor;
 
     double openLevel = std::numeric_limits<double>::max();
@@ -355,7 +355,7 @@ public:
         std::shared_ptr<I2CManager> i2c,
         uint8_t lightSensorAddress,
         std::shared_ptr<SwitchManager> switches,
-        PwmMotorDriver& motor,
+        const std::shared_ptr<PwmMotorDriver> motor,
         const std::shared_ptr<ChickenDoorDeviceConfig> config)
         : Peripheral<ChickenDoorConfig>(name, mqttRoot)
         , lightSensor(
@@ -416,13 +416,13 @@ class ChickenDoorFactory
     : public PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig>,
       protected Motorized {
 public:
-    ChickenDoorFactory(const std::list<ServiceRef<PwmMotorDriver>>& motors)
+    ChickenDoorFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors)
         : PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig>("chicken-door")
         , Motorized(motors) {
     }
 
     std::unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ChickenDoorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
-        PwmMotorDriver& motor = findMotor(deviceConfig->motor.get());
+        std::shared_ptr<PwmMotorDriver> motor = findMotor(deviceConfig->motor.get());
         auto lightSensorType = deviceConfig->lightSensor.get()->type.get();
         try {
             if (lightSensorType == "bh1750") {

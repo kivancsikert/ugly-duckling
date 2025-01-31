@@ -2,7 +2,6 @@
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/Pin.hpp>
-#include <kernel/Service.hpp>
 #include <kernel/drivers/LedDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
@@ -26,13 +25,14 @@ public:
     }
 };
 
-class UglyDucklingMk8 : public DeviceDefinition {
+class UglyDucklingMk8 : public DeviceDefinition<Mk8Config> {
 public:
     UglyDucklingMk8(std::shared_ptr<Mk8Config> config)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
-    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) override {
+protected:
+    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<Mk8Config> deviceConfig) override {
     }
 };
 
