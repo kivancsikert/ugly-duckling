@@ -2,7 +2,6 @@
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/Pin.hpp>
-#include <kernel/Service.hpp>
 #include <kernel/drivers/Bq27220Driver.hpp>
 #include <kernel/drivers/Drv8833Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -81,7 +80,7 @@ public:
     }
 };
 
-class UglyDucklingMk7 : public DeviceDefinition {
+class UglyDucklingMk7 : public DeviceDefinition<Mk7Config> {
 public:
     UglyDucklingMk7(std::shared_ptr<Mk7Config> config)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
@@ -95,28 +94,24 @@ public:
         });
     }
 
-    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) override {
+protected:
+    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<Mk7Config> deviceConfig) override {
+        auto motorDriver = Drv8833Driver::create(
+            services.pwmManager,
+            pins::DAIN1,
+            pins::DAIN2,
+            pins::DBIN1,
+            pins::DBIN2,
+            pins::DNFault,
+            pins::LOADEN);
+
+        std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a",  motorDriver->getMotorA() }, { "b",  motorDriver->getMotorB() } };
+
         peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
         peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
     }
-
-    std::shared_ptr<LedDriver> secondaryStatusLed { std::make_shared<LedDriver>("status-2", pins::STATUS2) };
-
-    Drv8833Driver motorDriver {
-        pwm,
-        pins::DAIN1,
-        pins::DAIN2,
-        pins::DBIN1,
-        pins::DBIN2,
-        pins::DNFault,
-        pins::LOADEN,
-    };
-
-    const ServiceRef<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
-    const ServiceRef<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };
-    const std::list<ServiceRef<PwmMotorDriver>> motors { motorA, motorB };
 };
 
 }    // namespace farmhub::devices

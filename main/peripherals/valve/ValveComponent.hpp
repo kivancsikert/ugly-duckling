@@ -11,7 +11,6 @@
 #include <kernel/Component.hpp>
 #include <kernel/Concurrent.hpp>
 #include <kernel/NvsStore.hpp>
-#include <kernel/Service.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/Time.hpp>
@@ -38,19 +37,19 @@ public:
 class MotorValveControlStrategy
     : public ValveControlStrategy {
 public:
-    MotorValveControlStrategy(PwmMotorDriver& controller)
+    MotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller)
         : controller(controller) {
     }
 
 protected:
-    PwmMotorDriver& controller;
+    const std::shared_ptr<PwmMotorDriver> controller;
 };
 
 class HoldingMotorValveControlStrategy
     : public MotorValveControlStrategy {
 
 public:
-    HoldingMotorValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double holdDuty)
+    HoldingMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double holdDuty)
         : MotorValveControlStrategy(controller)
         , switchDuration(switchDuration)
         , holdDuty(holdDuty) {
@@ -76,16 +75,16 @@ protected:
 
 private:
     void driveAndHold(MotorPhase phase) {
-        controller.drive(phase, 1.0);
+        controller->drive(phase, 1.0);
         Task::delay(switchDuration);
-        controller.drive(phase, holdDuty);
+        controller->drive(phase, holdDuty);
     }
 };
 
 class NormallyClosedMotorValveControlStrategy
     : public HoldingMotorValveControlStrategy {
 public:
-    NormallyClosedMotorValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double holdDuty)
+    NormallyClosedMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double holdDuty)
         : HoldingMotorValveControlStrategy(controller, switchDuration, holdDuty) {
     }
 
@@ -94,7 +93,7 @@ public:
     }
 
     void close() override {
-        controller.stop();
+        controller->stop();
     }
 
     ValveState getDefaultState() const override {
@@ -109,12 +108,12 @@ public:
 class NormallyOpenMotorValveControlStrategy
     : public HoldingMotorValveControlStrategy {
 public:
-    NormallyOpenMotorValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double holdDuty)
+    NormallyOpenMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double holdDuty)
         : HoldingMotorValveControlStrategy(controller, switchDuration, holdDuty) {
     }
 
     void open() override {
-        controller.stop();
+        controller->stop();
     }
 
     void close() override {
@@ -133,22 +132,22 @@ public:
 class LatchingMotorValveControlStrategy
     : public MotorValveControlStrategy {
 public:
-    LatchingMotorValveControlStrategy(PwmMotorDriver& controller, milliseconds switchDuration, double switchDuty = 1.0)
+    LatchingMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double switchDuty = 1.0)
         : MotorValveControlStrategy(controller)
         , switchDuration(switchDuration)
         , switchDuty(switchDuty) {
     }
 
     void open() override {
-        controller.drive(MotorPhase::FORWARD, switchDuty);
+        controller->drive(MotorPhase::FORWARD, switchDuty);
         Task::delay(switchDuration);
-        controller.stop();
+        controller->stop();
     }
 
     void close() override {
-        controller.drive(MotorPhase::REVERSE, switchDuty);
+        controller->drive(MotorPhase::REVERSE, switchDuty);
         Task::delay(switchDuration);
-        controller.stop();
+        controller->stop();
     }
 
     ValveState getDefaultState() const override {

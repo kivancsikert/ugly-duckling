@@ -77,7 +77,7 @@ public:
             return new LatchingPinValveControlStrategy(pin);
         }
 
-        PwmMotorDriver& motor = motorOwner->findMotor(this->motor.get());
+        std::shared_ptr<PwmMotorDriver> motor = motorOwner->findMotor(this->motor.get());
 
         auto switchDuration = this->switchDuration.get();
         auto holdDuty = this->holdDuty.get() / 100.0;

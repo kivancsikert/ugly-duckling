@@ -6,7 +6,6 @@
 
 #include <ArduinoJson.h>
 
-#include <kernel/Service.hpp>
 #include <kernel/Task.hpp>
 #include <kernel/Telemetry.hpp>
 #include <kernel/drivers/MotorDriver.hpp>
@@ -57,7 +56,7 @@ class ValveFactory
       protected Motorized {
 public:
     ValveFactory(
-        const std::list<ServiceRef<PwmMotorDriver>>& motors,
+        const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
         ValveControlStrategyType defaultStrategy)
         : PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType>("valve", defaultStrategy)
         , Motorized(motors) {

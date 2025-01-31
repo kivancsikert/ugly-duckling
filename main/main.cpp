@@ -416,12 +416,17 @@ extern "C" void app_main() {
     registerHttpUpdateCommand(mqttRoot, fs);
     performPendingHttpUpdateIfNecessary(fs, wifi, watchdog);
 
+    auto pcnt = std::make_shared<PcntManager>();
+    auto pulseCounterManager = std::make_shared<PulseCounterManager>();
+    auto pwm = std::make_shared<PwmManager>();
+    auto peripheralServices = PeripheralServices { i2c, pcnt, pulseCounterManager, pwm, switches };
+
     // Init peripherals
-    auto peripheralManager = std::make_shared<PeripheralManager>(fs, i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, switches, mqttRoot);
+    auto peripheralManager = std::make_shared<PeripheralManager>(fs, peripheralServices, mqttRoot);
     shutdownManager->registerShutdownListener([peripheralManager]() {
         peripheralManager->shutdown();
     });
-    deviceDefinition->registerPeripheralFactories(peripheralManager);
+    deviceDefinition->registerPeripheralFactories(peripheralManager, peripheralServices, deviceConfig);
 
     // Init telemetry
     auto telemetryPublishQueue = std::make_shared<CopyQueue<bool>>("telemetry-publish", 1);

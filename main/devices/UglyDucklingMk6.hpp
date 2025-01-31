@@ -1,10 +1,10 @@
 #pragma once
 
 #include <memory>
+#include <map>
 
 #include <kernel/FileSystem.hpp>
 #include <kernel/Pin.hpp>
-#include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
 #include <kernel/drivers/Drv8833Driver.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -83,11 +83,10 @@ public:
     Property<PinPtr> motorNSleepPin { this, "motorNSleepPin", pins::IOC2 };
 };
 
-class UglyDucklingMk6 : public DeviceDefinition {
+class UglyDucklingMk6 : public DeviceDefinition<Mk6Config> {
 public:
     UglyDucklingMk6(std::shared_ptr<Mk6Config> config)
-        : DeviceDefinition(pins::STATUS, pins::BOOT)
-        , motorDriver(pwm, pins::AIN1, pins::AIN2, pins::BIN1, pins::BIN2, pins::NFault, config->motorNSleepPin.get()) {
+        : DeviceDefinition(pins::STATUS, pins::BOOT) {
         // Switch off strapping pin
         // TODO: Add a LED driver instead
         pins::LEDA_RED->pinMode(Pin::Mode::Output);
@@ -95,27 +94,34 @@ public:
     }
 
     static std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) {
-        return std::make_shared<AnalogBatteryDriver>(pins::BATTERY, 1.2424, BatteryParameters {
-            .maximumVoltage = 4.1,
-            .bootThreshold = 3.8,
-            .shutdownThreshold = 3.4,
-        });
+        return std::make_shared<AnalogBatteryDriver>(
+            pins::BATTERY,
+            1.2424,
+            BatteryParameters {
+                .maximumVoltage = 4.1,
+                .bootThreshold = 3.8,
+                .shutdownThreshold = 3.4,
+            });
     }
 
-    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) override {
+protected:
+    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<Mk6Config> deviceConfig) override {
+        auto motorDriver = Drv8833Driver::create(
+            services.pwmManager,
+            pins::AIN1,
+            pins::AIN2,
+            pins::BIN1,
+            pins::BIN2,
+            pins::NFault,
+            deviceConfig->motorNSleepPin.get());
+
+        std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a",  motorDriver->getMotorA() }, { "b",  motorDriver->getMotorB() } };
+
         peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
         peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
     }
-
-    std::shared_ptr<LedDriver> secondaryStatusLed { std::make_shared<LedDriver>("status-2", pins::STATUS2) };
-
-    Drv8833Driver motorDriver;
-
-    const ServiceRef<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
-    const ServiceRef<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };
-    const std::list<ServiceRef<PwmMotorDriver>> motors { motorA, motorB };
 };
 
 }    // namespace farmhub::devices

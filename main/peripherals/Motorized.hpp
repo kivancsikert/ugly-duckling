@@ -1,8 +1,6 @@
 #pragma once
 
-#include <list>
-
-#include <kernel/Service.hpp>
+#include <map>
 
 #include <kernel/drivers/MotorDriver.hpp>
 
@@ -14,25 +12,25 @@ namespace farmhub::peripherals {
 
 class Motorized {
 public:
-    Motorized(const std::list<ServiceRef<PwmMotorDriver>>& motors)
+    Motorized(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors)
         : motors(motors) {
     }
 
-    PwmMotorDriver& findMotor(const std::string& motorName) {
+    std::shared_ptr<PwmMotorDriver> findMotor(const std::string& motorName) {
         // If there's only one motor and no name is specified, use it
         if (motorName.empty() && motors.size() == 1) {
-            return motors.front().get();
+            return motors.begin()->second;
         }
         for (auto& motor : motors) {
-            if (motor.getName() == motorName) {
-                return motor.get();
+            if (motor.first == motorName) {
+                return motor.second;
             }
         }
         throw PeripheralCreationException("failed to find motor: " + motorName);
     }
 
 private:
-    const std::list<ServiceRef<PwmMotorDriver>> motors;
+    const std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors;
 };
 
 }    // namespace farmhub::peripherals

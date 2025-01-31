@@ -75,7 +75,7 @@ class FlowControlFactory
       protected Motorized {
 public:
     FlowControlFactory(
-        const std::list<ServiceRef<PwmMotorDriver>>& motors,
+        const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
         ValveControlStrategyType defaultStrategy)
         : PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig, ValveControlStrategyType>("flow-control", defaultStrategy)
         , Motorized(motors) {
@@ -96,9 +96,6 @@ public:
             flowMeterConfig->qFactor.get(),
             flowMeterConfig->measurementFrequency.get());
     }
-
-private:
-    const std::list<ServiceRef<PwmMotorDriver>> motors;
 };
 
 }    // namespace farmhub::peripherals::flow_control

@@ -15,28 +15,37 @@ namespace farmhub::kernel::drivers {
  *
  * https://www.ti.com/lit/gpn/DRV8833
  */
-class Drv8833Driver {
+class Drv8833Driver
+    : public std::enable_shared_from_this<Drv8833Driver> {
 
 public:
-    // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
-    Drv8833Driver(
+    static std::shared_ptr<Drv8833Driver> create(
         std::shared_ptr<PwmManager> pwm,
         InternalPinPtr ain1Pin,
         InternalPinPtr ain2Pin,
         InternalPinPtr bin1Pin,
         InternalPinPtr bin2Pin,
         PinPtr faultPin,
-        PinPtr sleepPin)
-        : motorA(this, pwm, ain1Pin, ain2Pin, sleepPin != nullptr)
-        , motorB(this, pwm, bin1Pin, bin2Pin, sleepPin != nullptr)
-        , faultPin(faultPin)
+        PinPtr sleepPin) {
+        auto driver = std::make_shared<Drv8833Driver>(faultPin, sleepPin);
+        driver->initMotors(pwm, ain1Pin, ain2Pin, bin1Pin, bin2Pin);
+        return driver;
+    }
+
+    std::shared_ptr<PwmMotorDriver> getMotorA() {
+        return motorA;
+    }
+
+    std::shared_ptr<PwmMotorDriver> getMotorB() {
+        return motorB;
+    }
+
+    // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
+    Drv8833Driver(PinPtr faultPin, PinPtr sleepPin)
+        : faultPin(faultPin)
         , sleepPin(sleepPin) {
 
-        LOGI("Initializing DRV8833 on pins ain1 = %s, ain2 = %s, bin1 = %s, bin2 = %s, fault = %s, sleep = %s",
-            ain1Pin->getName().c_str(),
-            ain2Pin->getName().c_str(),
-            bin1Pin->getName().c_str(),
-            bin2Pin->getName().c_str(),
+        LOGI("Initializing DRV8833 on pins fault = %s, sleep = %s",
             faultPin->getName().c_str(),
             sleepPin->getName().c_str());
 
@@ -45,18 +54,26 @@ public:
         }
         faultPin->pinMode(Pin::Mode::Input);
 
-        updateSleepState();
-    }
-
-    PwmMotorDriver& getMotorA() {
-        return motorA;
-    }
-
-    PwmMotorDriver& getMotorB() {
-        return motorB;
+        setSleepState(true);
     }
 
 private:
+    void initMotors(
+        std::shared_ptr<PwmManager> pwm,
+        InternalPinPtr ain1Pin,
+        InternalPinPtr ain2Pin,
+        InternalPinPtr bin1Pin,
+        InternalPinPtr bin2Pin) {
+
+        LOGI("Initializing DRV8833 motors on pins ain1 = %s, ain2 = %s, bin1 = %s, bin2 = %s",
+            ain1Pin->getName().c_str(),
+            ain2Pin->getName().c_str(),
+            bin1Pin->getName().c_str(),
+            bin2Pin->getName().c_str());
+        motorA = std::make_shared<Drv8833MotorDriver>(shared_from_this(), pwm, ain1Pin, ain2Pin, sleepPin != nullptr);
+        motorB = std::make_shared<Drv8833MotorDriver>(shared_from_this(), pwm, bin1Pin, bin2Pin, sleepPin != nullptr);
+    }
+
     class Drv8833MotorDriver : public PwmMotorDriver {
     private:
         static constexpr uint32_t PWM_FREQ = 25000;
@@ -64,7 +81,7 @@ private:
 
     public:
         Drv8833MotorDriver(
-            Drv8833Driver* driver,
+            std::shared_ptr<Drv8833Driver> driver,
             std::shared_ptr<PwmManager> pwm,
             InternalPinPtr in1Pin,
             InternalPinPtr in2Pin,
@@ -117,7 +134,7 @@ private:
         }
 
     private:
-        Drv8833Driver* const driver;
+        const std::shared_ptr<Drv8833Driver> driver;
         const PwmPin& in1Channel;
         const PwmPin& in2Channel;
 
@@ -125,7 +142,7 @@ private:
     };
 
     void updateSleepState() {
-        setSleepState(motorA.isSleeping() && motorB.isSleeping());
+        setSleepState(motorA->isSleeping() && motorB->isSleeping());
     }
 
     void setSleepState(bool sleep) {
@@ -134,8 +151,8 @@ private:
         }
     }
 
-    Drv8833MotorDriver motorA;
-    Drv8833MotorDriver motorB;
+    std::shared_ptr<Drv8833MotorDriver> motorA;
+    std::shared_ptr<Drv8833MotorDriver> motorB;
     const PinPtr faultPin;
     const PinPtr sleepPin;
 
