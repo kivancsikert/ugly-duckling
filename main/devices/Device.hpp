@@ -17,6 +17,7 @@
 #include <kernel/Task.hpp>
 #include <kernel/mqtt/MqttDriver.hpp>
 #include <kernel/mqtt/MqttRoot.hpp>
+#include <kernel/mqtt/MqttTelemetryPublisher.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -89,22 +90,6 @@ private:
     const std::shared_ptr<PowerManager> powerManager;
 };
 
-class MqttTelemetryPublisher : public TelemetryPublisher {
-public:
-    MqttTelemetryPublisher(std::shared_ptr<MqttRoot> mqttRoot, TelemetryCollector& telemetryCollector)
-        : mqttRoot(mqttRoot)
-        , telemetryCollector(telemetryCollector) {
-    }
-
-    void publishTelemetry() {
-        mqttRoot->publish("telemetry", [&](JsonObject& json) { telemetryCollector.collect(json); }, Retention::NoRetain, QoS::AtLeastOnce);
-    }
-
-private:
-    std::shared_ptr<MqttRoot> mqttRoot;
-    TelemetryCollector& telemetryCollector;
-};
-
 class Device {
 public:
     Device(
@@ -117,21 +102,11 @@ public:
         const std::shared_ptr<PowerManager> powerManager,
         const std::shared_ptr<MqttRoot> mqttDeviceRoot,
         const std::shared_ptr<PeripheralManager> peripheralManager,
+        const std::shared_ptr<TelemetryPublisher> deviceTelemetryPublisher,
         const State& rtcInSync)
         : deviceDefinition(deviceDefinition)
         , fs(fs)
         , mqttDeviceRoot(mqttDeviceRoot) {
-        if (battery != nullptr) {
-            deviceTelemetryCollector.registerProvider("battery", battery);
-        }
-
-        deviceTelemetryCollector.registerProvider("wifi", std::make_shared<WiFiTelemetryProvider>(wifi));
-
-#if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
-        deviceTelemetryCollector.registerProvider("memory", std::make_shared<MemoryTelemetryProvider>());
-#endif
-        deviceTelemetryCollector.registerProvider("pm", std::make_shared<PowerManagementTelemetryProvider>(powerManager));
-
         mqttDeviceRoot->registerCommand(echoCommand);
         mqttDeviceRoot->registerCommand(pingCommand);
         // TODO Add reset-wifi command
@@ -196,10 +171,10 @@ public:
             Retention::NoRetain, QoS::AtLeastOnce, 5s);
 
         auto publishInterval = deviceConfig->publishInterval.get();
-        Task::loop("telemetry", 8192, [this, publishInterval, watchdog, peripheralManager](Task& task) {
+        Task::loop("telemetry", 8192, [this, publishInterval, watchdog, peripheralManager, deviceTelemetryPublisher](Task& task) {
             task.markWakeTime();
 
-            deviceTelemetryPublisher.publishTelemetry();
+            deviceTelemetryPublisher->publishTelemetry();
             peripheralManager->publishTelemetry();
 
             // Signal that we are still alive
@@ -312,8 +287,6 @@ private:
     const std::shared_ptr<FileSystem> fs;
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
 
-    TelemetryCollector deviceTelemetryCollector;
-    MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };
     PingCommand pingCommand { [this]() {
         telemetryPublishQueue.offer(true);
     } };

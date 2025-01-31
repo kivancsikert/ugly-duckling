@@ -263,7 +263,18 @@ extern "C" void app_main() {
     });
     deviceDefinition->registerPeripheralFactories(peripheralManager);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, mqttRoot, peripheralManager, states->rtcInSync);
+    auto deviceTelemetryCollector = std::make_shared<TelemetryCollector>();
+    auto deviceTelemetryPublisher = std::make_shared<MqttTelemetryPublisher>(mqttRoot, deviceTelemetryCollector);
+    if (batteryManager != nullptr) {
+        deviceTelemetryCollector->registerProvider("battery", batteryManager);
+    }
+    deviceTelemetryCollector->registerProvider("wifi", std::make_shared<WiFiTelemetryProvider>(wifi));
+#if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
+    deviceTelemetryCollector->registerProvider("memory", std::make_shared<MemoryTelemetryProvider>());
+#endif
+    deviceTelemetryCollector->registerProvider("pm", std::make_shared<PowerManagementTelemetryProvider>(powerManager));
+
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, mqttRoot, peripheralManager, deviceTelemetryPublisher, states->rtcInSync);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
