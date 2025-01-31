@@ -88,24 +88,24 @@ public:
 
 class FileCommand : public Command {
 public:
-    FileCommand(const std::string& name, FileSystem& fs)
+    FileCommand(const std::string& name, std::shared_ptr<FileSystem> fs)
         : Command(name)
         , fs(fs) {
     }
 
 protected:
-    FileSystem& fs;
+    const std::shared_ptr<FileSystem> fs;
 };
 
 class FileListCommand : public FileCommand {
 public:
-    FileListCommand(FileSystem& fs)
+    FileListCommand(std::shared_ptr<FileSystem> fs)
         : FileCommand("files/list", fs) {
     }
 
     void handle(const JsonObject& request, JsonObject& response) override {
         JsonArray files = response["files"].to<JsonArray>();
-        fs.readDir("/", [&](const std::string& name, off_t size) {
+        fs->readDir("/", [&](const std::string& name, off_t size) {
             JsonObject file = files.add<JsonObject>();
             file["name"] = name;
             file["size"] = size;
@@ -115,7 +115,7 @@ public:
 
 class FileReadCommand : public FileCommand {
 public:
-    FileReadCommand(FileSystem& fs)
+    FileReadCommand(std::shared_ptr<FileSystem> fs)
         : FileCommand("files/read", fs) {
     }
 
@@ -127,9 +127,9 @@ public:
         LOGI("Reading %s",
             path.c_str());
         response["path"] = path;
-        if (fs.exists(path)) {
-            response["size"] = fs.size(path);
-            auto contents = fs.readAll(path);
+        if (fs->exists(path)) {
+            response["size"] = fs->size(path);
+            auto contents = fs->readAll(path);
             if (contents.has_value()) {
                 response["contents"] = contents.value();
             }
@@ -141,7 +141,7 @@ public:
 
 class FileWriteCommand : public FileCommand {
 public:
-    FileWriteCommand(FileSystem& fs)
+    FileWriteCommand(std::shared_ptr<FileSystem> fs)
         : FileCommand("files/write", fs) {
     }
 
@@ -154,14 +154,14 @@ public:
             path.c_str());
         std::string contents = request["contents"];
         response["path"] = path;
-        size_t written = fs.writeAll(path, contents);
+        size_t written = fs->writeAll(path, contents);
         response["written"] = written;
     }
 };
 
 class FileRemoveCommand : public FileCommand {
 public:
-    FileRemoveCommand(FileSystem& fs)
+    FileRemoveCommand(std::shared_ptr<FileSystem> fs)
         : FileCommand("files/remove", fs) {
     }
 
@@ -173,7 +173,7 @@ public:
         LOGI("Removing %s",
             path.c_str());
         response["path"] = path;
-        int err = fs.remove(path);
+        int err = fs->remove(path);
         if (err == 0) {
             response["removed"] = true;
         } else {

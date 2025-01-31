@@ -51,20 +51,20 @@ static esp_err_t httpEventHandler(esp_http_client_event_t* event) {
     return ESP_OK;
 }
 
-static void handleHttpUpdate(FileSystem& fs, std::shared_ptr<WiFiDriver> wifi, std::shared_ptr<Watchdog> watchdog) {
+static void handleHttpUpdate(std::shared_ptr<FileSystem> fs, std::shared_ptr<WiFiDriver> wifi, std::shared_ptr<Watchdog> watchdog) {
     // Do we need to update?
-    if (!fs.exists(UPDATE_FILE)) {
+    if (!fs->exists(UPDATE_FILE)) {
         LOGV("No update file found, not updating");
         return;
     }
 
-    auto contents = fs.readAll(UPDATE_FILE);
+    auto contents = fs->readAll(UPDATE_FILE);
     if (!contents.has_value()) {
         LOGE("Failed to read update file");
     }
     JsonDocument doc;
     auto error = deserializeJson(doc, contents.value());
-    int deleteError = fs.remove(UPDATE_FILE);
+    int deleteError = fs->remove(UPDATE_FILE);
     if (deleteError) {
         LOGE("Failed to delete update file");
         return;

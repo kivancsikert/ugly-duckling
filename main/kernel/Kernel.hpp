@@ -13,7 +13,6 @@
 
 #include <devices/DeviceConfiguration.hpp>
 
-#include <kernel/FileSystem.hpp>
 #include <kernel/I2CManager.hpp>
 #include <kernel/NetworkUtil.hpp>
 #include <kernel/PowerManager.hpp>
@@ -60,8 +59,6 @@ public:
     const StateSource& getKernelReadyState() {
         return kernelReadyState;
     }
-
-    FileSystem& fs { FileSystem::get() };
 
 private:
     enum class KernelState {

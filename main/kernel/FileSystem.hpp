@@ -109,24 +109,8 @@ public:
         }
     }
 
-    static FileSystem& get() {
-        static FileSystem* instance = initializeFileSystem();
-        return *instance;
-    }
-
-private:
-    FileSystem(const std::string& mountPoint)
-        : mountPoint(mountPoint) {
-    }
-
-    std::string resolve(const std::string& path) const {
-        return mountPoint + path;
-    }
-
-    static FileSystem* initializeFileSystem() {
-        const std::string mountPoint = "/" + std::string(PARTITION);
-        FileSystem* fs = nullptr;
-
+    FileSystem()
+        : mountPoint("/" + std::string(PARTITION)) {
         esp_vfs_spiffs_conf_t conf = {
             .base_path = mountPoint.c_str(),
             .partition_label = PARTITION,
@@ -138,8 +122,7 @@ private:
         switch (ret) {
             case ESP_OK: {
                 LOGTI(Tag::FS, "SPIFFS partition '%s' mounted successfully", PARTITION);
-                fs = new FileSystem(mountPoint);
-                fs->readDir(mountPoint, [&](const std::string& name, size_t size) {
+                readDir("/", [&](const std::string& name, size_t size) {
                     LOGTI(Tag::FS, " - %s (%u bytes)", name.c_str(), size);
                 });
                 break;
@@ -154,8 +137,11 @@ private:
                 LOGTE(Tag::FS, "Failed to initialize SPIFFS partition '%s' (%s)", PARTITION, esp_err_to_name(ret));
                 break;
         }
+    }
 
-        return fs;
+private:
+    std::string resolve(const std::string& path) const {
+        return mountPoint + path;
     }
 
     const std::string mountPoint;

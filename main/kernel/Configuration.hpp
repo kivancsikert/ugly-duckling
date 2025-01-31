@@ -285,14 +285,14 @@ private:
 template <std::derived_from<ConfigurationSection> TConfiguration>
 class ConfigurationFile {
 public:
-    ConfigurationFile(const FileSystem& fs, const std::string& path, std::shared_ptr<TConfiguration> config)
+    ConfigurationFile(const std::shared_ptr<FileSystem> fs, const std::string& path, std::shared_ptr<TConfiguration> config)
         : path(path)
         , config(config) {
-        if (!fs.exists(path)) {
+        if (!fs->exists(path)) {
             LOGD("The configuration file '%s' was not found, falling back to defaults",
                 path.c_str());
         } else {
-            auto contents = fs.readAll(path);
+            auto contents = fs->readAll(path);
             if (!contents.has_value()) {
                 throw ConfigurationException("Cannot open config file " + path);
             }
@@ -316,7 +316,7 @@ public:
         onUpdate([&fs, path](const JsonObject& json) {
             std::string contents;
             serializeJson(json, contents);
-            bool success = fs.writeAll(path, contents);
+            bool success = fs->writeAll(path, contents);
             if (!success) {
                 throw ConfigurationException("Cannot write config file " + path);
             }

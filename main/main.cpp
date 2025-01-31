@@ -154,7 +154,7 @@ extern "C" void app_main() {
         }
     });
 
-    auto fs = FileSystem::get();
+    auto fs = std::make_shared<FileSystem>();
 
     auto deviceConfig = std::make_shared<TDeviceConfiguration>();
     // TODO This should just be a "load()" call
@@ -238,10 +238,10 @@ extern "C" void app_main() {
 
     auto kernel = std::make_shared<Kernel>(statusLed, wifi, mdns, rtc, mqtt);
 
-    auto peripheralManager = std::make_shared<PeripheralManager>(i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, switches, mqttRoot);
+    auto peripheralManager = std::make_shared<PeripheralManager>(fs, i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, switches, mqttRoot);
     deviceDefinition->registerPeripheralFactories(peripheralManager);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, batteryManager, watchdog, powerManager, kernel, shutdownManager, mqttRoot, peripheralManager);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, batteryManager, watchdog, powerManager, kernel, shutdownManager, mqttRoot, peripheralManager);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());

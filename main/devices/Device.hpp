@@ -111,6 +111,7 @@ public:
     Device(
         const std::shared_ptr<TDeviceConfiguration> deviceConfig,
         const std::shared_ptr<TDeviceDefinition> deviceDefinition,
+        std::shared_ptr<FileSystem> fs,
         std::shared_ptr<BatteryManager> battery,
         std::shared_ptr<Watchdog> watchdog,
         std::shared_ptr<PowerManager> powerManager,
@@ -119,6 +120,7 @@ public:
         std::shared_ptr<MqttRoot> mqttDeviceRoot,
         std::shared_ptr<PeripheralManager> peripheralManager)
         : deviceDefinition(deviceDefinition)
+        , fs(fs)
         , kernel(kernel)
         , mqttDeviceRoot(mqttDeviceRoot)
         , peripheralManager(peripheralManager)
@@ -321,6 +323,7 @@ private:
     }
 
     const std::shared_ptr<TDeviceDefinition> deviceDefinition;
+    const std::shared_ptr<FileSystem> fs;
     const std::shared_ptr<Kernel> kernel;
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
     const std::shared_ptr<PeripheralManager> peripheralManager;
@@ -331,7 +334,6 @@ private:
         telemetryPublishQueue.offer(true);
     } };
 
-    FileSystem& fs { kernel->fs };
     EchoCommand echoCommand;
     RestartCommand restartCommand;
     SleepCommand sleepCommand;
@@ -344,7 +346,7 @@ private:
         doc["url"] = url;
         std::string content;
         serializeJson(doc, content);
-        fs.writeAll(UPDATE_FILE, content);
+        fs->writeAll(UPDATE_FILE, content);
     } };
 
     CopyQueue<bool> telemetryPublishQueue { "telemetry-publish", 1 };
