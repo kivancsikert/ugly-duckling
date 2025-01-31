@@ -260,6 +260,32 @@ void registerHttpUpdateCommand(std::shared_ptr<MqttRoot> mqttRoot, std::shared_p
     });
 }
 
+void initTelemetryPublishTask(
+    std::chrono::milliseconds publishInterval,
+    std::shared_ptr<Watchdog> watchdog,
+    std::shared_ptr<PeripheralManager> peripheralManager,
+    std::shared_ptr<TelemetryPublisher> deviceTelemetryPublisher,
+    std::shared_ptr<CopyQueue<bool>> telemetryPublishQueue) {
+    Task::loop("telemetry", 8192, [publishInterval, watchdog, peripheralManager, deviceTelemetryPublisher, telemetryPublishQueue](Task& task) {
+        task.markWakeTime();
+
+        deviceTelemetryPublisher->publishTelemetry();
+        peripheralManager->publishTelemetry();
+
+        // Signal that we are still alive
+        watchdog->restart();
+
+        // We always wait at least this much between telemetry updates
+        const auto debounceInterval = 500ms;
+        // Delay without updating last wake time
+        task.delay(task.ticksUntil(debounceInterval));
+
+        // Allow other tasks to trigger telemetry updates
+        auto timeout = task.ticksUntil(publishInterval - debounceInterval);
+        telemetryPublishQueue->pollIn(timeout);
+    });
+}
+
 extern "C" void app_main() {
     auto i2c = std::make_shared<I2CManager>();
     auto battery = initBattery(i2c);
@@ -384,7 +410,9 @@ extern "C" void app_main() {
     // We want RTC to be in sync before we start setting up peripherals
     states->rtcInSync.awaitSet();
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, mqttRoot, peripheralManager, deviceTelemetryPublisher, telemetryPublishQueue);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, mqttRoot, peripheralManager);
+
+    initTelemetryPublishTask(deviceConfig->publishInterval.get(), watchdog, peripheralManager, deviceTelemetryPublisher, telemetryPublishQueue);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());

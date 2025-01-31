@@ -101,9 +101,7 @@ public:
         const std::shared_ptr<Watchdog> watchdog,
         const std::shared_ptr<PowerManager> powerManager,
         const std::shared_ptr<MqttRoot> mqttDeviceRoot,
-        const std::shared_ptr<PeripheralManager> peripheralManager,
-        const std::shared_ptr<TelemetryPublisher> deviceTelemetryPublisher,
-        const std::shared_ptr<CopyQueue<bool>> telemetryPublishQueue)
+        const std::shared_ptr<PeripheralManager> peripheralManager)
         : deviceDefinition(deviceDefinition)
         , fs(fs)
         , mqttDeviceRoot(mqttDeviceRoot) {
@@ -156,25 +154,6 @@ public:
             },
             Retention::NoRetain, QoS::AtLeastOnce, 5s);
 
-        auto publishInterval = deviceConfig->publishInterval.get();
-        Task::loop("telemetry", 8192, [this, publishInterval, watchdog, peripheralManager, deviceTelemetryPublisher, telemetryPublishQueue](Task& task) {
-            task.markWakeTime();
-
-            deviceTelemetryPublisher->publishTelemetry();
-            peripheralManager->publishTelemetry();
-
-            // Signal that we are still alive
-            watchdog->restart();
-
-            // We always wait at least this much between telemetry updates
-            const auto debounceInterval = 500ms;
-            // Delay without updating last wake time
-            task.delay(task.ticksUntil(debounceInterval));
-
-            // Allow other tasks to trigger telemetry updates
-            auto timeout = task.ticksUntil(publishInterval - debounceInterval);
-            telemetryPublishQueue->pollIn(timeout);
-        });
     }
 
 private:
