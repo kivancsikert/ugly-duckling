@@ -209,12 +209,14 @@ extern "C" void app_main() {
     auto states = std::make_shared<ModuleStates>();
     KernelStatusTask::init(statusLed, states);
 
+    // Init WiFi
     auto wifi = std::make_shared<WiFiDriver>(
         states->networkConnecting,
         states->networkReady,
         states->configPortalRunning,
         deviceConfig->getHostname());
 
+    // Init switch and button handling
     auto switches = std::make_shared<SwitchManager>();
     switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [statusLed](const Switch&, milliseconds duration) {
         if (duration >= 15s) {
@@ -226,6 +228,7 @@ extern "C" void app_main() {
         }
     });
 
+    // Init battery management
     auto shutdownManager = std::make_shared<ShutdownManager>();
     std::shared_ptr<BatteryManager> batteryManager;
     if (battery != nullptr) {
@@ -236,22 +239,21 @@ extern "C" void app_main() {
     new DebugConsole(batteryManager, wifi);
 #endif
 
+    // Init mDNS
     auto mdns = std::make_shared<MdnsDriver>(wifi->getNetworkReady(), deviceConfig->getHostname(), "ugly-duckling", farmhubVersion, states->mdnsReady);
 
     // Init real time clock
     auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), states->rtcInSync);
 
-    auto mqttConfig = std::make_shared<MqttDriver::Config>();
-    // TODO This should just be a "load()" call
-    ConfigurationFile<MqttDriver::Config> mqttConfigFile(fs, "/mqtt-config.json", mqttConfig);
-
+    // Init MQTT connection
+    auto mqttConfig = loadConfig<MqttDriver::Config>(fs, "/mqtt-config.json");
     auto mqttRoot = initMqtt(states, mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->location.get());
-
     MqttLog::init(deviceConfig->publishLogs.get(), logRecords, mqttRoot);
 
-    // Reboots if update is successful
-    handleHttpUpdate(fs, wifi, watchdog);
+    // Handle any pending HTTP update (will reboot if update was required and was successful)
+    performHttpUpdateIfNecessary(fs, wifi, watchdog);
 
+    // Init peripherals
     auto peripheralManager = std::make_shared<PeripheralManager>(fs, i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, switches, mqttRoot);
     deviceDefinition->registerPeripheralFactories(peripheralManager);
 
