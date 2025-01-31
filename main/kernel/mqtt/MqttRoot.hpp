@@ -8,7 +8,7 @@ namespace farmhub::kernel::mqtt {
 
 class MqttRoot {
 public:
-    MqttRoot(MqttDriver& mqtt, const std::string& rootTopic)
+    MqttRoot(const std::shared_ptr<MqttDriver> mqtt, const std::string& rootTopic)
         : mqtt(mqtt)
         , rootTopic(rootTopic) {
     }
@@ -18,7 +18,7 @@ public:
     }
 
     PublishStatus publish(const std::string& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_DEFAULT_PUBLISH_TIMEOUT, LogPublish log = LogPublish::Log) {
-        return mqtt.publish(fullTopic(suffix), json, retain, qos, timeout, log);
+        return mqtt->publish(fullTopic(suffix), json, retain, qos, timeout, log);
     }
 
     PublishStatus publish(const std::string& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_DEFAULT_PUBLISH_TIMEOUT, LogPublish log = LogPublish::Log) {
@@ -29,7 +29,7 @@ public:
     }
 
     PublishStatus clear(const std::string& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_DEFAULT_PUBLISH_TIMEOUT) {
-        return mqtt.clear(fullTopic(suffix), retain, qos, timeout);
+        return mqtt->clear(fullTopic(suffix), retain, qos, timeout);
     }
 
     bool subscribe(const std::string& suffix, SubscriptionHandler handler) {
@@ -60,7 +60,7 @@ public:
      * Note that subscription does not support wildcards.
      */
     bool subscribe(const std::string& suffix, QoS qos, SubscriptionHandler handler) {
-        return mqtt.subscribe(fullTopic(suffix), qos, handler);
+        return mqtt->subscribe(fullTopic(suffix), qos, handler);
     }
 
 private:
@@ -68,7 +68,7 @@ private:
         return rootTopic + "/" + suffix;
     }
 
-    MqttDriver& mqtt;
+    const std::shared_ptr<MqttDriver> mqtt;
     const std::string rootTopic;
 };
 

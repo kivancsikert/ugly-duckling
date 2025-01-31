@@ -71,7 +71,6 @@ public:
         std::shared_ptr<MdnsDriver> mdns,
         const std::shared_ptr<Config> config,
         const std::string& instanceName,
-        bool powerSaveMode,
         StateSource& ready)
         : networkReady(networkReady)
         , mdns(mdns)
@@ -81,7 +80,6 @@ public:
         , configClientCert(joinStrings(config->clientCert.get()))
         , configClientKey(joinStrings(config->clientKey.get()))
         , clientId(getClientId(config->clientId.get(), instanceName))
-        , powerSaveMode(powerSaveMode)
         , ready(ready)
         , eventQueue("mqtt-outgoing", config->queueSize.get())
         , incomingQueue("mqtt-incoming", config->queueSize.get()) {
@@ -166,10 +164,6 @@ public:
         } else {
             config.broker.address.transport = MQTT_TRANSPORT_OVER_TCP;
         }
-    }
-
-    std::shared_ptr<MqttRoot> forRoot(const std::string& topic) {
-        return std::make_shared<MqttRoot>(*this, topic);
     }
 
     // TODO Review these values
@@ -704,7 +698,6 @@ private:
     const std::string configClientKey;
     const std::string clientId;
 
-    const bool powerSaveMode;
     StateSource& ready;
 
     std::string hostname;

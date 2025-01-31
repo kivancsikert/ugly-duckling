@@ -158,6 +158,11 @@ std::shared_ptr<TConfiguration> loadConfig(std::shared_ptr<FileSystem> fs, const
     return config;
 }
 
+std::shared_ptr<MqttRoot> initMqtt(std::shared_ptr<ModuleStates> states, std::shared_ptr<MdnsDriver> mdns, std::shared_ptr<MqttDriver::Config> mqttConfig, const std::string& instance, const std::string& location) {
+    auto mqtt = std::make_shared<MqttDriver>(states->networkReady, mdns, mqttConfig, instance, states->mqttReady);
+    return std::make_shared<MqttRoot>(mqtt, (location.empty() ? "" : location + "/") + "devices/ugly-duckling/" + instance);
+}
+
 extern "C" void app_main() {
     auto i2c = std::make_shared<I2CManager>();
     auto battery = initBattery(i2c);
@@ -240,11 +245,7 @@ extern "C" void app_main() {
     // TODO This should just be a "load()" call
     ConfigurationFile<MqttDriver::Config> mqttConfigFile(fs, "/mqtt-config.json", mqttConfig);
 
-    auto mqtt = std::make_shared<MqttDriver>(wifi->getNetworkReady(), mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->sleepWhenIdle.get(), states->mqttReady);
-
-    auto location = deviceConfig->location.get();
-    auto instance = deviceConfig->instance.get();
-    auto mqttRoot = mqtt->forRoot((location.empty() ? "" : location + "/") + "devices/ugly-duckling/" + instance);
+    auto mqttRoot = initMqtt(states, mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->location.get());
 
     MqttLog::init(deviceConfig->publishLogs.get(), logRecords, mqttRoot);
 
