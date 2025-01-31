@@ -232,7 +232,10 @@ extern "C" void app_main() {
     auto shutdownManager = std::make_shared<ShutdownManager>();
     std::shared_ptr<BatteryManager> batteryManager;
     if (battery != nullptr) {
+        LOGI("Battery configured");
         batteryManager = std::make_shared<BatteryManager>(battery, shutdownManager);
+    } else {
+        LOGI("No battery configured");
     }
 
 #ifdef FARMHUB_DEBUG
@@ -255,9 +258,12 @@ extern "C" void app_main() {
 
     // Init peripherals
     auto peripheralManager = std::make_shared<PeripheralManager>(fs, i2c, deviceDefinition->pcnt, deviceDefinition->pulseCounterManager, deviceDefinition->pwm, switches, mqttRoot);
+    shutdownManager->registerShutdownListener([peripheralManager]() {
+        peripheralManager->shutdown();
+    });
     deviceDefinition->registerPeripheralFactories(peripheralManager);
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, shutdownManager, mqttRoot, peripheralManager, states->rtcInSync);
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, mqttRoot, peripheralManager, states->rtcInSync);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());

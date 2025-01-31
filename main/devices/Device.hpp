@@ -115,7 +115,6 @@ public:
         const std::shared_ptr<BatteryManager> battery,
         const std::shared_ptr<Watchdog> watchdog,
         const std::shared_ptr<PowerManager> powerManager,
-        const std::shared_ptr<ShutdownManager> shutdownManager,
         const std::shared_ptr<MqttRoot> mqttDeviceRoot,
         const std::shared_ptr<PeripheralManager> peripheralManager,
         const State& rtcInSync)
@@ -124,12 +123,6 @@ public:
         , mqttDeviceRoot(mqttDeviceRoot) {
         if (battery != nullptr) {
             deviceTelemetryCollector.registerProvider("battery", battery);
-            shutdownManager->registerShutdownListener([peripheralManager]() {
-                peripheralManager->shutdown();
-            });
-            LOGI("Battery configured");
-        } else {
-            LOGI("No battery configured");
         }
 
         deviceTelemetryCollector.registerProvider("wifi", std::make_shared<WiFiTelemetryProvider>(wifi));
