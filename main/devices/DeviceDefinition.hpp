@@ -28,7 +28,7 @@
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
-using namespace farmhub::peripherals::environment;
+using namespace farmhub::peripherals;
 
 namespace farmhub::devices {
 
@@ -40,20 +40,20 @@ public:
     }
 
     virtual void registerPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) {
-        peripheralManager->registerFactory(std::make_unique<I2CEnvironmentFactory<Sht3xComponent>>("sht3x", 0x44 /* Also supports 0x45 */));
+        peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht3xComponent>>("sht3x", 0x44 /* Also supports 0x45 */));
         // TODO Unify these two factories
-        peripheralManager->registerFactory(std::make_unique<I2CEnvironmentFactory<Sht2xComponent>>("sht2x", 0x40 /* Not configurable */));
-        peripheralManager->registerFactory(std::make_unique<I2CEnvironmentFactory<Sht2xComponent>>("htu2x", 0x40 /* Not configurable */));
+        peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht2xComponent>>("sht2x", 0x40 /* Not configurable */));
+        peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht2xComponent>>("htu2x", 0x40 /* Not configurable */));
 
-        peripheralManager->registerFactory(std::make_unique<SoilMoistureSensorFactory>());
-        peripheralManager->registerFactory(std::make_unique<Ds18B20SoilSensorFactory>());
+        peripheralManager->registerFactory(std::make_unique<environment::SoilMoistureSensorFactory>());
+        peripheralManager->registerFactory(std::make_unique<environment::Ds18B20SoilSensorFactory>());
 
-        peripheralManager->registerFactory(std::make_unique<farmhub::peripherals::fence::ElectricFenceMonitorFactory>());
+        peripheralManager->registerFactory(std::make_unique<fence::ElectricFenceMonitorFactory>());
 
-        peripheralManager->registerFactory(std::make_unique<Bh1750Factory>());
-        peripheralManager->registerFactory(std::make_unique<Tsl2591Factory>());
+        peripheralManager->registerFactory(std::make_unique<light_sensor::Bh1750Factory>());
+        peripheralManager->registerFactory(std::make_unique<light_sensor::Tsl2591Factory>());
 
-        peripheralManager->registerFactory(std::make_unique<farmhub::peripherals::multiplexer::Xl9535Factory>());
+        peripheralManager->registerFactory(std::make_unique<multiplexer::Xl9535Factory>());
 
         registerDeviceSpecificPeripheralFactories(peripheralManager);
     }
