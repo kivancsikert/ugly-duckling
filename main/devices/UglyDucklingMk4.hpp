@@ -59,10 +59,10 @@ public:
     }
 
     void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) override {
-        peripheralManager->registerFactory(valveFactory);
-        peripheralManager->registerFactory(flowMeterFactory);
-        peripheralManager->registerFactory(flowControlFactory);
-        peripheralManager->registerFactory(chickenDoorFactory);
+        peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::NormallyClosed));
+        peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
+        peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::NormallyClosed));
+        peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
     }
 
     std::list<std::string> getBuiltInPeripherals() override {
@@ -93,11 +93,6 @@ public:
 
     const ServiceRef<PwmMotorDriver> motor { "motor", motorDriver };
     const std::list<ServiceRef<PwmMotorDriver>> motors { motor };
-
-    ValveFactory valveFactory { motors, ValveControlStrategyType::NormallyClosed };
-    FlowMeterFactory flowMeterFactory;
-    FlowControlFactory flowControlFactory { motors, ValveControlStrategyType::NormallyClosed };
-    ChickenDoorFactory chickenDoorFactory { motors };
 };
 
 }    // namespace farmhub::devices

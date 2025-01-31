@@ -182,10 +182,10 @@ public:
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 
-    void registerFactory(PeripheralFactoryBase& factory) {
+    void registerFactory(std::unique_ptr<PeripheralFactoryBase> factory) {
         LOGD("Registering peripheral factory: %s",
-            factory.factoryType.c_str());
-        factories.insert(std::make_pair(factory.factoryType, std::reference_wrapper<PeripheralFactoryBase>(factory)));
+            factory->factoryType.c_str());
+        factories.insert(std::make_pair(factory->factoryType, std::move(factory)));
     }
 
     bool createPeripheral(const std::string& peripheralConfig, JsonArray peripheralsInitJson) {
@@ -273,10 +273,9 @@ private:
         if (it == factories.end()) {
             throw PeripheralCreationException("Factory not found: '" + factoryType + "'");
         }
-        const std::string& peripheralType = it->second.get().peripheralType;
+        const std::string& peripheralType = it->second.get()->peripheralType;
         std::shared_ptr<MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
-        PeripheralFactoryBase& factory = it->second.get();
-        return factory.createPeripheral(name, configJson, mqttRoot, fs, services, initConfigJson);
+        return it->second.get()->createPeripheral(name, configJson, mqttRoot, fs, services, initConfigJson);
     }
 
     enum class State {
@@ -291,7 +290,7 @@ private:
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
 
     // TODO Use an unordered_map?
-    std::map<std::string, std::reference_wrapper<PeripheralFactoryBase>> factories;
+    std::map<std::string, std::unique_ptr<PeripheralFactoryBase>> factories;
     Mutex stateMutex;
     State state = State::Running;
     std::list<std::unique_ptr<PeripheralBase>> peripherals;

@@ -40,15 +40,21 @@ public:
     }
 
     virtual void registerPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) {
-        peripheralManager->registerFactory(sht3xFactory);
-        peripheralManager->registerFactory(sht2xFactory);
-        peripheralManager->registerFactory(htu2xFactory);
-        peripheralManager->registerFactory(ds18b20SoilSensorFactory);
-        peripheralManager->registerFactory(soilMoistureSensorFactory);
-        peripheralManager->registerFactory(electricFenceMonitorFactory);
-        peripheralManager->registerFactory(bh1750Factory);
-        peripheralManager->registerFactory(tsl2591Factory);
-        peripheralManager->registerFactory(xl9535Factory);
+        peripheralManager->registerFactory(std::make_unique<I2CEnvironmentFactory<Sht3xComponent>>("sht3x", 0x44 /* Also supports 0x45 */));
+        // TODO Unify these two factories
+        peripheralManager->registerFactory(std::make_unique<I2CEnvironmentFactory<Sht2xComponent>>("sht2x", 0x40 /* Not configurable */));
+        peripheralManager->registerFactory(std::make_unique<I2CEnvironmentFactory<Sht2xComponent>>("htu2x", 0x40 /* Not configurable */));
+
+        peripheralManager->registerFactory(std::make_unique<SoilMoistureSensorFactory>());
+        peripheralManager->registerFactory(std::make_unique<Ds18B20SoilSensorFactory>());
+
+        peripheralManager->registerFactory(std::make_unique<farmhub::peripherals::fence::ElectricFenceMonitorFactory>());
+
+        peripheralManager->registerFactory(std::make_unique<Bh1750Factory>());
+        peripheralManager->registerFactory(std::make_unique<Tsl2591Factory>());
+
+        peripheralManager->registerFactory(std::make_unique<farmhub::peripherals::multiplexer::Xl9535Factory>());
+
         registerDeviceSpecificPeripheralFactories(peripheralManager);
     }
 
@@ -73,22 +79,6 @@ public:
     const std::shared_ptr<PcntManager> pcnt { std::make_shared<PcntManager>() };
     const std::shared_ptr<PulseCounterManager> pulseCounterManager { std::make_shared<PulseCounterManager>() };
     const std::shared_ptr<PwmManager> pwm { std::make_shared<PwmManager>() };
-
-private:
-    I2CEnvironmentFactory<Sht3xComponent> sht3xFactory { "sht3x", 0x44 /* Also supports 0x45 */ };
-    // TODO Unify these two factories
-    I2CEnvironmentFactory<Sht2xComponent> sht2xFactory { "sht2x", 0x40 /* Not configurable */ };
-    I2CEnvironmentFactory<Sht2xComponent> htu2xFactory { "htu2x", 0x40 /* Not configurable */ };
-    SoilMoistureSensorFactory soilMoistureSensorFactory;
-
-    Ds18B20SoilSensorFactory ds18b20SoilSensorFactory;
-
-    farmhub::peripherals::fence::ElectricFenceMonitorFactory electricFenceMonitorFactory;
-
-    farmhub::peripherals::light_sensor::Bh1750Factory bh1750Factory;
-    farmhub::peripherals::light_sensor::Tsl2591Factory tsl2591Factory;
-
-    farmhub::peripherals::multiplexer::Xl9535Factory xl9535Factory;
 };
 
 }    // namespace farmhub::devices
