@@ -14,15 +14,42 @@ static const char* const farmhubVersion = esp_app_get_description()->version;
 
 #include <kernel/BatteryManager.hpp>
 #include <kernel/Console.hpp>
+#include <kernel/CrashManager.hpp>
 #include <kernel/DebugConsole.hpp>
 #include <kernel/HttpUpdate.hpp>
 #include <kernel/KernelStatus.hpp>
 #include <kernel/Log.hpp>
+#include <kernel/Strings.hpp>
 #include <kernel/mqtt/MqttLog.hpp>
+#include <kernel/mqtt/MqttTelemetryPublisher.hpp>
 
-#include <devices/Device.hpp>
+#include <devices/DeviceTelemetry.hpp>
 
 #include <peripherals/Peripheral.hpp>
+
+#if defined(MK4)
+#include <devices/UglyDucklingMk4.hpp>
+typedef farmhub::devices::UglyDucklingMk4 TDeviceDefinition;
+typedef farmhub::devices::Mk4Config TDeviceConfiguration;
+#elif defined(MK5)
+#include <devices/UglyDucklingMk5.hpp>
+typedef farmhub::devices::UglyDucklingMk5 TDeviceDefinition;
+typedef farmhub::devices::Mk5Config TDeviceConfiguration;
+#elif defined(MK6)
+#include <devices/UglyDucklingMk6.hpp>
+typedef farmhub::devices::UglyDucklingMk6 TDeviceDefinition;
+typedef farmhub::devices::Mk6Config TDeviceConfiguration;
+#elif defined(MK7)
+#include <devices/UglyDucklingMk7.hpp>
+typedef farmhub::devices::UglyDucklingMk7 TDeviceDefinition;
+typedef farmhub::devices::Mk7Config TDeviceConfiguration;
+#elif defined(MK8)
+#include <devices/UglyDucklingMk8.hpp>
+typedef farmhub::devices::UglyDucklingMk8 TDeviceDefinition;
+typedef farmhub::devices::Mk8Config TDeviceConfiguration;
+#else
+#error "No device defined"
+#endif
 
 using namespace farmhub::kernel;
 

@@ -5,6 +5,8 @@
 
 #include <ArduinoJson.h>
 
+#include <kernel/Strings.hpp>
+
 namespace farmhub::kernel {
 
 class CrashManager {
