@@ -3,7 +3,6 @@
 #include <memory>
 
 #include <kernel/FileSystem.hpp>
-#include <kernel/Kernel.hpp>
 #include <kernel/Pin.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
@@ -103,11 +102,11 @@ public:
         });
     }
 
-    void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
-        peripheralManager.registerFactory(valveFactory);
-        peripheralManager.registerFactory(flowMeterFactory);
-        peripheralManager.registerFactory(flowControlFactory);
-        peripheralManager.registerFactory(chickenDoorFactory);
+    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) override {
+        peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::Latching));
+        peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
+        peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::Latching));
+        peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
     }
 
     std::shared_ptr<LedDriver> secondaryStatusLed { std::make_shared<LedDriver>("status-2", pins::STATUS2) };
@@ -117,11 +116,6 @@ public:
     const ServiceRef<PwmMotorDriver> motorA { "a", motorDriver.getMotorA() };
     const ServiceRef<PwmMotorDriver> motorB { "b", motorDriver.getMotorB() };
     const std::list<ServiceRef<PwmMotorDriver>> motors { motorA, motorB };
-
-    ValveFactory valveFactory { motors, ValveControlStrategyType::Latching };
-    FlowMeterFactory flowMeterFactory;
-    FlowControlFactory flowControlFactory { motors, ValveControlStrategyType::Latching };
-    ChickenDoorFactory chickenDoorFactory { motors };
 };
 
 }    // namespace farmhub::devices

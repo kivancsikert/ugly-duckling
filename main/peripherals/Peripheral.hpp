@@ -112,7 +112,7 @@ public:
         , peripheralType(peripheralType) {
     }
 
-    virtual std::unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services, JsonObject& initConfigJson) = 0;
+    virtual std::unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<FileSystem> fs, const PeripheralServices& services, JsonObject& initConfigJson) = 0;
 
     const std::string factoryType;
     const std::string peripheralType;
@@ -131,10 +131,10 @@ public:
         , deviceConfigArgs(std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
-    std::unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services, JsonObject& initConfigJson) override {
+    std::unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<FileSystem> fs, const PeripheralServices& services, JsonObject& initConfigJson) override {
         std::shared_ptr<TConfig> config = std::make_shared<TConfig>();
         // Use short prefix because SPIFFS has a 32 character limit
-        std::shared_ptr<ConfigurationFile<TConfig>> configFile = std::make_shared<ConfigurationFile<TConfig>>(FileSystem::get(), "/p/" + name, config);
+        std::shared_ptr<ConfigurationFile<TConfig>> configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + name, config);
         mqttRoot->subscribe("config", [name, configFile](const std::string&, const JsonObject& configJson) {
             LOGD("Received configuration update for peripheral: %s", name.c_str());
             try {
@@ -170,20 +170,22 @@ class PeripheralManager
     : public TelemetryPublisher {
 public:
     PeripheralManager(
+        std::shared_ptr<FileSystem> fs,
         std::shared_ptr<I2CManager> i2c,
         std::shared_ptr<PcntManager> pcntManager,
         std::shared_ptr<PulseCounterManager> pulseCounterManager,
         std::shared_ptr<PwmManager> pwmManager,
         std::shared_ptr<SwitchManager> switchManager,
         const std::shared_ptr<MqttRoot> mqttDeviceRoot)
-        : services({ i2c, pcntManager, pulseCounterManager, pwmManager, switchManager })
+        : fs(fs)
+        , services({ i2c, pcntManager, pulseCounterManager, pwmManager, switchManager })
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 
-    void registerFactory(PeripheralFactoryBase& factory) {
+    void registerFactory(std::unique_ptr<PeripheralFactoryBase> factory) {
         LOGD("Registering peripheral factory: %s",
-            factory.factoryType.c_str());
-        factories.insert(std::make_pair(factory.factoryType, std::reference_wrapper<PeripheralFactoryBase>(factory)));
+            factory->factoryType.c_str());
+        factories.insert(std::make_pair(factory->factoryType, std::move(factory)));
     }
 
     bool createPeripheral(const std::string& peripheralConfig, JsonArray peripheralsInitJson) {
@@ -271,10 +273,9 @@ private:
         if (it == factories.end()) {
             throw PeripheralCreationException("Factory not found: '" + factoryType + "'");
         }
-        const std::string& peripheralType = it->second.get().peripheralType;
+        const std::string& peripheralType = it->second.get()->peripheralType;
         std::shared_ptr<MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
-        PeripheralFactoryBase& factory = it->second.get();
-        return factory.createPeripheral(name, configJson, mqttRoot, services, initConfigJson);
+        return it->second.get()->createPeripheral(name, configJson, mqttRoot, fs, services, initConfigJson);
     }
 
     enum class State {
@@ -282,12 +283,14 @@ private:
         Stopped
     };
 
+    const std::shared_ptr<FileSystem> fs;
+
     PeripheralServices services;
 
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
 
     // TODO Use an unordered_map?
-    std::map<std::string, std::reference_wrapper<PeripheralFactoryBase>> factories;
+    std::map<std::string, std::unique_ptr<PeripheralFactoryBase>> factories;
     Mutex stateMutex;
     State state = State::Running;
     std::list<std::unique_ptr<PeripheralBase>> peripherals;

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <kernel/FileSystem.hpp>
-#include <kernel/Kernel.hpp>
 #include <kernel/Pin.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/BatteryDriver.hpp>
@@ -81,11 +80,11 @@ public:
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
-    void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
-        peripheralManager.registerFactory(valveFactory);
-        peripheralManager.registerFactory(flowMeterFactory);
-        peripheralManager.registerFactory(flowControlFactory);
-        peripheralManager.registerFactory(chickenDoorFactory);
+    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) override {
+        peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::Latching));
+        peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
+        peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::Latching));
+        peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
     }
 
     Drv8874Driver motorADriver {
@@ -109,11 +108,6 @@ public:
     const ServiceRef<PwmMotorDriver> motorA { "a", motorADriver };
     const ServiceRef<PwmMotorDriver> motorB { "b", motorBDriver };
     const std::list<ServiceRef<PwmMotorDriver>> motors { motorA, motorB };
-
-    ValveFactory valveFactory { motors, ValveControlStrategyType::Latching };
-    FlowMeterFactory flowMeterFactory;
-    FlowControlFactory flowControlFactory { motors, ValveControlStrategyType::Latching };
-    ChickenDoorFactory chickenDoorFactory { motors };
 };
 
 }}    // namespace farmhub::devices

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <kernel/FileSystem.hpp>
-#include <kernel/Kernel.hpp>
 #include <kernel/Pin.hpp>
 #include <kernel/Service.hpp>
 #include <kernel/drivers/LedDriver.hpp>
@@ -33,7 +32,7 @@ public:
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
-    void registerDeviceSpecificPeripheralFactories(PeripheralManager& peripheralManager) override {
+    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager) override {
     }
 };
 
