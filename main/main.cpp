@@ -381,7 +381,10 @@ extern "C" void app_main() {
 #endif
     deviceTelemetryCollector->registerProvider("pm", std::make_shared<PowerManagementTelemetryProvider>(powerManager));
 
-    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, mqttRoot, peripheralManager, deviceTelemetryPublisher, telemetryPublishQueue, states->rtcInSync);
+    // We want RTC to be in sync before we start setting up peripherals
+    states->rtcInSync.awaitSet();
+
+    new farmhub::devices::Device(deviceConfig, deviceDefinition, fs, wifi, batteryManager, watchdog, powerManager, mqttRoot, peripheralManager, deviceTelemetryPublisher, telemetryPublishQueue);
 
     // Enable power saving once we are done initializing
     wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());

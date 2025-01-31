@@ -103,14 +103,10 @@ public:
         const std::shared_ptr<MqttRoot> mqttDeviceRoot,
         const std::shared_ptr<PeripheralManager> peripheralManager,
         const std::shared_ptr<TelemetryPublisher> deviceTelemetryPublisher,
-        const std::shared_ptr<CopyQueue<bool>> telemetryPublishQueue,
-        const State& rtcInSync)
+        const std::shared_ptr<CopyQueue<bool>> telemetryPublishQueue)
         : deviceDefinition(deviceDefinition)
         , fs(fs)
         , mqttDeviceRoot(mqttDeviceRoot) {
-
-        // We want RTC to be in sync before we start setting up peripherals
-        rtcInSync.awaitSet();
 
         JsonDocument peripheralsInitDoc;
         JsonArray peripheralsInitJson = peripheralsInitDoc.to<JsonArray>();
