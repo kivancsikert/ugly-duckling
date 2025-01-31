@@ -121,9 +121,7 @@ public:
         const State& rtcInSync)
         : deviceDefinition(deviceDefinition)
         , fs(fs)
-        , mqttDeviceRoot(mqttDeviceRoot)
-        , peripheralManager(peripheralManager)
-    {
+        , mqttDeviceRoot(mqttDeviceRoot) {
         if (battery != nullptr) {
             deviceTelemetryCollector.registerProvider("battery", battery);
             shutdownManager->registerShutdownListener([peripheralManager]() {
@@ -205,10 +203,11 @@ public:
             Retention::NoRetain, QoS::AtLeastOnce, 5s);
 
         auto publishInterval = deviceConfig->publishInterval.get();
-        Task::loop("telemetry", 8192, [this, publishInterval, watchdog](Task& task) {
+        Task::loop("telemetry", 8192, [this, publishInterval, watchdog, peripheralManager](Task& task) {
             task.markWakeTime();
 
-            publishTelemetry();
+            deviceTelemetryPublisher.publishTelemetry();
+            peripheralManager->publishTelemetry();
 
             // Signal that we are still alive
             watchdog->restart();
@@ -229,11 +228,6 @@ private:
         Success = 0,
         PeripheralError = 1,
     };
-
-    void publishTelemetry() {
-        deviceTelemetryPublisher.publishTelemetry();
-        peripheralManager->publishTelemetry();
-    }
 
     void reportPreviousCrashIfAny(JsonObject& json) {
         if (!hasCoreDump()) {
@@ -324,7 +318,6 @@ private:
     const std::shared_ptr<TDeviceDefinition> deviceDefinition;
     const std::shared_ptr<FileSystem> fs;
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
-    const std::shared_ptr<PeripheralManager> peripheralManager;
 
     TelemetryCollector deviceTelemetryCollector;
     MqttTelemetryPublisher deviceTelemetryPublisher { mqttDeviceRoot, deviceTelemetryCollector };
