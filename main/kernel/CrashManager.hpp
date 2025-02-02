@@ -14,21 +14,19 @@ class CrashManager {
 public:
     static void handleCrashReport(JsonObject& json) {
         NvsStore nvs("crash-report");
-        reportPreviousCrashIfAny(json, nvs);
+        if (hasCoreDump()) {
+            std::string crashedFirmwareVersion;
+            if (!nvs.get<std::string>("version", crashedFirmwareVersion)) {
+                crashedFirmwareVersion = "unknown";
+            }
+
+            reportPreviousCrash(json, crashedFirmwareVersion);
+        }
         nvs.set("version", farmhubVersion);
     }
 
 private:
-    static void reportPreviousCrashIfAny(JsonObject& json, NvsStore& nvs) {
-        if (!hasCoreDump()) {
-            return;
-        }
-
-        std::string crashedFirmwareVersion;
-        if (!nvs.get<std::string>("version", crashedFirmwareVersion)) {
-            crashedFirmwareVersion = "unknown";
-        }
-
+    static void reportPreviousCrash(JsonObject& json, const std::string& crashedFirmwareVersion) {
         esp_core_dump_summary_t summary {};
         esp_err_t err = esp_core_dump_get_summary(&summary);
         if (err != ESP_OK) {
