@@ -554,6 +554,11 @@ private:
                 eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, MessagePublished { event->msg_id, true });
                 break;
             }
+            case MQTT_EVENT_DELETED: {
+                LOGTV(Tag::MQTT, "Deleted, message ID %d", event->msg_id);
+                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, MessagePublished { event->msg_id, false });
+                break;
+            }
             case MQTT_EVENT_DATA: {
                 std::string topic(event->topic, event->topic_len);
                 std::string payload(event->data, event->data_len);
@@ -662,16 +667,11 @@ private:
 #endif
         for (auto subscription : subscriptions) {
             if (subscription.topic == topic) {
-                JsonDocument json;
-                deserializeJson(json, payload);
-                // TODO Make timeout and stack size configurable
-                auto result = Task::runIn("mqtt:incoming-handler", 10s, 4096, [&](Task& task) {
+                Task::run("mqtt:incoming-handler", 4096, [topic, payload, subscription](Task& task) {
+                    JsonDocument json;
+                    deserializeJson(json, payload);
                     subscription.handle(topic, json.as<JsonObject>());
                 });
-                if (result != Task::RunResult::OK) {
-                    LOGTE(Tag::MQTT, "Incoming handler for topic '%s' timed out",
-                        topic.c_str());
-                }
                 return;
             }
         }
