@@ -499,7 +499,7 @@ extern "C" void app_main() {
             json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
             json["sleepWhenIdle"] = powerManager->sleepWhenIdle;
 
-            CrashManager::reportPreviousCrashIfAny(json);
+            CrashManager::handleCrashReport(json);
         },
         Retention::NoRetain, QoS::AtLeastOnce, 5s);
 
