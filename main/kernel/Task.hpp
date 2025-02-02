@@ -195,12 +195,10 @@ private:
     }
 
     static void executeTask(void* parameters) {
-        TaskFunction* taskFunctionParam = static_cast<TaskFunction*>(parameters);
-        TaskFunction taskFunction(*taskFunctionParam);
-        delete taskFunctionParam;
-
+        auto taskFunction = static_cast<TaskFunction*>(parameters);
         Task task;
-        taskFunction(task);
+        (*taskFunction)(task);
+        delete taskFunction;
     }
 
     TickType_t lastWakeTime { xTaskGetTickCount() };
