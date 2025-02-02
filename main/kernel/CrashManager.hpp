@@ -5,15 +5,28 @@
 
 #include <ArduinoJson.h>
 
+#include <kernel/NvsStore.hpp>
 #include <kernel/Strings.hpp>
 
 namespace farmhub::kernel {
 
 class CrashManager {
 public:
-    static void reportPreviousCrashIfAny(JsonObject& json) {
+    static void handleCrashReport(JsonObject& json) {
+        NvsStore nvs("crash-report");
+        reportPreviousCrashIfAny(json, nvs);
+        nvs.set("version", farmhubVersion);
+    }
+
+private:
+    static void reportPreviousCrashIfAny(JsonObject& json, NvsStore& nvs) {
         if (!hasCoreDump()) {
             return;
+        }
+
+        std::string crashedFirmwareVersion;
+        if (!nvs.get<std::string>("version", crashedFirmwareVersion)) {
+            crashedFirmwareVersion = "unknown";
         }
 
         esp_core_dump_summary_t summary {};
@@ -22,13 +35,13 @@ public:
             LOGE("Failed to get core dump summary: %s", esp_err_to_name(err));
         } else {
             auto crashJson = json["crash"].to<JsonObject>();
+            crashJson["firmware-version"] = crashedFirmwareVersion;
             reportPreviousCrash(crashJson, summary);
         }
 
         ESP_ERROR_CHECK_WITHOUT_ABORT(esp_core_dump_image_erase());
     }
 
-private:
     static bool hasCoreDump() {
         esp_err_t err = esp_core_dump_image_check();
         switch (err) {
@@ -58,8 +71,8 @@ private:
         LOGW("Core dump found: task: %s, cause: %ld",
             summary.exc_task, excCause);
 
-        json["version"] = summary.core_dump_version;
-        json["sha256"] = std::string((const char*) summary.app_elf_sha256);
+        json["dump-version"] = summary.core_dump_version;
+        json["elf-sha256"] = std::string((const char*) summary.app_elf_sha256);
         json["task"] = std::string(summary.exc_task);
         json["cause"] = excCause;
 
