@@ -8,8 +8,10 @@
 /data-unused/
 
 # ESP-IDF generated files
-/build/
+build/
+
+sdkconfig*
+!sdkconfig*.defaults
+
 /managed_components/
-/sdkconfig*
-!/sdkconfig*.defaults
 /dependencies*.lock
