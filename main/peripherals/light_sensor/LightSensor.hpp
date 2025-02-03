@@ -3,11 +3,11 @@
 #include <chrono>
 #include <memory>
 
-#include <kernel/Component.hpp>
-#include <kernel/Configuration.hpp>
-#include <kernel/I2CManager.hpp>
-#include <kernel/MovingAverage.hpp>
-#include <kernel/Telemetry.hpp>
+#include <Component.hpp>
+#include <Configuration.hpp>
+#include <I2CManager.hpp>
+#include <MovingAverage.hpp>
+#include <Telemetry.hpp>
 
 #include <peripherals/I2CConfig.hpp>
 #include <peripherals/Peripheral.hpp>

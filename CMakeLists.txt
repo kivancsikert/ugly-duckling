@@ -9,8 +9,7 @@ FetchContent_Declare(
   GIT_TAG "1abe2e5194b1a45c8878229ad893a058816cdd18"
 )
 FetchContent_MakeAvailable(espidflib)
-set(EXTRA_COMPONENT_DIRS ${espidflib_SOURCE_DIR}/components)
-
+set(EXTRA_COMPONENT_DIRS ${espidflib_SOURCE_DIR}/components ${CMAKE_SOURCE_DIR}/components)
 
 if(NOT DEFINED UD_GEN)
     set(UD_GEN "$ENV{UD_GEN}")

@@ -3,7 +3,7 @@
 // TODO Move this someplace else?
 #define configTICK_RATE_HZ 1000
 
-#include <kernel/MovingAverage.hpp>
+#include <MovingAverage.hpp>
 
 namespace farmhub::kernel {
 

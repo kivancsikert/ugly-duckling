@@ -3,10 +3,10 @@
 #include <chrono>
 #include <list>
 
-#include <kernel/Component.hpp>
-#include <kernel/Concurrent.hpp>
-#include <kernel/PulseCounter.hpp>
-#include <kernel/Telemetry.hpp>
+#include <Component.hpp>
+#include <Concurrent.hpp>
+#include <PulseCounter.hpp>
+#include <Telemetry.hpp>
 
 #include <peripherals/Peripheral.hpp>
 

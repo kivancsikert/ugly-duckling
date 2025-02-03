@@ -3,11 +3,11 @@
 #include <memory>
 #include <map>
 
-#include <kernel/FileSystem.hpp>
-#include <kernel/Pin.hpp>
-#include <kernel/drivers/BatteryDriver.hpp>
-#include <kernel/drivers/Drv8833Driver.hpp>
-#include <kernel/drivers/LedDriver.hpp>
+#include <FileSystem.hpp>
+#include <Pin.hpp>
+#include <drivers/BatteryDriver.hpp>
+#include <drivers/Drv8833Driver.hpp>
+#include <drivers/LedDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/chicken_door/ChickenDoor.hpp>
