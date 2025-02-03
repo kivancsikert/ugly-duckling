@@ -12,16 +12,16 @@
 
 static const char* const farmhubVersion = esp_app_get_description()->version;
 
-#include <kernel/BatteryManager.hpp>
-#include <kernel/Console.hpp>
-#include <kernel/CrashManager.hpp>
-#include <kernel/DebugConsole.hpp>
-#include <kernel/HttpUpdate.hpp>
-#include <kernel/KernelStatus.hpp>
-#include <kernel/Log.hpp>
-#include <kernel/Strings.hpp>
-#include <kernel/mqtt/MqttLog.hpp>
-#include <kernel/mqtt/MqttTelemetryPublisher.hpp>
+#include <BatteryManager.hpp>
+#include <Console.hpp>
+#include <CrashManager.hpp>
+#include <DebugConsole.hpp>
+#include <HttpUpdate.hpp>
+#include <KernelStatus.hpp>
+#include <Log.hpp>
+#include <Strings.hpp>
+#include <mqtt/MqttLog.hpp>
+#include <mqtt/MqttTelemetryPublisher.hpp>
 
 #include <devices/DeviceTelemetry.hpp>
 
@@ -51,6 +51,7 @@ typedef farmhub::devices::Mk8Config TDeviceConfiguration;
 #error "No device defined"
 #endif
 
+using namespace farmhub::devices;
 using namespace farmhub::kernel;
 
 #ifdef CONFIG_HEAP_TRACING

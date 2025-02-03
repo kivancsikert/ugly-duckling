@@ -6,14 +6,14 @@
 #include <list>
 #include <variant>
 
-#include <kernel/Component.hpp>
-#include <kernel/Concurrent.hpp>
-#include <kernel/Task.hpp>
-#include <kernel/Telemetry.hpp>
-#include <kernel/Watchdog.hpp>
+#include <Component.hpp>
+#include <Concurrent.hpp>
+#include <Task.hpp>
+#include <Telemetry.hpp>
+#include <Watchdog.hpp>
 
-#include <kernel/drivers/MotorDriver.hpp>
-#include <kernel/drivers/SwitchManager.hpp>
+#include <drivers/MotorDriver.hpp>
+#include <drivers/SwitchManager.hpp>
 
 #include <peripherals/Motorized.hpp>
 #include <peripherals/Peripheral.hpp>

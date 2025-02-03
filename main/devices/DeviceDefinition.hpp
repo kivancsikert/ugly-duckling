@@ -8,12 +8,12 @@
 
 #include <devices/DeviceConfiguration.hpp>
 
-#include <kernel/Log.hpp>
-#include <kernel/PcntManager.hpp>
-#include <kernel/PulseCounter.hpp>
-#include <kernel/PwmManager.hpp>
-#include <kernel/drivers/BatteryDriver.hpp>
-#include <kernel/drivers/LedDriver.hpp>
+#include <Log.hpp>
+#include <PcntManager.hpp>
+#include <PulseCounter.hpp>
+#include <PwmManager.hpp>
+#include <drivers/BatteryDriver.hpp>
+#include <drivers/LedDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/environment/Ds18B20SoilSensor.hpp>

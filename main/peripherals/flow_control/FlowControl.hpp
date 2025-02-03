@@ -2,8 +2,8 @@
 
 #include <memory>
 
-#include <kernel/Configuration.hpp>
-#include <kernel/mqtt/MqttDriver.hpp>
+#include <Configuration.hpp>
+#include <mqtt/MqttDriver.hpp>
 #include <peripherals/Motorized.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>

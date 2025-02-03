@@ -4,13 +4,13 @@
 
 #include <ArduinoJson.h>
 
-#include <kernel/BootClock.hpp>
-#include <kernel/Component.hpp>
-#include <kernel/Concurrent.hpp>
-#include <kernel/PulseCounter.hpp>
-#include <kernel/Task.hpp>
-#include <kernel/Telemetry.hpp>
-#include <kernel/mqtt/MqttDriver.hpp>
+#include <BootClock.hpp>
+#include <Component.hpp>
+#include <Concurrent.hpp>
+#include <PulseCounter.hpp>
+#include <Task.hpp>
+#include <Telemetry.hpp>
+#include <mqtt/MqttDriver.hpp>
 
 using namespace farmhub::kernel::mqtt;
 

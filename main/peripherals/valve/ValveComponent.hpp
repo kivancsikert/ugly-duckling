@@ -8,13 +8,13 @@
 
 #include <ArduinoJson.h>
 
-#include <kernel/Component.hpp>
-#include <kernel/Concurrent.hpp>
-#include <kernel/NvsStore.hpp>
-#include <kernel/Task.hpp>
-#include <kernel/Telemetry.hpp>
-#include <kernel/Time.hpp>
-#include <kernel/drivers/MotorDriver.hpp>
+#include <Component.hpp>
+#include <Concurrent.hpp>
+#include <NvsStore.hpp>
+#include <Task.hpp>
+#include <Telemetry.hpp>
+#include <Time.hpp>
+#include <drivers/MotorDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/valve/ValveScheduler.hpp>
