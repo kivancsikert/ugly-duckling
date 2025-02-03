@@ -1,3 +1,3 @@
-idf_component_register(SRCS "test_main.c"
-                    PRIV_REQUIRES unity
-                    INCLUDE_DIRS ".")
+idf_component_register(SRC_DIRS "."
+                    INCLUDE_DIRS "."
+                    WHOLE_ARCHIVE)
