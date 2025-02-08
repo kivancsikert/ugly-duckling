@@ -3,16 +3,16 @@
 #include <map>
 #include <memory>
 
-#include <kernel/BootClock.hpp>
-#include <kernel/Configuration.hpp>
-#include <kernel/I2CManager.hpp>
-#include <kernel/Named.hpp>
-#include <kernel/PcntManager.hpp>
-#include <kernel/PulseCounter.hpp>
-#include <kernel/PwmManager.hpp>
-#include <kernel/Telemetry.hpp>
-#include <kernel/drivers/SwitchManager.hpp>
-#include <kernel/mqtt/MqttRoot.hpp>
+#include <BootClock.hpp>
+#include <Configuration.hpp>
+#include <I2CManager.hpp>
+#include <Named.hpp>
+#include <PcntManager.hpp>
+#include <PulseCounter.hpp>
+#include <PwmManager.hpp>
+#include <Telemetry.hpp>
+#include <drivers/SwitchManager.hpp>
+#include <mqtt/MqttRoot.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;

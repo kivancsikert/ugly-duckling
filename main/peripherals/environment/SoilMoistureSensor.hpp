@@ -2,8 +2,8 @@
 
 #include <memory>
 
-#include <kernel/Component.hpp>
-#include <kernel/Telemetry.hpp>
+#include <Component.hpp>
+#include <Telemetry.hpp>
 
 #include <peripherals/Peripheral.hpp>
 

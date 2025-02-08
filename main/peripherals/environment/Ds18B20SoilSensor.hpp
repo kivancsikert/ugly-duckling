@@ -4,8 +4,8 @@
 
 #include <ds18x20.h>
 
-#include <kernel/Component.hpp>
-#include <kernel/Configuration.hpp>
+#include <Component.hpp>
+#include <Configuration.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/SinglePinDeviceConfig.hpp>
 

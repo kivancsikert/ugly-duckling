@@ -2,8 +2,8 @@
 
 #include <chrono>
 
-#include <kernel/Configuration.hpp>
-#include <kernel/I2CManager.hpp>
+#include <Configuration.hpp>
+#include <I2CManager.hpp>
 
 using namespace std::chrono;
 using namespace farmhub::kernel;
