@@ -104,7 +104,7 @@ class I2CManager {
 public:
     I2CManager() {
         ESP_ERROR_CHECK(i2cdev_init());
-        buses.reserve(BUS_COUNT);
+        buses.reserve(I2C_NUM_MAX);
     }
 
     ~I2CManager() {
@@ -136,15 +136,16 @@ public:
         Lock lock(mutex);
         for (auto bus : buses) {
             if (bus->sda == sda && bus->scl == scl) {
-                LOGV("Reusing already registered I2C bus for SDA: %s, SCL: %s",
-                    sda->getName().c_str(), scl->getName().c_str());
+                LOGV("Using previously registered I2C bus #%d for SDA: %s, SCL: %s",
+                    static_cast<int>(bus->port), sda->getName().c_str(), scl->getName().c_str());
                 return bus;
             }
         }
-        if (buses.size() < BUS_COUNT) {
-            LOGD("Creating new I2C bus for SDA: %s, SCL: %s",
-                sda->getName().c_str(), scl->getName().c_str());
-            auto bus = std::make_shared<I2CBus>(I2CBus { .port = static_cast<i2c_port_t>(buses.size()), .sda = sda, .scl = scl });
+        auto nextBus = buses.size();
+        if (nextBus < I2C_NUM_MAX) {
+            LOGI("Registering I2C bus #%d for SDA: %s, SCL: %s",
+                nextBus, sda->getName().c_str(), scl->getName().c_str());
+            auto bus = std::make_shared<I2CBus>(I2CBus { .port = static_cast<i2c_port_t>(nextBus), .sda = sda, .scl = scl });
             buses.push_back(bus);
             return bus;
         }
@@ -153,8 +154,6 @@ public:
     }
 
 private:
-    static constexpr size_t BUS_COUNT = 2;
-
     Mutex mutex;
     std::vector<std::shared_ptr<I2CBus>> buses;
 };
