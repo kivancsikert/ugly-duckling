@@ -67,17 +67,47 @@ public:
 class ChickenDoorDeviceConfig
     : public ConfigurationSection {
 public:
+    /**
+     * @brief The motor to drive the door.
+     */
     Property<std::string> motor { this, "motor" };
+
+    /**
+     * @brief Pin that indicates the door is open.
+     */
     Property<InternalPinPtr> openPin { this, "openPin" };
+
+    /**
+     * @brief Pin that indicates the door is closed.
+     */
     Property<InternalPinPtr> closedPin { this, "closedPin" };
+
+    /**
+     * @brief By default, open/close pins are high-active; set this to true to invert the logic.
+     */
+    Property<bool> invertSwitches { this, "invertSwitches", false };
+
+    /**
+     * @brief How long the motor is allowed to be running before we switch to emergency mode.
+     */
     Property<seconds> movementTimeout { this, "movementTimeout", seconds(60) };
 
+    /**
+     * @brief Light sensor configuration.
+     */
     NamedConfigurationEntry<ChickenDoorLightSensorConfig> lightSensor { this, "lightSensor" };
 };
 
 class ChickenDoorConfig : public ConfigurationSection {
 public:
+    /**
+     * @brief Light level above which the door should be open.
+     */
     Property<double> openLevel { this, "openLevel", 250 };
+
+    /**
+     * @brief Light level below which the door should be closed.
+     */
     Property<double> closeLevel { this, "closeLevel", 10 };
 };
 
@@ -94,6 +124,7 @@ public:
         TLightSensorComponent& lightSensor,
         InternalPinPtr openPin,
         InternalPinPtr closedPin,
+        bool invertSwitches,
         ticks movementTimeout,
         std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
@@ -111,6 +142,7 @@ public:
               SwitchMode::PullUp,
               [this](const Switch&) { updateState(); },
               [this](const Switch&, milliseconds) { updateState(); }))
+        , invertSwitches(invertSwitches)
         , watchdog(name + ":watchdog", movementTimeout, false, [this](WatchdogState state) {
             handleWatchdogEvent(state);
         })
@@ -118,8 +150,9 @@ public:
     // TODO Make this configurable
     {
 
-        LOGI("Initializing chicken door %s, open switch %s, close switch %s",
-            name.c_str(), openSwitch.getPin()->getName().c_str(), closedSwitch.getPin()->getName().c_str());
+        LOGI("Initializing chicken door %s, open switch %s, close switch %s%s",
+            name.c_str(), openSwitch.getPin()->getName().c_str(), closedSwitch.getPin()->getName().c_str(),
+            invertSwitches ? " (switches are inverted)" : "");
 
         motor->stop();
 
@@ -274,8 +307,8 @@ private:
     }
 
     DoorState determineCurrentState() {
-        bool open = openSwitch.isEngaged();
-        bool close = closedSwitch.isEngaged();
+        bool open = openSwitch.isEngaged() ^ invertSwitches;
+        bool close = closedSwitch.isEngaged() ^ invertSwitches;
         if (open && close) {
             LOGD("Both open and close switches are engaged");
             return DoorState::NONE;
@@ -318,6 +351,7 @@ private:
 
     const Switch& openSwitch;
     const Switch& closedSwitch;
+    const bool invertSwitches;
 
     Watchdog watchdog;
 
@@ -373,6 +407,7 @@ public:
               lightSensor,
               config->openPin.get(),
               config->closedPin.get(),
+              config->invertSwitches.get(),
               config->movementTimeout.get(),
               [this]() {
                   publishTelemetry();
