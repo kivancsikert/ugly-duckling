@@ -1,8 +1,8 @@
 #pragma once
 
-#include <kernel/FileSystem.hpp>
-#include <kernel/Pin.hpp>
-#include <kernel/drivers/LedDriver.hpp>
+#include <FileSystem.hpp>
+#include <Pin.hpp>
+#include <drivers/LedDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
 

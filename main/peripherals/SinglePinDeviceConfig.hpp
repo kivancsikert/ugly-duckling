@@ -2,7 +2,7 @@
 
 #include <chrono>
 
-#include <kernel/Configuration.hpp>
+#include <Configuration.hpp>
 
 using namespace std::chrono;
 using namespace farmhub::kernel;

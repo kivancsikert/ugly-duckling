@@ -1,10 +1,10 @@
 #pragma once
 
-#include <kernel/FileSystem.hpp>
-#include <kernel/Pin.hpp>
-#include <kernel/drivers/BatteryDriver.hpp>
-#include <kernel/drivers/Drv8801Driver.hpp>
-#include <kernel/drivers/LedDriver.hpp>
+#include <FileSystem.hpp>
+#include <Pin.hpp>
+#include <drivers/BatteryDriver.hpp>
+#include <drivers/Drv8801Driver.hpp>
+#include <drivers/LedDriver.hpp>
 
 #include <peripherals/chicken_door/ChickenDoor.hpp>
 #include <peripherals/flow_control/FlowControl.hpp>

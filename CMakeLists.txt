@@ -9,8 +9,7 @@ FetchContent_Declare(
   GIT_TAG "1abe2e5194b1a45c8878229ad893a058816cdd18"
 )
 FetchContent_MakeAvailable(espidflib)
-set(EXTRA_COMPONENT_DIRS ${espidflib_SOURCE_DIR}/components)
-
+set(EXTRA_COMPONENT_DIRS ${espidflib_SOURCE_DIR}/components ${CMAKE_SOURCE_DIR}/components)
 
 if(NOT DEFINED UD_GEN)
     set(UD_GEN "$ENV{UD_GEN}")
@@ -64,10 +63,13 @@ else()
 endif()
 add_link_options("-Wl,--gc-sections")
 
-include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-
 # Keep struct initializers simple
 add_compile_options("-Wno-missing-field-initializers")
+
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+
+# "Trim" the build. Include the minimal set of components, main, and anything it depends on.
+idf_build_set_property(MINIMAL_BUILD ON)
 
 project(ugly-duckling)
 

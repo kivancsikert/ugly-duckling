@@ -1,8 +1,8 @@
 #pragma once
 
-#include <kernel/Component.hpp>
-#include <kernel/Configuration.hpp>
-#include <kernel/Pin.hpp>
+#include <Component.hpp>
+#include <Configuration.hpp>
+#include <Pin.hpp>
 
 namespace farmhub::peripherals::multiplexer {
 

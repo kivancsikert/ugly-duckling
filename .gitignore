@@ -8,8 +8,12 @@
 /data-unused/
 
 # ESP-IDF generated files
-/build/
-/managed_components/
-/sdkconfig*
-!/sdkconfig*.defaults
-/dependencies*.lock
+build/
+
+sdkconfig*
+!sdkconfig*.defaults
+
+managed_components/
+dependencies*.lock
+
+__pycache__/

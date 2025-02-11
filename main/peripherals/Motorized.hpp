@@ -2,7 +2,7 @@
 
 #include <map>
 
-#include <kernel/drivers/MotorDriver.hpp>
+#include <drivers/MotorDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
 

@@ -2,9 +2,9 @@
 
 #include <string>
 
-#include <kernel/Configuration.hpp>
-#include <kernel/NetworkUtil.hpp>
-#include <kernel/drivers/RtcDriver.hpp>
+#include <Configuration.hpp>
+#include <NetworkUtil.hpp>
+#include <drivers/RtcDriver.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;

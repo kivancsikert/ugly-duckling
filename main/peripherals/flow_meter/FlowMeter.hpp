@@ -3,8 +3,8 @@
 #include <memory>
 
 #include <peripherals/Peripheral.hpp>
-#include <kernel/Configuration.hpp>
-#include <kernel/mqtt/MqttDriver.hpp>
+#include <Configuration.hpp>
+#include <mqtt/MqttDriver.hpp>
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>
 #include <peripherals/flow_meter/FlowMeterConfig.hpp>
 

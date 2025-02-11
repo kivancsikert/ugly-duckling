@@ -4,9 +4,9 @@
 
 #include <sht3x.h>
 
-#include <kernel/Component.hpp>
-#include <kernel/I2CManager.hpp>
-#include <kernel/Telemetry.hpp>
+#include <Component.hpp>
+#include <I2CManager.hpp>
+#include <Telemetry.hpp>
 
 #include <peripherals/I2CConfig.hpp>
 #include <peripherals/Peripheral.hpp>

@@ -1,10 +1,10 @@
 #pragma once
 
-#include <kernel/FileSystem.hpp>
-#include <kernel/Pin.hpp>
-#include <kernel/drivers/Bq27220Driver.hpp>
-#include <kernel/drivers/Drv8833Driver.hpp>
-#include <kernel/drivers/LedDriver.hpp>
+#include <FileSystem.hpp>
+#include <Pin.hpp>
+#include <drivers/Bq27220Driver.hpp>
+#include <drivers/Drv8833Driver.hpp>
+#include <drivers/LedDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/chicken_door/ChickenDoor.hpp>
