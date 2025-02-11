@@ -275,17 +275,8 @@ void registerHttpUpdateCommand(std::shared_ptr<MqttRoot> mqttRoot, std::shared_p
             response["failure"] = "Command contains empty url";
             return;
         }
-        JsonDocument doc;
-        doc["url"] = url;
-        std::string content;
-        serializeJson(doc, content);
-        fs->writeAll(UPDATE_FILE, content);
+        HttpUpdater::startUpdate(url, fs);
         response["success"] = true;
-        Task::run("update", 3072, [](Task& task) {
-            LOGI("Restarting in 5 seconds to apply update");
-            Task::delay(5s);
-            esp_restart();
-        });
     });
 }
 
@@ -414,7 +405,7 @@ extern "C" void app_main() {
 
     // Handle any pending HTTP update (will reboot if update was required and was successful)
     registerHttpUpdateCommand(mqttRoot, fs);
-    performPendingHttpUpdateIfNecessary(fs, wifi, watchdog);
+    HttpUpdater::performPendingHttpUpdateIfNecessary(fs, wifi, watchdog);
 
     auto pcnt = std::make_shared<PcntManager>();
     auto pulseCounterManager = std::make_shared<PulseCounterManager>();
