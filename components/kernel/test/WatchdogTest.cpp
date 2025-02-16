@@ -50,3 +50,15 @@ TEST_CASE("watchdog can time out") {
     vTaskDelay(20 / portTICK_PERIOD_MS);
     REQUIRE(watchdogState.value() == WatchdogState::TimedOut);
 }
+
+TEST_CASE("deleting watchdog cancels") {
+    std::optional<WatchdogState> watchdogState;
+    {
+        Watchdog watchdog("test", 1h, true, [&](WatchdogState state) {
+            watchdogState = state;
+        });
+        REQUIRE(watchdogState.value() == WatchdogState::Started);
+    }
+
+    REQUIRE(watchdogState.value() == WatchdogState::Cancelled);
+}
