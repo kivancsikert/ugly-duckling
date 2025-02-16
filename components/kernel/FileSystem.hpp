@@ -6,6 +6,7 @@
 #include <optional>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <esp_spiffs.h>
 
