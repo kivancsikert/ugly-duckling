@@ -1,10 +1,15 @@
 #pragma once
 
+#include <chrono>
 #include <functional>
 
 #include <esp_check.h>
+#include <esp_timer.h>
 
-#include <Time.hpp>
+#include <Log.hpp>
+
+using namespace std::chrono;
+using namespace std::chrono_literals;
 
 namespace farmhub::kernel {
 
@@ -56,7 +61,12 @@ public:
 
     bool cancel() {
         // TODO Add proper error handling
-        return esp_timer_stop(timer) == ESP_OK;
+        if (esp_timer_stop(timer) == ESP_OK) {
+            callback(WatchdogState::Cancelled);
+            return true;
+        } else {
+            return false;
+        }
     }
 
 private:
