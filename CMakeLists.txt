@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16.0)
 
-include(Components.cmake)
+include(Common.cmake)
 
 if(NOT DEFINED UD_GEN)
     set(UD_GEN "$ENV{UD_GEN}")
@@ -53,14 +53,6 @@ else()
     set(CMAKE_BUILD_TYPE Release)
 endif()
 add_link_options("-Wl,--gc-sections")
-
-# Keep struct initializers simple
-add_compile_options("-Wno-missing-field-initializers")
-
-include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-
-# "Trim" the build. Include the minimal set of components, main, and anything it depends on.
-idf_build_set_property(MINIMAL_BUILD ON)
 
 project(ugly-duckling)
 
