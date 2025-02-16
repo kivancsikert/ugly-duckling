@@ -96,7 +96,7 @@ static void dumpPerTaskHeapInfo() {
 }
 #endif
 
-void performFactoryReset(std::shared_ptr<LedDriver> statusLed, bool completeReset) {
+static void performFactoryReset(std::shared_ptr<LedDriver> statusLed, bool completeReset) {
     LOGI("Performing factory reset");
 
     statusLed->turnOn();
@@ -122,6 +122,7 @@ void performFactoryReset(std::shared_ptr<LedDriver> statusLed, bool completeRese
     esp_restart();
 }
 
+template <class TDeviceDefinition>
 std::shared_ptr<BatteryDriver> initBattery(std::shared_ptr<I2CManager> i2c) {
     auto battery = TDeviceDefinition::createBatteryDriver(i2c);
     if (battery != nullptr) {
@@ -290,9 +291,10 @@ enum class InitState {
     PeripheralError = 1,
 };
 
-static void start_app() {
+template <class TDeviceDefinition, class TDeviceConfiguration>
+static void startDevice() {
     auto i2c = std::make_shared<I2CManager>();
-    auto battery = initBattery(i2c);
+    auto battery = initBattery<TDeviceDefinition>(i2c);
 
     Log::init();
 
