@@ -25,7 +25,9 @@ static time_point<system_clock> parseTime(const char* str) {
     return system_clock::from_time_t(mktime(&time));
 }
 
-std::ostream& operator<<(std::ostream& os, const ValveState& val) {
+namespace farmhub::peripherals::valve {
+
+std::ostream& operator<<(std::ostream& os, ValveState const& val) {
     switch (val) {
         case ValveState::CLOSED:
             os << "CLOSED";
@@ -41,15 +43,34 @@ std::ostream& operator<<(std::ostream& os, const ValveState& val) {
 }
 
 template <typename _Rep, typename _Period>
-std::ostream& operator<<(std::ostream& os, const std::chrono::duration<_Rep, _Period>& val) {
+std::ostream& operator<<(std::ostream& os, std::chrono::duration<_Rep, _Period> const& val) {
     os << duration_cast<milliseconds>(val).count() << " ms";
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const ValveStateUpdate& val) {
-    os << "{ state: " << val.state << ", transitionAfter: " << val.validFor << " }";
-    return os;
-}
+}    // namespace farmhub::peripherals::valve
+
+namespace Catch {
+
+template <>
+struct StringMaker<ValveState> {
+    static auto convert(ValveState const& val) -> std::string {
+        ReusableStringStream rss;
+        rss << val;
+        return rss.str();
+    }
+};
+
+template <>
+struct StringMaker<ValveStateUpdate> {
+    static auto convert(ValveStateUpdate const& val) -> std::string {
+        ReusableStringStream rss;
+        rss << "{ state: " << val.state << ", transitionAfter: " << val.validFor << " }";
+        return rss.str();
+    }
+};
+
+}    // namespace Catch
 
 ValveSchedule fromJson(const char* json) {
     JsonDocument doc;
