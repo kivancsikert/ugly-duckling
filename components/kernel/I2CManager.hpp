@@ -5,6 +5,7 @@
 
 #include <i2cdev.h>
 
+#include <Concurrent.hpp>
 #include <Pin.hpp>
 #include <Strings.hpp>
 

@@ -1,4 +1,22 @@
 idf_component_register(
     INCLUDE_DIRS "."
-    REQUIRES esp_timer
+    REQUIRES
+        bblanchon__arduinojson
+        esp_adc
+        esp_app_format
+        esp_driver_gpio
+        esp_event
+        esp_http_client
+        esp_https_ota
+        esp_netif
+        esp_timer
+        esp_wifi
+        espcoredump
+        espressif__mdns
+        i2cdev
+        mbedtls
+        mqtt
+        nvs_flash
+        spiffs
+        wifi_provisioning
 )

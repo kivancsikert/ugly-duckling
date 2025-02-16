@@ -1,0 +1,18 @@
+{
+  "instance": "test-instance",
+  "location": "ci",
+  "peripherals": [
+    {
+      "name": "flow-control-a",
+      "type": "flow-control",
+      "params": {
+        "valve": {
+          "motor": "a"
+        },
+        "flow-meter": {
+          "pin": "A1"
+        }
+      }
+    }
+  ]
+}

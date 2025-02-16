@@ -2,10 +2,15 @@
 
 #include <dirent.h>
 #include <expected>
+#include <functional>
+#include <optional>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <esp_spiffs.h>
+
+#include <Log.hpp>
 
 namespace farmhub::kernel {
 

@@ -6,6 +6,7 @@
 
 #include <driver/gpio.h>
 #include <driver/rtc_io.h>
+#include <esp_sleep.h>
 
 #include <BootClock.hpp>
 #include <Concurrent.hpp>
