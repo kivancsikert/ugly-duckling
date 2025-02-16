@@ -3,3 +3,4 @@ dependencies:
   idf:
     version: '>=5.4.0'
   espressif/catch2: =3.7.0
+  bblanchon/arduinojson: 7.3.0

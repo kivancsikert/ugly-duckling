@@ -15,7 +15,6 @@
 #include <NetworkUtil.hpp>
 #include <PowerManager.hpp>
 #include <StateManager.hpp>
-#include <Watchdog.hpp>
 #include <drivers/LedDriver.hpp>
 #include <drivers/MdnsDriver.hpp>
 #include <drivers/RtcDriver.hpp>

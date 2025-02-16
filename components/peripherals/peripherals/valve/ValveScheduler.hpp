@@ -5,6 +5,7 @@
 #include <list>
 #include <optional>
 
+#include <Log.hpp>
 #include <Time.hpp>
 #include <peripherals/valve/ValveSchedule.hpp>
 
