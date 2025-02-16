@@ -1,7 +1,5 @@
-FILE(GLOB_RECURSE app_sources main.cpp **/*.cpp)
-
 idf_component_register(
-    SRCS ${app_sources}
+    SRC_DIRS "."
     INCLUDE_DIRS "."
     EMBED_TXTFILES "${CMAKE_SOURCE_DIR}/partitions.csv"
 )
