@@ -48,29 +48,12 @@ std::ostream& operator<<(std::ostream& os, std::chrono::duration<_Rep, _Period> 
     return os;
 }
 
+std::ostream& operator<<(std::ostream& os, ValveStateUpdate const& val) {
+    os << "{ state: " << val.state << ", transitionAfter: " << val.validFor << " }";
+    return os;
+}
+
 }    // namespace farmhub::peripherals::valve
-
-namespace Catch {
-
-template <>
-struct StringMaker<ValveState> {
-    static auto convert(ValveState const& val) -> std::string {
-        ReusableStringStream rss;
-        rss << val;
-        return rss.str();
-    }
-};
-
-template <>
-struct StringMaker<ValveStateUpdate> {
-    static auto convert(ValveStateUpdate const& val) -> std::string {
-        ReusableStringStream rss;
-        rss << "{ state: " << val.state << ", transitionAfter: " << val.validFor << " }";
-        return rss.str();
-    }
-};
-
-}    // namespace Catch
 
 ValveSchedule fromJson(const char* json) {
     JsonDocument doc;
