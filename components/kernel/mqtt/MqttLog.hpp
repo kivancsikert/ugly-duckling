@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Log.hpp>
+#include <LogJson.hpp>
 #include <Task.hpp>
 #include <mqtt/MqttRoot.hpp>
 

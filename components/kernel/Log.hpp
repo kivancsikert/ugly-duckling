@@ -2,8 +2,6 @@
 
 #include <string>
 
-#include <ArduinoJson.h>
-
 #include <esp_log.h>
 
 namespace farmhub::kernel {
@@ -59,13 +57,6 @@ public:
 #define FARMHUB_LOG_LEVEL FARMHUB_LOG_LEVEL_INFO
 #endif
 #endif
-
-bool convertToJson(const Level& src, JsonVariant dst) {
-    return dst.set(static_cast<int>(src));
-}
-void convertFromJson(JsonVariantConst src, Level& dst) {
-    dst = static_cast<Level>(src.as<int>());
-}
 
 class Log {
 public:
