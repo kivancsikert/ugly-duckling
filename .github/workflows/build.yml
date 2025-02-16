@@ -83,7 +83,7 @@ jobs:
           esp_idf_version: v5.4
           target: esp32s3
           command: idf.py build
-          path: test
+          path: test/unit-tests
 
       - name: esp-idf test
         run: |
