@@ -213,9 +213,9 @@ After that from the "Run and Debug" panel select the "Wokwi GDB" configuration a
 To run unit tests using Wokwi:
 
 ```bash
-$ cd test
+$ cd test/unit-tests
 $ idf.py build
-$ pytest --embedded-services idf,wokwi .\pytest_catch2.py
+$ pytest --embedded-services idf,wokwi .\pytest_unit-tests.py
 ```
 
 Make sure to set the `WOKWI_CLI_TOKEN` environment variable.
