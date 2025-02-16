@@ -1,6 +1,6 @@
 idf_component_register(
-    SRC_DIRS "."
-    INCLUDE_DIRS "."
+    SRC_DIRS ${CMAKE_CURRENT_LIST_DIR}
+    INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}
     EMBED_TXTFILES "${CMAKE_SOURCE_DIR}/partitions.csv"
 )
 
