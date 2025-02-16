@@ -3,6 +3,7 @@
 #include <dirent.h>
 #include <expected>
 #include <functional>
+#include <optional>
 #include <stdio.h>
 #include <sys/stat.h>
 
