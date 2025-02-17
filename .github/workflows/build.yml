@@ -92,10 +92,29 @@ jobs:
         run: |
           docker run -v .:/project -w /project/test/unit-tests -e HOME=/tmp -e WOKWI_CLI_TOKEN=${{ secrets.WOKWI_CLI_TOKEN }} lptr/pytest-embedded:latest pytest --embedded-services idf,wokwi ./pytest_unit-tests.py
 
+  integ-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: esp-idf build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.4
+          target: esp32s3
+          command: idf.py build
+          path: test/integ-tests
+
+      - name: esp-idf test
+        run: |
+          docker run -v .:/project -w /project/test/integ-tests -e HOME=/tmp -e WOKWI_CLI_TOKEN=${{ secrets.WOKWI_CLI_TOKEN }} lptr/pytest-embedded:latest pytest --embedded-services idf,wokwi ./pytest_integ-tests.py
+
   release:
     needs:
       - build
       - unit-test
+      - integ-test
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
