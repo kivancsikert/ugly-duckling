@@ -85,6 +85,9 @@ jobs:
           command: idf.py build
           path: test/unit-tests
 
+      - name: Run a Wokwi CI server
+        uses: wokwi/wokwi-ci-server-action@v1
+
       - name: esp-idf test
         run: |
           docker run -v .:/project -w /project/test/unit-tests -e HOME=/tmp -e WOKWI_CLI_TOKEN=${{ secrets.WOKWI_CLI_TOKEN }} lptr/pytest-embedded:latest pytest --embedded-services idf,wokwi ./pytest_unit-tests.py
