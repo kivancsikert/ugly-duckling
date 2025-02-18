@@ -95,6 +95,17 @@ jobs:
   integ-test:
     runs-on: ubuntu-latest
 
+    services:
+      mqtt:
+        image: eclipse-mosquitto:latest
+        ports:
+          - 1883:1883
+        options: >-
+          --health-cmd "timeout 5 mosquitto_pub -t test -m hello || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
