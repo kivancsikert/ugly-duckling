@@ -109,9 +109,18 @@ jobs:
       - name: Run a Wokwi CI server
         uses: wokwi/wokwi-ci-server-action@v1
 
-      - name: esp-idf test
-        run: |
-          docker run -v .:/project -w /project/test/integ-tests -e HOME=/tmp -e WOKWI_CLI_TOKEN=${{ secrets.WOKWI_CLI_TOKEN }} lptr/pytest-embedded:latest pytest --embedded-services idf,wokwi ./pytest_integ-tests.py
+      - name: Test with Wokwi
+        uses: wokwi/wokwi-ci-action@v1
+        with:
+          token: ${{ secrets.WOKWI_CLI_TOKEN }}
+          path: test/integ-tests
+          timeout: 30000
+          expect_text: 'Device ready'
+          serial_log_file: 'log-hello-world.txt'
+
+      # - name: esp-idf test
+      #   run: |
+      #     docker run -v .:/project -w /project/test/integ-tests -e HOME=/tmp -e WOKWI_CLI_TOKEN=${{ secrets.WOKWI_CLI_TOKEN }} lptr/pytest-embedded:latest pytest --embedded-services idf,wokwi ./pytest_integ-tests.py
 
   release:
     needs:
