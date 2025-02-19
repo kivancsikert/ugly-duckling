@@ -570,7 +570,7 @@ private:
             case MQTT_EVENT_ERROR: {
                 switch (event->error_handle->error_type) {
                     case MQTT_ERROR_TYPE_TCP_TRANSPORT:
-                        LOGTE(Tag::MQTT, "TCP transport error; transport socket errno: %d, TLS last ESP error: 0x%x, TLS stack error: 0x%x, TLS cert verify flags: 0x%x",
+                        LOGTE(Tag::MQTT, "TCP transport error; esp_transport_sock_errno: %d, esp_tls_last_esp_err: 0x%x, esp_tls_stack_err: 0x%x, esp_tls_cert_verify_flags: 0x%x",
                             event->error_handle->esp_transport_sock_errno,
                             event->error_handle->esp_tls_last_esp_err,
                             event->error_handle->esp_tls_stack_err,
