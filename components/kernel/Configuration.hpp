@@ -310,7 +310,7 @@ public:
                     throw ConfigurationException("Cannot open config file " + path + " (" + std::string(error.c_str()) + ")");
             }
             update(json.as<JsonObject>());
-            LOGI("Effective configuration for '%s': %s",
+            LOGD("Effective configuration for '%s': %s",
                 path.c_str(), toString().c_str());
         }
         onUpdate([fs, path](const JsonObject& json) {
