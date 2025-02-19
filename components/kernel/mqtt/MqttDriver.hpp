@@ -568,25 +568,38 @@ private:
                 break;
             }
             case MQTT_EVENT_ERROR: {
-                if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
-                    LOGTE(Tag::MQTT, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
-                    logErrorIfNonZero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
-                    logErrorIfNonZero("reported from tls stack", event->error_handle->esp_tls_stack_err);
-                    logErrorIfNonZero("captured as transport's socket errno", event->error_handle->esp_transport_sock_errno);
+                switch (event->error_handle->error_type) {
+                    case MQTT_ERROR_TYPE_TCP_TRANSPORT:
+                        LOGTE(Tag::MQTT, "TCP transport error; esp_transport_sock_errno: %d, esp_tls_last_esp_err: 0x%x, esp_tls_stack_err: 0x%x, esp_tls_cert_verify_flags: 0x%x",
+                            event->error_handle->esp_transport_sock_errno,
+                            event->error_handle->esp_tls_last_esp_err,
+                            event->error_handle->esp_tls_stack_err,
+                            event->error_handle->esp_tls_cert_verify_flags);
+                        break;
+
+                    case MQTT_ERROR_TYPE_CONNECTION_REFUSED:
+                        LOGTE(Tag::MQTT, "Connection refused; return code: %d",
+                            event->error_handle->connect_return_code);
+                        break;
+
+                    case MQTT_ERROR_TYPE_SUBSCRIBE_FAILED:
+                        LOGTE(Tag::MQTT, "Subscribe failed; message ID: %d",
+                            event->msg_id);
+                        break;
+
+                    case MQTT_ERROR_TYPE_NONE:
+                        // Nothing to report
+                        break;
                 }
-                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, MessagePublished { event->msg_id, false });
+                if (event->msg_id != 0) {
+                    eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, MessagePublished { event->msg_id, false });
+                }
                 break;
             }
             default: {
                 LOGTW(Tag::MQTT, "Unknown event %d", eventId);
                 break;
             }
-        }
-    }
-
-    static void logErrorIfNonZero(const char* message, int error) {
-        if (error != 0) {
-            LOGTE(Tag::MQTT, " - %s: 0x%x", message, error);
         }
     }
 

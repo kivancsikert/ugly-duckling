@@ -118,11 +118,11 @@ private:
     static bool shouldSleepWhenIdle(bool requestedSleepWhenIdle) {
         if (requestedSleepWhenIdle) {
 #if FARMHUB_DEBUG
-            LOGTW(Tag::PM, "Light sleep is disabled in debug mode");
+            LOGTI(Tag::PM, "Light sleep is disabled in debug mode");
             return false;
 #elif WOKWI
             // See https://github.com/wokwi/wokwi-features/issues/922
-            LOGTW(Tag::PM, "Light sleep is disabled when running under Wokwi");
+            LOGTI(Tag::PM, "Light sleep is disabled when running under Wokwi");
             return false;
 #elif not(CONFIG_PM_ENABLE)
             LOGTI(Tag::PM, "Power management is disabled because CONFIG_PM_ENABLE is not set");

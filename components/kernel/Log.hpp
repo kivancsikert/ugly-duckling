@@ -73,6 +73,12 @@ public:
             esp_log_level_set(tag, ESP_LOG_INFO);
 #endif
         }
+        // Prevent "esp_vfs_register_fd_range is successful for range" from spamming the logs
+        // TODO Remove once ESP-IDF 5.4.1(?) is released with https://github.com/espressif/esp-idf/issues/14327 fixed
+        esp_log_level_set("vfs", ESP_LOG_ERROR);
+        // Prevent "saving new calibration data because of checksum failure" from spamming the logs
+        // TODO Remove once ESP-IDF 5.4.1 is released with https://github.com/espressif/esp-idf/issues/14963 fixed
+        esp_log_level_set("phy_init", ESP_LOG_ERROR);
     }
 
 private:
