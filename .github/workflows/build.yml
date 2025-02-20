@@ -105,24 +105,26 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+        # volumes:
+        #   - ./.github/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
 
     env:
-      HOST_IP: ""
+      HOSTNAME: ""
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Get Host IP
         run: |
-          HOST_IP=$(hostname -I | awk '{print $1}')
-          echo "HOST_IP=$HOST_IP" >> $GITHUB_ENV
+          HOSTNAME=$(hostname | awk '{print $1}')
+          echo "HOSTNAME=$HOSTNAME" >> $GITHUB_ENV
 
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v5.4
           target: esp32s3
-          command: idf.py -DUD_GEN=MK6 -DUD_DEBUG=1 -DFSUPLOAD=1 -DWOKWI=1 -DWOKWI_MQTT_HOST=${{ env.HOST_IP }} build
+          command: idf.py -DUD_GEN=MK6 -DUD_DEBUG=1 -DFSUPLOAD=1 -DWOKWI=1 -DWOKWI_MQTT_HOST=${{ env.HOSTNAME }} build
           path: test/integ-tests
 
       - name: Run a Wokwi CI server
