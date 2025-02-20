@@ -105,7 +105,11 @@ public:
     void configMqttClient(esp_mqtt_client_config_t& config) {
         if (configHostname.empty()) {
 #ifdef WOKWI
+#ifdef WOKWI_MQTT_HOST
+            hostname = WOKWI_MQTT_HOST;
+#else
             hostname = "host.wokwi.internal";
+#endif
             port = 1883;
 #else
             MdnsRecord mqttServer;
