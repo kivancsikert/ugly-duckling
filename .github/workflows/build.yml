@@ -95,24 +95,22 @@ jobs:
   integ-test:
     runs-on: ubuntu-latest
 
-    services:
-      mqtt:
-        image: eclipse-mosquitto:latest
-        ports:
-          - 1883:1883
-        options: >-
-          --health-cmd "timeout 5 mosquitto_pub -t test -m hello || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        # volumes:
-        #   - ./.github/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
-
     env:
       HOSTNAME: ""
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Start Mosquitto
+        run: |
+          docker run -d --name mosquitto \
+            -p 1883:1883 \
+            -v "${{ github.workspace }}/.github/mosquitto/mosquitto.conf":"/mosquitto/config/mosquitto.conf" \
+            --health-cmd "timeout 5 mosquitto_pub -t test -m hello || exit 1" \
+            --health-interval 10s \
+            --health-timeout 5s \
+            --health-retries 5 \
+            eclipse-mosquitto:latest
 
       - name: Get Host IP
         run: |
