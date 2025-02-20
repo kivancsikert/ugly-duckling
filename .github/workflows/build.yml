@@ -102,19 +102,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Start Mosquitto
-        run: |
-          docker run -d --name mosquitto \
-            -p 1883:1883 \
-            -v "${{ github.workspace }}/.github/mosquitto/mosquitto.conf":"/mosquitto/config/mosquitto.conf" \
-            --health-cmd "timeout 5 mosquitto_pub -t test -m hello || exit 1" \
-            --health-interval 10s \
-            --health-timeout 5s \
-            --health-retries 5 \
-            eclipse-mosquitto:latest
+        uses: namoshek/mosquitto-github-action@v1
+        with:
+          ports: '1883:1883'
+          config: ${{ github.workspace }}/.github/mosquitto/mosquitto.conf
 
       - name: Get Host IP
         run: |
-          HOSTNAME=$(hostname | awk '{print $1}')
+          HOSTNAME=$(hostname -I | awk '{print $1}')
           echo "HOSTNAME=$HOSTNAME" >> $GITHUB_ENV
 
       - name: esp-idf build
