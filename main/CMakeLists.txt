@@ -14,11 +14,18 @@ if(NOT DEFINED WOKWI)
     set(WOKWI "$ENV{WOKWI}")
 endif()
 
+if(NOT DEFINED WOKWI_MQTT_HOST)
+    set(WOKWI_MQTT_HOST "$ENV{WOKWI_MQTT_HOST}")
+endif()
+
 # Make sure we reconfigure if parameters change
-set_property(DIRECTORY PROPERTY WOKWI_TRACKER "${WOKWI}")
+set_property(DIRECTORY PROPERTY WOKWI_TRACKER "${WOKWI} ${WOKWI_MQTT_HOST}")
 
 if(WOKWI)
     component_compile_definitions(WOKWI)
+    if (WOKWI_MQTT_HOST)
+        component_compile_definitions(WOKWI_MQTT_HOST="${WOKWI_MQTT_HOST}")
+    endif()
 endif()
 
 component_compile_definitions("${UD_GEN}")
