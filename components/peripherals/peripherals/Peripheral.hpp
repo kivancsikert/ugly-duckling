@@ -3,6 +3,8 @@
 #include <map>
 #include <memory>
 
+#include <esp_err.h>
+
 #include <BootClock.hpp>
 #include <Configuration.hpp>
 #include <I2CManager.hpp>
@@ -84,18 +86,20 @@ public:
 // Peripheral factories
 
 class PeripheralCreationException
-    : public std::exception {
+    : public std::runtime_error {
 public:
-    PeripheralCreationException(const std::string& reason)
-        : message(std::string(reason)) {
+    explicit PeripheralCreationException(const std::string& reason)
+        : std::runtime_error(reason) {
     }
-
-    const char* what() const noexcept override {
-        return message.c_str();
-    }
-
-    const std::string message;
 };
+
+#define ESP_PERIPHERAL_THROW(err)                                      \
+    do {                                                               \
+        esp_err_t _err_ = (err);                                       \
+        if (_err_ != ESP_OK) {                                         \
+            throw PeripheralCreationException(esp_err_to_name(_err_)); \
+        }                                                              \
+    } while (0)
 
 struct PeripheralServices {
     const std::shared_ptr<I2CManager> i2c;

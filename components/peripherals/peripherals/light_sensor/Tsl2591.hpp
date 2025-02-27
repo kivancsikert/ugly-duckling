@@ -47,14 +47,14 @@ public:
         LOGI("Initializing TSL2591 light sensor with %s",
             config.toString().c_str());
 
-        ESP_ERROR_CHECK(tsl2591_init_desc(&sensor, bus->port, bus->sda->getGpio(), bus->scl->getGpio()));
-        ESP_ERROR_CHECK(tsl2591_init(&sensor));
+        ESP_PERIPHERAL_THROW(tsl2591_init_desc(&sensor, bus->port, bus->sda->getGpio(), bus->scl->getGpio()));
+        ESP_PERIPHERAL_THROW(tsl2591_init(&sensor));
 
         // TODO Make these configurable
-        ESP_ERROR_CHECK(tsl2591_set_power_status(&sensor, TSL2591_POWER_ON));
-        ESP_ERROR_CHECK(tsl2591_set_als_status(&sensor, TSL2591_ALS_ON));
-        ESP_ERROR_CHECK(tsl2591_set_gain(&sensor, TSL2591_GAIN_MEDIUM));
-        ESP_ERROR_CHECK(tsl2591_set_integration_time(&sensor, TSL2591_INTEGRATION_300MS));
+        ESP_PERIPHERAL_THROW(tsl2591_set_power_status(&sensor, TSL2591_POWER_ON));
+        ESP_PERIPHERAL_THROW(tsl2591_set_als_status(&sensor, TSL2591_ALS_ON));
+        ESP_PERIPHERAL_THROW(tsl2591_set_gain(&sensor, TSL2591_GAIN_MEDIUM));
+        ESP_PERIPHERAL_THROW(tsl2591_set_integration_time(&sensor, TSL2591_INTEGRATION_300MS));
 
         runLoop();
     }
