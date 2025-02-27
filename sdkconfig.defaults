@@ -99,3 +99,6 @@ CONFIG_ETH_USE_SPI_ETHERNET=n
 
 # Handle undelivered MQTT messages
 CONFIG_MQTT_REPORT_DELETED_MESSAGES=y
+
+# We don't need TLS server functionality
+CONFIG_MBEDTLS_TLS_CLIENT_ONLY=y
