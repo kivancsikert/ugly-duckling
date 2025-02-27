@@ -22,6 +22,16 @@ CONFIG_ESP32_WIFI_DYNAMIC_RX_BUFFER_NUM=8
 CONFIG_ESP32_WIFI_STATIC_TX_BUFFER_NUM=4
 CONFIG_ESP32_WIFI_DYNAMIC_TX_BUFFER_NUM=8
 
+# We don't actually need the most efficient power management on the MK4, so let's save some memory instead
+# This is supposed to save 8.58 kB of IRAM
+CONFIG_PM_POWER_DOWN_CPU_IN_LIGHT_SLEEP=n
+# This is supposed to save 9 kB of IRAM
+CONFIG_PM_RESTORE_CACHE_TAGMEM_AFTER_LIGHT_SLEEP=n
+# This is not enabled by default, but let's make sure it is explicitly disabled for MK4
+CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP=n
+# This is supposed to save 4 kB of IRAM
+CONFIG_ESP_PHY_MAC_BB_PD=n
+
 # Reduce memory usage when using SSL -- https://docs.espressif.com/projects/esp-idf/en/v5.4/esp32/api-reference/protocols/mbedtls.html#reducing-heap-usage
 CONFIG_MBEDTLS_SSL_VARIABLE_BUFFER_LENGTH=y
 CONFIG_MBEDTLS_SSL_KEEP_PEER_CERTIFICATE=n
