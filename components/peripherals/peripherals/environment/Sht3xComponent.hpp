@@ -36,8 +36,8 @@ public:
         LOGI("Initializing %s environment sensor with %s",
             sensorType.c_str(), config.toString().c_str());
 
-        ESP_ERROR_CHECK(sht3x_init_desc(&sensor, config.address, bus->port, bus->sda->getGpio(), bus->scl->getGpio()));
-        ESP_ERROR_CHECK(sht3x_init(&sensor));
+        ESP_PERIPHERAL_THROW(sht3x_init_desc(&sensor, config.address, bus->port, bus->sda->getGpio(), bus->scl->getGpio()));
+        ESP_PERIPHERAL_THROW(sht3x_init(&sensor));
     }
 
     void populateTelemetry(JsonObject& json) override {
