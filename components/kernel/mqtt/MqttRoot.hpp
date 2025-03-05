@@ -18,18 +18,18 @@ public:
         return std::make_shared<MqttRoot>(mqtt, rootTopic + "/" + suffix);
     }
 
-    PublishStatus publish(const std::string& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_DEFAULT_PUBLISH_TIMEOUT, LogPublish log = LogPublish::Log) {
+    PublishStatus publish(const std::string& suffix, const JsonDocument& json, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_NETWORK_TIMEOUT, LogPublish log = LogPublish::Log) {
         return mqtt->publish(fullTopic(suffix), json, retain, qos, timeout, log);
     }
 
-    PublishStatus publish(const std::string& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_DEFAULT_PUBLISH_TIMEOUT, LogPublish log = LogPublish::Log) {
+    PublishStatus publish(const std::string& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_NETWORK_TIMEOUT, LogPublish log = LogPublish::Log) {
         JsonDocument doc;
         JsonObject root = doc.to<JsonObject>();
         populate(root);
         return publish(suffix, doc, retain, qos, timeout, log);
     }
 
-    PublishStatus clear(const std::string& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_DEFAULT_PUBLISH_TIMEOUT) {
+    PublishStatus clear(const std::string& suffix, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_NETWORK_TIMEOUT) {
         return mqtt->clear(fullTopic(suffix), retain, qos, timeout);
     }
 
