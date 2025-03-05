@@ -138,7 +138,7 @@ public:
                 .client_id = clientId.c_str(),
             },
             .network {
-                .timeout_ms = duration_cast<milliseconds>(10s).count(),
+                .timeout_ms = duration_cast<milliseconds>(MQTT_NETWORK_TIMEOUT).count(),
             },
             .buffer {
                 .size = 2048,
@@ -169,11 +169,8 @@ public:
         }
     }
 
-    // TODO Review these values
-    static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = 30s;
-    static constexpr milliseconds MQTT_DEFAULT_PUBLISH_TIMEOUT = 5s;
-    static constexpr milliseconds MQTT_SUBSCRIPTION_TIMEOUT = MQTT_DEFAULT_PUBLISH_TIMEOUT;
-    static constexpr milliseconds MQTT_MINIMUM_CONNECTED_TIME = 1500ms;
+    static constexpr milliseconds MQTT_NETWORK_TIMEOUT = 15s;
+    static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = MQTT_NETWORK_TIMEOUT;
     static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
 
@@ -218,7 +215,7 @@ private:
 
     struct Disconnected { };
 
-    PublishStatus publish(const std::string& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = MQTT_DEFAULT_PUBLISH_TIMEOUT, LogPublish log = LogPublish::Log) {
+    PublishStatus publish(const std::string& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = MQTT_NETWORK_TIMEOUT, LogPublish log = LogPublish::Log) {
         if (log == LogPublish::Log) {
 #ifdef DUMP_MQTT
             std::string serializedJson;
@@ -242,7 +239,7 @@ private:
         return publishAndWait(topic, payload, retain, qos, timeout);
     }
 
-    PublishStatus clear(const std::string& topic, Retention retain, QoS qos, ticks timeout = MQTT_DEFAULT_PUBLISH_TIMEOUT) {
+    PublishStatus clear(const std::string& topic, Retention retain, QoS qos, ticks timeout = MQTT_NETWORK_TIMEOUT) {
         LOGTD(Tag::MQTT, "Clearing topic '%s' (qos = %d, timeout = %lld ms)",
             topic.c_str(),
             static_cast<int>(qos),
@@ -400,7 +397,7 @@ private:
             // Cull pending subscriptions
             // TODO Do this with deleted messages?
             pendingSubscriptions.remove_if([&](const auto& pendingSubscription) {
-                if (now - pendingSubscription.subscribedAt > MQTT_SUBSCRIPTION_TIMEOUT) {
+                if (now - pendingSubscription.subscribedAt > MQTT_NETWORK_TIMEOUT) {
                     LOGTE(Tag::MQTT, "Subscription timed out with message id %d", pendingSubscription.messageId);
                     // Force next session to start clean, so we can re-subscribe
                     nextSessionShouldBeClean = true;
