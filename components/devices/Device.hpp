@@ -367,7 +367,7 @@ static void startDevice() {
         LOGI("No battery configured");
     }
 
-#ifdef FARMHUB_DEBUG
+#if defined(FARMHUB_DEBUG) && !defined(MK4)
     new DebugConsole(batteryManager, wifi);
 #endif
 
