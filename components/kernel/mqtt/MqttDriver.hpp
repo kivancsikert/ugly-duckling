@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <list>
 #include <memory>
@@ -84,7 +85,7 @@ public:
         , incomingQueue("mqtt-incoming", config->queueSize.get()) {
 
         Task::run("mqtt", 5120, [this](Task& task) {
-            configMqttClient(mqttConfig);
+            esp_mqtt_client_config_t mqttConfig = {};
             client = esp_mqtt_client_init(&mqttConfig);
 
             ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, handleMqttEventCallback, this));
@@ -491,6 +492,8 @@ private:
 
         stopClient();
 
+        esp_mqtt_client_config_t mqttConfig {};
+        configMqttClient(mqttConfig);
         mqttConfig.session.disable_clean_session = !startCleanSession;
         esp_mqtt_set_config(client, &mqttConfig);
         LOGTD(Tag::MQTT, "Connecting to %s:%lu, clean session: %d",
@@ -576,11 +579,15 @@ private:
                             event->error_handle->esp_tls_last_esp_err,
                             event->error_handle->esp_tls_stack_err,
                             event->error_handle->esp_tls_cert_verify_flags);
+                        // In case we need to re-connect, make sure we have the right IP
+                        trustMdnsCache = false;
                         break;
 
                     case MQTT_ERROR_TYPE_CONNECTION_REFUSED:
                         LOGTE(Tag::MQTT, "Connection refused; return code: %d",
                             event->error_handle->connect_return_code);
+                        // In case we need to re-connect, make sure we have the right IP
+                        trustMdnsCache = false;
                         break;
 
                     case MQTT_ERROR_TYPE_SUBSCRIBE_FAILED:
@@ -702,7 +709,7 @@ private:
 
     State& networkReady;
     const std::shared_ptr<MdnsDriver> mdns;
-    bool trustMdnsCache = true;
+    std::atomic<bool> trustMdnsCache = true;
 
     const std::string configHostname;
     const int configPort;
@@ -715,7 +722,6 @@ private:
 
     std::string hostname;
     uint32_t port;
-    esp_mqtt_client_config_t mqttConfig {};
     esp_mqtt_client_handle_t client;
 
     Queue<std::variant<Connected, Disconnected, MessagePublished, Subscribed, OutgoingMessage, Subscription>> eventQueue;
