@@ -142,7 +142,8 @@ public:
                 .timeout_ms = duration_cast<milliseconds>(MQTT_NETWORK_TIMEOUT).count(),
             },
             .buffer {
-                .size = 2048,
+                .size = 8192,
+                .out_size = 4096,
             }
         };
 
