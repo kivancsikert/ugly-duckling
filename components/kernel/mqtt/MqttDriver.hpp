@@ -497,7 +497,7 @@ private:
         configMqttClient(mqttConfig);
         mqttConfig.session.disable_clean_session = !startCleanSession;
         esp_mqtt_set_config(client, &mqttConfig);
-        LOGTD(Tag::MQTT, "Connecting to %s:%lu, clean session: %d",
+        LOGTI(Tag::MQTT, "Connecting to %s:%lu, clean session: %d",
             mqttConfig.broker.address.hostname, mqttConfig.broker.address.port, startCleanSession);
         ESP_ERROR_CHECK(esp_mqtt_client_start(client));
         clientRunning = true;
