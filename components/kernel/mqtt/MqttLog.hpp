@@ -28,7 +28,7 @@ public:
                         json["level"] = level;
                         json["message"] = message;
                     },
-                    Retention::NoRetain, QoS::AtLeastOnce, 2s, LogPublish::Silent);
+                    Retention::NoRetain, QoS::ExactlyOnce, 2s, LogPublish::Silent);
             });
         });
     }
