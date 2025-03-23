@@ -67,6 +67,9 @@ static InternalPinPtr TDI = InternalPin::registerPin("TDI", GPIO_NUM_41);
 static InternalPinPtr TMS = InternalPin::registerPin("TMS", GPIO_NUM_42);
 static InternalPinPtr RXD0 = InternalPin::registerPin("RXD0", GPIO_NUM_44);
 static InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43);
+
+// Available on MK6 Rev3+
+static InternalPinPtr LOADEN = InternalPin::registerPin("LOADEN", GPIO_NUM_10);
 }    // namespace pins
 
 class Mk6Config
