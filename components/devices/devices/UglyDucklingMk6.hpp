@@ -102,7 +102,7 @@ public:
             1.2424,
             BatteryParameters {
                 .maximumVoltage = 4.1,
-                .bootThreshold = 3.8,
+                .bootThreshold = 3.7,
                 .shutdownThreshold = 3.4,
             });
     }
