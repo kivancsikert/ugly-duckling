@@ -16,6 +16,7 @@
 #include <drivers/LedDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
+#include <peripherals/analog_meter/AnalogMeter.hpp>
 #include <peripherals/environment/Ds18B20SoilSensor.hpp>
 #include <peripherals/environment/Environment.hpp>
 #include <peripherals/environment/Sht2xComponent.hpp>
@@ -55,6 +56,8 @@ public:
         peripheralManager->registerFactory(std::make_unique<light_sensor::Tsl2591Factory>());
 
         peripheralManager->registerFactory(std::make_unique<multiplexer::Xl9535Factory>());
+
+        peripheralManager->registerFactory(std::make_unique<analog_meter::AnalogMeterFactory>());
 
         registerDeviceSpecificPeripheralFactories(peripheralManager, services, deviceConfig);
     }

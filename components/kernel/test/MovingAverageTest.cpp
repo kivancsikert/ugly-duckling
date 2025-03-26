@@ -39,3 +39,10 @@ TEST_CASE("over capacity measurements are discarded") {
     ma.record(5);
     REQUIRE(ma.getAverage() == 4);
 }
+
+TEST_CASE("second measurements is returned for single-cell window") {
+    MovingAverage<double> ma(1);
+    ma.record(1);
+    ma.record(2);
+    REQUIRE(ma.getAverage() == 2);
+}
