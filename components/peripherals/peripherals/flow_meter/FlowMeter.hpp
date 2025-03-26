@@ -2,9 +2,9 @@
 
 #include <memory>
 
-#include <peripherals/Peripheral.hpp>
 #include <Configuration.hpp>
 #include <mqtt/MqttDriver.hpp>
+#include <peripherals/Peripheral.hpp>
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>
 #include <peripherals/flow_meter/FlowMeterConfig.hpp>
 
