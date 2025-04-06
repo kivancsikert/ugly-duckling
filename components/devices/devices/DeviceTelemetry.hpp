@@ -15,20 +15,6 @@ public:
     }
 };
 
-class WiFiTelemetryProvider : public TelemetryProvider {
-public:
-    WiFiTelemetryProvider(const std::shared_ptr<WiFiDriver> wifi)
-        : wifi(wifi) {
-    }
-
-    void populateTelemetry(JsonObject& json) override {
-        json["uptime"] = wifi->getUptime().count();
-    }
-
-private:
-    const std::shared_ptr<WiFiDriver> wifi;
-};
-
 class PowerManagementTelemetryProvider : public TelemetryProvider {
 public:
     PowerManagementTelemetryProvider(std::shared_ptr<PowerManager> powerManager)
