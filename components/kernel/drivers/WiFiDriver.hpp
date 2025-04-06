@@ -13,13 +13,15 @@
 #include <State.hpp>
 #include <StateManager.hpp>
 #include <Task.hpp>
+#include <Telemetry.hpp>
 
 using namespace std::chrono_literals;
 using namespace farmhub::kernel;
 
 namespace farmhub::kernel::drivers {
 
-class WiFiDriver {
+class WiFiDriver
+    : public TelemetryProvider {
 public:
     WiFiDriver(
         StateSource& networkConnecting,
@@ -72,6 +74,20 @@ public:
             esp_ip4addr_ntoa(&ip, ipString, sizeof(ipString));
             return std::string(ipString);
         });
+    }
+
+    void populateTelemetry(JsonObject& json) override {
+        if (networkReady.isSet()) {
+            wifi_ap_record_t apInfo = {};
+            esp_err_t err = esp_wifi_sta_get_ap_info(&apInfo);
+            if (err == ESP_OK) {
+                json["rssi"] = apInfo.rssi;
+            } else {
+                LOGTD(Tag::WIFI, "Failed to get AP info: %s", esp_err_to_name(err));
+            }
+        }
+        // TODO Consider not populating this as it's not very useful
+        json["uptime"] = getUptime().count();
     }
 
     milliseconds getUptime() {

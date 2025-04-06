@@ -412,7 +412,7 @@ static void startDevice() {
     if (batteryManager != nullptr) {
         deviceTelemetryCollector->registerProvider("battery", batteryManager);
     }
-    deviceTelemetryCollector->registerProvider("wifi", std::make_shared<WiFiTelemetryProvider>(wifi));
+    deviceTelemetryCollector->registerProvider("wifi", wifi);
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
     deviceTelemetryCollector->registerProvider("memory", std::make_shared<MemoryTelemetryProvider>());
 #endif
