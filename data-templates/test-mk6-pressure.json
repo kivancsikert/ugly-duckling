@@ -1,0 +1,14 @@
+{
+  "instance": "test-mk6-xxx",
+  "location": "bumblebee",
+  "peripherals": [
+    {
+      "name": "pressure",
+      "type": "analog-meter",
+      "params": {
+        "pin": "A2"
+      }
+    }
+  ],
+  "publishInterval": 5
+}
