@@ -45,7 +45,7 @@ jobs:
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
-          esp_idf_version: v5.4
+          esp_idf_version: v5.4.1
           target: ${{ matrix.target }}
           command: idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }}
 
@@ -80,7 +80,7 @@ jobs:
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
-          esp_idf_version: v5.4
+          esp_idf_version: v5.4.1
           target: esp32s3
           command: idf.py build
           path: test/unit-tests
@@ -115,7 +115,7 @@ jobs:
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
-          esp_idf_version: v5.4
+          esp_idf_version: v5.4.1
           target: esp32s3
           command: idf.py -DUD_GEN=MK6 -DUD_DEBUG=1 -DFSUPLOAD=1 -DWOKWI=1 -DWOKWI_MQTT_HOST=${{ env.HOSTNAME }} build
           path: test/integ-tests
