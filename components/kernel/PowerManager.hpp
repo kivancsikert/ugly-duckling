@@ -2,6 +2,7 @@
 
 #include <esp_pm.h>
 
+#include <BootClock.hpp>
 #include <Concurrent.hpp>
 
 #if defined(CONFIG_IDF_TARGET_ESP32S2)
@@ -103,8 +104,16 @@ public:
     const bool sleepWhenIdle;
 
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
-    milliseconds getLightSleepTime() {
-        return duration_cast<milliseconds>(lightSleepTime);
+    double getLightSleepRatio() {
+        auto now = boot_clock::now();
+        microseconds duration = now - sleepTimeLastReported;
+        if (duration.count() == 0) {
+            return 0;
+        }
+        auto ratio = static_cast<double>(lightSleepTime.count()) / duration.count();
+        sleepTimeLastReported = now;
+        lightSleepTime = microseconds::zero();
+        return ratio;
     }
 
     int getLightSleepCount() {
@@ -141,6 +150,7 @@ private:
     }
 
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
+    time_point<boot_clock> sleepTimeLastReported = boot_clock::now();
     microseconds lightSleepTime = microseconds::zero();
     int lightSleepCount = 0;
 #endif

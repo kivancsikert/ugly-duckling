@@ -23,7 +23,7 @@ public:
 
     void populateTelemetry(JsonObject& json) override {
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
-        json["sleep-time"] = powerManager->getLightSleepTime().count();
+        json["sleep-ratio"] = powerManager->getLightSleepRatio();
         json["sleep-count"] = powerManager->getLightSleepCount();
 #endif
     }
