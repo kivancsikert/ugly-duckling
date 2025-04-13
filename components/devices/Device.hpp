@@ -416,7 +416,7 @@ static void startDevice() {
 #if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
     deviceTelemetryCollector->registerProvider("memory", std::make_shared<MemoryTelemetryProvider>());
 #endif
-    deviceTelemetryCollector->registerProvider("pm", std::make_shared<PowerManagementTelemetryProvider>(powerManager));
+    deviceTelemetryCollector->registerProvider("pm", powerManager);
 
     // We want RTC to be in sync before we start setting up peripherals
     states->rtcInSync.awaitSet();

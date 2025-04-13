@@ -15,21 +15,4 @@ public:
     }
 };
 
-class PowerManagementTelemetryProvider : public TelemetryProvider {
-public:
-    PowerManagementTelemetryProvider(std::shared_ptr<PowerManager> powerManager)
-        : powerManager(powerManager) {
-    }
-
-    void populateTelemetry(JsonObject& json) override {
-#ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
-        json["sleep-time"] = powerManager->getLightSleepTime().count();
-        json["sleep-count"] = powerManager->getLightSleepCount();
-#endif
-    }
-
-private:
-    const std::shared_ptr<PowerManager> powerManager;
-};
-
 }    // namespace farmhub::devices

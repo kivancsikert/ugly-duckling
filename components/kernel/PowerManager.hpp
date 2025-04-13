@@ -2,7 +2,9 @@
 
 #include <esp_pm.h>
 
+#include <BootClock.hpp>
 #include <Concurrent.hpp>
+#include <Telemetry.hpp>
 
 #if defined(CONFIG_IDF_TARGET_ESP32S2)
 // Apparently on ESP32S2 things start to break down if we go below 80 MHz
@@ -58,7 +60,7 @@ private:
     PowerManagementLock& lock;
 };
 
-class PowerManager {
+class PowerManager : public TelemetryProvider {
 public:
     PowerManager(bool requestedSleepWhenIdle)
         : sleepWhenIdle(shouldSleepWhenIdle(requestedSleepWhenIdle)) {
@@ -102,15 +104,21 @@ public:
     }
     const bool sleepWhenIdle;
 
+    void populateTelemetry(JsonObject& json) override {
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
-    milliseconds getLightSleepTime() {
-        return duration_cast<milliseconds>(lightSleepTime);
-    }
-
-    int getLightSleepCount() {
-        return lightSleepCount;
-    }
+        auto now = boot_clock::now();
+        microseconds duration = now - sleepTimeLastReported;
+        if (duration.count() > 0) {
+            auto currentLightSleepRatio = static_cast<double>(lightSleepTime.count()) / duration.count();
+            auto currentLightSleepCount = lightSleepCount;
+            sleepTimeLastReported = now;
+            lightSleepTime = microseconds::zero();
+            lightSleepCount = 0;
+            json["sleep-ratio"] = currentLightSleepRatio;
+            json["sleep-count"] = currentLightSleepCount;
+        }
 #endif
+    }
 
     static PowerManagementLock noLightSleep;
 
@@ -141,6 +149,7 @@ private:
     }
 
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
+    time_point<boot_clock> sleepTimeLastReported = boot_clock::now();
     microseconds lightSleepTime = microseconds::zero();
     int lightSleepCount = 0;
 #endif
