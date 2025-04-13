@@ -83,15 +83,16 @@ private:
 
 #ifdef __XTENSA__
         auto backtraceJson = json["backtrace"].to<JsonObject>();
+
         if (summary.exc_bt_info.corrupted) {
             LOGE("Backtrace corrupted, depth %lu", summary.exc_bt_info.depth);
             backtraceJson["corrupted"] = true;
-        } else {
-            auto framesJson = backtraceJson["frames"].to<JsonArray>();
-            for (int i = 0; i < summary.exc_bt_info.depth; i++) {
-                auto& frame = summary.exc_bt_info.bt[i];
-                framesJson.add("0x" + toHexString(frame));
-            }
+        }
+
+        auto framesJson = backtraceJson["frames"].to<JsonArray>();
+        for (int i = 0; i < summary.exc_bt_info.depth; i++) {
+            auto& frame = summary.exc_bt_info.bt[i];
+            framesJson.add("0x" + toHexString(frame));
         }
 #else
         size_t encodedLen = (summary.exc_bt_info.dump_size + 2) / 3 * 4 + 1;
