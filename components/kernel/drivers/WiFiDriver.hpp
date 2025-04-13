@@ -86,12 +86,6 @@ public:
                 LOGTD(Tag::WIFI, "Failed to get AP info: %s", esp_err_to_name(err));
             }
         }
-        // TODO Consider not populating this as it's not very useful
-        json["uptime"] = getUptime().count();
-    }
-
-    milliseconds getUptime() {
-        return wifiUptimeBefore + currentWifiUptime();
     }
 
     State& getNetworkConnecting() {
@@ -310,15 +304,7 @@ private:
 #endif
     }
 
-    milliseconds currentWifiUptime() {
-        if (!wifiUpSince.has_value()) {
-            return milliseconds::zero();
-        }
-        return duration_cast<milliseconds>(boot_clock::now() - wifiUpSince.value());
-    }
-
     void ensureWifiStationStarted(wifi_config_t& config) {
-        wifiUpSince = boot_clock::now();
         if (!stationStarted.isSet()) {
             auto listenInterval = 20;
             LOGTV(Tag::WIFI, "Enabling power save mode, listen interval: %d DTIM beacons (%d ms)",
@@ -353,10 +339,7 @@ private:
                 LOGTD(Tag::WIFI, "Failed to stop WiFi: %s, assuming we are still okay", esp_err_to_name(err));
             }
         }
-        auto currentUptime = currentWifiUptime();
-        wifiUptimeBefore += currentUptime;
-        wifiUpSince.reset();
-        LOGTD(Tag::WIFI, "Stopping WiFi (was up %lld ms)", currentUptime.count());
+        LOGTD(Tag::WIFI, "Stopping WiFi");
     }
 
     void ensureWifiDisconnected() {
@@ -423,9 +406,6 @@ private:
     Mutex metadataMutex;
     std::optional<std::string> ssid;
     std::optional<esp_ip4_addr_t> ip;
-
-    std::optional<time_point<boot_clock>> wifiUpSince;
-    milliseconds wifiUptimeBefore = milliseconds::zero();
 };
 
 }    // namespace farmhub::kernel::drivers
