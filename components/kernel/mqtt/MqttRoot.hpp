@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <memory>
+#include <unordered_map>
 
 #include <mqtt/MqttDriver.hpp>
 
@@ -12,6 +13,22 @@ public:
     MqttRoot(const std::shared_ptr<MqttDriver> mqtt, const std::string& rootTopic)
         : mqtt(mqtt)
         , rootTopic(rootTopic) {
+        const std::string commandsTopic = fullTopic("commands/#");
+        const auto commandsPrefixLength = commandsTopic.length() - 1;
+        mqtt->subscribe(commandsTopic, QoS::ExactlyOnce, [this, commandsPrefixLength](const std::string& topic, const JsonObject& request) {
+            std::string command = topic.substr(commandsPrefixLength);
+            auto it = commandHandlers.find(command);
+            if (it != commandHandlers.end()) {
+                JsonDocument responseDoc;
+                auto response = responseDoc.to<JsonObject>();
+                it->second(request, response);
+                if (response.size() > 0) {
+                    publish("responses/" + command, responseDoc, Retention::NoRetain, QoS::ExactlyOnce);
+                }
+            } else {
+                LOGTE(Tag::MQTT, "Unknown command: %s", command.c_str());
+            }
+        });
     }
 
     std::shared_ptr<MqttRoot> forSuffix(const std::string& suffix) {
@@ -37,16 +54,8 @@ public:
         return subscribe(suffix, QoS::ExactlyOnce, handler);
     }
 
-    bool registerCommand(const std::string& name, CommandHandler handler) {
-        std::string suffix = "commands/" + name;
-        return subscribe(suffix, QoS::ExactlyOnce, [this, name, suffix, handler](const std::string&, const JsonObject& request) {
-            JsonDocument responseDoc;
-            auto response = responseDoc.to<JsonObject>();
-            handler(request, response);
-            if (response.size() > 0) {
-                publish("responses/" + name, responseDoc, Retention::NoRetain, QoS::ExactlyOnce);
-            }
-        });
+    void registerCommand(const std::string& name, CommandHandler handler) {
+        commandHandlers.emplace(name, handler);
     }
 
     /**
@@ -65,6 +74,7 @@ private:
 
     const std::shared_ptr<MqttDriver> mqtt;
     const std::string rootTopic;
+    std::unordered_map<std::string, CommandHandler> commandHandlers;
 };
 
 }    // namespace farmhub::kernel::mqtt
