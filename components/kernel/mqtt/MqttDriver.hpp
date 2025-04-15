@@ -688,7 +688,7 @@ private:
             topic.c_str(), payload.length());
 #endif
         for (auto subscription : subscriptions) {
-            if (subscription.topic == topic) {
+            if (topicMatches(subscription.topic.c_str(), topic.c_str())) {
                 Task::run("mqtt:incoming-handler", 4096, [topic, payload, subscription](Task& task) {
                     JsonDocument json;
                     deserializeJson(json, payload);
@@ -706,6 +706,46 @@ private:
             return clientId;
         }
         return "ugly-duckling-" + instanceName;
+    }
+
+    static bool topicMatches(const char *pattern, const char *topic) {
+        const char *pat_ptr = pattern;
+        const char *top_ptr = topic;
+
+        while (*pat_ptr && *top_ptr) {
+            // Extract pattern level
+            const char *pat_end = strchr(pat_ptr, '/');
+            size_t pat_len = pat_end ? (size_t)(pat_end - pat_ptr) : strlen(pat_ptr);
+
+            // Extract topic level
+            const char *top_end = strchr(top_ptr, '/');
+            size_t top_len = top_end ? (size_t)(top_end - top_ptr) : strlen(top_ptr);
+
+            // Handle wildcard +
+            if (strncmp(pat_ptr, "+", pat_len) == 0) {
+                // Match any single level, so just advance
+            } else if (strncmp(pat_ptr, "#", pat_len) == 0) {
+                // # must be at the end of the pattern
+                return *(pat_ptr + pat_len) == '\0';
+            } else {
+                // Compare level literally
+                if (pat_len != top_len || strncmp(pat_ptr, top_ptr, pat_len) != 0) {
+                    return false;
+                }
+            }
+
+            // Move to next level
+            if (pat_end) pat_ptr = pat_end + 1;
+            else pat_ptr += pat_len;
+
+            if (top_end) top_ptr = top_end + 1;
+            else top_ptr += top_len;
+        }
+
+        // Handle cases like pattern: "foo/#", topic: "foo"
+        if (*pat_ptr == '#' && *(pat_ptr + 1) == '\0') return true;
+
+        return *pat_ptr == '\0' && *top_ptr == '\0';
     }
 
     State& networkReady;
