@@ -24,7 +24,7 @@ public:
             .freq_hz = freqHz,
             .clk_cfg = clkSrc,
         };
-        ESP_ERROR_CHECK(ledc_timer_config(&config));
+        ESP_ERROR_THROW(ledc_timer_config(&config));
     }
 
     ~LedcTimer() {
@@ -66,7 +66,7 @@ public:
             .duty = 0,    // Set duty to 0%
             .hpoint = 0
         };
-        ESP_ERROR_CHECK(ledc_channel_config(&config));
+        ESP_ERROR_THROW(ledc_channel_config(&config));
     }
 
     uint32_t constexpr maxValue() const {
@@ -74,8 +74,8 @@ public:
     }
 
     void write(uint32_t value) const {
-        ESP_ERROR_CHECK(ledc_set_duty(timer.speedMode, channel, value));
-        ESP_ERROR_CHECK(ledc_update_duty(timer.speedMode, channel));
+        ESP_ERROR_THROW(ledc_set_duty(timer.speedMode, channel, value));
+        ESP_ERROR_THROW(ledc_update_duty(timer.speedMode, channel));
     }
 
     const std::string& getName() const {
