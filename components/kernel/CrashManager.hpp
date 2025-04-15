@@ -49,8 +49,7 @@ private:
                 LOGV("No core dump found");
                 return false;
             case ESP_ERR_INVALID_SIZE:
-                LOGD("Invalid core dump size");
-                // Typically, this happens when no core dump has been saved yet
+                LOGD("Invalid core dump size, likely no core dump saved");
                 return false;
             default:
                 LOGE("Failed to check for core dump: %s", esp_err_to_name(err));
@@ -66,7 +65,7 @@ private:
             summary.ex_info.mcause;
 #endif
 
-        LOGW("Core dump found: task: %s, cause: %ld",
+        LOGD("Core dump found: task: %s, cause: %ld",
             summary.exc_task, excCause);
 
         json["dump-version"] = summary.core_dump_version;
@@ -77,7 +76,7 @@ private:
         static constexpr size_t PANIC_REASON_SIZE = 256;
         char panicReason[PANIC_REASON_SIZE];
         if (esp_core_dump_get_panic_reason(panicReason, PANIC_REASON_SIZE) == ESP_OK) {
-            LOGW("Panic reason: %s", panicReason);
+            LOGD("Panic reason: %s", panicReason);
             json["panicReason"] = std::string(panicReason);
         }
 
@@ -85,7 +84,7 @@ private:
         auto backtraceJson = json["backtrace"].to<JsonObject>();
 
         if (summary.exc_bt_info.corrupted) {
-            LOGE("Backtrace corrupted, depth %lu", summary.exc_bt_info.depth);
+            LOGD("Backtrace corrupted, depth %lu", summary.exc_bt_info.depth);
             backtraceJson["corrupted"] = true;
         }
 
