@@ -47,8 +47,8 @@ public:
             config.toString().c_str());
 
         // TODO Use I2CManager to create device
-        ESP_PERIPHERAL_THROW(bh1750_init_desc(&sensor, config.address, I2C_NUM_0, config.sda->getGpio(), config.scl->getGpio()));
-        ESP_PERIPHERAL_THROW(bh1750_setup(&sensor, BH1750_MODE_CONTINUOUS, BH1750_RES_LOW));
+        ESP_ERROR_THROW(bh1750_init_desc(&sensor, config.address, I2C_NUM_0, config.sda->getGpio(), config.scl->getGpio()));
+        ESP_ERROR_THROW(bh1750_setup(&sensor, BH1750_MODE_CONTINUOUS, BH1750_RES_LOW));
 
         runLoop();
     }

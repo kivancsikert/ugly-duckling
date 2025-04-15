@@ -55,7 +55,7 @@ public:
     void populateTelemetry(JsonObject& json) override {
         // TODO Get temperature in a task to avoid delaying reporting
         float temperature;
-        ESP_PERIPHERAL_THROW(ds18x20_measure_and_read_multi(pin->getGpio(), &sensor, 1, &temperature));
+        ESP_ERROR_THROW(ds18x20_measure_and_read_multi(pin->getGpio(), &sensor, 1, &temperature));
         json["temperature"] = temperature;
     }
 

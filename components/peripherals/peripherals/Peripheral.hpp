@@ -3,10 +3,9 @@
 #include <map>
 #include <memory>
 
-#include <esp_err.h>
-
 #include <BootClock.hpp>
 #include <Configuration.hpp>
+#include <EspException.hpp>
 #include <I2CManager.hpp>
 #include <Named.hpp>
 #include <PcntManager.hpp>
@@ -92,14 +91,6 @@ public:
         : std::runtime_error(reason) {
     }
 };
-
-#define ESP_PERIPHERAL_THROW(err)                                      \
-    do {                                                               \
-        esp_err_t _err_ = (err);                                       \
-        if (_err_ != ESP_OK) {                                         \
-            throw PeripheralCreationException(esp_err_to_name(_err_)); \
-        }                                                              \
-    } while (0)
 
 struct PeripheralServices {
     const std::shared_ptr<I2CManager> i2c;

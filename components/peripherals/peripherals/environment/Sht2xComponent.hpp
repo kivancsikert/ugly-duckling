@@ -39,7 +39,7 @@ public:
         LOGI("Initializing %s environment sensor with %s",
             sensorType.c_str(), config.toString().c_str());
 
-        ESP_PERIPHERAL_THROW(si7021_init_desc(&sensor, bus->port, bus->sda->getGpio(), bus->scl->getGpio()));
+        ESP_ERROR_THROW(si7021_init_desc(&sensor, bus->port, bus->sda->getGpio(), bus->scl->getGpio()));
     }
 
     void populateTelemetry(JsonObject& json) override {
