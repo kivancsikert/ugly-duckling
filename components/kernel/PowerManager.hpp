@@ -4,6 +4,7 @@
 
 #include <BootClock.hpp>
 #include <Concurrent.hpp>
+#include <EspException.hpp>
 #include <Telemetry.hpp>
 
 #if defined(CONFIG_IDF_TARGET_ESP32S2)
@@ -21,7 +22,7 @@ class PowerManagementLock {
 public:
     PowerManagementLock(const std::string& name, esp_pm_lock_type_t type)
         : name(name) {
-        ESP_ERROR_CHECK(esp_pm_lock_create(type, 0, name.c_str(), &lock));
+        ESP_ERROR_THROW(esp_pm_lock_create(type, 0, name.c_str(), &lock));
     }
 
     ~PowerManagementLock() {
@@ -43,7 +44,7 @@ class PowerManagementLockGuard {
 public:
     PowerManagementLockGuard(PowerManagementLock& lock)
         : lock(lock) {
-        ESP_ERROR_CHECK(esp_pm_lock_acquire(lock.lock));
+        ESP_ERROR_THROW(esp_pm_lock_acquire(lock.lock));
     }
 
     ~PowerManagementLockGuard() {
@@ -72,7 +73,7 @@ public:
             .min_freq_mhz = MIN_CPU_FREQ_MHZ,
             .light_sleep_enable = sleepWhenIdle,
         };
-        ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
+        ESP_ERROR_THROW(esp_pm_configure(&pm_config));
 
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
         esp_pm_sleep_cbs_register_config_t cbs_conf = {
@@ -88,7 +89,7 @@ public:
             .enter_cb_prior = 0,
             .exit_cb_prior = 0,
         };
-        ESP_ERROR_CHECK(esp_pm_light_sleep_register_cbs(&cbs_conf));
+        ESP_ERROR_THROW(esp_pm_light_sleep_register_cbs(&cbs_conf));
 #endif
 
         //         Task::loop("power-manager", 4096, [this](Task& task) {

@@ -467,7 +467,7 @@ public:
             } else {
                 throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
             }
-        } catch (const PeripheralCreationException& e) {
+        } catch (const std::exception& e) {
             LOGE("Could not initialize light sensor because %s", e.what());
             LOGW("Initializing without a light sensor");
             // TODO Do not pass I2C parameters to NoLightSensorComponent

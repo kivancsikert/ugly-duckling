@@ -4,6 +4,8 @@
 
 #include <driver/pulse_cnt.h>
 
+#include <EspException.hpp>
+
 namespace farmhub::kernel {
 
 // TODO Limit number of channels available
@@ -53,13 +55,13 @@ public:
             .intr_priority = 0,
         };
         pcnt_unit_handle_t unit = nullptr;
-        ESP_ERROR_CHECK(pcnt_new_unit(&unitConfig, &unit));
+        ESP_ERROR_THROW(pcnt_new_unit(&unitConfig, &unit));
 
         if (maxGlitchDuration != 0ns) {
             pcnt_glitch_filter_config_t filterConfig = {
                 .max_glitch_ns = static_cast<uint32_t>(maxGlitchDuration.count()),
             };
-            ESP_ERROR_CHECK(pcnt_unit_set_glitch_filter(unit, &filterConfig));
+            ESP_ERROR_THROW(pcnt_unit_set_glitch_filter(unit, &filterConfig));
         }
 
         pcnt_chan_config_t channelConfig = {
@@ -67,12 +69,12 @@ public:
             .level_gpio_num = -1,
         };
         pcnt_channel_handle_t channel = nullptr;
-        ESP_ERROR_CHECK(pcnt_new_channel(unit, &channelConfig, &channel));
-        ESP_ERROR_CHECK(pcnt_channel_set_edge_action(channel, PCNT_CHANNEL_EDGE_ACTION_INCREASE, PCNT_CHANNEL_EDGE_ACTION_HOLD));
+        ESP_ERROR_THROW(pcnt_new_channel(unit, &channelConfig, &channel));
+        ESP_ERROR_THROW(pcnt_channel_set_edge_action(channel, PCNT_CHANNEL_EDGE_ACTION_INCREASE, PCNT_CHANNEL_EDGE_ACTION_HOLD));
 
-        ESP_ERROR_CHECK(pcnt_unit_enable(unit));
-        ESP_ERROR_CHECK(pcnt_unit_clear_count(unit));
-        ESP_ERROR_CHECK(pcnt_unit_start(unit));
+        ESP_ERROR_THROW(pcnt_unit_enable(unit));
+        ESP_ERROR_THROW(pcnt_unit_clear_count(unit));
+        ESP_ERROR_THROW(pcnt_unit_start(unit));
 
         LOGTD(Tag::PCNT, "Registered PCNT unit on pin %s",
             pin->getName().c_str());

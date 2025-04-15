@@ -39,16 +39,16 @@ public:
             .pull_down_en = GPIO_PULLDOWN_ENABLE,
             .intr_type = GPIO_INTR_ANYEDGE,
         };
-        ESP_ERROR_CHECK(gpio_config(&config));
+        ESP_ERROR_THROW(gpio_config(&config));
 
         // Use the same configuration while in light sleep
-        ESP_ERROR_CHECK(gpio_sleep_sel_dis(gpio));
+        ESP_ERROR_THROW(gpio_sleep_sel_dis(gpio));
 
         // TODO Where should this be called?
-        ESP_ERROR_CHECK(esp_sleep_enable_gpio_wakeup());
+        ESP_ERROR_THROW(esp_sleep_enable_gpio_wakeup());
 
         // Attach the ISR handler to the GPIO pin
-        ESP_ERROR_CHECK(gpio_isr_handler_add(gpio, interruptHandler, this));
+        ESP_ERROR_THROW(gpio_isr_handler_add(gpio, interruptHandler, this));
 
         LOGTD(Tag::PCNT, "Registered interrupt-based pulse counter unit on pin %s",
             pin->getName().c_str());
@@ -112,7 +112,7 @@ private:
                 sleepLock.emplace(PowerManager::noLightSleep, boot_clock::now());
 
                 // Make sure we wake up again to check for the opposing edge
-                ESP_ERROR_CHECK(gpio_wakeup_enable(
+                ESP_ERROR_THROW(gpio_wakeup_enable(
                     pin->getGpio(),
                     lastEdge == EdgeKind::Rising
                         ? GPIO_INTR_LOW_LEVEL
@@ -177,7 +177,7 @@ public:
                 return ESP_OK; },
                 .exit_cb_user_arg = this,
             };
-            ESP_ERROR_CHECK(esp_pm_light_sleep_register_cbs(&sleepCallbackConfig));
+            ESP_ERROR_THROW(esp_pm_light_sleep_register_cbs(&sleepCallbackConfig));
         }
 
         auto counter = std::make_shared<PulseCounter>(pin);

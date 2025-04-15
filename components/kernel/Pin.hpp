@@ -12,6 +12,8 @@
 
 #include <ArduinoJson.h>
 
+#include <EspException.hpp>
+
 namespace farmhub::kernel {
 
 class Pin;
@@ -113,7 +115,7 @@ public:
             .pull_down_en = mode == Mode::InputPullDown ? GPIO_PULLDOWN_ENABLE : GPIO_PULLDOWN_DISABLE,
         };
         gpio_sleep_set_direction(gpio, conf.mode);
-        ESP_ERROR_CHECK(gpio_config(&conf));
+        ESP_ERROR_THROW(gpio_config(&conf));
     }
 
     inline void digitalWrite(uint8_t val) const override {
@@ -139,7 +141,7 @@ public:
     AnalogPin(const InternalPinPtr pin)
         : pin(pin) {
         adc_unit_t unit;
-        ESP_ERROR_CHECK(adc_oneshot_io_to_channel(pin->getGpio(), &unit, &channel));
+        ESP_ERROR_THROW(adc_oneshot_io_to_channel(pin->getGpio(), &unit, &channel));
 
         handle = getUnitHandle(unit);
 
@@ -147,7 +149,7 @@ public:
             .atten = ADC_ATTEN_DB_12,
             .bitwidth = ADC_BITWIDTH_DEFAULT,
         };
-        ESP_ERROR_CHECK(adc_oneshot_config_channel(handle, channel, &config));
+        ESP_ERROR_THROW(adc_oneshot_config_channel(handle, channel, &config));
     }
 
     ~AnalogPin() {
@@ -167,7 +169,7 @@ public:
             case ESP_ERR_TIMEOUT:
                 return std::nullopt;
             default:
-                ESP_ERROR_CHECK(err);
+                ESP_ERROR_THROW(err);
                 // Won't get this far
                 abort();
         }
@@ -185,7 +187,7 @@ private:
                 .unit_id = unit,
                 .ulp_mode = ADC_ULP_MODE_DISABLE,
             };
-            ESP_ERROR_CHECK(adc_oneshot_new_unit(&config, &handle));
+            ESP_ERROR_THROW(adc_oneshot_new_unit(&config, &handle));
             ANALOG_UNITS[unit] = handle;
         }
         return handle;
