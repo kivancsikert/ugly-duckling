@@ -6,6 +6,7 @@
 #include <i2cdev.h>
 
 #include <Concurrent.hpp>
+#include <EspException.hpp>
 #include <Pin.hpp>
 #include <Strings.hpp>
 
@@ -68,30 +69,30 @@ public:
 
     uint8_t readRegByte(uint8_t reg) {
         uint8_t value;
-        ESP_ERROR_CHECK(i2c_dev_read(&device, &reg, 1, &value, 1));
+        ESP_ERROR_THROW(i2c_dev_read(&device, &reg, 1, &value, 1));
         return value;
     }
 
     uint16_t readRegWord(uint8_t reg) {
         uint16_t value;
-        ESP_ERROR_CHECK(i2c_dev_read(&device, &reg, 1, &value, 2));
+        ESP_ERROR_THROW(i2c_dev_read(&device, &reg, 1, &value, 2));
         return value;
     }
 
     void readReg(uint8_t reg, uint8_t* buffer, size_t length) {
-        ESP_ERROR_CHECK(i2c_dev_read(&device, &reg, 1, buffer, length));
+        ESP_ERROR_THROW(i2c_dev_read(&device, &reg, 1, buffer, length));
     }
 
     void writeRegByte(uint8_t reg, uint8_t value) {
-        ESP_ERROR_CHECK(i2c_dev_write(&device, &reg, 1, &value, 1));
+        ESP_ERROR_THROW(i2c_dev_write(&device, &reg, 1, &value, 1));
     }
 
     void writeRegWord(uint8_t reg, uint16_t value) {
-        ESP_ERROR_CHECK(i2c_dev_write(&device, &reg, 1, &value, 2));
+        ESP_ERROR_THROW(i2c_dev_write(&device, &reg, 1, &value, 2));
     }
 
     void writeReg(uint8_t reg, uint8_t* buffer, size_t length) {
-        ESP_ERROR_CHECK(i2c_dev_write(&device, &reg, 1, buffer, length));
+        ESP_ERROR_THROW(i2c_dev_write(&device, &reg, 1, buffer, length));
     }
 
 private:
@@ -104,7 +105,7 @@ private:
 class I2CManager {
 public:
     I2CManager() {
-        ESP_ERROR_CHECK(i2cdev_init());
+        ESP_ERROR_THROW(i2cdev_init());
         buses.reserve(I2C_NUM_MAX);
     }
 
