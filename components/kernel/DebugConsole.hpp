@@ -55,8 +55,8 @@ private:
             return "\033[0;33moff\033[0m";
         }
 
-        wifi_mode_t mode;
-        ESP_ERROR_CHECK(esp_wifi_get_mode(&mode));
+        wifi_mode_t mode = WIFI_MODE_NULL;
+        ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_get_mode(&mode));
 
         switch (mode) {
             case WIFI_MODE_STA:
