@@ -204,7 +204,7 @@ public:
             JsonObject initConfigJson = initConfigDoc.to<JsonObject>();
             std::unique_ptr<PeripheralBase> peripheral = createPeripheral(name, type, deviceConfig->params.get().get(), initConfigJson);
             initJson["config"].to<JsonObject>().set(initConfigJson);
-            peripherals.push_back(move(peripheral));
+            peripherals.push_back(std::move(peripheral));
 
             return true;
         } catch (const std::exception& e) {

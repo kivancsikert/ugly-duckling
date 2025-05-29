@@ -16,6 +16,7 @@ UNSUPPORTED_FLAGS = [
 
 # ✅ Extra args appended to each compile command
 EXTRA_ARGS = [
+    "-Wno-missing-field-initializers",
 ]
 
 def run(cmd):

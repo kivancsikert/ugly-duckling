@@ -1,0 +1,11 @@
+Checks: >
+  clang-analyzer-*,
+#   bugprone-*,
+#   performance-*,
+#   readability-*,
+#   modernize-*,
+#   -modernize-use-trailing-return-type,
+#   cppcoreguidelines-*,
+#   -cppcoreguidelines-pro-type-vararg,
+#   -cppcoreguidelines-owning-memory
+HeaderFilterRegex: '/ugly-duckling/(main|components)/'

@@ -180,7 +180,7 @@ void convertFromJson(JsonVariantConst src, MdnsRecord& dst) {
         dst.hostname = "";
     }
     if (jsonRecord["ip"].is<std::string>()) {
-        const char* ipStr = jsonRecord["ip"].as<std::string>().c_str();
+        const char* ipStr = jsonRecord["ip"].as<const char*>();
         dst.ip.addr = esp_ip4addr_aton(ipStr);
     } else {
         dst.ip.addr = 0;
