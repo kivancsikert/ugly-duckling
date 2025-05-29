@@ -95,7 +95,7 @@ public:
     PwmPin& registerPin(const InternalPinPtr& pin, uint32_t freq, ledc_timer_bit_t dutyResolution = LEDC_TIMER_8_BIT, ledc_clk_cfg_t clkSrc = LEDC_AUTO_CLK) {
         LedcTimer& timer = getOrCreateTimer(LEDC_LOW_SPEED_MODE, dutyResolution, freq, clkSrc);
 
-        ledc_channel_t channel = static_cast<ledc_channel_t>(pins.size());
+        auto channel = static_cast<ledc_channel_t>(pins.size());
         if (channel >= LEDC_CHANNEL_MAX) {
             throw std::runtime_error("No more LEDC channels available");
         }
@@ -113,7 +113,7 @@ private:
                 return timer;
             }
         }
-        ledc_timer_t timerNum = static_cast<ledc_timer_t>(timers.size());
+        auto timerNum = static_cast<ledc_timer_t>(timers.size());
         if (timerNum >= LEDC_TIMER_MAX) {
             throw std::runtime_error("No more LEDC timers available");
         }

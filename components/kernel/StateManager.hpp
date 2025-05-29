@@ -24,7 +24,7 @@ public:
             throw std::runtime_error("Too many states");
         }
         EventBits_t eventBits = 1 << nextEventBit++;
-        return StateSource(name, eventGroup, eventBits);
+        return { name, eventGroup, eventBits };
     }
 
     State combineStates(const std::string& name, const std::list<State>& states) const {
@@ -34,7 +34,7 @@ public:
         for (const auto& state : states) {
             eventBits |= state.eventBits;
         }
-        return State(name, eventGroup, eventBits);
+        return { name, eventGroup, eventBits };
     }
 
     /**

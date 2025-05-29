@@ -31,10 +31,7 @@ public:
     }
 
     State(const State& event)
-        : name(event.name)
-        , eventGroup(event.eventGroup)
-        , eventBits(event.eventBits) {
-    }
+        = default;
 
     /**
      * @brief Checks if the state is set.
@@ -79,8 +76,7 @@ public:
     }
 
     StateSource(const StateSource& eventSource)
-        : State(eventSource) {
-    }
+        = default;
 
     bool set() const {
         return hasAllBits(setBits(eventBits | STATE_CHANGE_BIT_MASK));

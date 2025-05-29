@@ -158,7 +158,7 @@ public:
         motor->stop();
 
         mqttRoot->registerCommand("override", [this](const JsonObject& request, JsonObject& response) {
-            DoorState overrideState = request["state"].as<DoorState>();
+            auto overrideState = request["state"].as<DoorState>();
             if (overrideState == DoorState::NONE) {
                 updateQueue.put(StateOverride { DoorState::NONE, time_point<system_clock>::min() });
             } else {

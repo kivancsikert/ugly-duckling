@@ -1,4 +1,4 @@
-    #pragma once
+#pragma once
 
 // Helper macros to convert macro to string
 #define STRINGIFY(x) #x
@@ -31,6 +31,7 @@ static const char* const farmhubVersion = esp_app_get_description()->version;
 
 using namespace farmhub::devices;
 using namespace farmhub::kernel;
+using namespace farmhub::peripherals;
 
 #ifdef CONFIG_HEAP_TRACING
 #include <esp_heap_trace.h>
@@ -192,7 +193,7 @@ void registerFileCommands(const std::shared_ptr<MqttRoot>& mqttRoot, const std::
     mqttRoot->registerCommand("files/list", [fs](const JsonObject&, JsonObject& response) {
         JsonArray files = response["files"].to<JsonArray>();
         fs->readDir("/", [files](const std::string& name, off_t size) {
-            JsonObject file = files.add<JsonObject>();
+            auto file = files.add<JsonObject>();
             file["name"] = name;
             file["size"] = size;
         });
@@ -494,5 +495,5 @@ static void startDevice() {
     });
 #endif
 
-    vTaskDelete(NULL);
+    vTaskDelete(nullptr);
 }

@@ -17,7 +17,7 @@ public:
         , telemetryCollector(std::move(telemetryCollector)) {
     }
 
-    void publishTelemetry() {
+    void publishTelemetry() override {
         mqttRoot->publish("telemetry", [this](JsonObject& json) { telemetryCollector->collect(json); }, Retention::NoRetain, QoS::AtLeastOnce);
     }
 

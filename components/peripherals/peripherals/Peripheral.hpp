@@ -52,7 +52,7 @@ public:
         mqttRoot->publish("telemetry", telemetryDoc, Retention::NoRetain, QoS::AtLeastOnce);
     }
 
-    virtual void populateTelemetry(JsonObject& telemetryJson) override {
+    void populateTelemetry(JsonObject& telemetryJson) override {
     }
 
     struct ShutdownParameters {
@@ -192,7 +192,7 @@ public:
 
         std::string name = deviceConfig->name.get();
         std::string type = deviceConfig->type.get();
-        JsonObject initJson = peripheralsInitJson.add<JsonObject>();
+        auto initJson = peripheralsInitJson.add<JsonObject>();
         deviceConfig->store(initJson, true);
         try {
             Lock lock(stateMutex);

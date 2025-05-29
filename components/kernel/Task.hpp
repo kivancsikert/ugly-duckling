@@ -18,7 +18,7 @@ static const unsigned int DEFAULT_PRIORITY = 1;
 
 class Task;
 
-typedef std::function<void(Task&)> TaskFunction;
+using TaskFunction = std::function<void (Task &)>;
 
 class TaskHandle {
 public:
@@ -74,7 +74,7 @@ public:
         return Task::run(name, stackSize, DEFAULT_PRIORITY, runFunction);
     }
     static TaskHandle run(const std::string& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction& runFunction) {
-        TaskFunction* taskFunction = new TaskFunction(runFunction);
+        auto* taskFunction = new TaskFunction(runFunction);
         LOGD("Creating task %s with priority %u and stack size %" PRIu32,
             name.c_str(), priority, stackSize);
         TaskHandle_t handle = nullptr;
@@ -82,9 +82,9 @@ public:
         if (result != pdPASS) {
             LOGE("Failed to create task %s: %d", name.c_str(), result);
             delete taskFunction;
-            return TaskHandle();
+            return {};
         }
-        return TaskHandle(handle);
+        return { handle };
     }
 
     enum class RunResult : uint8_t {

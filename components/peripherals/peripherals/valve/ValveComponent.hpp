@@ -238,7 +238,7 @@ public:
         doTransitionTo(initState);
 
         mqttRoot->registerCommand("override", [this](const JsonObject& request, JsonObject& response) {
-            ValveState targetState = request["state"].as<ValveState>();
+            auto targetState = request["state"].as<ValveState>();
             if (targetState == ValveState::NONE) {
                 override(ValveState::NONE, time_point<system_clock>());
             } else {

@@ -16,7 +16,7 @@ namespace farmhub::kernel::drivers {
 
 class LedDriver {
 public:
-    typedef std::vector<milliseconds> BlinkPattern;
+    using BlinkPattern = std::vector<milliseconds>;
 
     LedDriver(const std::string& name, const PinPtr& pin)
         : pin(pin)

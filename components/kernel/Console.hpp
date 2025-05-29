@@ -110,7 +110,7 @@ private:
                 return "<Encoding error>";
             }
             if (length < BUFFER_SIZE) {
-                return std::string(buffer, length);
+                return { buffer, static_cast<size_t>(length) };
             }
         }
 

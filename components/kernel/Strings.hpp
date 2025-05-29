@@ -20,13 +20,13 @@ std::string toHexString(uint64_t value) {
         ++start;
     }
 
-    return std::string(start);
+    return { start };
 }
 
 std::string toStringWithPrecision(double value, int precision) {
     char buffer[32];
     std::snprintf(buffer, sizeof(buffer), "%.*f", precision, value);
-    return std::string(buffer);
+    return { buffer };
 }
 
 }    // namespace farmhub::kernel

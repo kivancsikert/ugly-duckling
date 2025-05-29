@@ -20,7 +20,7 @@ enum class WatchdogState : uint8_t {
     TimedOut
 };
 
-typedef std::function<void(WatchdogState)> WatchdogCallback;
+using WatchdogCallback = std::function<void (WatchdogState)>;
 
 class Watchdog {
 public:

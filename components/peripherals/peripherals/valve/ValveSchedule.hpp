@@ -68,7 +68,7 @@ struct Converter<ValveSchedule> {
         auto startLocalTime = system_clock::from_time_t(startTime);
         seconds period = seconds(src["period"].as<long long int>());
         seconds duration = seconds(src["duration"].as<long long int>());
-        return ValveSchedule(startLocalTime, period, duration);
+        return { startLocalTime, period, duration };
     }
 
     static bool checkJson(JsonVariantConst src) {

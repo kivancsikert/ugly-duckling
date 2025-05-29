@@ -48,9 +48,9 @@ enum class PublishStatus : uint8_t {
     QueueFull = 4
 };
 
-typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
+using CommandHandler = std::function<void (const JsonObject &, JsonObject &)>;
 
-typedef std::function<void(const std::string&, const JsonObject&)> SubscriptionHandler;
+using SubscriptionHandler = std::function<void (const std::string &, const JsonObject &)>;
 
 class MqttRoot;
 

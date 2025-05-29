@@ -132,7 +132,7 @@ private:
         return success;
     }
 
-    static void printServers(void) {
+    static void printServers() {
         LOGD("List of configured NTP servers:");
 
         for (uint8_t i = 0; i < SNTP_MAX_SERVERS; ++i) {
@@ -141,7 +141,7 @@ private:
             } else {
                 char buff[48];
                 ip_addr_t const* ip = esp_sntp_getserver(i);
-                if (ipaddr_ntoa_r(ip, buff, 48) != NULL) {
+                if (ipaddr_ntoa_r(ip, buff, 48) != nullptr) {
                     LOGD(" - server %d: %s", i, buff);
                 }
             }

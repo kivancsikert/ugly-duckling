@@ -32,16 +32,14 @@ public:
 
 class JsonAsString {
 public:
-    JsonAsString() {
-    }
+    JsonAsString() = default;
 
     JsonAsString(const std::string& value)
         : value(value) {
     }
 
     JsonAsString(const JsonAsString& other)
-        : value(other.value) {
-    }
+        = default;
 
     JsonAsString& operator=(const JsonAsString& other) = default;
 
@@ -106,25 +104,25 @@ public:
         entries.push_back(reference);
     }
 
-    virtual void load(const JsonObject& json) override {
+    void load(const JsonObject& json) override {
         for (auto& entry : entries) {
             entry.get().load(json);
         }
     }
 
-    virtual void reset() override {
+    void reset() override {
         for (auto& entry : entries) {
             entry.get().reset();
         }
     }
 
-    virtual void store(JsonObject& json, bool inlineDefaults) const override {
+    void store(JsonObject& json, bool inlineDefaults) const override {
         for (const auto& entry : entries) {
             entry.get().store(json, inlineDefaults);
         }
     }
 
-    virtual bool hasValue() const override {
+    bool hasValue() const override {
         for (const auto& entry : entries) {
             if (entry.get().hasValue()) {
                 return true;
@@ -149,7 +147,7 @@ public:
     }
 
     template <typename... Args>
-    requires std::constructible_from<TDelegateEntry, Args...>
+        requires std::constructible_from<TDelegateEntry, Args...>
     NamedConfigurationEntry(ConfigurationSection* parent, const std::string& name, Args&&... args)
         : NamedConfigurationEntry(parent, name, std::make_shared<TDelegateEntry>(std::forward<Args>(args)...)) {
     }

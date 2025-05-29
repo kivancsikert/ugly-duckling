@@ -49,8 +49,8 @@ public:
         });
     }
 
-    typedef std::function<void(const Switch&)> SwitchEngagementHandler;
-    typedef std::function<void(const Switch&, milliseconds duration)> SwitchReleaseHandler;
+    using SwitchEngagementHandler = std::function<void(const Switch&)>;
+    using SwitchReleaseHandler = std::function<void(const Switch&, milliseconds)>;
 
     const Switch& onEngaged(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
         return registerHandler(
@@ -71,7 +71,7 @@ public:
         // gpio_set_direction(pin, GPIO_MODE_INPUT);
         // gpio_set_pull_mode(pin, mode == SwitchMode::PullUp ? GPIO_PULLUP_ONLY : GPIO_PULLDOWN_ONLY);
 
-        SwitchState* switchState = new SwitchState();
+        auto* switchState = new SwitchState();
         switchState->name = name;
         switchState->pin = pin;
         switchState->mode = mode;
@@ -131,7 +131,7 @@ private:
 
 // ISR handler for GPIO interrupt
 static void IRAM_ATTR handleSwitchInterrupt(void* arg) {
-    SwitchManager::SwitchState* state = static_cast<SwitchManager::SwitchState*>(arg);
+    auto* state = static_cast<SwitchManager::SwitchState*>(arg);
     bool engaged = state->pin->digitalRead() == (state->mode == SwitchMode::PullUp ? 0 : 1);
     state->manager->queueSwitchStateChange(state, engaged);
 }
