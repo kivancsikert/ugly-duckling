@@ -617,7 +617,7 @@ private:
             client,
             message.topic.c_str(),
             message.payload.c_str(),
-            message.payload.length(),
+            (int) message.payload.length(),
             static_cast<int>(message.qos),
             message.retain == Retention::Retain,
             true);
@@ -655,7 +655,7 @@ private:
     }
 
     void processSubscriptionBatch(const std::vector<esp_mqtt_topic_t>& topics, std::list<PendingSubscription>& pendingSubscriptions) {
-        int ret = esp_mqtt_client_subscribe_multiple(client, topics.data(), topics.size());
+        int ret = esp_mqtt_client_subscribe_multiple(client, topics.data(), (int) topics.size());
 
         if (ret < 0) {
             LOGTD(Tag::MQTT, "Error subscribing: %s",
@@ -753,7 +753,7 @@ private:
     std::atomic<bool> trustMdnsCache = true;
 
     const std::string configHostname;
-    const int configPort;
+    const unsigned int configPort;
     const std::string configServerCert;
     const std::string configClientCert;
     const std::string configClientKey;

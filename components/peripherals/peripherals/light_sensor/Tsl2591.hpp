@@ -61,9 +61,9 @@ public:
 
 protected:
     double readLightLevel() override {
-        esp_err_t res;
         float lux;
-        if ((res = tsl2591_get_lux(&sensor, &lux)) != ESP_OK) {
+        esp_err_t res = tsl2591_get_lux(&sensor, &lux);
+        if (res != ESP_OK) {
             LOGD("Could not read light level: %s", esp_err_to_name(res));
             return std::numeric_limits<double>::quiet_NaN();
         } else {

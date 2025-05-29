@@ -30,7 +30,7 @@ public:
     State combineStates(const std::string& name, const std::list<State>& states) const {
         LOGD("Creating combined state: %s",
             name.c_str());
-        int eventBits = 0;
+        EventBits_t eventBits = 0;
         for (auto& state : states) {
             eventBits |= state.eventBits;
         }

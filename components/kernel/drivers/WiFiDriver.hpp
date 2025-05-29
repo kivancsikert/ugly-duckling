@@ -156,6 +156,8 @@ private:
                 LOGTI(Tag::WIFI, "SoftAP transport disconnected");
                 break;
             }
+            default:
+                break;
         }
     }
 
@@ -182,6 +184,8 @@ private:
                 LOGTD(Tag::WIFI, "Lost IP");
                 break;
             }
+            default:
+                break;
         }
     }
 
@@ -215,6 +219,8 @@ private:
                 wifi_prov_mgr_deinit();
                 break;
             }
+            default:
+                break;
         }
     }
 

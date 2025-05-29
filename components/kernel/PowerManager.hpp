@@ -110,7 +110,7 @@ public:
         auto now = boot_clock::now();
         microseconds duration = now - sleepTimeLastReported;
         if (duration.count() > 0) {
-            auto currentLightSleepRatio = static_cast<double>(lightSleepTime.count()) / duration.count();
+            double currentLightSleepRatio = static_cast<double>(lightSleepTime.count()) / static_cast<double>(duration.count());
             auto currentLightSleepCount = lightSleepCount;
             sleepTimeLastReported = now;
             lightSleepTime = microseconds::zero();

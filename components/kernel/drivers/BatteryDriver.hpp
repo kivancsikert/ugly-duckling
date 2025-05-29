@@ -31,7 +31,7 @@ public:
 
     virtual ~BatteryDriver() = default;
 
-    virtual float getVoltage() = 0;
+    virtual double getVoltage() = 0;
 
     const BatteryParameters parameters;
 };
@@ -47,7 +47,7 @@ public:
             analogPin.getName().c_str());
     }
 
-    float getVoltage() {
+    double getVoltage() override {
         for (int trial = 0; trial < 5; trial++) {
             auto batteryLevel = analogPin.analogRead();
             if (!batteryLevel.has_value()) {

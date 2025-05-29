@@ -1,6 +1,7 @@
 Checks: >
   clang-analyzer-*,
-#   bugprone-*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
 #   performance-*,
 #   readability-*,
 #   modernize-*,

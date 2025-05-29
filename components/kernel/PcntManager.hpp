@@ -29,8 +29,8 @@ struct PulseCounterUnit {
             pin->getName().c_str());
     }
 
-    int16_t getAndClearCount() {
-        int16_t count = getCount();
+    int getAndClearCount() {
+        int count = getCount();
         if (count != 0) {
             clear();
         }

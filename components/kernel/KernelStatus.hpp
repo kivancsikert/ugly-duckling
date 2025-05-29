@@ -116,8 +116,6 @@ private:
                         statusLed->blink(1500ms);
                         break;
                     case KernelState::TRANSMITTING:
-                        statusLed->turnOff();
-                        break;
                     case KernelState::IDLE:
                         statusLed->turnOff();
                         break;

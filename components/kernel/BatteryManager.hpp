@@ -39,7 +39,7 @@ public:
         });
     }
 
-    float getVoltage() {
+    double getVoltage() {
         return batteryVoltage.getAverage();
     }
 

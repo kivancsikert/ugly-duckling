@@ -23,7 +23,7 @@ std::string toHexString(uint64_t value) {
     return std::string(start);
 }
 
-std::string toStringWithPrecision(float value, int precision) {
+std::string toStringWithPrecision(double value, int precision) {
     char buffer[32];
     std::snprintf(buffer, sizeof(buffer), "%.*f", precision, value);
     return std::string(buffer);

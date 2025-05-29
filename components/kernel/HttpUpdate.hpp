@@ -40,6 +40,7 @@ public:
         auto contents = fs->readAll(UPDATE_FILE);
         if (!contents.has_value()) {
             LOGE("Failed to read update file");
+            return;
         }
         JsonDocument doc;
         auto error = deserializeJson(doc, contents.value());
