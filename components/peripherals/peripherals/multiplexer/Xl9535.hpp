@@ -76,12 +76,11 @@ private:
 
     std::shared_ptr<I2CDevice> device;
 
-    uint16_t polarity = 0;
     uint16_t direction = 0xFFFF;
     uint16_t output = 0;
 };
 
-class Xl9535Pin : public Pin {
+class Xl9535Pin final : public Pin {
 public:
     Xl9535Pin(const std::string& name, Xl9535Component& mpx, uint8_t pin)
         : Pin(name)

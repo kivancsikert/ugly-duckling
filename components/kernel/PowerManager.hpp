@@ -61,7 +61,7 @@ private:
     PowerManagementLock& lock;
 };
 
-class PowerManager : public TelemetryProvider {
+class PowerManager final : public TelemetryProvider {
 public:
     PowerManager(bool requestedSleepWhenIdle)
         : sleepWhenIdle(shouldSleepWhenIdle(requestedSleepWhenIdle)) {

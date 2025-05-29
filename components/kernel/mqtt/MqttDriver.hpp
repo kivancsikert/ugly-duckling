@@ -147,7 +147,7 @@ public:
             }
         };
 
-        LOGTD(Tag::MQTT, "server: %s:%ld, client ID is '%s'",
+        LOGTD(Tag::MQTT, "server: %s:%" PRIu32 ", client ID is '%s'",
             config.broker.address.hostname,
             config.broker.address.port,
             config.credentials.client_id);
@@ -497,7 +497,7 @@ private:
         configMqttClient(mqttConfig);
         mqttConfig.session.disable_clean_session = !startCleanSession;
         esp_mqtt_set_config(client, &mqttConfig);
-        LOGTI(Tag::MQTT, "Connecting to %s:%lu, clean session: %d",
+        LOGTI(Tag::MQTT, "Connecting to %s:%" PRIu32 ", clean session: %d",
             mqttConfig.broker.address.hostname, mqttConfig.broker.address.port, startCleanSession);
         ESP_ERROR_CHECK(esp_mqtt_client_start(client));
         clientRunning = true;
@@ -530,7 +530,7 @@ private:
     void handleMqttEvent(int eventId, esp_mqtt_event_handle_t event) {
         switch (eventId) {
             case MQTT_EVENT_BEFORE_CONNECT: {
-                LOGTD(Tag::MQTT, "Connecting to MQTT server %s:%lu", hostname.c_str(), port);
+                LOGTD(Tag::MQTT, "Connecting to MQTT server %s:%" PRIu32, hostname.c_str(), port);
                 break;
             }
             case MQTT_EVENT_CONNECTED: {

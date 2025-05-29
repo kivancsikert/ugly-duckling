@@ -27,6 +27,8 @@ namespace farmhub::peripherals::valve {
 
 class ValveControlStrategy {
 public:
+    virtual ~ValveControlStrategy() = default;
+
     virtual void open() = 0;
     virtual void close() = 0;
     virtual ValveState getDefaultState() const = 0;

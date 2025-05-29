@@ -65,7 +65,7 @@ private:
             summary.ex_info.mcause;
 #endif
 
-        LOGD("Core dump found: task: %s, cause: %ld",
+        LOGD("Core dump found: task: %s, cause: %" PRIu32,
             summary.exc_task, excCause);
 
         json["dump-version"] = summary.core_dump_version;
@@ -84,7 +84,7 @@ private:
         auto backtraceJson = json["backtrace"].to<JsonObject>();
 
         if (summary.exc_bt_info.corrupted) {
-            LOGD("Backtrace corrupted, depth %lu", summary.exc_bt_info.depth);
+            LOGD("Backtrace corrupted, depth %" PRIu32, summary.exc_bt_info.depth);
             backtraceJson["corrupted"] = true;
         }
 

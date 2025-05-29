@@ -101,7 +101,7 @@ public:
         }
 
         pins.emplace_back(pin, timer, channel);
-        LOGTD("ledc", "Registered PWM channel on pin %s with freq %ld and resolution %d",
+        LOGTD("ledc", "Registered PWM channel on pin %s with freq %" PRIu32 " and resolution %d",
             pin->getName().c_str(), freq, dutyResolution);
         return pins.back();
     }
@@ -119,7 +119,7 @@ private:
         }
 
         timers.emplace_back(speedMode, dutyResolution, timerNum, freqHz, clkSrc);
-        LOGTD("ledc", "Created LEDC timer %d with freq %ld and resolution %d bits",
+        LOGTD("ledc", "Created LEDC timer %d with freq %" PRIu32 " and resolution %d bits",
             timerNum, freqHz, dutyResolution);
         return timers.back();
     }

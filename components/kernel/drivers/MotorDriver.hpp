@@ -15,6 +15,8 @@ MotorPhase operator-(MotorPhase phase) {
 
 class PwmMotorDriver {
 public:
+    virtual ~PwmMotorDriver() = default;
+
     void stop() {
         drive(MotorPhase::FORWARD, 0);
     };

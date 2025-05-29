@@ -79,6 +79,8 @@ bool convertFromJson(JsonVariantConst src, JsonAsString& dst) {
 
 class ConfigurationEntry {
 public:
+    virtual ~ConfigurationEntry() = default;
+
     void loadFromString(const std::string& json) {
         JsonDocument jsonDocument;
         DeserializationError error = deserializeJson(jsonDocument, json);

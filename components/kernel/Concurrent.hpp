@@ -21,7 +21,7 @@ protected:
         , queue(xQueueCreate(capacity, messageSize)) {
     }
 
-    ~BaseQueue() {
+    virtual ~BaseQueue() {
         vQueueDelete(queue);
     }
 

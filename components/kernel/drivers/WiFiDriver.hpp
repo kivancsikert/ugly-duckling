@@ -20,7 +20,7 @@ using namespace farmhub::kernel;
 
 namespace farmhub::kernel::drivers {
 
-class WiFiDriver
+class WiFiDriver final
     : public TelemetryProvider {
 public:
     WiFiDriver(
@@ -387,7 +387,6 @@ private:
     const std::string hostname;
 
     StateManager internalStates;
-    bool wifiInitialized = false;
     StateSource stationStarted = internalStates.createStateSource("wifi:station-started");
 
     enum class WiFiEvent {

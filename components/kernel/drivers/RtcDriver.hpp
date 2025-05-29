@@ -36,8 +36,7 @@ public:
     };
 
     RtcDriver(State& networkReady, std::shared_ptr<MdnsDriver> mdns, const std::shared_ptr<Config> ntpConfig, StateSource& rtcInSync)
-        : networkReady(networkReady)
-        , mdns(mdns)
+        : mdns(mdns)
         , ntpConfig(ntpConfig)
         , rtcInSync(rtcInSync) {
 
@@ -148,7 +147,6 @@ private:
         }
     }
 
-    State& networkReady;
     const std::shared_ptr<MdnsDriver> mdns;
     const std::shared_ptr<Config> ntpConfig;
     StateSource& rtcInSync;

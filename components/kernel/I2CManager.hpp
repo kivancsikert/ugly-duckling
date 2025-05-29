@@ -39,7 +39,6 @@ public:
     I2CDevice(const std::string& name, std::shared_ptr<I2CBus> bus, uint8_t address)
         : name(name)
         , bus(bus)
-        , address(address)
         , device({
               .port = bus->port,
               .cfg = {
@@ -98,7 +97,6 @@ public:
 private:
     const std::string name;
     const std::shared_ptr<I2CBus> bus;
-    const uint8_t address;
     i2c_dev_t device;
 };
 

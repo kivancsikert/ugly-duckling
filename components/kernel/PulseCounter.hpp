@@ -61,14 +61,14 @@ public:
 
     uint32_t getCount() const {
         uint32_t count = counter.load();
-        LOGTV(Tag::PCNT, "Counted %lu pulses on pin %s",
+        LOGTV(Tag::PCNT, "Counted %" PRIu32 " pulses on pin %s",
             count, pin->getName().c_str());
         return count;
     }
 
     uint32_t reset() {
         uint32_t count = counter.exchange(0);
-        LOGTV(Tag::PCNT, "Counted %lu pulses and cleared on pin %s",
+        LOGTV(Tag::PCNT, "Counted %" PRIu32 " pulses and cleared on pin %s",
             count, pin->getName().c_str());
         return count;
     }

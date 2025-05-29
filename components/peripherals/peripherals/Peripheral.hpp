@@ -27,10 +27,9 @@ class PeripheralBase
     : public TelemetryProvider,
       public Named {
 public:
-    PeripheralBase(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot, size_t telemetrySize = 2048)
+    PeripheralBase(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot)
         : Named(name)
-        , mqttRoot(mqttRoot)
-        , telemetrySize(telemetrySize) {
+        , mqttRoot(mqttRoot) {
         mqttRoot->registerCommand("ping", [this](const JsonObject& request, JsonObject& response) {
             LOGV("Received ping request");
             publishTelemetry();
@@ -64,9 +63,6 @@ public:
 
 protected:
     std::shared_ptr<MqttRoot> mqttRoot;
-
-private:
-    const size_t telemetrySize;
 };
 
 template <std::derived_from<ConfigurationSection> TConfig>
@@ -106,6 +102,8 @@ public:
         : factoryType(factoryType)
         , peripheralType(peripheralType) {
     }
+
+    virtual ~PeripheralFactoryBase() = default;
 
     virtual std::unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<FileSystem> fs, const PeripheralServices& services, JsonObject& initConfigJson) = 0;
 
@@ -161,7 +159,7 @@ private:
 
 // Peripheral manager
 
-class PeripheralManager
+class PeripheralManager final
     : public TelemetryPublisher {
 public:
     PeripheralManager(

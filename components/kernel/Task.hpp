@@ -59,6 +59,8 @@ public:
     bool abortDelay() {
         if (isValid()) {
             return xTaskAbortDelay(handle);
+        } else {
+            return false;
         }
     }
 
@@ -73,7 +75,7 @@ public:
     }
     static TaskHandle run(const std::string& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
         TaskFunction* taskFunction = new TaskFunction(runFunction);
-        LOGD("Creating task %s with priority %d and stack size %ld",
+        LOGD("Creating task %s with priority %u and stack size %" PRIu32,
             name.c_str(), priority, stackSize);
         TaskHandle_t handle = nullptr;
         auto result = xTaskCreate(executeTask, name.c_str(), stackSize, taskFunction, priority, &handle);

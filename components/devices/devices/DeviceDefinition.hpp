@@ -41,6 +41,8 @@ public:
         , bootPin(bootPin) {
     }
 
+    virtual ~DeviceDefinition() = default;
+
     virtual void registerPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<TDeviceConfiguration> deviceConfig) {
         peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht3xComponent>>("sht3x", 0x44 /* Also supports 0x45 */));
         // TODO Unify these two factories

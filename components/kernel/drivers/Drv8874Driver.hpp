@@ -2,7 +2,10 @@
 
 #include <atomic>
 #include <chrono>
+#include <memory>
 
+#include <Log.hpp>
+#include <Pin.hpp>
 #include <PwmManager.hpp>
 #include <drivers/MotorDriver.hpp>
 

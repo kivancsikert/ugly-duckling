@@ -8,7 +8,8 @@
 
 namespace farmhub::kernel::mqtt {
 
-class MqttTelemetryPublisher : public TelemetryPublisher {
+class MqttTelemetryPublisher final
+    : public TelemetryPublisher {
 public:
     MqttTelemetryPublisher(std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<TelemetryCollector> telemetryCollector)
         : mqttRoot(mqttRoot)

@@ -63,6 +63,8 @@ protected:
         : name(name) {
     }
 
+    virtual ~Pin() = default;
+
 protected:
     const std::string name;
 

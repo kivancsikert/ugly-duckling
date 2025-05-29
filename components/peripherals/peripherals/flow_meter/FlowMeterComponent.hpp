@@ -51,7 +51,7 @@ public:
                 if (pulses > 0) {
                     Lock lock(updateMutex);
                     double currentVolume = pulses / this->qFactor / 60.0f;
-                    LOGV("Counted %lu pulses, %.2f l/min, %.2f l",
+                    LOGV("Counted %" PRIu32 " pulses, %.2f l/min, %.2f l",
                         pulses, currentVolume / (elapsed.count() / 1000.0f / 60.0f), currentVolume);
                     volume += currentVolume;
                     lastSeenFlow = now;

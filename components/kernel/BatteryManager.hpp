@@ -27,7 +27,7 @@ static constexpr microseconds LOW_POWER_SLEEP_CHECK_INTERVAL = 10s;
     abort();
 }
 
-class BatteryManager : public TelemetryProvider {
+class BatteryManager final : public TelemetryProvider {
 public:
     BatteryManager(
         std::shared_ptr<BatteryDriver> battery,

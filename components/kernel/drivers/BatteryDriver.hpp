@@ -29,6 +29,8 @@ public:
         : parameters(parameters) {
     }
 
+    virtual ~BatteryDriver() = default;
+
     virtual float getVoltage() = 0;
 
     const BatteryParameters parameters;

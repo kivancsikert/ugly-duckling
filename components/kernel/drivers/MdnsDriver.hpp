@@ -48,7 +48,8 @@ struct MdnsRecord {
 
     std::string toString() const {
         std::string result = ipOrHost();
-        result += ":" + port;
+        result += ":";
+        result += std::to_string(port);
         return result;
     }
 };
