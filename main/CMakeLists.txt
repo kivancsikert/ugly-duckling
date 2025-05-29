@@ -4,6 +4,9 @@ idf_component_register(
     EMBED_TXTFILES "${CMAKE_SOURCE_DIR}/partitions.csv"
 )
 
+# Do not fail on warnings in ESP-IDF
+idf_build_set_property(COMPILE_OPTIONS "-Wno-error" APPEND)
+
 component_compile_options(-Wall)
 component_compile_options(-Wextra)
 component_compile_options(-Wunused)
