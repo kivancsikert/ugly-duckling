@@ -2,6 +2,7 @@
 
 #include <Log.hpp>
 #include <Concurrent.hpp>
+#include <utility>
 
 namespace farmhub::kernel {
 
@@ -19,7 +20,7 @@ namespace farmhub::kernel {
 class ConsoleProvider {
 public:
     static void init(std::shared_ptr<Queue<LogRecord>> logRecords, Level recordedLevel) {
-        ConsoleProvider::logRecords = logRecords;
+        ConsoleProvider::logRecords = std::move(logRecords);
         ConsoleProvider::recordedLevel = recordedLevel;
         ConsoleProvider::originalVprintf = esp_log_set_vprintf(ConsoleProvider::processLogFunc);
     }

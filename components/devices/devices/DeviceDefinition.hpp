@@ -26,6 +26,7 @@
 #include <peripherals/light_sensor/Bh1750.hpp>
 #include <peripherals/light_sensor/Tsl2591.hpp>
 #include <peripherals/multiplexer/Xl9535.hpp>
+#include <utility>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
@@ -37,8 +38,8 @@ template <std::derived_from<DeviceConfiguration> TDeviceConfiguration>
 class DeviceDefinition {
 public:
     DeviceDefinition(PinPtr statusPin, InternalPinPtr bootPin)
-        : statusPin(statusPin)
-        , bootPin(bootPin) {
+        : statusPin(std::move(statusPin))
+        , bootPin(std::move(bootPin)) {
     }
 
     virtual ~DeviceDefinition() = default;
@@ -71,7 +72,7 @@ public:
         return {};
     }
 
-    static std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) {
+    static std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& i2c) {
         return nullptr;
     }
 
@@ -79,7 +80,7 @@ public:
     const InternalPinPtr bootPin;
 
 protected:
-    virtual void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<TDeviceConfiguration> deviceConfig) {
+    virtual void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<TDeviceConfiguration>& deviceConfig) {
     }
 };
 

@@ -28,7 +28,7 @@ public:
     Valve(
         const std::string& name,
         std::unique_ptr<ValveControlStrategy> strategy,
-        std::shared_ptr<MqttRoot> mqttRoot)
+        const std::shared_ptr<MqttRoot>& mqttRoot)
         : Peripheral<ValveConfig>(name, mqttRoot)
         , valve(name, std::move(strategy), mqttRoot, [this]() {
             publishTelemetry();

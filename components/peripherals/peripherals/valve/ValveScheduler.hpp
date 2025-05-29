@@ -14,7 +14,7 @@ using namespace farmhub::kernel;
 
 namespace farmhub::peripherals::valve {
 
-enum class ValveState {
+enum class ValveState : int8_t {
     CLOSED = -1,
     NONE = 0,
     OPEN = 1

@@ -20,7 +20,7 @@ public:
     Property<InternalPinPtr> sda { this, "sda" };
     Property<InternalPinPtr> scl { this, "scl" };
 
-    I2CConfig parse(uint8_t defaultAddress = 0xFF, InternalPinPtr defaultSda = nullptr, InternalPinPtr defaultScl = nullptr) const {
+    I2CConfig parse(uint8_t defaultAddress = 0xFF, const InternalPinPtr& defaultSda = nullptr, const InternalPinPtr& defaultScl = nullptr) const {
         return {
             address.get().empty()
                 ? defaultAddress

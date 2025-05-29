@@ -7,13 +7,14 @@
 #include <esp_timer.h>
 
 #include <Log.hpp>
+#include <utility>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
 
 namespace farmhub::kernel {
 
-enum class WatchdogState {
+enum class WatchdogState : uint8_t {
     Started,
     Cancelled,
     TimedOut
@@ -26,7 +27,7 @@ public:
     Watchdog(const std::string& name, const microseconds timeout, bool startImmediately, WatchdogCallback callback)
         : name(name)
         , timeout(timeout)
-        , callback(callback) {
+        , callback(std::move(callback)) {
         esp_timer_create_args_t config = {
             .callback = [](void* arg) {
                 auto watchdog = (Watchdog*) arg;

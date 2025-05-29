@@ -88,7 +88,7 @@ public:
 
 class UglyDucklingMk6 : public DeviceDefinition<Mk6Config> {
 public:
-    UglyDucklingMk6(std::shared_ptr<Mk6Config> config)
+    UglyDucklingMk6(const std::shared_ptr<Mk6Config>& config)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
         // Switch off strapping pin
         // TODO: Add a LED driver instead
@@ -96,7 +96,7 @@ public:
         pins::LEDA_RED->digitalWrite(1);
     }
 
-    static std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) {
+    static std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& i2c) {
         return std::make_shared<AnalogBatteryDriver>(
             pins::BATTERY,
             1.2424,
@@ -108,7 +108,7 @@ public:
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<Mk6Config> deviceConfig) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk6Config>& deviceConfig) override {
         auto motorDriver = Drv8833Driver::create(
             services.pwmManager,
             pins::AIN1,

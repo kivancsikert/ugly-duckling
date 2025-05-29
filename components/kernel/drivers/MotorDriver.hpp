@@ -2,7 +2,7 @@
 
 namespace farmhub::kernel::drivers {
 
-enum class MotorPhase {
+enum class MotorPhase : int8_t {
     FORWARD = 1,
     REVERSE = -1
 };

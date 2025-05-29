@@ -4,6 +4,7 @@
 #include <chrono>
 #include <list>
 #include <memory>
+#include <utility>
 #include <variant>
 
 #include <ArduinoJson.h>
@@ -40,7 +41,7 @@ class MotorValveControlStrategy
     : public ValveControlStrategy {
 public:
     MotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller)
-        : controller(controller) {
+        : controller(std::move(controller)) {
     }
 
 protected:
@@ -52,7 +53,7 @@ class HoldingMotorValveControlStrategy
 
 public:
     HoldingMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double holdDuty)
-        : MotorValveControlStrategy(controller)
+        : MotorValveControlStrategy(std::move(controller))
         , switchDuration(switchDuration)
         , holdDuty(holdDuty) {
     }
@@ -87,7 +88,7 @@ class NormallyClosedMotorValveControlStrategy
     : public HoldingMotorValveControlStrategy {
 public:
     NormallyClosedMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double holdDuty)
-        : HoldingMotorValveControlStrategy(controller, switchDuration, holdDuty) {
+        : HoldingMotorValveControlStrategy(std::move(controller), switchDuration, holdDuty) {
     }
 
     void open() override {
@@ -111,7 +112,7 @@ class NormallyOpenMotorValveControlStrategy
     : public HoldingMotorValveControlStrategy {
 public:
     NormallyOpenMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double holdDuty)
-        : HoldingMotorValveControlStrategy(controller, switchDuration, holdDuty) {
+        : HoldingMotorValveControlStrategy(std::move(controller), switchDuration, holdDuty) {
     }
 
     void open() override {
@@ -135,7 +136,7 @@ class LatchingMotorValveControlStrategy
     : public MotorValveControlStrategy {
 public:
     LatchingMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double switchDuty = 1.0)
-        : MotorValveControlStrategy(controller)
+        : MotorValveControlStrategy(std::move(controller))
         , switchDuration(switchDuration)
         , switchDuty(switchDuty) {
     }
@@ -168,7 +169,7 @@ private:
 class LatchingPinValveControlStrategy
     : public ValveControlStrategy {
 public:
-    LatchingPinValveControlStrategy(PinPtr pin)
+    LatchingPinValveControlStrategy(const PinPtr& pin)
         : pin(pin) {
         pin->pinMode(Pin::Mode::Output);
     }
@@ -198,12 +199,12 @@ public:
     ValveComponent(
         const std::string& name,
         std::unique_ptr<ValveControlStrategy> _strategy,
-        std::shared_ptr<MqttRoot> mqttRoot,
+        const std::shared_ptr<MqttRoot>& mqttRoot,
         std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
         , nvs(name)
         , strategy(std::move(_strategy))
-        , publishTelemetry(publishTelemetry) {
+        , publishTelemetry(std::move(publishTelemetry)) {
 
         LOGI("Creating valve '%s' with strategy %s",
             name.c_str(), strategy->describe().c_str());

@@ -11,6 +11,7 @@
 #include <State.hpp>
 #include <Task.hpp>
 #include <drivers/MdnsDriver.hpp>
+#include <utility>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -35,8 +36,8 @@ public:
         Property<std::string> host { this, "host", "" };
     };
 
-    RtcDriver(State& networkReady, std::shared_ptr<MdnsDriver> mdns, const std::shared_ptr<Config> ntpConfig, StateSource& rtcInSync)
-        : mdns(mdns)
+    RtcDriver(State& networkReady, std::shared_ptr<MdnsDriver> mdns, const std::shared_ptr<Config>& ntpConfig, StateSource& rtcInSync)
+        : mdns(std::move(mdns))
         , ntpConfig(ntpConfig)
         , rtcInSync(rtcInSync) {
 

@@ -287,7 +287,7 @@ private:
 template <std::derived_from<ConfigurationSection> TConfiguration>
 class ConfigurationFile {
 public:
-    ConfigurationFile(const std::shared_ptr<FileSystem> fs, const std::string& path, std::shared_ptr<TConfiguration> config)
+    ConfigurationFile(const std::shared_ptr<FileSystem>& fs, const std::string& path, std::shared_ptr<TConfiguration> config)
         : path(path)
         , config(config) {
         if (!fs->exists(path)) {
@@ -337,7 +337,7 @@ public:
         }
     }
 
-    void onUpdate(const std::function<void(const JsonObject&)> callback) {
+    void onUpdate(const std::function<void(const JsonObject&)>& callback) {
         callbacks.push_back(callback);
     }
 

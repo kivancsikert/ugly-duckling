@@ -2,7 +2,7 @@ Checks: >
   clang-analyzer-*,
   bugprone-*,
   -bugprone-easily-swappable-parameters,
-#   performance-*,
+  performance-*,
 #   readability-*,
 #   modernize-*,
 #   -modernize-use-trailing-return-type,

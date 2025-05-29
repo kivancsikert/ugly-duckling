@@ -14,7 +14,7 @@ namespace farmhub::kernel {
 #ifdef FARMHUB_DEBUG
 class DebugConsole {
 public:
-    DebugConsole(const std::shared_ptr<BatteryManager> battery, const std::shared_ptr<WiFiDriver> wifi)
+    DebugConsole(const std::shared_ptr<BatteryManager>& battery, const std::shared_ptr<WiFiDriver>& wifi)
         : battery(battery)
         , wifi(wifi) {
         status.reserve(256);

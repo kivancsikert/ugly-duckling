@@ -14,6 +14,7 @@
 #include <Telemetry.hpp>
 #include <drivers/SwitchManager.hpp>
 #include <mqtt/MqttRoot.hpp>
+#include <utility>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
@@ -27,7 +28,7 @@ class PeripheralBase
     : public TelemetryProvider,
       public Named {
 public:
-    PeripheralBase(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot)
+    PeripheralBase(const std::string& name, const std::shared_ptr<MqttRoot>& mqttRoot)
         : Named(name)
         , mqttRoot(mqttRoot) {
         mqttRoot->registerCommand("ping", [this](const JsonObject& request, JsonObject& response) {
@@ -165,9 +166,9 @@ public:
     PeripheralManager(
         std::shared_ptr<FileSystem> fs,
         PeripheralServices services,
-        const std::shared_ptr<MqttRoot> mqttDeviceRoot)
-        : fs(fs)
-        , services(services)
+        const std::shared_ptr<MqttRoot>& mqttDeviceRoot)
+        : fs(std::move(fs))
+        , services(std::move(services))
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 
@@ -267,7 +268,7 @@ private:
         return it->second.get()->createPeripheral(name, configJson, mqttRoot, fs, services, initConfigJson);
     }
 
-    enum class State {
+    enum class State : uint8_t {
         Running,
         Stopped
     };

@@ -8,6 +8,7 @@
 #include <Concurrent.hpp>
 #include <Pin.hpp>
 #include <Task.hpp>
+#include <utility>
 
 using namespace std::chrono;
 
@@ -15,7 +16,7 @@ using farmhub::kernel::PinPtr;
 
 namespace farmhub::kernel::drivers {
 
-enum class SwitchMode {
+enum class SwitchMode : uint8_t {
     PullUp,
     PullDown
 };
@@ -51,17 +52,17 @@ public:
     typedef std::function<void(const Switch&)> SwitchEngagementHandler;
     typedef std::function<void(const Switch&, milliseconds duration)> SwitchReleaseHandler;
 
-    const Switch& onEngaged(const std::string& name, InternalPinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
+    const Switch& onEngaged(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
         return registerHandler(
-            name, pin, mode, engagementHandler, [](const Switch&, milliseconds) {});
+            name, pin, mode, std::move(engagementHandler), [](const Switch&, milliseconds) {});
     }
 
-    const Switch& onReleased(const std::string& name, InternalPinPtr pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
+    const Switch& onReleased(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
         return registerHandler(
-            name, pin, mode, [](const Switch&) {}, releaseHandler);
+            name, pin, mode, [](const Switch&) {}, std::move(releaseHandler));
     }
 
-    const Switch& registerHandler(const std::string& name, InternalPinPtr pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
+    const Switch& registerHandler(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
         LOGI("Registering switch %s on pin %s, mode %s",
             name.c_str(), pin->getName().c_str(), mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
 
@@ -75,8 +76,8 @@ public:
         switchState->pin = pin;
         switchState->mode = mode;
         switchState->manager = this;
-        switchState->engagementHandler = engagementHandler;
-        switchState->releaseHandler = releaseHandler;
+        switchState->engagementHandler = std::move(engagementHandler);
+        switchState->releaseHandler = std::move(releaseHandler);
 
         // Install GPIO ISR
         gpio_isr_handler_add(pin->getGpio(), handleSwitchInterrupt, switchState);

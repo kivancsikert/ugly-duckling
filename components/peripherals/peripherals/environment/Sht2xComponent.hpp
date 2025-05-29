@@ -10,6 +10,7 @@
 
 #include <peripherals/I2CConfig.hpp>
 #include <peripherals/Peripheral.hpp>
+#include <utility>
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
@@ -27,9 +28,9 @@ public:
         const std::string& name,
         const std::string& sensorType,
         std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<I2CManager> i2c,
+        const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config)
-        : Component(name, mqttRoot)
+        : Component(name, std::move(mqttRoot))
         , bus(i2c->getBusFor(config)) {
 
         // TODO Add commands to soft/hard reset the sensor

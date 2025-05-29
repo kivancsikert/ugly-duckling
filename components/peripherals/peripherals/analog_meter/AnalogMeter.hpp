@@ -6,6 +6,7 @@
 #include <mqtt/MqttDriver.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/analog_meter/AnalogMeterComponent.hpp>
+#include <utility>
 
 using namespace farmhub::kernel::mqtt;
 
@@ -16,8 +17,8 @@ class AnalogMeter
 public:
     AnalogMeter(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
-        InternalPinPtr pin,
+        const std::shared_ptr<MqttRoot>& mqttRoot,
+        const InternalPinPtr& pin,
         double offset,
         double multiplier,
         milliseconds measurementFrequency,

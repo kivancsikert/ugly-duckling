@@ -9,6 +9,7 @@
 #include <EspException.hpp>
 #include <Pin.hpp>
 #include <Strings.hpp>
+#include <utility>
 
 namespace farmhub::kernel {
 
@@ -36,7 +37,7 @@ public:
 
 class I2CDevice {
 public:
-    I2CDevice(const std::string& name, std::shared_ptr<I2CBus> bus, uint8_t address)
+    I2CDevice(const std::string& name, const std::shared_ptr<I2CBus>& bus, uint8_t address)
         : name(name)
         , bus(bus)
         , device({
@@ -115,7 +116,7 @@ public:
         return createDevice(name, config.sda, config.scl, config.address);
     }
 
-    std::shared_ptr<I2CDevice> createDevice(const std::string& name, InternalPinPtr sda, InternalPinPtr scl, uint8_t address) {
+    std::shared_ptr<I2CDevice> createDevice(const std::string& name, const InternalPinPtr& sda, const InternalPinPtr& scl, uint8_t address) {
         auto device = std::make_shared<I2CDevice>(name, getBusFor(sda, scl), address);
         LOGI("Created I2C device %s at address 0x%02x",
             name.c_str(), address);
@@ -132,7 +133,7 @@ public:
         return getBusFor(config.sda, config.scl);
     }
 
-    std::shared_ptr<I2CBus> getBusFor(InternalPinPtr sda, InternalPinPtr scl) {
+    std::shared_ptr<I2CBus> getBusFor(const InternalPinPtr& sda, const InternalPinPtr& scl) {
         Lock lock(mutex);
         for (auto bus : buses) {
             if (bus->sda == sda && bus->scl == scl) {

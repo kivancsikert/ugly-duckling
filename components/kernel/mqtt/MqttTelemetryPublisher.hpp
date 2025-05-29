@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 
 #include <Telemetry.hpp>
+#include <utility>
 
 namespace farmhub::kernel::mqtt {
 
@@ -12,8 +13,8 @@ class MqttTelemetryPublisher final
     : public TelemetryPublisher {
 public:
     MqttTelemetryPublisher(std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<TelemetryCollector> telemetryCollector)
-        : mqttRoot(mqttRoot)
-        , telemetryCollector(telemetryCollector) {
+        : mqttRoot(std::move(mqttRoot))
+        , telemetryCollector(std::move(telemetryCollector)) {
     }
 
     void publishTelemetry() {

@@ -8,6 +8,7 @@
 
 #include <Log.hpp>
 #include <Time.hpp>
+#include <utility>
 
 using namespace std::chrono;
 
@@ -70,10 +71,10 @@ private:
 
 class Task {
 public:
-    static TaskHandle inline run(const std::string& name, uint32_t stackSize, const TaskFunction runFunction) {
+    static TaskHandle inline run(const std::string& name, uint32_t stackSize, const TaskFunction& runFunction) {
         return Task::run(name, stackSize, DEFAULT_PRIORITY, runFunction);
     }
-    static TaskHandle run(const std::string& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
+    static TaskHandle run(const std::string& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction& runFunction) {
         TaskFunction* taskFunction = new TaskFunction(runFunction);
         LOGD("Creating task %s with priority %u and stack size %" PRIu32,
             name.c_str(), priority, stackSize);
@@ -87,15 +88,15 @@ public:
         return TaskHandle(handle);
     }
 
-    enum class RunResult {
+    enum class RunResult : uint8_t {
         OK,
         TIMEOUT,
     };
 
-    static TaskHandle inline loop(const std::string& name, uint32_t stackSize, TaskFunction loopFunction) {
+    static TaskHandle inline loop(const std::string& name, uint32_t stackSize, const TaskFunction& loopFunction) {
         return Task::loop(name, stackSize, DEFAULT_PRIORITY, loopFunction);
     }
-    static TaskHandle loop(const std::string& name, uint32_t stackSize, UBaseType_t priority, TaskFunction loopFunction) {
+    static TaskHandle loop(const std::string& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction& loopFunction) {
         return Task::run(name, stackSize, priority, [loopFunction](Task& task) {
             while (true) {
                 loopFunction(task);

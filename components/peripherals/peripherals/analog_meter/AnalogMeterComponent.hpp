@@ -8,6 +8,7 @@
 #include <MovingAverage.hpp>
 #include <Pin.hpp>
 #include <Task.hpp>
+#include <utility>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -23,12 +24,12 @@ public:
     AnalogMeterComponent(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        InternalPinPtr pin,
+        const InternalPinPtr& pin,
         double offset,
         double multiplier,
         milliseconds measurementFrequency,
         std::size_t windowSize)
-        : Component(name, mqttRoot)
+        : Component(name, std::move(mqttRoot))
         , pin(pin)
         , value(windowSize) {
 

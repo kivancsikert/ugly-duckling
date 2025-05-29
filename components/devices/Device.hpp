@@ -96,7 +96,7 @@ static void dumpPerTaskHeapInfo() {
 }
 #endif
 
-static void performFactoryReset(std::shared_ptr<LedDriver> statusLed, bool completeReset) {
+static void performFactoryReset(const std::shared_ptr<LedDriver>& statusLed, bool completeReset) {
     LOGI("Performing factory reset");
 
     statusLed->turnOn();
@@ -167,12 +167,12 @@ std::shared_ptr<TConfiguration> loadConfig(std::shared_ptr<FileSystem> fs, const
     return config;
 }
 
-std::shared_ptr<MqttRoot> initMqtt(std::shared_ptr<ModuleStates> states, std::shared_ptr<MdnsDriver> mdns, std::shared_ptr<MqttDriver::Config> mqttConfig, const std::string& instance, const std::string& location) {
+std::shared_ptr<MqttRoot> initMqtt(const std::shared_ptr<ModuleStates>& states, const std::shared_ptr<MdnsDriver>& mdns, const std::shared_ptr<MqttDriver::Config>& mqttConfig, const std::string& instance, const std::string& location) {
     auto mqtt = std::make_shared<MqttDriver>(states->networkReady, mdns, mqttConfig, instance, states->mqttReady);
     return std::make_shared<MqttRoot>(mqtt, (location.empty() ? "" : location + "/") + "devices/ugly-duckling/" + instance);
 }
 
-void registerBasicCommands(std::shared_ptr<MqttRoot> mqttRoot) {
+void registerBasicCommands(const std::shared_ptr<MqttRoot>& mqttRoot) {
     mqttRoot->registerCommand("restart", [](const JsonObject&, JsonObject&) {
         printf("Restarting...\n");
         fflush(stdout);
@@ -188,7 +188,7 @@ void registerBasicCommands(std::shared_ptr<MqttRoot> mqttRoot) {
     });
 }
 
-void registerFileCommands(std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<FileSystem> fs) {
+void registerFileCommands(const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<FileSystem>& fs) {
     mqttRoot->registerCommand("files/list", [fs](const JsonObject&, JsonObject& response) {
         JsonArray files = response["files"].to<JsonArray>();
         fs->readDir("/", [files](const std::string& name, off_t size) {
@@ -244,7 +244,7 @@ void registerFileCommands(std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<Fi
     });
 }
 
-void registerHttpUpdateCommand(std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<FileSystem> fs) {
+void registerHttpUpdateCommand(const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<FileSystem>& fs) {
     mqttRoot->registerCommand("update", [fs](const JsonObject& request, JsonObject& response) {
         if (!request["url"].is<std::string>()) {
             response["failure"] = "Command contains no URL";
@@ -262,10 +262,10 @@ void registerHttpUpdateCommand(std::shared_ptr<MqttRoot> mqttRoot, std::shared_p
 
 void initTelemetryPublishTask(
     std::chrono::milliseconds publishInterval,
-    std::shared_ptr<Watchdog> watchdog,
-    std::shared_ptr<PeripheralManager> peripheralManager,
-    std::shared_ptr<TelemetryPublisher> deviceTelemetryPublisher,
-    std::shared_ptr<CopyQueue<bool>> telemetryPublishQueue) {
+    const std::shared_ptr<Watchdog>& watchdog,
+    const std::shared_ptr<PeripheralManager>& peripheralManager,
+    const std::shared_ptr<TelemetryPublisher>& deviceTelemetryPublisher,
+    const std::shared_ptr<CopyQueue<bool>>& telemetryPublishQueue) {
     Task::loop("telemetry", 8192, [publishInterval, watchdog, peripheralManager, deviceTelemetryPublisher, telemetryPublishQueue](Task& task) {
         task.markWakeTime();
 
@@ -286,7 +286,7 @@ void initTelemetryPublishTask(
     });
 }
 
-enum class InitState {
+enum class InitState : std::uint8_t {
     Success = 0,
     PeripheralError = 1,
 };

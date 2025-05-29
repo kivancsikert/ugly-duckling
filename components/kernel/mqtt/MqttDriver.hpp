@@ -5,6 +5,7 @@
 #include <list>
 #include <memory>
 #include <optional>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -23,23 +24,23 @@ using namespace farmhub::kernel::drivers;
 
 namespace farmhub::kernel::mqtt {
 
-enum class Retention {
+enum class Retention : uint8_t {
     NoRetain,
     Retain
 };
 
-enum class QoS {
+enum class QoS : uint8_t {
     AtMostOnce = 0,
     AtLeastOnce = 1,
     ExactlyOnce = 2
 };
 
-enum class LogPublish {
+enum class LogPublish : uint8_t {
     Log,
     Silent
 };
 
-enum class PublishStatus {
+enum class PublishStatus : uint8_t {
     TimeOut = 0,
     Success = 1,
     Failed = 2,
@@ -69,11 +70,11 @@ public:
     MqttDriver(
         State& networkReady,
         std::shared_ptr<MdnsDriver> mdns,
-        const std::shared_ptr<Config> config,
+        const std::shared_ptr<Config>& config,
         const std::string& instanceName,
         StateSource& ready)
         : networkReady(networkReady)
-        , mdns(mdns)
+        , mdns(std::move(mdns))
         , configHostname(config->host.get())
         , configPort(config->port.get())
         , configServerCert(joinStrings(config->serverCert.get()))
@@ -290,10 +291,10 @@ private:
             Subscription {
                 topic,
                 qos,
-                handler });
+                std::move(handler) });
     }
 
-    static std::string joinStrings(std::list<std::string> strings) {
+    static std::string joinStrings(const std::list<std::string>& strings) {
         if (strings.empty()) {
             return "";
         }
@@ -304,7 +305,7 @@ private:
         return result;
     }
 
-    enum class MqttState {
+    enum class MqttState : uint8_t {
         Disconnected,
         Connecting,
         Connected,
@@ -687,7 +688,7 @@ private:
         LOGTD(Tag::MQTT, "Received '%s' (size: %d)",
             topic.c_str(), payload.length());
 #endif
-        for (auto subscription : subscriptions) {
+        for (const auto& subscription : subscriptions) {
             if (topicMatches(subscription.topic.c_str(), topic.c_str())) {
                 Task::run("mqtt:incoming-handler", 4096, [topic, payload, subscription](Task& task) {
                     JsonDocument json;

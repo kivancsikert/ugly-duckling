@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <utility>
 #include <vector>
 
 #include <driver/gpio.h>
@@ -37,7 +38,7 @@ public:
         throw std::runtime_error(std::string("Unknown pin: " + name).c_str());
     }
 
-    enum class Mode {
+    enum class Mode : uint8_t {
         Output,
         Input,
         InputPullUp,
@@ -55,7 +56,7 @@ public:
     }
 
     static void registerPin(const std::string& name, PinPtr pin) {
-        BY_NAME[name] = pin;
+        BY_NAME[name] = std::move(pin);
     }
 
 protected:
@@ -140,7 +141,7 @@ private:
 
 class AnalogPin {
 public:
-    AnalogPin(const InternalPinPtr pin)
+    AnalogPin(const InternalPinPtr& pin)
         : pin(pin) {
         adc_unit_t unit;
         ESP_ERROR_THROW(adc_oneshot_io_to_channel(pin->getGpio(), &unit, &channel));

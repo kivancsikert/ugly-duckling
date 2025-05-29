@@ -12,12 +12,13 @@
 #include <Log.hpp>
 #include <Watchdog.hpp>
 #include <drivers/WiFiDriver.hpp>
+#include <utility>
 
 namespace farmhub::kernel {
 
 class HttpUpdater {
 public:
-    static void startUpdate(const std::string& url, std::shared_ptr<FileSystem> fs) {
+    static void startUpdate(const std::string& url, const std::shared_ptr<FileSystem>& fs) {
         JsonDocument doc;
         doc["url"] = url;
         std::string content;
@@ -30,7 +31,7 @@ public:
         });
     }
 
-    static void performPendingHttpUpdateIfNecessary(std::shared_ptr<FileSystem> fs, std::shared_ptr<WiFiDriver> wifi, std::shared_ptr<Watchdog> watchdog) {
+    static void performPendingHttpUpdateIfNecessary(const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<WiFiDriver>& wifi, std::shared_ptr<Watchdog> watchdog) {
         // Do we need to update?
         if (!fs->exists(UPDATE_FILE)) {
             LOGV("No update file found, not updating");
@@ -60,7 +61,7 @@ public:
             return;
         }
 
-        HttpUpdater updater(watchdog);
+        HttpUpdater updater(std::move(watchdog));
         updater.performPendingHttpUpdate(url, wifi);
     }
 
@@ -68,10 +69,10 @@ public:
 
 private:
     HttpUpdater(std::shared_ptr<Watchdog> watchdog)
-        : watchdog(watchdog) {
+        : watchdog(std::move(watchdog)) {
     }
 
-    void performPendingHttpUpdate(const std::string& url, std::shared_ptr<WiFiDriver> wifi) {
+    void performPendingHttpUpdate(const std::string& url, const std::shared_ptr<WiFiDriver>& wifi) {
         LOGI("Updating from version %s via URL %s",
             farmhubVersion, url.c_str());
 

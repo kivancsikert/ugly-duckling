@@ -11,6 +11,7 @@
 #include <peripherals/valve/Valve.hpp>
 #include <peripherals/valve/ValveComponent.hpp>
 #include <peripherals/valve/ValveConfig.hpp>
+#include <utility>
 
 using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
@@ -27,10 +28,10 @@ class FlowControl : public Peripheral<FlowControlConfig> {
 public:
     FlowControl(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<PulseCounterManager> pulseCounterManager,
+        const std::shared_ptr<MqttRoot>& mqttRoot,
+        const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
         std::unique_ptr<ValveControlStrategy> strategy,
-        InternalPinPtr pin,
+        const InternalPinPtr& pin,
         double qFactor,
         milliseconds measurementFrequency)
         : Peripheral<FlowControlConfig>(name, mqttRoot)

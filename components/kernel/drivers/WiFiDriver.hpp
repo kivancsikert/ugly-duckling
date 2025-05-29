@@ -395,7 +395,7 @@ private:
     StateManager internalStates;
     StateSource stationStarted = internalStates.createStateSource("wifi:station-started");
 
-    enum class WiFiEvent {
+    enum class WiFiEvent : uint8_t {
         STARTED,
         CONNECTED,
         DISCONNECTED,

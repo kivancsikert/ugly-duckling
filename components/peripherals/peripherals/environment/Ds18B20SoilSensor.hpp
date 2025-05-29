@@ -8,6 +8,7 @@
 #include <Configuration.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/SinglePinDeviceConfig.hpp>
+#include <utility>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::mqtt;
@@ -27,8 +28,8 @@ public:
     Ds18B20SoilSensorComponent(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        InternalPinPtr pin)
-        : Component(name, mqttRoot)
+        const InternalPinPtr& pin)
+        : Component(name, std::move(mqttRoot))
         , pin(pin) {
 
         LOGI("Initializing DS18B20 soil temperature sensor on pin %s",
@@ -67,7 +68,7 @@ private:
 class Ds18B20SoilSensor
     : public Peripheral<EmptyConfiguration> {
 public:
-    Ds18B20SoilSensor(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot, InternalPinPtr pin)
+    Ds18B20SoilSensor(const std::string& name, const std::shared_ptr<MqttRoot>& mqttRoot, const InternalPinPtr& pin)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , sensor(name, mqttRoot, pin) {
     }

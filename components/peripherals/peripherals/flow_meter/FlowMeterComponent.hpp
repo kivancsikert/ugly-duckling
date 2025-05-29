@@ -11,6 +11,7 @@
 #include <Task.hpp>
 #include <Telemetry.hpp>
 #include <mqtt/MqttDriver.hpp>
+#include <utility>
 
 using namespace farmhub::kernel::mqtt;
 
@@ -23,11 +24,11 @@ public:
     FlowMeterComponent(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<PulseCounterManager> pulseCounterManager,
-        InternalPinPtr pin,
+        const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
+        const InternalPinPtr& pin,
         double qFactor,
         milliseconds measurementFrequency)
-        : Component(name, mqttRoot)
+        : Component(name, std::move(mqttRoot))
         , qFactor(qFactor) {
 
         LOGI("Initializing flow meter on pin %s with Q = %.2f",

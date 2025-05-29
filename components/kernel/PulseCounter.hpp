@@ -27,7 +27,7 @@ class PulseCounterManager;
  */
 class PulseCounter {
 public:
-    PulseCounter(InternalPinPtr pin)
+    PulseCounter(const InternalPinPtr& pin)
         : pin(pin) {
         auto gpio = pin->getGpio();
 
@@ -78,7 +78,7 @@ public:
     }
 
 private:
-    enum class EdgeKind {
+    enum class EdgeKind : uint8_t {
         Rising,
         Falling,
     };
@@ -161,7 +161,7 @@ private:
 
 class PulseCounterManager {
 public:
-    std::shared_ptr<PulseCounter> create(InternalPinPtr pin) {
+    std::shared_ptr<PulseCounter> create(const InternalPinPtr& pin) {
         if (!initialized) {
             initialized = true;
 

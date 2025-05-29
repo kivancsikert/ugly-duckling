@@ -17,7 +17,7 @@ using namespace farmhub::kernel;
 
 namespace farmhub::peripherals::valve {
 
-enum class ValveControlStrategyType {
+enum class ValveControlStrategyType : uint8_t {
     NormallyOpen,
     NormallyClosed,
     Latching

@@ -118,7 +118,7 @@ public:
     }
 
 private:
-    esp_err_t withPreferences(bool readOnly, std::function<esp_err_t(nvs_handle_t)> action) {
+    esp_err_t withPreferences(bool readOnly, const std::function<esp_err_t(nvs_handle_t)>& action) {
         Lock lock(preferencesMutex);
         LOGTV(Tag::NVS, "%s '%s'", readOnly ? "read" : "write", name.c_str());
 

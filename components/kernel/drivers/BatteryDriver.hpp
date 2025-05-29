@@ -5,6 +5,7 @@
 
 #include <Pin.hpp>
 #include <Telemetry.hpp>
+#include <utility>
 
 using farmhub::kernel::PinPtr;
 
@@ -39,7 +40,7 @@ public:
 class AnalogBatteryDriver
     : public BatteryDriver {
 public:
-    AnalogBatteryDriver(InternalPinPtr pin, float voltageDividerRatio, const BatteryParameters& parameters)
+    AnalogBatteryDriver(const InternalPinPtr& pin, float voltageDividerRatio, const BatteryParameters& parameters)
         : BatteryDriver(parameters)
         , analogPin(pin)
         , voltageDividerRatio(voltageDividerRatio) {

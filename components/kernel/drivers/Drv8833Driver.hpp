@@ -8,6 +8,7 @@
 #include <Pin.hpp>
 #include <PwmManager.hpp>
 #include <drivers/MotorDriver.hpp>
+#include <utility>
 
 using namespace std::chrono;
 
@@ -23,13 +24,13 @@ class Drv8833Driver
 
 public:
     static std::shared_ptr<Drv8833Driver> create(
-        std::shared_ptr<PwmManager> pwm,
-        InternalPinPtr ain1Pin,
-        InternalPinPtr ain2Pin,
-        InternalPinPtr bin1Pin,
-        InternalPinPtr bin2Pin,
-        PinPtr faultPin,
-        PinPtr sleepPin) {
+        const std::shared_ptr<PwmManager>& pwm,
+        const InternalPinPtr& ain1Pin,
+        const InternalPinPtr& ain2Pin,
+        const InternalPinPtr& bin1Pin,
+        const InternalPinPtr& bin2Pin,
+        const PinPtr& faultPin,
+        const PinPtr& sleepPin) {
         auto driver = std::make_shared<Drv8833Driver>(faultPin, sleepPin);
         driver->initMotors(pwm, ain1Pin, ain2Pin, bin1Pin, bin2Pin);
         return driver;
@@ -44,7 +45,7 @@ public:
     }
 
     // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
-    Drv8833Driver(PinPtr faultPin, PinPtr sleepPin)
+    Drv8833Driver(const PinPtr& faultPin, const PinPtr& sleepPin)
         : faultPin(faultPin)
         , sleepPin(sleepPin) {
 
@@ -62,11 +63,11 @@ public:
 
 private:
     void initMotors(
-        std::shared_ptr<PwmManager> pwm,
-        InternalPinPtr ain1Pin,
-        InternalPinPtr ain2Pin,
-        InternalPinPtr bin1Pin,
-        InternalPinPtr bin2Pin) {
+        const std::shared_ptr<PwmManager>& pwm,
+        const InternalPinPtr& ain1Pin,
+        const InternalPinPtr& ain2Pin,
+        const InternalPinPtr& bin1Pin,
+        const InternalPinPtr& bin2Pin) {
 
         LOGI("Initializing DRV8833 motors on pins ain1 = %s, ain2 = %s, bin1 = %s, bin2 = %s",
             ain1Pin->getName().c_str(),
@@ -85,11 +86,11 @@ private:
     public:
         Drv8833MotorDriver(
             std::shared_ptr<Drv8833Driver> driver,
-            std::shared_ptr<PwmManager> pwm,
-            InternalPinPtr in1Pin,
-            InternalPinPtr in2Pin,
+            const std::shared_ptr<PwmManager>& pwm,
+            const InternalPinPtr& in1Pin,
+            const InternalPinPtr& in2Pin,
             bool canSleep)
-            : driver(driver)
+            : driver(std::move(driver))
             , in1Channel(pwm->registerPin(in1Pin, PWM_FREQ, PWM_RESOLUTION))
             , in2Channel(pwm->registerPin(in2Pin, PWM_FREQ, PWM_RESOLUTION))
             , sleeping(canSleep) {

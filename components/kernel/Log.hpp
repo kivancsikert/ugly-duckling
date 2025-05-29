@@ -6,7 +6,7 @@
 
 namespace farmhub::kernel {
 
-enum class Level {
+enum class Level : uint8_t {
     None = 0,
     // Fatal = 1,
     Error = 2,
