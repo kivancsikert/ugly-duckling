@@ -29,7 +29,9 @@ using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::kernel {
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 static RTC_DATA_ATTR int bootCount = 0;
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 class KernelStatusTask;
 

@@ -19,7 +19,6 @@ Checks: >
   -cppcoreguidelines-owning-memory,
   -cppcoreguidelines-pro-type-vararg,
   -cppcoreguidelines-avoid-const-or-ref-data-members,
-  -cppcoreguidelines-avoid-non-const-global-variables,
   -cppcoreguidelines-init-variables,
   -cppcoreguidelines-macro-usage,
   -cppcoreguidelines-non-private-member-variables-in-classes,
