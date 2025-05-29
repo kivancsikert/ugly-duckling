@@ -16,5 +16,8 @@ sdkconfig*
 managed_components/
 dependencies*.lock
 
+# Clang Tidy's output
+warnings.txt
+
 __pycache__/
 .pytest_cache/
