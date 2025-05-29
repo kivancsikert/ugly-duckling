@@ -224,6 +224,8 @@ private:
         }
     }
 
+    // TODO Refactor this to avoid using goto
+    // NOLINTBEGIN(cppcoreguidelines-avoid-goto)
     void runLoop() {
         bool connected = false;
         std::optional<time_point<boot_clock>> connectingSince;
@@ -279,6 +281,7 @@ private:
             }
         }
     }
+    // NOLINTEND(cppcoreguidelines-avoid-goto)
 
     void connect() {
         networkConnecting.set();
