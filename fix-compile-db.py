@@ -5,11 +5,17 @@ import subprocess
 import re
 from pathlib import Path
 
+# Flags from GCC that are not supported by Clang
 UNSUPPORTED_FLAGS = [
     "-fanalyzer",
     "-fno-shrink-wrap",
     "-fno-tree-switch-conversion",
     "-fstrict-volatile-bitfields",
+    "-mlongcalls",
+]
+
+# ✅ Extra args appended to each compile command
+EXTRA_ARGS = [
 ]
 
 def run(cmd):
@@ -28,7 +34,7 @@ def get_gcc_version():
 def patch_command(command, includes):
     tokens = command.split()
     tokens = [tok for tok in tokens if tok not in UNSUPPORTED_FLAGS]
-    return tokens + [f"-I{inc}" for inc in includes]
+    return tokens + [f"-isystem{inc}" for inc in includes] + EXTRA_ARGS
 
 def fix_compile_commands(input_path, output_path, sysroot, gcc_version):
     with open(input_path, "r", encoding="utf-8") as f:
@@ -54,7 +60,7 @@ def fix_compile_commands(input_path, output_path, sysroot, gcc_version):
 # --- Main ---
 if __name__ == "__main__":
     input_file = "build/compile_commands.json"
-    output_file = "build/clang/compile_commands.json"
+    output_file = "build/clang-tidy/compile_commands.json"
 
     sysroot = get_sysroot()
     version = get_gcc_version()
