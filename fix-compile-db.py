@@ -2,7 +2,6 @@
 
 import json
 import subprocess
-import os
 import re
 from pathlib import Path
 
@@ -17,7 +16,7 @@ def run(cmd):
     return subprocess.check_output(cmd, shell=True, text=True).strip()
 
 def get_sysroot():
-    return run("xtensa-esp32-elf-g++ -print-sysroot")
+    return run("xtensa-esp32-elf-g++ -print-sysroot").replace("\\", "/")
 
 def get_gcc_version():
     output = run("xtensa-esp32-elf-g++ --version")
@@ -36,9 +35,9 @@ def fix_compile_commands(input_path, output_path, sysroot, gcc_version):
         commands = json.load(f)
 
     include_dirs = [
-        os.path.join(sysroot, "include"),
-        os.path.join(sysroot, "lib", "gcc", "xtensa-esp32-elf", gcc_version, "include", "c++"),
-        os.path.join(sysroot, "lib", "gcc", "xtensa-esp32-elf", gcc_version, "include", "c++", "xtensa-esp32-elf"),
+        f"{sysroot}/include",
+        f"{sysroot}/include/c++/{gcc_version}",
+        f"{sysroot}/include/c++/{gcc_version}/xtensa-esp-elf",
     ]
 
     for entry in commands:
@@ -46,6 +45,7 @@ def fix_compile_commands(input_path, output_path, sysroot, gcc_version):
             original = entry["command"]
             entry["command"] = " ".join(patch_command(original, include_dirs))
 
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(commands, f, indent=2)
 
@@ -54,7 +54,7 @@ def fix_compile_commands(input_path, output_path, sysroot, gcc_version):
 # --- Main ---
 if __name__ == "__main__":
     input_file = "build/compile_commands.json"
-    output_file = "build/compile_commands.clang.json"
+    output_file = "build/clang/compile_commands.json"
 
     sysroot = get_sysroot()
     version = get_gcc_version()
