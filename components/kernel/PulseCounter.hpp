@@ -84,7 +84,7 @@ private:
     };
 
     static void IRAM_ATTR interruptHandler(void* arg) {
-        auto self = static_cast<PulseCounter*>(arg);
+        auto* self = static_cast<PulseCounter*>(arg);
         self->handlePotentialStateChange();
     }
 
@@ -93,7 +93,7 @@ private:
     }
 
     IRAM_ATTR EdgeKind takeSample() {
-        return pin->digitalRead()
+        return (pin->digitalRead() != 0)
             ? EdgeKind::Rising
             : EdgeKind::Falling;
     }
@@ -169,7 +169,7 @@ public:
             esp_pm_sleep_cbs_register_config_t sleepCallbackConfig = {
                 .exit_cb = [](int64_t timeSleptInUs, void* arg) {
                 if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
-                    auto self = static_cast<PulseCounterManager*>(arg);
+                    auto* self = static_cast<PulseCounterManager*>(arg);
                     for (auto& counter : self->counters) {
                         counter->handlePotentialStateChange();
                     }

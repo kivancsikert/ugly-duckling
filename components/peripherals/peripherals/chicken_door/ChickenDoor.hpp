@@ -185,7 +185,7 @@ public:
         telemetry["operationState"] = operationState;
         if (overrideState != DoorState::NONE) {
             time_t rawtime = system_clock::to_time_t(overrideUntil);
-            auto timeinfo = gmtime(&rawtime);
+            auto* timeinfo = gmtime(&rawtime);
             char buffer[80];
             strftime(buffer, 80, "%FT%TZ", timeinfo);
             telemetry["overrideEnd"] = std::string(buffer);
@@ -313,35 +313,36 @@ private:
         if (open && close) {
             LOGD("Both open and close switches are engaged");
             return DoorState::NONE;
-        } else if (open) {
-            return DoorState::OPEN;
-        } else if (close) {
-            return DoorState::CLOSED;
-        } else {
-            return DoorState::NONE;
         }
+        if (open) {
+            return DoorState::OPEN;
+        }
+        if (close) {
+            return DoorState::CLOSED;
+        }
+        return DoorState::NONE;
     }
 
     DoorState determineTargetState(DoorState currentState) {
         if (overrideUntil >= system_clock::now()) {
             return overrideState;
-        } else {
-            if (overrideState != DoorState::NONE) {
-                LOGI("Override expired, returning to scheduled state");
-                Lock lock(stateMutex);
-                overrideState = DoorState::NONE;
-                overrideUntil = time_point<system_clock>::min();
-            }
-            auto lightLevel = lightSensor.getCurrentLevel();
-            if (lightLevel >= openLevel) {
-                return DoorState::OPEN;
-            } else if (lightLevel <= closeLevel) {
-                return DoorState::CLOSED;
-            }
-            return currentState == DoorState::NONE
-                ? DoorState::CLOSED
-                : currentState;
         }
+        if (overrideState != DoorState::NONE) {
+            LOGI("Override expired, returning to scheduled state");
+            Lock lock(stateMutex);
+            overrideState = DoorState::NONE;
+            overrideUntil = time_point<system_clock>::min();
+        }
+        auto lightLevel = lightSensor.getCurrentLevel();
+        if (lightLevel >= openLevel) {
+            return DoorState::OPEN;
+        }
+        if (lightLevel <= closeLevel) {
+            return DoorState::CLOSED;
+        }
+        return currentState == DoorState::NONE
+            ? DoorState::CLOSED
+            : currentState;
     }
 
     const std::shared_ptr<PwmMotorDriver> motor;
@@ -463,11 +464,12 @@ public:
         try {
             if (lightSensorType == "bh1750") {
                 return std::make_unique<ChickenDoor<Bh1750Component>>(name, mqttRoot, services.i2c, 0x23, services.switches, motor, deviceConfig);
-            } else if (lightSensorType == "tsl2591") {
-                return std::make_unique<ChickenDoor<Tsl2591Component>>(name, mqttRoot, services.i2c, TSL2591_ADDR, services.switches, motor, deviceConfig);
-            } else {
-                throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
             }
+            if (lightSensorType == "tsl2591") {
+                return std::make_unique<ChickenDoor<Tsl2591Component>>(name, mqttRoot, services.i2c, TSL2591_ADDR, services.switches, motor, deviceConfig);
+            }
+            throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
+
         } catch (const std::exception& e) {
             LOGE("Could not initialize light sensor because %s", e.what());
             LOGW("Initializing without a light sensor");

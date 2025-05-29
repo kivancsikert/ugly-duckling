@@ -67,9 +67,8 @@ protected:
         if (res != ESP_OK) {
             LOGD("Could not read light level: %s", esp_err_to_name(res));
             return std::numeric_limits<double>::quiet_NaN();
-        } else {
-            return lux;
         }
+        return lux;
     }
 
 private:

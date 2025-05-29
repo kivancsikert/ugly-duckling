@@ -64,9 +64,9 @@ private:
         cursor++;
 
         if (blinkTime > milliseconds::zero()) {
-            setLedState(0);
+            setLedState(false);
         } else {
-            setLedState(1);
+            setLedState(true);
         }
 
         // TOOD Substract processing time from delay
@@ -83,7 +83,7 @@ private:
 
     void setLedState(bool state) {
         this->ledState = state;
-        pin->digitalWrite(state);
+        pin->digitalWrite(static_cast<uint8_t>(state));
     }
 
     const PinPtr pin;

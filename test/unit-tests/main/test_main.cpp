@@ -2,10 +2,9 @@
 
 #include <stdio.h>
 
-extern "C" void app_main(void)
-{
+extern "C" void app_main(void) {
     int argc = 1;
-    const char *argv[2] = {
+    const char* argv[2] = {
         "target_test_main",
         NULL
     };

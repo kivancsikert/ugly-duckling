@@ -49,7 +49,7 @@ private:
 
 class PcntManager {
 public:
-    std::shared_ptr<PulseCounterUnit> registerUnit(const InternalPinPtr& pin, nanoseconds maxGlitchDuration = 1000ns) {
+    static std::shared_ptr<PulseCounterUnit> registerUnit(const InternalPinPtr& pin, nanoseconds maxGlitchDuration = 1000ns) {
         pcnt_unit_config_t unitConfig = {
             .low_limit = std::numeric_limits<int16_t>::min(),
             .high_limit = std::numeric_limits<int16_t>::max(),

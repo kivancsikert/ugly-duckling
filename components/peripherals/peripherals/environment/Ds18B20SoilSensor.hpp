@@ -44,7 +44,7 @@ public:
 
         esp_err_t searchResult = ds18x20_scan_devices(pin->getGpio(), &sensor, maxSensors, &sensorCount);
         if (searchResult == ESP_OK) {
-            if (!sensorCount) {
+            if (sensorCount == 0U) {
                 throw PeripheralCreationException("No DS18B20 sensors found on bus");
             }
             LOGD("Found a DS18B20 at address: %016llX", sensor);

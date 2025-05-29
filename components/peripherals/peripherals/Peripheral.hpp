@@ -152,7 +152,7 @@ public:
         return peripheral;
     }
 
-    virtual std::unique_ptr<Peripheral<TConfig>> createPeripheral(const std::string& name, const std::shared_ptr<TDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) = 0;
+    virtual std::unique_ptr<Peripheral<TConfig>> createPeripheral(const std::string& name, std::shared_ptr<TDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) = 0;
 
 private:
     std::tuple<TDeviceConfigArgs...> deviceConfigArgs;
@@ -263,9 +263,9 @@ private:
         if (it == factories.end()) {
             throw PeripheralCreationException("Factory not found: '" + factoryType + "'");
         }
-        const std::string& peripheralType = it->second.get()->peripheralType;
+        const std::string& peripheralType = it->second->peripheralType;
         std::shared_ptr<MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
-        return it->second.get()->createPeripheral(name, configJson, mqttRoot, fs, services, initConfigJson);
+        return it->second->createPeripheral(name, configJson, mqttRoot, fs, services, initConfigJson);
     }
 
     enum class State : uint8_t {

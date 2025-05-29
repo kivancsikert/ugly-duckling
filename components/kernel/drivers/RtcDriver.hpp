@@ -136,7 +136,7 @@ private:
         LOGD("List of configured NTP servers:");
 
         for (uint8_t i = 0; i < SNTP_MAX_SERVERS; ++i) {
-            if (esp_sntp_getservername(i)) {
+            if (esp_sntp_getservername(i) != nullptr) {
                 LOGD(" - server %d: '%s'", i, esp_sntp_getservername(i));
             } else {
                 char buff[48];

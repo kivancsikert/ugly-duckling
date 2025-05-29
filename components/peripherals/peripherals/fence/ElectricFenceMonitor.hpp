@@ -51,14 +51,15 @@ public:
         : Component(name, std::move(mqttRoot)) {
 
         std::string pinsDescription;
-        for (auto& pinConfig : config->pins.get()) {
-            if (pinsDescription.length() > 0)
+        for (const auto& pinConfig : config->pins.get()) {
+            if (!pinsDescription.empty()) {
                 pinsDescription += ", ";
+            }
             pinsDescription += pinConfig.pin->getName() + "=" + std::to_string(pinConfig.voltage) + "V";
         }
         LOGI("Initializing electric fence with pins %s", pinsDescription.c_str());
 
-        for (auto& pinConfig : config->pins.get()) {
+        for (const auto& pinConfig : config->pins.get()) {
             auto unit = pulseCounterManager->create(pinConfig.pin);
             pins.emplace_back(pinConfig.voltage, unit);
         }

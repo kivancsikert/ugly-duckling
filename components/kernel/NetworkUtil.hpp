@@ -8,7 +8,7 @@ namespace farmhub::kernel {
 
 static const std::string& getMacAddress() {
     static std::string macAddress;
-    if (macAddress.length() == 0) {
+    if (macAddress.empty()) {
         uint8_t rawMac[6];
         for (int i = 0; i < 6; i++) {
             rawMac[i] = 0;

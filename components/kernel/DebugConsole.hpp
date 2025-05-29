@@ -50,8 +50,8 @@ private:
     }
 
     static const char* wifiStatus() {
-        auto netif = esp_netif_get_default_netif();
-        if (!netif) {
+        auto* netif = esp_netif_get_default_netif();
+        if (netif == nullptr) {
             return "\033[0;33moff\033[0m";
         }
 
@@ -91,9 +91,8 @@ private:
             static char ip_str[32];
             snprintf(ip_str, sizeof(ip_str), "\033[0;33m" IPSTR "\033[0m", IP2STR(&ip_info.ip));
             return ip_str;
-        } else {
-            return "\033[0;33mIP?\033[0m";
         }
+        return "\033[0;33mIP?\033[0m";
     }
 
     const std::shared_ptr<BatteryManager> battery;

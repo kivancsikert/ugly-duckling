@@ -55,9 +55,8 @@ private:
         if (res != ESP_OK) {
             LOGD("Could not measure temperature: %s", esp_err_to_name(res));
             return std::numeric_limits<float>::quiet_NaN();
-        } else {
-            return value;
         }
+        return value;
     }
 
     float getHumidity() {
@@ -66,9 +65,8 @@ private:
         if (res != ESP_OK) {
             LOGD("Could not measure humidity: %s", esp_err_to_name(res));
             return std::numeric_limits<float>::quiet_NaN();
-        } else {
-            return value;
         }
+        return value;
     }
 
     std::shared_ptr<I2CBus> bus;

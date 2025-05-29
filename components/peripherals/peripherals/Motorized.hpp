@@ -21,7 +21,7 @@ public:
         if (motorName.empty() && motors.size() == 1) {
             return motors.begin()->second;
         }
-        for (auto& motor : motors) {
+        for (const auto& motor : motors) {
             if (motor.first == motorName) {
                 return motor.second;
             }

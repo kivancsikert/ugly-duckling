@@ -299,7 +299,7 @@ private:
             return "";
         }
         std::string result;
-        for (auto& str : strings) {
+        for (const auto& str : strings) {
             result += str + "\n";
         }
         return result;
@@ -405,9 +405,8 @@ private:
                     // Force next session to start clean, so we can re-subscribe
                     nextSessionShouldBeClean = true;
                     return true;
-                } else {
-                    return false;
                 }
+                return false;
             });
 
             switch (state) {
@@ -521,7 +520,7 @@ private:
     bool clientRunning = false;
 
     static void handleMqttEventCallback(void* userData, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
-        auto event = static_cast<esp_mqtt_event_handle_t>(eventData);
+        auto* event = static_cast<esp_mqtt_event_handle_t>(eventData);
         // LOGTV(Tag::MQTT, "Event dispatched from event loop: base=%s, event_id=%d, client=%p, data=%p, data_len=%d, topic=%p, topic_len=%d, msg_id=%d",
         //     eventBase, event->event_id, event->client, event->data, event->data_len, event->topic, event->topic_len, event->msg_id);
         auto* driver = static_cast<MqttDriver*>(userData);
@@ -620,7 +619,7 @@ private:
             message.payload.c_str(),
             (int) message.payload.length(),
             static_cast<int>(message.qos),
-            message.retain == Retention::Retain,
+            static_cast<int>(message.retain == Retention::Retain),
             true);
 
         if (ret < 0) {
@@ -703,24 +702,24 @@ private:
     }
 
     static std::string getClientId(const std::string& clientId, const std::string& instanceName) {
-        if (clientId.length() > 0) {
+        if (!clientId.empty()) {
             return clientId;
         }
         return "ugly-duckling-" + instanceName;
     }
 
-    static bool topicMatches(const char *pattern, const char *topic) {
-        const char *pat_ptr = pattern;
-        const char *top_ptr = topic;
+    static bool topicMatches(const char* pattern, const char* topic) {
+        const char* pat_ptr = pattern;
+        const char* top_ptr = topic;
 
-        while (*pat_ptr && *top_ptr) {
+        while ((*pat_ptr != 0) && (*top_ptr != 0)) {
             // Extract pattern level
-            const char *pat_end = strchr(pat_ptr, '/');
-            size_t pat_len = pat_end ? (size_t)(pat_end - pat_ptr) : strlen(pat_ptr);
+            const char* pat_end = strchr(pat_ptr, '/');
+            size_t pat_len = (pat_end != nullptr) ? (size_t) (pat_end - pat_ptr) : strlen(pat_ptr);
 
             // Extract topic level
-            const char *top_end = strchr(top_ptr, '/');
-            size_t top_len = top_end ? (size_t)(top_end - top_ptr) : strlen(top_ptr);
+            const char* top_end = strchr(top_ptr, '/');
+            size_t top_len = (top_end != nullptr) ? (size_t) (top_end - top_ptr) : strlen(top_ptr);
 
             // Handle wildcard +
             if (strncmp(pat_ptr, "+", pat_len) == 0) {
@@ -736,15 +735,23 @@ private:
             }
 
             // Move to next level
-            if (pat_end) pat_ptr = pat_end + 1;
-            else pat_ptr += pat_len;
+            if (pat_end != nullptr) {
+                pat_ptr = pat_end + 1;
+            } else {
+                pat_ptr += pat_len;
+            }
 
-            if (top_end) top_ptr = top_end + 1;
-            else top_ptr += top_len;
+            if (top_end != nullptr) {
+                top_ptr = top_end + 1;
+            } else {
+                top_ptr += top_len;
+            }
         }
 
         // Handle cases like pattern: "foo/#", topic: "foo"
-        if (*pat_ptr == '#' && *(pat_ptr + 1) == '\0') return true;
+        if (*pat_ptr == '#' && *(pat_ptr + 1) == '\0') {
+            return true;
+        }
 
         return *pat_ptr == '\0' && *top_ptr == '\0';
     }

@@ -90,7 +90,7 @@ private:
 
         auto framesJson = backtraceJson["frames"].to<JsonArray>();
         for (int i = 0; i < summary.exc_bt_info.depth; i++) {
-            auto& frame = summary.exc_bt_info.bt[i];
+            const auto& frame = summary.exc_bt_info.bt[i];
             framesJson.add("0x" + toHexString(frame));
         }
 #else

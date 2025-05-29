@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Log.hpp>
 #include <Concurrent.hpp>
+#include <Log.hpp>
 #include <utility>
 
 namespace farmhub::kernel {
@@ -42,16 +42,16 @@ private:
             if (message[message.length() - 1] != '\n') {
                 partialMessage += message;
                 return 0;
-            } else if (!partialMessage.empty()) {
+            }
+            if (!partialMessage.empty()) {
                 assembledMessage = partialMessage + message;
                 partialMessage.clear();
             }
         }
         if (assembledMessage.empty()) {
             return processLogLine(message);
-        } else {
-            return processLogLine(assembledMessage);
         }
+        return processLogLine(assembledMessage);
     }
 
     static int processLogLine(const std::string& message) {
@@ -108,7 +108,8 @@ private:
             length = vsnprintf(buffer, BUFFER_SIZE, format, args);
             if (length < 0) {
                 return "<Encoding error>";
-            } else if (length < BUFFER_SIZE) {
+            }
+            if (length < BUFFER_SIZE) {
                 return std::string(buffer, length);
             }
         }

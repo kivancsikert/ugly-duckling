@@ -31,7 +31,7 @@ public:
         LOGD("Creating combined state: %s",
             name.c_str());
         EventBits_t eventBits = 0;
-        for (auto& state : states) {
+        for (const auto& state : states) {
             eventBits |= state.eventBits;
         }
         return State(name, eventGroup, eventBits);
@@ -51,7 +51,7 @@ public:
      */
     bool awaitStateChange(ticks timeout) const {
         // Since this is bit 0, we can just return the result directly
-        return xEventGroupWaitBits(eventGroup, STATE_CHANGE_BIT_MASK, true, true, timeout.count());
+        return xEventGroupWaitBits(eventGroup, STATE_CHANGE_BIT_MASK, 1, 1, timeout.count()) != 0U;
     }
 
 private:

@@ -1,4 +1,4 @@
-#pragma once
+    #pragma once
 
 // Helper macros to convert macro to string
 #define STRINGIFY(x) #x
@@ -251,7 +251,7 @@ void registerHttpUpdateCommand(const std::shared_ptr<MqttRoot>& mqttRoot, const 
             return;
         }
         std::string url = request["url"];
-        if (url.length() == 0) {
+        if (url.empty()) {
             response["failure"] = "Command contains empty url";
             return;
         }
@@ -278,7 +278,7 @@ void initTelemetryPublishTask(
         // We always wait at least this much between telemetry updates
         const auto debounceInterval = 500ms;
         // Delay without updating last wake time
-        task.delay(task.ticksUntil(debounceInterval));
+        Task::delay(task.ticksUntil(debounceInterval));
 
         // Allow other tasks to trigger telemetry updates
         auto timeout = task.ticksUntil(publishInterval - debounceInterval);
@@ -447,7 +447,7 @@ static void startDevice() {
     initTelemetryPublishTask(deviceConfig->publishInterval.get(), watchdog, peripheralManager, deviceTelemetryPublisher, telemetryPublishQueue);
 
     // Enable power saving once we are done initializing
-    wifi->setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
+    WiFiDriver::setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
 
     mqttRoot->publish(
         "init",

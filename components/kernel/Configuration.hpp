@@ -119,13 +119,13 @@ public:
     }
 
     virtual void store(JsonObject& json, bool inlineDefaults) const override {
-        for (auto& entry : entries) {
+        for (const auto& entry : entries) {
             entry.get().store(json, inlineDefaults);
         }
     }
 
     virtual bool hasValue() const override {
-        for (auto& entry : entries) {
+        for (const auto& entry : entries) {
             if (entry.get().hasValue()) {
                 return true;
             }
@@ -179,7 +179,7 @@ public:
         delegate->reset();
     }
 
-    const std::shared_ptr<TDelegateEntry> get() const {
+    std::shared_ptr<TDelegateEntry> get() const {
         return delegate;
     }
 
@@ -318,7 +318,7 @@ public:
         onUpdate([fs, path](const JsonObject& json) {
             std::string contents;
             serializeJson(json, contents);
-            bool success = fs->writeAll(path, contents);
+            bool success = fs->writeAll(path, contents) != 0U;
             if (!success) {
                 throw ConfigurationException("Cannot write config file " + path);
             }

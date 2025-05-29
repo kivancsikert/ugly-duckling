@@ -39,7 +39,7 @@ public:
     /**
      * @brief Checks if the state is set.
      */
-    bool inline isSet() const {
+    bool isSet() const {
         return awaitSet(ticks::zero());
     }
 
@@ -49,7 +49,7 @@ public:
      * @return Whether the state was set before the timeout elapsed.
      */
     bool awaitSet(const ticks timeout) const {
-        return hasAllBits(xEventGroupWaitBits(eventGroup, eventBits, false, true, timeout.count()));
+        return hasAllBits(xEventGroupWaitBits(eventGroup, eventBits, 0, 1, timeout.count()));
     }
 
     /**
@@ -97,11 +97,11 @@ public:
     bool IRAM_ATTR clearFromISR() const;
 
 private:
-    EventBits_t inline setBits(EventBits_t bits) const {
+    EventBits_t setBits(EventBits_t bits) const {
         return xEventGroupSetBits(eventGroup, bits);
     }
 
-    EventBits_t inline setBitsFromISR(EventBits_t bits) const {
+    EventBits_t setBitsFromISR(EventBits_t bits) const {
         BaseType_t xHigherPriorityTaskWoken = pdFALSE;
         auto result = xEventGroupSetBitsFromISR(eventGroup, bits, &xHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);

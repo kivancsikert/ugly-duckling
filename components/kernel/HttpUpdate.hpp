@@ -46,7 +46,7 @@ public:
         JsonDocument doc;
         auto error = deserializeJson(doc, contents.value());
         int deleteError = fs->remove(UPDATE_FILE);
-        if (deleteError) {
+        if (deleteError != 0) {
             LOGE("Failed to delete update file");
             return;
         }
@@ -109,7 +109,7 @@ private:
     }
 
     static esp_err_t httpEventHandler(esp_http_client_event_t* event) {
-        auto updater = static_cast<HttpUpdater*>(event->user_data);
+        auto* updater = static_cast<HttpUpdater*>(event->user_data);
         return updater->handleEvent(event);
     }
 

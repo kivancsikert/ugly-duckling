@@ -20,7 +20,7 @@ public:
     void collect(JsonObject& root) {
         root["uptime"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
         for (auto& entry : providers) {
-            auto& name = entry.first;
+            const auto& name = entry.first;
             auto& provider = entry.second;
             JsonObject telemetryRoot = root[name].to<JsonObject>();
             provider->populateTelemetry(telemetryRoot);

@@ -3,10 +3,17 @@ Checks: >
   bugprone-*,
   -bugprone-easily-swappable-parameters,
   performance-*,
-#   readability-*,
+  readability-*,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-use-anyofallof,
 #   modernize-*,
 #   -modernize-use-trailing-return-type,
 #   cppcoreguidelines-*,
 #   -cppcoreguidelines-pro-type-vararg,
 #   -cppcoreguidelines-owning-memory
+
+CheckOptions:
+  readability-function-cognitive-complexity.Threshold: 200
+
 HeaderFilterRegex: '/ugly-duckling/(main|components)/'

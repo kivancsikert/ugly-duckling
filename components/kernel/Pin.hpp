@@ -51,7 +51,7 @@ public:
 
     virtual int digitalRead() const = 0;
 
-    inline const std::string& getName() const {
+    const std::string& getName() const {
         return name;
     }
 
@@ -66,7 +66,7 @@ protected:
 
     virtual ~Pin() = default;
 
-protected:
+
     const std::string name;
 
     static std::map<std::string, PinPtr> BY_NAME;
@@ -100,9 +100,8 @@ public:
         if (it == INTERNAL_BY_GPIO.end()) {
             std::string name = "GPIO_NUM_" + std::to_string(static_cast<int>(pin));
             return registerPin(name, pin);
-        } else {
-            return it->second;
-        }
+        }             return it->second;
+
     }
 
     InternalPin(const std::string& name, gpio_num_t gpio)
@@ -121,15 +120,15 @@ public:
         ESP_ERROR_THROW(gpio_config(&conf));
     }
 
-    inline void digitalWrite(uint8_t val) const override {
+    void digitalWrite(uint8_t val) const override {
         gpio_set_level(gpio, val);
     }
 
-    inline int digitalRead() const override {
+    int digitalRead() const override {
         return gpio_get_level(gpio);
     }
 
-    inline gpio_num_t getGpio() const {
+    gpio_num_t getGpio() const {
         return gpio;
     }
 
@@ -229,9 +228,8 @@ struct Converter<PinPtr> {
     static PinPtr fromJson(JsonVariantConst src) {
         if (src.is<const char*>()) {
             return Pin::byName(src.as<const char*>());
-        } else {
-            throw std::runtime_error(std::string("Invalid pin name: " + src.as<std::string>()).c_str());
-        }
+        }             throw std::runtime_error(std::string("Invalid pin name: " + src.as<std::string>()).c_str());
+
     }
 
     static bool checkJson(JsonVariantConst src) {
@@ -254,9 +252,8 @@ struct Converter<InternalPinPtr> {
     static InternalPinPtr fromJson(JsonVariantConst src) {
         if (src.is<const char*>()) {
             return InternalPin::byName(src.as<const char*>());
-        } else {
-            return InternalPin::byGpio(static_cast<gpio_num_t>(src.as<int>()));
-        }
+        }             return InternalPin::byGpio(static_cast<gpio_num_t>(src.as<int>()));
+
     }
 
     static bool checkJson(JsonVariantConst src) {

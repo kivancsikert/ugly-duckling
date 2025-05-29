@@ -35,7 +35,7 @@ public:
     SwitchManager() {
         Task::loop("switch-manager", 3072, [this](Task& task) {
             SwitchStateChange stateChange = switchStateInterrupts.take();
-            auto state = stateChange.switchState;
+            auto* state = stateChange.switchState;
             auto engaged = stateChange.engaged;
             LOGV("Switch %s is %s",
                 state->name.c_str(), engaged ? "engaged" : "released");
@@ -54,12 +54,12 @@ public:
 
     const Switch& onEngaged(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
         return registerHandler(
-            name, pin, mode, std::move(engagementHandler), [](const Switch&, milliseconds) {});
+            name, pin, mode, std::move(engagementHandler), [](const Switch&, milliseconds) { });
     }
 
     const Switch& onReleased(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
         return registerHandler(
-            name, pin, mode, [](const Switch&) {}, std::move(releaseHandler));
+            name, pin, mode, [](const Switch&) { }, std::move(releaseHandler));
     }
 
     const Switch& registerHandler(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
@@ -121,7 +121,7 @@ private:
         bool engaged;
     };
 
-    void inline queueSwitchStateChange(SwitchState* state, bool engaged) {
+    void queueSwitchStateChange(SwitchState* state, bool engaged) {
         switchStateInterrupts.offerFromISR(SwitchStateChange { state, engaged });
     }
 

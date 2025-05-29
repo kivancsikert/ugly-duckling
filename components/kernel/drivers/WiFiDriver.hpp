@@ -56,7 +56,7 @@ public:
         });
     }
 
-    void setPowerSaveMode(bool enable) {
+    static void setPowerSaveMode(bool enable) {
         ESP_ERROR_CHECK(esp_wifi_set_ps(enable
                 ? WIFI_PS_MAX_MODEM
                 : WIFI_PS_MIN_MODEM));
@@ -108,7 +108,7 @@ private:
         } else if (eventBase == IP_EVENT) {
             driver->onIpEvent(eventId, eventData);
         } else if (eventBase == WIFI_PROV_EVENT) {
-            driver->onWiFiProvEvent(eventId, eventData);
+            WiFiDriver::onWiFiProvEvent(eventId, eventData);
         }
     }
 
@@ -126,7 +126,7 @@ private:
                 break;
             }
             case WIFI_EVENT_STA_CONNECTED: {
-                auto event = static_cast<wifi_event_sta_connected_t*>(eventData);
+                auto* event = static_cast<wifi_event_sta_connected_t*>(eventData);
                 std::string newSsid((const char*) event->ssid, event->ssid_len);
                 {
                     Lock lock(metadataMutex);
@@ -137,7 +137,7 @@ private:
                 break;
             }
             case WIFI_EVENT_STA_DISCONNECTED: {
-                auto event = static_cast<wifi_event_sta_disconnected_t*>(eventData);
+                auto* event = static_cast<wifi_event_sta_disconnected_t*>(eventData);
                 networkReady.clear();
                 {
                     Lock lock(metadataMutex);
@@ -189,14 +189,14 @@ private:
         }
     }
 
-    void onWiFiProvEvent(int32_t eventId, void* eventData) {
+    static void onWiFiProvEvent(int32_t eventId, void* eventData) {
         switch (eventId) {
             case WIFI_PROV_START: {
                 LOGTD(Tag::WIFI, "provisioning started");
                 break;
             }
             case WIFI_PROV_CRED_RECV: {
-                auto wifiConfig = static_cast<wifi_sta_config_t*>(eventData);
+                auto* wifiConfig = static_cast<wifi_sta_config_t*>(eventData);
                 LOGD("Received Wi-Fi credentials for SSID '%s'",
                     (const char*) wifiConfig->ssid);
                 break;
@@ -361,7 +361,7 @@ private:
         ensureWifiStationStarted(config);
     }
 
-    void startProvisioning() {
+    static void startProvisioning() {
         // Initialize provisioning manager
         wifi_prov_mgr_config_t config = {
             .scheme = wifi_prov_scheme_softap,

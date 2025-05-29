@@ -30,7 +30,7 @@ public:
         , callback(std::move(callback)) {
         esp_timer_create_args_t config = {
             .callback = [](void* arg) {
-                auto watchdog = (Watchdog*) arg;
+                auto* watchdog = (Watchdog*) arg;
                 watchdog->callback(WatchdogState::TimedOut);
             },
             .arg = this,
@@ -65,9 +65,8 @@ public:
         if (esp_timer_stop(timer) == ESP_OK) {
             callback(WatchdogState::Cancelled);
             return true;
-        } else {
-            return false;
         }
+        return false;
     }
 
 private:

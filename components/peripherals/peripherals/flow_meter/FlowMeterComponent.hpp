@@ -51,9 +51,9 @@ public:
 
                 if (pulses > 0) {
                     Lock lock(updateMutex);
-                    double currentVolume = pulses / this->qFactor / 60.0f;
+                    double currentVolume = pulses / this->qFactor / 60.0F;
                     LOGV("Counted %" PRIu32 " pulses, %.2f l/min, %.2f l",
-                        pulses, currentVolume / (elapsed.count() / 1000.0f / 60.0f), currentVolume);
+                        pulses, currentVolume / (elapsed.count() / 1000.0F / 60.0F), currentVolume);
                     volume += currentVolume;
                     lastSeenFlow = now;
                 }
@@ -66,11 +66,11 @@ public:
 
     void populateTelemetry(JsonObject& json) override {
         Lock lock(updateMutex);
-        pupulateTelemetryUnderLock(json);
+        populateTelemetryUnderLock(json);
     }
 
 private:
-    void inline pupulateTelemetryUnderLock(JsonObject& json) {
+    void populateTelemetryUnderLock(JsonObject& json) {
         auto currentVolume = volume;
         volume = 0;
         // Volume is measured in liters

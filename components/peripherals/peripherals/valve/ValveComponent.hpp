@@ -308,7 +308,7 @@ public:
         auto overrideUntil = this->overrideUntil.load();
         if (overrideUntil != time_point<system_clock>()) {
             time_t rawtime = system_clock::to_time_t(overrideUntil);
-            auto timeinfo = gmtime(&rawtime);
+            auto* timeinfo = gmtime(&rawtime);
             char buffer[80];
             strftime(buffer, 80, "%FT%TZ", timeinfo);
             telemetry["overrideEnd"] = std::string(buffer);
@@ -359,9 +359,7 @@ private:
         }
         doTransitionTo(state);
 
-        mqttRoot->publish("events/state", [=](JsonObject& json) {
-            json["state"] = state;
-        }, Retention::NoRetain, QoS::AtLeastOnce);
+        mqttRoot->publish("events/state", [=](JsonObject& json) { json["state"] = state; }, Retention::NoRetain, QoS::AtLeastOnce);
         publishTelemetry();
     }
 
@@ -404,9 +402,9 @@ private:
         std::list<ValveSchedule> schedules;
     };
 
-    std::list<ValveSchedule> schedules = {};
+    std::list<ValveSchedule> schedules;
     std::atomic<ValveState> overrideState = ValveState::NONE;
-    std::atomic<time_point<system_clock>> overrideUntil = time_point<system_clock>();
+    std::atomic<time_point<system_clock>> overrideUntil;
     Queue<std::variant<OverrideSpec, ScheduleSpec>> updateQueue { "eventQueue", 1 };
 };
 

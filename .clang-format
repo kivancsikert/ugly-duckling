@@ -9,3 +9,4 @@ SpacesBeforeTrailingComments: 4
 CompactNamespaces: true
 FixNamespaceComments: true
 NamespaceIndentation: None
+PointerAlignment: Left

@@ -31,7 +31,7 @@ public:
         ESP_ERROR_CHECK(ledc_timer_rst(speedMode, timerNum));
     }
 
-    inline bool isSameConfig(ledc_mode_t otherSpeedMode, ledc_timer_bit_t otherDutyResolution, uint32_t otherFreqHz, ledc_clk_cfg_t otherClkCfg) {
+    bool isSameConfig(ledc_mode_t otherSpeedMode, ledc_timer_bit_t otherDutyResolution, uint32_t otherFreqHz, ledc_clk_cfg_t otherClkCfg) {
         return speedMode == otherSpeedMode && dutyResolution == otherDutyResolution && freqHz == otherFreqHz && clkSrc == otherClkCfg;
     }
 
