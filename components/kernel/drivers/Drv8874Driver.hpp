@@ -54,7 +54,7 @@ public:
         sleep();
     }
 
-    void drive(MotorPhase phase, double duty = 1) override {
+    void drive(MotorPhase phase, double duty) override {
         if (duty == 0) {
             LOGD("Stopping motor");
             sleep();

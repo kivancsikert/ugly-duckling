@@ -12,7 +12,7 @@
 #include <driver/gpio.h>
 #include <esp_app_desc.h>
 
-static const char* const farmhubVersion = esp_app_get_description()->version;
+static const char* const farmhubVersion = reinterpret_cast<const char*>(esp_app_get_description()->version);
 
 #include <BatteryManager.hpp>
 #include <Console.hpp>
@@ -181,7 +181,7 @@ void registerBasicCommands(const std::shared_ptr<MqttRoot>& mqttRoot) {
         esp_restart();
     });
     mqttRoot->registerCommand("sleep", [](const JsonObject& request, JsonObject& response) {
-        seconds duration = seconds(request["duration"].as<long>());
+        seconds duration = seconds(request["duration"].as<int64_t>());
         esp_sleep_enable_timer_wakeup((microseconds(duration)).count());
         LOGI("Sleeping for %lld seconds in light sleep mode",
             duration.count());

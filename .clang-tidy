@@ -33,6 +33,8 @@ Checks: >
   -cert-dcl58-cpp,
   concurrency-*,
   google-*,
+  -google-build-using-namespace,
+  -google-global-names-in-headers,
   -google-readability-todo,
 #   hicpp-*,
 
