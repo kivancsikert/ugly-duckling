@@ -96,7 +96,7 @@ private:
             , sleeping(canSleep) {
         }
 
-        void drive(MotorPhase phase, double duty = 1) override {
+        void drive(MotorPhase phase, double duty) override {
             int dutyValue = static_cast<int>((in1Channel.maxValue() + in1Channel.maxValue() * duty) / 2);
             LOGD("Driving motor %s on pins %s/%s at %d%% (duty = %d)",
                 phase == MotorPhase::FORWARD ? "forward" : "reverse",

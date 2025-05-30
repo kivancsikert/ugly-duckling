@@ -19,8 +19,7 @@ using namespace farmhub::peripherals::flow_control;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
 
-namespace farmhub {
-namespace devices {
+namespace farmhub::devices {
 
 class Mk5Config
     : public DeviceConfiguration {
@@ -75,20 +74,19 @@ static const InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43)
 
 class UglyDucklingMk5 : public DeviceDefinition<Mk5Config> {
 public:
-    UglyDucklingMk5(std::shared_ptr<Mk5Config> config)
+    explicit UglyDucklingMk5(const std::shared_ptr<Mk5Config>& /*config*/)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk5Config>& deviceConfig) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk5Config>& /*deviceConfig*/) override {
         auto motorA = std::make_shared<Drv8874Driver>(
             services.pwmManager,
             pins::AIN1,
             pins::AIN2,
             pins::AIPROPI,
             pins::NFault,
-            pins::NSLEEP
-        );
+            pins::NSLEEP);
 
         auto motorB = std::make_shared<Drv8874Driver>(
             services.pwmManager,
@@ -96,10 +94,9 @@ protected:
             pins::BIN2,
             pins::BIPROPI,
             pins::NFault,
-            pins::NSLEEP
-        );
+            pins::NSLEEP);
 
-        std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a",  motorA }, { "b",  motorB } };
+        std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorA }, { "b", motorB } };
 
         peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
@@ -108,4 +105,4 @@ protected:
     }
 };
 
-}}    // namespace farmhub::devices
+}    // namespace farmhub::devices

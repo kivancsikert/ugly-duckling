@@ -12,7 +12,7 @@ namespace farmhub::peripherals {
 
 class Motorized {
 public:
-    Motorized(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors)
+    explicit Motorized(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors)
         : motors(motors) {
     }
 

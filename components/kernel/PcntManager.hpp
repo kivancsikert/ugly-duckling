@@ -43,7 +43,7 @@ struct PulseCounterUnit {
     }
 
 private:
-    const pcnt_unit_handle_t unit;
+    pcnt_unit_handle_t unit;
     const InternalPinPtr pin;
 };
 
@@ -54,6 +54,7 @@ public:
             .low_limit = std::numeric_limits<int16_t>::min(),
             .high_limit = std::numeric_limits<int16_t>::max(),
             .intr_priority = 0,
+            .flags = {},
         };
         pcnt_unit_handle_t unit = nullptr;
         ESP_ERROR_THROW(pcnt_new_unit(&unitConfig, &unit));
@@ -68,6 +69,7 @@ public:
         pcnt_chan_config_t channelConfig = {
             .edge_gpio_num = pin->getGpio(),
             .level_gpio_num = -1,
+            .flags = {},
         };
         pcnt_channel_handle_t channel = nullptr;
         ESP_ERROR_THROW(pcnt_new_channel(unit, &channelConfig, &channel));

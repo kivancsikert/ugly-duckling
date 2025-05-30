@@ -23,6 +23,7 @@ public:
             .timer_num = timerNum,
             .freq_hz = freqHz,
             .clk_cfg = clkSrc,
+            .deconfigure = false,
         };
         ESP_ERROR_THROW(ledc_timer_config(&config));
     }
@@ -64,7 +65,9 @@ public:
             .intr_type = LEDC_INTR_DISABLE,
             .timer_sel = timer.timerNum,
             .duty = 0,    // Set duty to 0%
-            .hpoint = 0
+            .hpoint = 0,
+            .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+            .flags = {},
         };
         ESP_ERROR_THROW(ledc_channel_config(&config));
     }

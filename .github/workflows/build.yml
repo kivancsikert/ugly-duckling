@@ -5,6 +5,9 @@ on:
     types: [published]
 
 env:
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_MAXSIZE: 256M
+  CCACHE_COMPRESS: true
   ESP_IDF_VERSION: v5.4.1
 
 jobs:
@@ -45,12 +48,35 @@ jobs:
           fetch-depth: 0
           submodules: "recursive"
 
+      - name: Restore ccache cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-${{ env.ESP_IDF_VERSION }}-${{ matrix.environment }}
+
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: ${{ env.ESP_IDF_VERSION }}
+          esp_idf_docker_image: lptr/esp-idf-clang
           target: ${{ matrix.target }}
-          command: idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }}
+          extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache
+          command: |
+            ccache --max-size=${{ env.CCACHE_MAXSIZE }} && \
+            idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }} && \
+            ccache -s
+
+      - name: clang-tidy
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: ${{ env.ESP_IDF_VERSION }}
+          esp_idf_docker_image: lptr/esp-idf-clang
+          target: ${{ matrix.target }}
+          extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache
+          command: |
+            ccache --max-size=${{ env.CCACHE_MAXSIZE }} && \
+            ./generate-clang-tidy-compile-db.py && \
+            clang-tidy -p build/clang-tidy main/main.cpp
 
       - name: Rename firmware artifact
         run: |
@@ -80,20 +106,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Restore ccache cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-${{ env.ESP_IDF_VERSION }}-unit-test
+
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: ${{ env.ESP_IDF_VERSION }}
           target: esp32s3
-          command: idf.py build
           path: test/unit-tests
+          extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache
+          command: |
+            ccache --max-size=${{ env.CCACHE_MAXSIZE }} && \
+            idf.py build && \
+            ccache -s
 
       - name: Run a Wokwi CI server
         uses: wokwi/wokwi-ci-server-action@v1
 
       - name: esp-idf test
         run: |
-          docker run -v .:/project -w /project/test/unit-tests -e HOME=/tmp -e WOKWI_CLI_TOKEN=${{ secrets.WOKWI_CLI_TOKEN }} lptr/pytest-embedded:latest pytest --embedded-services idf,wokwi ./pytest_unit-tests.py
+            docker run \
+            -v .:/project \
+            -w /project/test/unit-tests \
+            -e HOME=/tmp \
+            -e WOKWI_CLI_TOKEN=${{ secrets.WOKWI_CLI_TOKEN }} \
+            lptr/pytest-embedded:latest \
+            pytest --embedded-services idf,wokwi ./pytest_unit-tests.py
 
   integ-test:
     runs-on: ubuntu-latest
@@ -115,13 +157,23 @@ jobs:
           HOSTNAME=$(hostname -I | awk '{print $1}')
           echo "HOSTNAME=$HOSTNAME" >> $GITHUB_ENV
 
+      - name: Restore ccache cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-${{ env.ESP_IDF_VERSION }}-integ-test
+
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: ${{ env.ESP_IDF_VERSION }}
           target: esp32s3
-          command: idf.py -DUD_GEN=MK6 -DUD_DEBUG=1 -DFSUPLOAD=1 -DWOKWI=1 -DWOKWI_MQTT_HOST=${{ env.HOSTNAME }} build
           path: test/integ-tests
+          extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache
+          command: |
+            ccache --max-size=${{ env.CCACHE_MAXSIZE }} && \
+            idf.py -DUD_GEN=MK6 -DUD_DEBUG=1 -DFSUPLOAD=1 -DWOKWI=1 -DWOKWI_MQTT_HOST=${{ env.HOSTNAME }} build && \
+            ccache -s
 
       - name: Run a Wokwi CI server
         uses: wokwi/wokwi-ci-server-action@v1

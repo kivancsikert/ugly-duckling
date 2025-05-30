@@ -9,7 +9,7 @@
 
 #include <nvs_flash.h>
 
-#include <freertos/FreeRTOS.h>
+#include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle)
 
 #include <I2CManager.hpp>
 #include <NetworkUtil.hpp>
@@ -59,7 +59,7 @@ public:
     }
 
 private:
-    enum class KernelState : uint8_t{
+    enum class KernelState : uint8_t {
         BOOTING,
         NETWORK_CONNECTING,
         NETWORK_CONFIGURING,

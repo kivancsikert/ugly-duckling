@@ -13,8 +13,8 @@ namespace farmhub::kernel::drivers {
 
 struct MdnsRecord {
     std::string hostname;
-    esp_ip4_addr_t ip;
-    int port;
+    esp_ip4_addr_t ip {};
+    int port {};
 
     bool hasHostname() const {
         return !hostname.empty();
@@ -64,7 +64,7 @@ public:
         : networkReady(networkReady)
         , mdnsReady(mdnsReady) {
         // TODO Add error handling
-        Task::run("mdns:init", 4096, [networkReady, mdnsReady, instanceName, hostname, version](Task& task) {
+        Task::run("mdns:init", 4096, [networkReady, mdnsReady, instanceName, hostname, version](Task& /*task*/) {
             LOGTI(Tag::MDNS, "initializing");
             networkReady.awaitSet();
 

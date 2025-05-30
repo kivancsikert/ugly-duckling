@@ -48,9 +48,9 @@ enum class PublishStatus : uint8_t {
     QueueFull = 4
 };
 
-using CommandHandler = std::function<void (const JsonObject &, JsonObject &)>;
+using CommandHandler = std::function<void(const JsonObject&, JsonObject&)>;
 
-using SubscriptionHandler = std::function<void (const std::string &, const JsonObject &)>;
+using SubscriptionHandler = std::function<void(const std::string&, const JsonObject&)>;
 
 class MqttRoot;
 
@@ -93,7 +93,7 @@ public:
 
             runEventLoop(task);
         });
-        Task::loop("mqtt:incoming", 4096, [this](Task& task) {
+        Task::loop("mqtt:incoming", 4096, [this](Task& /*task*/) {
             incomingQueue.take([this](const IncomingMessage& message) {
                 processIncomingMessage(message);
             });
@@ -132,20 +132,43 @@ public:
         config = {
             .broker {
                 .address {
+                    .uri = nullptr,
                     .hostname = hostname.c_str(),
+                    .transport = MQTT_TRANSPORT_OVER_TCP,
+                    .path = nullptr,
                     .port = port,
                 },
+                .verification {},
             },
             .credentials {
+                .username = nullptr,
                 .client_id = clientId.c_str(),
+                .set_null_client_id = false,
+                .authentication {},
+            },
+            // TODO Configure last will
+            .session {
+                .last_will {},
+                .disable_clean_session = false,
+                .keepalive = duration_cast<seconds>(MQTT_SESSION_KEEP_ALIVE).count(),
+                .disable_keepalive = false,
+                .protocol_ver = MQTT_PROTOCOL_UNDEFINED,    // Default MQTT version
+                .message_retransmit_timeout = 0,            // Default retransmit timeout
             },
             .network {
+                .reconnect_timeout_ms = duration_cast<milliseconds>(MQTT_CONNECTION_TIMEOUT).count(),
                 .timeout_ms = duration_cast<milliseconds>(MQTT_NETWORK_TIMEOUT).count(),
+                .refresh_connection_after_ms = 0,    // No need to refresh connection
+                .disable_auto_reconnect = false,
+                .transport = nullptr,    // Use default transport
+                .if_name = nullptr,      // Use default interface
             },
+            .task {},
             .buffer {
                 .size = 8192,
                 .out_size = 4096,
-            }
+            },
+            .outbox {},
         };
 
         LOGTD(Tag::MQTT, "server: %s:%" PRIu32 ", client ID is '%s'",
@@ -160,20 +183,17 @@ public:
                 config.broker.verification.certificate);
 
             if (!configClientCert.empty() && !configClientKey.empty()) {
-                config.credentials.authentication = {
-                    .certificate = configClientCert.c_str(),
-                    .key = configClientKey.c_str(),
-                };
+                config.credentials.authentication.certificate = configClientCert.c_str();
+                config.credentials.authentication.key = configClientKey.c_str();
                 LOGTV(Tag::MQTT, "Client cert:\n%s",
                     config.credentials.authentication.certificate);
             }
-        } else {
-            config.broker.address.transport = MQTT_TRANSPORT_OVER_TCP;
         }
     }
 
     static constexpr milliseconds MQTT_NETWORK_TIMEOUT = 15s;
     static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = MQTT_NETWORK_TIMEOUT;
+    static constexpr milliseconds MQTT_SESSION_KEEP_ALIVE = 120s;
     static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
 
@@ -188,7 +208,7 @@ private:
         const std::string payload;
         const Retention retain;
         const QoS qos;
-        const TaskHandle_t waitingTask;
+        TaskHandle_t waitingTask;
         const LogPublish log;
     };
 
@@ -383,7 +403,7 @@ private:
         std::unordered_map<int, TaskHandle_t> messages;
     };
 
-    void runEventLoop(Task& task) {
+    void runEventLoop(Task& /*task*/) {
         // We are not yet connected
         auto state = MqttState::Disconnected;
         auto connectionStarted = boot_clock::zero();
@@ -439,7 +459,7 @@ private:
                                 arg.sessionPresent);
                             state = MqttState::Connected;
 
-                            // TODO Should make it work with persistent sessions, but apparenlty it doesn't
+                            // TODO Should make it work with persistent sessions, but apparently it doesn't
                             // // Next connection can start with a persistent session
                             // nextSessionShouldBeClean = false;
 
@@ -519,7 +539,7 @@ private:
 
     bool clientRunning = false;
 
-    static void handleMqttEventCallback(void* userData, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
+    static void handleMqttEventCallback(void* userData, esp_event_base_t /*eventBase*/, int32_t eventId, void* eventData) {
         auto* event = static_cast<esp_mqtt_event_handle_t>(eventData);
         // LOGTV(Tag::MQTT, "Event dispatched from event loop: base=%s, event_id=%d, client=%p, data=%p, data_len=%d, topic=%p, topic_len=%d, msg_id=%d",
         //     eventBase, event->event_id, event->client, event->data, event->data_len, event->topic, event->topic_len, event->msg_id);
@@ -536,7 +556,7 @@ private:
             case MQTT_EVENT_CONNECTED: {
                 LOGTD(Tag::MQTT, "Connected to MQTT server");
                 ready.set();
-                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Connected { (bool) event->session_present });
+                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Connected { static_cast<bool>(event->session_present) });
                 break;
             }
             case MQTT_EVENT_DISCONNECTED: {
@@ -617,7 +637,7 @@ private:
             client,
             message.topic.c_str(),
             message.payload.c_str(),
-            (int) message.payload.length(),
+            static_cast<int>(message.payload.length()),
             static_cast<int>(message.qos),
             static_cast<int>(message.retain == Retention::Retain),
             true);
@@ -655,7 +675,7 @@ private:
     }
 
     void processSubscriptionBatch(const std::vector<esp_mqtt_topic_t>& topics, std::list<PendingSubscription>& pendingSubscriptions) {
-        int ret = esp_mqtt_client_subscribe_multiple(client, topics.data(), (int) topics.size());
+        int ret = esp_mqtt_client_subscribe_multiple(client, topics.data(), static_cast<int>(topics.size()));
 
         if (ret < 0) {
             LOGTD(Tag::MQTT, "Error subscribing: %s",
@@ -689,7 +709,7 @@ private:
 #endif
         for (const auto& subscription : subscriptions) {
             if (topicMatches(subscription.topic.c_str(), topic.c_str())) {
-                Task::run("mqtt:incoming-handler", 4096, [topic, payload, subscription](Task& task) {
+                Task::run("mqtt:incoming-handler", 4096, [topic, payload, subscription](Task& /*task*/) {
                     JsonDocument json;
                     deserializeJson(json, payload);
                     subscription.handle(topic, json.as<JsonObject>());
@@ -715,11 +735,11 @@ private:
         while ((*pat_ptr != 0) && (*top_ptr != 0)) {
             // Extract pattern level
             const char* pat_end = strchr(pat_ptr, '/');
-            size_t pat_len = (pat_end != nullptr) ? (size_t) (pat_end - pat_ptr) : strlen(pat_ptr);
+            size_t pat_len = (pat_end != nullptr) ? static_cast<size_t>(pat_end - pat_ptr) : strlen(pat_ptr);
 
             // Extract topic level
             const char* top_end = strchr(top_ptr, '/');
-            size_t top_len = (top_end != nullptr) ? (size_t) (top_end - top_ptr) : strlen(top_ptr);
+            size_t top_len = (top_end != nullptr) ? static_cast<size_t>(top_end - top_ptr) : strlen(top_ptr);
 
             // Handle wildcard +
             if (strncmp(pat_ptr, "+", pat_len) == 0) {
@@ -770,7 +790,7 @@ private:
     StateSource& ready;
 
     std::string hostname;
-    uint32_t port;
+    uint32_t port {};
     esp_mqtt_client_handle_t client;
 
     Queue<std::variant<Connected, Disconnected, MessagePublished, Subscribed, OutgoingMessage, Subscription>> eventQueue;

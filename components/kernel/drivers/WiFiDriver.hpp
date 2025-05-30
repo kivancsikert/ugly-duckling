@@ -229,7 +229,7 @@ private:
     // NOLINTBEGIN(cppcoreguidelines-avoid-goto)
     void runLoop() {
         bool connected = false;
-        std::optional<time_point<boot_clock>> connectingSince;
+        time_point<boot_clock> connectingSince;
         while (true) {
             if (!connected) {
                 if (configPortalRunning.isSet()) {
@@ -238,7 +238,7 @@ private:
                     goto handleEvents;
                 }
                 if (networkConnecting.isSet()) {
-                    if (boot_clock::now() - connectingSince.value() < WIFI_CONNECTION_TIMEOUT) {
+                    if (boot_clock::now() - connectingSince < WIFI_CONNECTION_TIMEOUT) {
                         LOGTV(Tag::WIFI, "Already connecting");
                         goto handleEvents;
                     }
@@ -253,6 +253,7 @@ private:
 
         handleEvents:
             for (auto event = eventQueue.pollIn(WIFI_CHECK_INTERVAL); event.has_value(); event = eventQueue.poll()) {
+                // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
                 switch (event.value()) {
                     case WiFiEvent::STARTED:
                         if (!configPortalRunning.isSet()) {
@@ -265,7 +266,6 @@ private:
                         break;
                     case WiFiEvent::CONNECTED:
                         connected = true;
-                        connectingSince.reset();
                         networkConnecting.clear();
                         LOGTD(Tag::WIFI, "Connected to the network");
                         break;
@@ -289,13 +289,11 @@ private:
 
 #ifdef WOKWI
         LOGTD(Tag::WIFI, "Skipping provisioning on Wokwi");
-        wifi_config_t wifiConfig = {
-            .sta = {
-                .ssid = "Wokwi-GUEST",
-                .password = "",
-                .channel = 6,
-            }
-        };
+        wifi_config_t wifiConfig = {};
+        strncpy(reinterpret_cast<char*>(wifiConfig.sta.ssid), "Wokwi-GUEST", sizeof(wifiConfig.sta.ssid) - 1);
+        wifiConfig.sta.ssid[sizeof(wifiConfig.sta.ssid) - 1] = '\0';
+        wifiConfig.sta.password[0] = '\0';
+        wifiConfig.sta.channel = 6;
         connectToStation(wifiConfig);
 #else
         bool provisioned = false;
@@ -369,7 +367,12 @@ private:
         // Initialize provisioning manager
         wifi_prov_mgr_config_t config = {
             .scheme = wifi_prov_scheme_softap,
-            .scheme_event_handler = WIFI_PROV_EVENT_HANDLER_NONE
+            .scheme_event_handler = WIFI_PROV_EVENT_HANDLER_NONE,
+            .app_event_handler = WIFI_PROV_EVENT_HANDLER_NONE,
+            .wifi_prov_conn_cfg = {
+                // TODO Shall we limit the number of connection attempts?
+                .wifi_conn_attempts = 0,    // Infinite attempts
+            },
         };
         ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
 
@@ -377,7 +380,7 @@ private:
         uint8_t mac[6];
         const char* ssid_prefix = "PROV_";
         esp_wifi_get_mac(WIFI_IF_STA, mac);
-        snprintf(serviceName, sizeof(serviceName), "%s%02X%02X%02X",
+        (void) snprintf(serviceName, sizeof(serviceName), "%s%02X%02X%02X",
             ssid_prefix, mac[3], mac[4], mac[5]);
         LOGTD(Tag::WIFI, "Starting provisioning service '%s'",
             serviceName);

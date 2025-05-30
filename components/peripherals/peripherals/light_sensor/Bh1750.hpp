@@ -38,7 +38,7 @@ public:
     Bh1750Component(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        const std::shared_ptr<I2CManager>& i2c,
+        const std::shared_ptr<I2CManager>& /*i2c*/,
         const I2CConfig& config,
         seconds measurementFrequency,
         seconds latencyInterval)

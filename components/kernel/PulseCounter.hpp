@@ -27,7 +27,7 @@ class PulseCounterManager;
  */
 class PulseCounter {
 public:
-    PulseCounter(const InternalPinPtr& pin)
+    explicit PulseCounter(const InternalPinPtr& pin)
         : pin(pin) {
         auto gpio = pin->getGpio();
 
@@ -54,7 +54,7 @@ public:
             pin->getName().c_str());
 
         // TODO Turn this into a single task that handles all pulse counters
-        Task::run(pin->getName(), 4096, [this](Task& task) {
+        Task::run(pin->getName(), 4096, [this](Task& /*task*/) {
             runLoop();
         });
     }
@@ -167,15 +167,20 @@ public:
 
             // Make sure we handle any state changes when the device wakes up due to a GPIO interrupt
             esp_pm_sleep_cbs_register_config_t sleepCallbackConfig = {
-                .exit_cb = [](int64_t timeSleptInUs, void* arg) {
-                if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
-                    auto* self = static_cast<PulseCounterManager*>(arg);
-                    for (auto& counter : self->counters) {
-                        counter->handlePotentialStateChange();
+                .enter_cb = nullptr,
+                .exit_cb = [](int64_t /*timeSleptInUs*/, void* arg) {
+                    if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
+                        auto* self = static_cast<PulseCounterManager*>(arg);
+                        for (auto& counter : self->counters) {
+                            counter->handlePotentialStateChange();
+                        }
                     }
-                }
-                return ESP_OK; },
+                    return ESP_OK;
+                },
+                .enter_cb_user_arg = nullptr,
                 .exit_cb_user_arg = this,
+                .enter_cb_prior = 0,
+                .exit_cb_prior = 0,
             };
             ESP_ERROR_THROW(esp_pm_light_sleep_register_cbs(&sleepCallbackConfig));
         }

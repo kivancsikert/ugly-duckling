@@ -82,7 +82,7 @@ public:
 
 class UglyDucklingMk7 : public DeviceDefinition<Mk7Config> {
 public:
-    UglyDucklingMk7(std::shared_ptr<Mk7Config> config)
+    explicit UglyDucklingMk7(const std::shared_ptr<Mk7Config>& /*config*/)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
         // Switch off strapping pin
         // TODO: Add a LED driver instead
@@ -90,16 +90,20 @@ public:
         pins::STATUS2->digitalWrite(1);
     }
 
-    static std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) {
-        return std::make_shared<Bq27220Driver>(i2c, pins::SDA, pins::SCL, BatteryParameters {
-            .maximumVoltage = 4.1,
-            .bootThreshold = 3.7,
-            .shutdownThreshold = 3.0,
-        });
+    static std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& i2c) {
+        return std::make_shared<Bq27220Driver>(
+            i2c,
+            pins::SDA,
+            pins::SCL,
+            BatteryParameters {
+                .maximumVoltage = 4.1,
+                .bootThreshold = 3.7,
+                .shutdownThreshold = 3.0,
+            });
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk7Config>& deviceConfig) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk7Config>& /*deviceConfig*/) override {
         auto motorDriver = Drv8833Driver::create(
             services.pwmManager,
             pins::DAIN1,
@@ -109,7 +113,7 @@ protected:
             pins::DNFault,
             pins::LOADEN);
 
-        std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a",  motorDriver->getMotorA() }, { "b",  motorDriver->getMotorB() } };
+        std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorDriver->getMotorA() }, { "b", motorDriver->getMotorB() } };
 
         peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());

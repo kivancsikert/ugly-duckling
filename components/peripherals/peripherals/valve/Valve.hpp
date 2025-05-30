@@ -43,7 +43,7 @@ public:
         valve.populateTelemetry(telemetry);
     }
 
-    void shutdown(const ShutdownParameters parameters) override {
+    void shutdown(const ShutdownParameters /*parameters*/) override {
         valve.closeBeforeShutdown();
     }
 
@@ -62,7 +62,7 @@ public:
         , Motorized(motors) {
     }
 
-    std::unique_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ValveDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    std::unique_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ValveDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& /*services*/) override {
         auto strategy = deviceConfig->createValveControlStrategy(this);
         return std::make_unique<Valve>(name, std::move(strategy), mqttRoot);
     }

@@ -53,7 +53,7 @@ static const InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43)
 
 class UglyDucklingMk4 : public DeviceDefinition<Mk4Config> {
 public:
-    UglyDucklingMk4(std::shared_ptr<Mk4Config> config)
+    explicit UglyDucklingMk4(const std::shared_ptr<Mk4Config>& /*config*/)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
@@ -73,7 +73,7 @@ public:
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk4Config>& deviceConfig) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk4Config>& /*deviceConfig*/) override {
         auto motor = std::make_shared<Drv8801Driver>(
             services.pwmManager,
             pins::VALVE_EN,

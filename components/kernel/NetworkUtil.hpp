@@ -17,7 +17,7 @@ static const std::string& getMacAddress() {
             macAddress = "??:??:??:??:??:??:??:??";
         } else {
             char mac[24];
-            sprintf(mac, "%02x:%02x:%02x:%02x:%02x:%02x",
+            (void) sprintf(mac, "%02x:%02x:%02x:%02x:%02x:%02x",
                 rawMac[0], rawMac[1], rawMac[2], rawMac[3],
                 rawMac[4], rawMac[5]);
             macAddress = mac;

@@ -24,7 +24,7 @@ public:
         return {
             address.get().empty()
                 ? defaultAddress
-                : (uint8_t) strtol(address.get().c_str(), nullptr, 0),
+                : static_cast<uint8_t>(strtol(address.get().c_str(), nullptr, 0)),
             sda.get() == nullptr
                 ? defaultSda
                 : sda.get(),
@@ -35,4 +35,4 @@ public:
     }
 };
 
-}    // namespace farmhub::peripherals::environment
+}    // namespace farmhub::peripherals

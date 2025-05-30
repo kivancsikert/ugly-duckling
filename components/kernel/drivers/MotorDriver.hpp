@@ -21,7 +21,7 @@ public:
         drive(MotorPhase::FORWARD, 0);
     };
 
-    virtual void drive(MotorPhase phase, double duty = 1) = 0;
+    virtual void drive(MotorPhase phase, double duty) = 0;
 };
 
 }    // namespace farmhub::kernel::drivers

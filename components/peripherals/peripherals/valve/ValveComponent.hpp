@@ -40,7 +40,7 @@ public:
 class MotorValveControlStrategy
     : public ValveControlStrategy {
 public:
-    MotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller)
+    explicit MotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller)
         : controller(std::move(controller)) {
     }
 
@@ -169,7 +169,7 @@ private:
 class LatchingPinValveControlStrategy
     : public ValveControlStrategy {
 public:
-    LatchingPinValveControlStrategy(const PinPtr& pin)
+    explicit LatchingPinValveControlStrategy(const PinPtr& pin)
         : pin(pin) {
         pin->pinMode(Pin::Mode::Output);
     }
@@ -251,7 +251,7 @@ public:
             response["state"] = state;
         });
 
-        Task::loop(name, 4096, [this, name](Task& task) {
+        Task::loop(name, 4096, [this, name](Task& /*task*/) {
             auto now = system_clock::now();
             if (overrideState != ValveState::NONE && now >= overrideUntil.load()) {
                 LOGI("Valve '%s' override expired", name.c_str());
@@ -259,7 +259,7 @@ public:
                 overrideState = ValveState::NONE;
             }
 
-            ValveStateUpdate update;
+            ValveStateUpdate update {};
             if (overrideState != ValveState::NONE) {
                 update = { overrideState, overrideUntil.load() - now };
             } else {
@@ -308,9 +308,10 @@ public:
         auto overrideUntil = this->overrideUntil.load();
         if (overrideUntil != time_point<system_clock>()) {
             time_t rawtime = system_clock::to_time_t(overrideUntil);
-            auto* timeinfo = gmtime(&rawtime);
+            std::tm timeinfo {};
+            gmtime_r(&rawtime, &timeinfo);
             char buffer[80];
-            strftime(buffer, 80, "%FT%TZ", timeinfo);
+            (void) strftime(buffer, 80, "%FT%TZ", &timeinfo);
             telemetry["overrideEnd"] = std::string(buffer);
             telemetry["overrideState"] = this->overrideState.load();
         }

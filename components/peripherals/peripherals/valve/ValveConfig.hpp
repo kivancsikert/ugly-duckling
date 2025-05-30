@@ -32,7 +32,7 @@ public:
 class ValveDeviceConfig
     : public ConfigurationSection {
 public:
-    ValveDeviceConfig(ValveControlStrategyType defaultStrategy)
+    explicit ValveDeviceConfig(ValveControlStrategyType defaultStrategy)
         : strategy(this, "strategy", defaultStrategy) {
     }
 

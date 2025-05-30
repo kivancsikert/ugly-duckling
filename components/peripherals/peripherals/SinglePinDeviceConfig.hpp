@@ -15,4 +15,4 @@ public:
     Property<InternalPinPtr> pin { this, "pin" };
 };
 
-}    // namespace farmhub::peripherals::environment
+} // namespace farmhub::peripherals

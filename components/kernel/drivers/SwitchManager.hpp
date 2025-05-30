@@ -35,7 +35,7 @@ static void handleSwitchInterrupt(void* arg);
 class SwitchManager final {
 public:
     SwitchManager() {
-        Task::loop("switch-manager", 3072, [this](Task& task) {
+        Task::loop("switch-manager", 3072, [this](Task& /*task*/) {
             SwitchStateChange stateChange = switchStateInterrupts.take();
             auto* state = stateChange.switchState;
             auto engaged = stateChange.engaged;
@@ -91,6 +91,8 @@ public:
 private:
     struct SwitchState final : public Switch {
     public:
+        SwitchState() = default;
+
         const std::string& getName() const override {
             return name;
         }
@@ -112,7 +114,7 @@ private:
         SwitchReleaseHandler releaseHandler;
 
         time_point<system_clock> engagementStarted;
-        SwitchManager* manager;
+        SwitchManager* manager {};
 
         friend class SwitchManager;
         friend void handleSwitchInterrupt(void* arg);

@@ -62,7 +62,7 @@ public:
 
 private:
     const InternalPinPtr pin;
-    onewire_addr_t sensor;
+    onewire_addr_t sensor {};
 };
 
 class Ds18B20SoilSensor
@@ -88,7 +88,7 @@ public:
         : PeripheralFactory<SinglePinDeviceConfig, EmptyConfiguration>("environment:ds18b20", "environment") {
     }
 
-    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SinglePinDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SinglePinDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices&  /*services*/) override {
         return std::make_unique<Ds18B20SoilSensor>(name, mqttRoot, deviceConfig->pin.get());
     }
 };

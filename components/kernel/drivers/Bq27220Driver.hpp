@@ -9,11 +9,20 @@ namespace farmhub::kernel::drivers {
 
 class Bq27220Driver final : public BatteryDriver {
 public:
-    Bq27220Driver(std::shared_ptr<I2CManager> i2c, InternalPinPtr sda, InternalPinPtr scl, const BatteryParameters& parameters)
+    Bq27220Driver(
+        const std::shared_ptr<I2CManager>& i2c,
+        const InternalPinPtr& sda,
+        const InternalPinPtr& scl,
+        const BatteryParameters& parameters)
         : Bq27220Driver(i2c, sda, scl, 0x55, parameters) {
     }
 
-    Bq27220Driver(std::shared_ptr<I2CManager> i2c, InternalPinPtr sda, InternalPinPtr scl, const uint8_t address, const BatteryParameters& parameters)
+    Bq27220Driver(
+        const std::shared_ptr<I2CManager>& i2c,
+        const InternalPinPtr& sda,
+        const InternalPinPtr& scl,
+        uint8_t address,
+        const BatteryParameters& parameters)
         : BatteryDriver(parameters)
         , device(i2c->createDevice("battery:bq27220", sda, scl, address)) {
         LOGI("Initializing BQ27220 driver on SDA %s, SCL %s",
@@ -35,11 +44,11 @@ public:
         return device->readRegWord(0x08) / 1000.0;
     }
 
-    float getCurrent() {
+    double getCurrent() {
         return readSigned(0x0C) / 1.0;
     }
 
-    float getTemperature() {
+    double getTemperature() {
         return device->readRegWord(0x06) * 0.1 - 273.2;
     }
 

@@ -45,7 +45,7 @@ private:
         }
 
         printf("\033[1G\033[0K%s", status.c_str());
-        fflush(stdout);
+        (void) fflush(stdout);
         fsync(fileno(stdout));
     }
 
@@ -90,7 +90,7 @@ private:
         if (ip_info.ip.addr != 0) {
             static char ip_str[32];
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
-            snprintf(ip_str, sizeof(ip_str), "\033[0;33m" IPSTR "\033[0m", IP2STR(&ip_info.ip));
+            (void) snprintf(ip_str, sizeof(ip_str), "\033[0;33m" IPSTR "\033[0m", IP2STR(&ip_info.ip));
             return ip_str;
         }
         return "\033[0;33mIP?\033[0m";
@@ -99,7 +99,7 @@ private:
     const std::shared_ptr<BatteryManager> battery;
     const std::shared_ptr<WiFiDriver> wifi;
 
-    size_t counter;
+    size_t counter {};
     std::string status;
 };
 #endif

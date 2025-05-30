@@ -171,9 +171,9 @@ public:
             response["overrideState"] = overrideState;
         });
 
-        Task::run(name, 4096, 2, [this](Task& task) {
+        Task::run(name, 4096, 2, [this](Task& /*task*/) {
             while (operationState == OperationState::RUNNING) {
-                runLoop(task);
+                runLoop();
             }
         });
     }
@@ -185,9 +185,10 @@ public:
         telemetry["operationState"] = operationState;
         if (overrideState != DoorState::NONE) {
             time_t rawtime = system_clock::to_time_t(overrideUntil);
-            auto* timeinfo = gmtime(&rawtime);
+            std::tm timeinfo {};
+            gmtime_r(&rawtime, &timeinfo);
             char buffer[80];
-            strftime(buffer, 80, "%FT%TZ", timeinfo);
+            (void) strftime(buffer, 80, "%FT%TZ", &timeinfo);
             telemetry["overrideEnd"] = std::string(buffer);
             telemetry["overrideState"] = overrideState;
         }
@@ -201,7 +202,7 @@ public:
     }
 
 private:
-    void runLoop(Task& task) {
+    void runLoop() {
         DoorState currentState = determineCurrentState();
         DoorState targetState = determineTargetState(currentState);
         if (currentState == DoorState::NONE && targetState == lastState) {
@@ -436,8 +437,8 @@ public:
     NoLightSensorComponent(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        const std::shared_ptr<I2CManager>& i2c,
-        const I2CConfig& config,
+        const std::shared_ptr<I2CManager>& /*i2c*/,
+        const I2CConfig& /*config*/,
         seconds measurementFrequency,
         seconds latencyInterval)
         : LightSensorComponent(name, std::move(mqttRoot), measurementFrequency, latencyInterval) {
@@ -454,7 +455,7 @@ class ChickenDoorFactory
     : public PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig>,
       protected Motorized {
 public:
-    ChickenDoorFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors)
+    explicit ChickenDoorFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors)
         : PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig>("chicken-door")
         , Motorized(motors) {
     }

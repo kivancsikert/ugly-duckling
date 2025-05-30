@@ -31,7 +31,7 @@ public:
     PeripheralBase(const std::string& name, const std::shared_ptr<MqttRoot>& mqttRoot)
         : Named(name)
         , mqttRoot(mqttRoot) {
-        mqttRoot->registerCommand("ping", [this](const JsonObject& request, JsonObject& response) {
+        mqttRoot->registerCommand("ping", [this](const JsonObject& /*request*/, JsonObject& response) {
             LOGV("Received ping request");
             publishTelemetry();
             response["pong"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
@@ -74,7 +74,7 @@ public:
         : PeripheralBase(name, mqttRoot) {
     }
 
-    virtual void configure(const std::shared_ptr<TConfig> config) {
+    virtual void configure(const std::shared_ptr<TConfig> /*config*/) {
         LOGV("No configuration to apply for peripheral: %s", name.c_str());
     }
 };
@@ -116,7 +116,7 @@ template <std::derived_from<ConfigurationSection> TDeviceConfig, std::derived_fr
 class PeripheralFactory : public PeripheralFactoryBase {
 public:
     // By default use the factory type as the peripheral type
-    PeripheralFactory(const std::string& type, TDeviceConfigArgs... deviceConfigArgs)
+    explicit PeripheralFactory(const std::string& type, TDeviceConfigArgs... deviceConfigArgs)
         : PeripheralFactory(type, type, std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 

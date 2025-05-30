@@ -3,8 +3,8 @@
 #include <chrono>
 #include <functional>
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
+#include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle)
+#include <freertos/task.h>        // NOLINT(misc-header-include-cycle)
 
 #include <Log.hpp>
 #include <Time.hpp>
@@ -18,11 +18,11 @@ static const unsigned int DEFAULT_PRIORITY = 1;
 
 class Task;
 
-using TaskFunction = std::function<void (Task &)>;
+using TaskFunction = std::function<void(Task&)>;
 
 class TaskHandle {
 public:
-    TaskHandle(const TaskHandle_t handle)
+    explicit TaskHandle(TaskHandle_t handle)
         : handle(handle) {
     }
 
@@ -84,7 +84,7 @@ public:
             delete taskFunction;
             return {};
         }
-        return { handle };
+        return TaskHandle { handle };
     }
 
     enum class RunResult : uint8_t {

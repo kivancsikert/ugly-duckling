@@ -19,7 +19,7 @@ namespace farmhub::peripherals::fence {
 
 struct FencePinConfig {
     InternalPinPtr pin;
-    uint16_t voltage;
+    uint16_t voltage {};
 };
 
 class ElectricFenceMonitorDeviceConfig

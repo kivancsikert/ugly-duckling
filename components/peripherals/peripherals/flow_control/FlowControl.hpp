@@ -50,7 +50,7 @@ public:
         flowMeter.populateTelemetry(telemetryJson);
     }
 
-    void shutdown(const ShutdownParameters parameters) override {
+    void shutdown(const ShutdownParameters /*parameters*/) override {
         valve.closeBeforeShutdown();
     }
 
@@ -62,7 +62,7 @@ private:
 class FlowControlDeviceConfig
     : public ConfigurationSection {
 public:
-    FlowControlDeviceConfig(ValveControlStrategyType defaultStrategy)
+    explicit FlowControlDeviceConfig(ValveControlStrategyType defaultStrategy)
         : valve(this, "valve", defaultStrategy)
         , flowMeter(this, "flow-meter") {
     }

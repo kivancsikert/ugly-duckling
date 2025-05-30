@@ -26,7 +26,7 @@ struct BatteryParameters {
 
 class BatteryDriver {
 public:
-    BatteryDriver(const BatteryParameters& parameters)
+    explicit BatteryDriver(const BatteryParameters& parameters)
         : parameters(parameters) {
     }
 

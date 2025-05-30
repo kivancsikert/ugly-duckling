@@ -46,7 +46,7 @@ public:
             rtcInSync.set();
         }
 
-        Task::run("ntp-sync", 4096, [this, &networkReady](Task& task) {
+        Task::run("ntp-sync", 4096, [this, &networkReady](Task& /*task*/) {
             while (true) {
                 {
                     networkReady.awaitSet();
@@ -95,7 +95,7 @@ private:
         LOGTI(Tag::RTC, "using default NTP server for Wokwi");
 #else
         // TODO Check this
-        if (ntpConfig->host.get().length() > 0) {
+        if (!ntpConfig->host.get().empty()) {
             LOGTD(Tag::RTC, "using NTP server %s from configuration",
                 ntpConfig->host.get().c_str());
             esp_sntp_setservername(0, ntpConfig->host.get().c_str());
@@ -104,7 +104,7 @@ private:
             if (mdns->lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
                 LOGTD(Tag::RTC, "using NTP server %s from mDNS",
                     ntpServer.toString().c_str());
-                esp_sntp_setserver(0, (const ip_addr_t*) &ntpServer.ip);
+                esp_sntp_setserver(0, reinterpret_cast<const ip_addr_t*>(&ntpServer.ip));
             } else {
                 LOGTD(Tag::RTC, "no NTP server configured, using default");
             }

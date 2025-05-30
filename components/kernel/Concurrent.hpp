@@ -5,7 +5,7 @@
 #include <memory>
 #include <optional>
 
-#include <freertos/FreeRTOS.h>
+#include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle)
 
 #include <BootClock.hpp>
 #include <Time.hpp>
@@ -34,13 +34,19 @@ public:
 
 protected:
     const std::string name;
-    const QueueHandle_t queue;
+
+    QueueHandle_t getQueueHandle() const {
+        return queue;
+    }
+
+private:
+    QueueHandle_t queue;
 };
 
 template <typename TMessage>
 class Queue : public BaseQueue {
 public:
-    Queue(const std::string& name, size_t capacity = 16)
+    explicit Queue(const std::string& name, size_t capacity = 16)
         : BaseQueue(name, sizeof(TMessage*), capacity) {
     }
 
@@ -59,8 +65,8 @@ public:
     template <typename... Args>
         requires std::constructible_from<TMessage, Args...>
     bool offerIn(ticks timeout, Args&&... args) {
-        auto* copy = new TMessage(std::forward<Args>(args)...);
-        bool sentWithoutDropping = xQueueSend(this->queue, reinterpret_cast<const void*>(&copy), timeout.count()) == pdTRUE;
+        auto copy = new TMessage(std::forward<Args>(args)...);
+        bool sentWithoutDropping = xQueueSend(getQueueHandle(), reinterpret_cast<const void*>(&copy), timeout.count()) == pdTRUE;
         if (!sentWithoutDropping) {
             printf("Overflow in queue '%s', dropping message\n",
                 this->name.c_str());
@@ -69,7 +75,7 @@ public:
         return sentWithoutDropping;
     }
 
-    using MessageHandler = std::function<void (TMessage &)>;
+    using MessageHandler = std::function<void(TMessage&)>;
 
     size_t drain(MessageHandler handler) {
         return drain(SIZE_MAX, handler);
@@ -136,7 +142,7 @@ public:
 
     bool pollIn(ticks timeout, MessageHandler handler) {
         TMessage* message;
-        if (!xQueueReceive(this->queue, reinterpret_cast<void*>(&message), timeout.count())) {
+        if (!xQueueReceive(getQueueHandle(), reinterpret_cast<void*>(&message), timeout.count())) {
             return false;
         }
         handler(*message);
@@ -152,7 +158,7 @@ public:
 template <typename TMessage>
 class CopyQueue : public BaseQueue {
 public:
-    CopyQueue(const std::string& name, size_t capacity = 16)
+    explicit CopyQueue(const std::string& name, size_t capacity = 16)
         : BaseQueue(name, sizeof(TMessage), capacity) {
     }
 
@@ -165,7 +171,7 @@ public:
     }
 
     bool offerIn(ticks timeout, const TMessage message) {
-        bool sentWithoutDropping = xQueueSend(this->queue, &message, timeout.count()) == pdTRUE;
+        bool sentWithoutDropping = xQueueSend(getQueueHandle(), &message, timeout.count()) == pdTRUE;
         if (!sentWithoutDropping) {
             printf("Overflow in queue '%s', dropping message",
                 this->name.c_str());
@@ -175,18 +181,18 @@ public:
 
     bool IRAM_ATTR offerFromISR(const TMessage& message) {
         BaseType_t xHigherPriorityTaskWoken;
-        bool sentWithoutDropping = xQueueSendFromISR(this->queue, &message, &xHigherPriorityTaskWoken) == pdTRUE;
+        bool sentWithoutDropping = xQueueSendFromISR(getQueueHandle(), &message, &xHigherPriorityTaskWoken) == pdTRUE;
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
         return sentWithoutDropping;
     }
 
     void overwrite(const TMessage message) {
-        xQueueOverwrite(this->queue, &message);
+        xQueueOverwrite(getQueueHandle(), &message);
     }
 
     void IRAM_ATTR overwriteFromISR(const TMessage& message) {
         BaseType_t xHigherPriorityTaskWoken;
-        xQueueOverwriteFromISR(this->queue, &message, &xHigherPriorityTaskWoken);
+        xQueueOverwriteFromISR(getQueueHandle(), &message, &xHigherPriorityTaskWoken);
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 
@@ -204,15 +210,15 @@ public:
     }
 
     std::optional<TMessage> pollIn(ticks timeout) {
-        TMessage message;
-        if (xQueueReceive(this->queue, &message, timeout.count())) {
+        TMessage message {};
+        if (xQueueReceive(getQueueHandle(), &message, timeout.count())) {
             return message;
         }
         return std::nullopt;
     }
 
     void clear() override {
-        xQueueReset(this->queue);
+        xQueueReset(getQueueHandle());
     }
 };
 
@@ -279,7 +285,7 @@ private:
 
 class Lock {
 public:
-    Lock(MutexBase& mutex)
+    explicit Lock(MutexBase& mutex)
         : mutex(mutex) {
         mutex.lock();
     }

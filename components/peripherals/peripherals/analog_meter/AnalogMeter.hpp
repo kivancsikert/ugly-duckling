@@ -27,9 +27,9 @@ public:
         , meter(name, mqttRoot, pin, offset, multiplier, measurementFrequency, windowSize) {
         };
 
-        void populateTelemetry(JsonObject& json) override {
-            meter.populateTelemetry(json);
-        }
+    void populateTelemetry(JsonObject& json) override {
+        meter.populateTelemetry(json);
+    }
 
 private:
     AnalogMeterComponent meter;
@@ -52,7 +52,7 @@ public:
         : PeripheralFactory<AnalogMeterDeviceConfig, EmptyConfiguration>("analog-meter") {
     }
 
-    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<AnalogMeterDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<AnalogMeterDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& /*services*/) override {
         return std::make_unique<AnalogMeter>(
             name,
             mqttRoot,
