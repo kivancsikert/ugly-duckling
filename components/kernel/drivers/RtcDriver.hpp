@@ -112,6 +112,8 @@ private:
 #endif
         printServers();
 
+        std::string alma = std::string("tibor");
+
         bool success = false;
         ESP_ERROR_CHECK(esp_netif_sntp_start());
 
