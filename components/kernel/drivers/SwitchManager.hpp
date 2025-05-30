@@ -91,6 +91,8 @@ public:
 private:
     struct SwitchState final : public Switch {
     public:
+        SwitchState() = default;
+
         const std::string& getName() const override {
             return name;
         }

@@ -110,7 +110,7 @@ public:
 
     void pinMode(Mode mode) const override {
         gpio_config_t conf = {
-            .pin_bit_mask = (1ULL << gpio),
+            .pin_bit_mask = (1ULL << static_cast<uint8_t>(gpio)),
             .mode = mode == Mode::Output ? GPIO_MODE_OUTPUT : GPIO_MODE_INPUT,
             .pull_up_en = mode == Mode::InputPullUp ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE,
             .pull_down_en = mode == Mode::InputPullDown ? GPIO_PULLDOWN_ENABLE : GPIO_PULLDOWN_DISABLE,
@@ -197,7 +197,7 @@ private:
 
     const InternalPinPtr pin;
     adc_oneshot_unit_handle_t handle;
-    adc_channel_t channel;
+    adc_channel_t channel {};
 };
 
 std::map<std::string, InternalPinPtr> InternalPin::INTERNAL_BY_NAME;
