@@ -49,6 +49,7 @@ jobs:
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: ${{ env.ESP_IDF_VERSION }}
+          esp_idf_docker_image: lptr/esp-idf-clang
           target: ${{ matrix.target }}
           command: |
             clang-tidy --version
