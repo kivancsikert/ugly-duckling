@@ -48,14 +48,12 @@ jobs:
           fetch-depth: 0
           submodules: "recursive"
 
-      # 🧠 Restore ccache directory from GitHub Actions cache
       - name: Restore ccache cache
         uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ runner.os }}-${{ env.ESP_IDF_VERSION }}-${{ matrix.environment }}
 
-      # 🛠️ Configure ccache to use max size
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
@@ -98,13 +96,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Restore ccache cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-${{ env.ESP_IDF_VERSION }}-unit-test
+
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: ${{ env.ESP_IDF_VERSION }}
+          extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache -e CCACHE_DIR=/root/.ccache -e CCACHE_MAXSIZE=${{ env.CCACHE_MAXSIZE }} -e CCACHE_COMPRESS=${{ env.CCACHE_COMPRESS }}
           target: esp32s3
-          command: idf.py build
           path: test/unit-tests
+          command: |
+            ccache --max-size=${CCACHE_MAXSIZE}
+            idf.py -DUD_GEN=MK6 build
+            ccache -s
 
       - name: Run a Wokwi CI server
         uses: wokwi/wokwi-ci-server-action@v1
@@ -133,13 +141,23 @@ jobs:
           HOSTNAME=$(hostname -I | awk '{print $1}')
           echo "HOSTNAME=$HOSTNAME" >> $GITHUB_ENV
 
+      - name: Restore ccache cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-${{ env.ESP_IDF_VERSION }}-integ-test
+
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: ${{ env.ESP_IDF_VERSION }}
+          extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache -e CCACHE_DIR=/root/.ccache -e CCACHE_MAXSIZE=${{ env.CCACHE_MAXSIZE }} -e CCACHE_COMPRESS=${{ env.CCACHE_COMPRESS }}
           target: esp32s3
-          command: idf.py -DUD_GEN=MK6 -DUD_DEBUG=1 -DFSUPLOAD=1 -DWOKWI=1 -DWOKWI_MQTT_HOST=${{ env.HOSTNAME }} build
           path: test/integ-tests
+          command: |
+            ccache --max-size=${CCACHE_MAXSIZE}
+            idf.py -DUD_GEN=MK6 -DUD_DEBUG=1 -DFSUPLOAD=1 -DWOKWI=1 -DWOKWI_MQTT_HOST=${{ env.HOSTNAME }} build
+            ccache -s
 
       - name: Run a Wokwi CI server
         uses: wokwi/wokwi-ci-server-action@v1
