@@ -30,6 +30,7 @@ Checks: >
   -cppcoreguidelines-special-member-functions,
   cert-*
   concurrency-*
+  google-*
 
 CheckOptions:
   readability-function-cognitive-complexity.Threshold: 200
