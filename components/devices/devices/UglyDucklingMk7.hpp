@@ -82,7 +82,7 @@ public:
 
 class UglyDucklingMk7 : public DeviceDefinition<Mk7Config> {
 public:
-    UglyDucklingMk7(const std::shared_ptr<Mk7Config>& config)
+    explicit UglyDucklingMk7(const std::shared_ptr<Mk7Config>& config)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
         // Switch off strapping pin
         // TODO: Add a LED driver instead
