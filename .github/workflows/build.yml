@@ -74,6 +74,11 @@ jobs:
             debug-${{ matrix.environment }}.zip
           if-no-files-found: error
 
+      - name: Run Clang Tidy
+        run: |
+          clang-tidy --version
+          clang-tidy-18 --version
+
   unit-test:
     runs-on: ubuntu-latest
 
