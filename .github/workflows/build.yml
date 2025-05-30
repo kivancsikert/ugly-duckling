@@ -54,8 +54,14 @@ jobs:
           command: |
             clang-tidy --version
             idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }}
-            # Generate compile_commands.json for clang-tidy
             ./generate-clang-tidy-compile-db.py
+            # idf.py clang-check \
+            #   --exit-code \
+            #   --exclude-paths managed_components \
+            #   --run-clang-tidy-options "-p build/clang-tidy" \
+            ##   --run-clang-tidy-options "-config-file $PWD/.clang-tidy"
+            clang-tidy --version
+            clang-tidy -p build/clang-tidy main/main.cpp
 
       - name: Rename firmware artifact
         run: |
@@ -78,15 +84,6 @@ jobs:
             ugly-duckling-${{ matrix.environment }}.bin
             debug-${{ matrix.environment }}.zip
           if-no-files-found: error
-
-      - name: Run Clang Tidy
-        uses: espressif/esp-idf-ci-action@v1
-        with:
-          esp_idf_version: ${{ env.ESP_IDF_VERSION }}
-          target: ${{ matrix.target }}
-          command: |
-            clang-tidy --version
-            clang-tidy -p build/clang-tidy main/main.cpp
 
   unit-test:
     runs-on: ubuntu-latest

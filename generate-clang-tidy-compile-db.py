@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+#
+# Generate compile_commands.json for clang-tidy based on a GCC compile database.
+#
+
 import json
 import subprocess
 import re
@@ -10,7 +14,9 @@ UNSUPPORTED_FLAGS = [
     "-fanalyzer",
     "-fno-shrink-wrap",
     "-fno-tree-switch-conversion",
+    "-freorder-blocks",
     "-fstrict-volatile-bitfields",
+    "-mlong-calls",
     "-mlongcalls",
 ]
 

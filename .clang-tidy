@@ -29,7 +29,6 @@ Checks: >
   -cppcoreguidelines-pro-type-reinterpret-cast,
   -cppcoreguidelines-special-member-functions,
 
-
 CheckOptions:
   readability-function-cognitive-complexity.Threshold: 200
   cppcoreguidelines-avoid-do-while.IgnoreMacros: true
