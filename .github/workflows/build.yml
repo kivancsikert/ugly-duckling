@@ -66,7 +66,7 @@ jobs:
             idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }}
             ccache -s
             ./generate-clang-tidy-compile-db.py
-            clang-tidy -p build/clang-tidy --header-filter "^$PWD/(main|components)/" main/main.cpp
+            clang-tidy -p build/clang-tidy main/main.cpp
             ccache -s
             echo "Cleaning ccache..."
             ccache -cs
