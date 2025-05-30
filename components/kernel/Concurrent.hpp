@@ -59,7 +59,7 @@ public:
     template <typename... Args>
         requires std::constructible_from<TMessage, Args...>
     bool offerIn(ticks timeout, Args&&... args) {
-        auto* copy = new TMessage(std::forward<Args>(args)...);
+        auto copy = new TMessage(std::forward<Args>(args)...);
         bool sentWithoutDropping = xQueueSend(this->queue, reinterpret_cast<const void*>(&copy), timeout.count()) == pdTRUE;
         if (!sentWithoutDropping) {
             printf("Overflow in queue '%s', dropping message\n",
