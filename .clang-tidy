@@ -32,8 +32,8 @@ Checks: >
   -cert-err58-cpp,
   -cert-dcl58-cpp,
   concurrency-*,
-#   google-*,
-#   -google-readability-todo
+  google-*,
+  -google-readability-todo,
 #   hicpp-*,
 
 CheckOptions:

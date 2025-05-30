@@ -18,6 +18,7 @@ UNSUPPORTED_FLAGS = [
     "-fstrict-volatile-bitfields",
     "-mlong-calls",
     "-mlongcalls",
+    "-nostartfiles",
 ]
 
 # ✅ Extra args appended to each compile command
