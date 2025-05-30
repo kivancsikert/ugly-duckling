@@ -308,9 +308,10 @@ public:
         auto overrideUntil = this->overrideUntil.load();
         if (overrideUntil != time_point<system_clock>()) {
             time_t rawtime = system_clock::to_time_t(overrideUntil);
-            auto* timeinfo = gmtime(&rawtime);
+            std::tm timeinfo {};
+            gmtime_r(&rawtime, &timeinfo);
             char buffer[80];
-            (void) strftime(buffer, 80, "%FT%TZ", timeinfo);
+            (void) strftime(buffer, 80, "%FT%TZ", &timeinfo);
             telemetry["overrideEnd"] = std::string(buffer);
             telemetry["overrideState"] = this->overrideState.load();
         }

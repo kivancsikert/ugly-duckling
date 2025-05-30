@@ -92,6 +92,7 @@ public:
         }
 
         struct dirent* entry;
+        // NOLINTNEXTLINE(concurrency-mt-unsafe)
         while ((entry = readdir(dir)) != nullptr) {
             std::string fullPath = path.ends_with("/")
                 ? (path + entry->d_name)
