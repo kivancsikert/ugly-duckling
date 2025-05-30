@@ -49,17 +49,17 @@ struct Converter<ValveSchedule> {
         JsonObject obj = dst.to<JsonObject>();
         auto startLocalTime = src.getStart();
         auto startTime = system_clock::to_time_t(startLocalTime);
-        tm startTm;
+        tm startTm {};
         localtime_r(&startTime, &startTm);
         char buf[64];
-        strftime(buf, sizeof(buf), "%FT%TZ", &startTm);
+        (void) strftime(buf, sizeof(buf), "%FT%TZ", &startTm);
         obj["start"] = buf;
         obj["period"] = src.getPeriod().count();
         obj["duration"] = src.getDuration().count();
     }
 
     static ValveSchedule fromJson(JsonVariantConst src) {
-        tm startTm;
+        tm startTm {};
         strptime(src["start"].as<const char*>(), "%FT%TZ", &startTm);
         // Must manually set this, otherwise mktime cannot parse the time properly
         // See notes at https://en.cppreference.com/w/cpp/chrono/c/mktime

@@ -27,7 +27,7 @@ class PulseCounterManager;
  */
 class PulseCounter {
 public:
-    PulseCounter(const InternalPinPtr& pin)
+    explicit PulseCounter(const InternalPinPtr& pin)
         : pin(pin) {
         auto gpio = pin->getGpio();
 

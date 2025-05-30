@@ -112,7 +112,7 @@ private:
         SwitchReleaseHandler releaseHandler;
 
         time_point<system_clock> engagementStarted;
-        SwitchManager* manager;
+        SwitchManager* manager {};
 
         friend class SwitchManager;
         friend void handleSwitchInterrupt(void* arg);

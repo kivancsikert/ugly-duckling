@@ -380,7 +380,7 @@ private:
         uint8_t mac[6];
         const char* ssid_prefix = "PROV_";
         esp_wifi_get_mac(WIFI_IF_STA, mac);
-        snprintf(serviceName, sizeof(serviceName), "%s%02X%02X%02X",
+        (void) snprintf(serviceName, sizeof(serviceName), "%s%02X%02X%02X",
             ssid_prefix, mac[3], mac[4], mac[5]);
         LOGTD(Tag::WIFI, "Starting provisioning service '%s'",
             serviceName);

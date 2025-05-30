@@ -187,7 +187,7 @@ public:
             time_t rawtime = system_clock::to_time_t(overrideUntil);
             auto* timeinfo = gmtime(&rawtime);
             char buffer[80];
-            strftime(buffer, 80, "%FT%TZ", timeinfo);
+            (void) strftime(buffer, 80, "%FT%TZ", timeinfo);
             telemetry["overrideEnd"] = std::string(buffer);
             telemetry["overrideState"] = overrideState;
         }
@@ -454,7 +454,7 @@ class ChickenDoorFactory
     : public PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig>,
       protected Motorized {
 public:
-    ChickenDoorFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors)
+    explicit ChickenDoorFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors)
         : PeripheralFactory<ChickenDoorDeviceConfig, ChickenDoorConfig>("chicken-door")
         , Motorized(motors) {
     }

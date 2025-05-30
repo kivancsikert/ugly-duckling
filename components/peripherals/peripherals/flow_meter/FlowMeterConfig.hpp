@@ -18,4 +18,4 @@ public:
     Property<milliseconds> measurementFrequency { this, "measurementFrequency", 1s };
 };
 
-}
+}    // namespace farmhub::peripherals::flow_meter

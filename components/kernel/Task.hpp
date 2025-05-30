@@ -18,11 +18,11 @@ static const unsigned int DEFAULT_PRIORITY = 1;
 
 class Task;
 
-using TaskFunction = std::function<void (Task &)>;
+using TaskFunction = std::function<void(Task&)>;
 
 class TaskHandle {
 public:
-    TaskHandle(const TaskHandle_t handle)
+    explicit TaskHandle(const TaskHandle_t handle)
         : handle(handle) {
     }
 
@@ -84,7 +84,7 @@ public:
             delete taskFunction;
             return {};
         }
-        return { handle };
+        return TaskHandle { handle };
     }
 
     enum class RunResult : uint8_t {

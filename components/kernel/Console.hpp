@@ -117,7 +117,7 @@ private:
         // The buffer was too small, try again with a heap-allocated buffer instead, but still limit length
         length = std::min(length, 2048);
         char* heapBuffer = new char[length + 1];
-        vsnprintf(heapBuffer, length + 1, format, args);
+        (void) vsnprintf(heapBuffer, length + 1, format, args);
         std::string result(heapBuffer, length);
         delete[] heapBuffer;
         return result;

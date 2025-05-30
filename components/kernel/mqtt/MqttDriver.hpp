@@ -459,7 +459,7 @@ private:
                                 arg.sessionPresent);
                             state = MqttState::Connected;
 
-                            // TODO Should make it work with persistent sessions, but apparenlty it doesn't
+                            // TODO Should make it work with persistent sessions, but apparently it doesn't
                             // // Next connection can start with a persistent session
                             // nextSessionShouldBeClean = false;
 
@@ -556,7 +556,7 @@ private:
             case MQTT_EVENT_CONNECTED: {
                 LOGTD(Tag::MQTT, "Connected to MQTT server");
                 ready.set();
-                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Connected { (bool) event->session_present });
+                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Connected { static_cast<bool>(event->session_present) });
                 break;
             }
             case MQTT_EVENT_DISCONNECTED: {
@@ -637,7 +637,7 @@ private:
             client,
             message.topic.c_str(),
             message.payload.c_str(),
-            (int) message.payload.length(),
+            static_cast<int>(message.payload.length()),
             static_cast<int>(message.qos),
             static_cast<int>(message.retain == Retention::Retain),
             true);
@@ -675,7 +675,7 @@ private:
     }
 
     void processSubscriptionBatch(const std::vector<esp_mqtt_topic_t>& topics, std::list<PendingSubscription>& pendingSubscriptions) {
-        int ret = esp_mqtt_client_subscribe_multiple(client, topics.data(), (int) topics.size());
+        int ret = esp_mqtt_client_subscribe_multiple(client, topics.data(), static_cast<int>(topics.size()));
 
         if (ret < 0) {
             LOGTD(Tag::MQTT, "Error subscribing: %s",
@@ -735,11 +735,11 @@ private:
         while ((*pat_ptr != 0) && (*top_ptr != 0)) {
             // Extract pattern level
             const char* pat_end = strchr(pat_ptr, '/');
-            size_t pat_len = (pat_end != nullptr) ? (size_t) (pat_end - pat_ptr) : strlen(pat_ptr);
+            size_t pat_len = (pat_end != nullptr) ? static_cast<size_t>(pat_end - pat_ptr) : strlen(pat_ptr);
 
             // Extract topic level
             const char* top_end = strchr(top_ptr, '/');
-            size_t top_len = (top_end != nullptr) ? (size_t) (top_end - top_ptr) : strlen(top_ptr);
+            size_t top_len = (top_end != nullptr) ? static_cast<size_t>(top_end - top_ptr) : strlen(top_ptr);
 
             // Handle wildcard +
             if (strncmp(pat_ptr, "+", pat_len) == 0) {
@@ -790,7 +790,7 @@ private:
     StateSource& ready;
 
     std::string hostname;
-    uint32_t port;
+    uint32_t port {};
     esp_mqtt_client_handle_t client;
 
     Queue<std::variant<Connected, Disconnected, MessagePublished, Subscribed, OutgoingMessage, Subscription>> eventQueue;

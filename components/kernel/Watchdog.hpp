@@ -20,7 +20,7 @@ enum class WatchdogState : uint8_t {
     TimedOut
 };
 
-using WatchdogCallback = std::function<void (WatchdogState)>;
+using WatchdogCallback = std::function<void(WatchdogState)>;
 
 class Watchdog {
 public:
@@ -75,7 +75,7 @@ private:
     const std::string name;
     const microseconds timeout;
     const WatchdogCallback callback;
-    esp_timer_handle_t timer;
+    esp_timer_handle_t timer {};
 };
 
 }    // namespace farmhub::kernel

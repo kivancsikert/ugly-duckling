@@ -40,7 +40,7 @@ protected:
 template <typename TMessage>
 class Queue : public BaseQueue {
 public:
-    Queue(const std::string& name, size_t capacity = 16)
+    explicit Queue(const std::string& name, size_t capacity = 16)
         : BaseQueue(name, sizeof(TMessage*), capacity) {
     }
 
@@ -69,7 +69,7 @@ public:
         return sentWithoutDropping;
     }
 
-    using MessageHandler = std::function<void (TMessage &)>;
+    using MessageHandler = std::function<void(TMessage&)>;
 
     size_t drain(MessageHandler handler) {
         return drain(SIZE_MAX, handler);
@@ -152,7 +152,7 @@ public:
 template <typename TMessage>
 class CopyQueue : public BaseQueue {
 public:
-    CopyQueue(const std::string& name, size_t capacity = 16)
+    explicit CopyQueue(const std::string& name, size_t capacity = 16)
         : BaseQueue(name, sizeof(TMessage), capacity) {
     }
 
@@ -204,7 +204,7 @@ public:
     }
 
     std::optional<TMessage> pollIn(ticks timeout) {
-        TMessage message;
+        TMessage message {};
         if (xQueueReceive(this->queue, &message, timeout.count())) {
             return message;
         }
@@ -279,7 +279,7 @@ private:
 
 class Lock {
 public:
-    Lock(MutexBase& mutex)
+    explicit Lock(MutexBase& mutex)
         : mutex(mutex) {
         mutex.lock();
     }

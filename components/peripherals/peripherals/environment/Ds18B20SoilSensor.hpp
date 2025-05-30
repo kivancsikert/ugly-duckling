@@ -62,7 +62,7 @@ public:
 
 private:
     const InternalPinPtr pin;
-    onewire_addr_t sensor;
+    onewire_addr_t sensor {};
 };
 
 class Ds18B20SoilSensor

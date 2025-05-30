@@ -25,7 +25,7 @@ std::string toHexString(uint64_t value) {
 
 std::string toStringWithPrecision(double value, int precision) {
     char buffer[32];
-    std::snprintf(buffer, sizeof(buffer), "%.*f", precision, value);
+    (void) std::snprintf(buffer, sizeof(buffer), "%.*f", precision, value);
     return { buffer };
 }
 

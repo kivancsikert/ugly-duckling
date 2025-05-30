@@ -15,7 +15,7 @@ namespace farmhub::kernel {
  */
 class NvsStore {
 public:
-    NvsStore(const std::string& name)
+    explicit NvsStore(const std::string& name)
         : name(name) {
     }
 

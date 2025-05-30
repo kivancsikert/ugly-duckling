@@ -88,10 +88,10 @@ public:
 
 class UglyDucklingMk6 : public DeviceDefinition<Mk6Config> {
 public:
-    UglyDucklingMk6(const std::shared_ptr<Mk6Config>& config)
+    explicit UglyDucklingMk6(const std::shared_ptr<Mk6Config>& config)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
         // Switch off strapping pin
-        // TODO: Add a LED driver instead
+        // TODO(lptr): Add a LED driver instead
         pins::LEDA_RED->pinMode(Pin::Mode::Output);
         pins::LEDA_RED->digitalWrite(1);
     }

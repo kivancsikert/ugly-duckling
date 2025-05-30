@@ -62,7 +62,7 @@ private:
 class FlowControlDeviceConfig
     : public ConfigurationSection {
 public:
-    FlowControlDeviceConfig(ValveControlStrategyType defaultStrategy)
+    explicit FlowControlDeviceConfig(ValveControlStrategyType defaultStrategy)
         : valve(this, "valve", defaultStrategy)
         , flowMeter(this, "flow-meter") {
     }

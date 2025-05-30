@@ -19,7 +19,7 @@ static constexpr const char* PARTITION = "data";
 class FileSystem {
 public:
     bool exists(const std::string& path) const {
-        struct stat fileStat;
+        struct stat fileStat {};
         return stat(resolve(path).c_str(), &fileStat) == 0;
     }
 
@@ -29,7 +29,7 @@ public:
 
     std::optional<std::string> readAll(const std::string& path) const {
         std::string resolvedPath = resolve(path);
-        struct stat fileStat;
+        struct stat fileStat {};
         if (stat(resolvedPath.c_str(), &fileStat) != 0) {
             return std::nullopt;
         }
@@ -39,7 +39,7 @@ public:
         }
         std::string result(fileStat.st_size, '\0');
         size_t bytesRead = fread(result.data(), 1, fileStat.st_size, file);
-        fclose(file);
+        (void) fclose(file);
         if (bytesRead != fileStat.st_size) {
             return std::nullopt;
         }
@@ -51,7 +51,7 @@ public:
     }
 
     size_t size(const std::string& path) const {
-        struct stat fileStat;
+        struct stat fileStat {};
         if (stat(resolve(path).c_str(), &fileStat) != 0) {
             return 0;
         }
@@ -65,7 +65,7 @@ public:
         }
 
         size_t bytesRead = fread(buffer, 1, size, file);
-        fclose(file);
+        (void) fclose(file);
         return bytesRead;
     }
 
@@ -76,7 +76,7 @@ public:
         }
 
         size_t bytesWritten = fwrite(buffer, 1, size, file);
-        fclose(file);
+        (void) fclose(file);
         return bytesWritten;
     }
 

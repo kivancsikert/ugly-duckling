@@ -116,7 +116,7 @@ template <std::derived_from<ConfigurationSection> TDeviceConfig, std::derived_fr
 class PeripheralFactory : public PeripheralFactoryBase {
 public:
     // By default use the factory type as the peripheral type
-    PeripheralFactory(const std::string& type, TDeviceConfigArgs... deviceConfigArgs)
+    explicit PeripheralFactory(const std::string& type, TDeviceConfigArgs... deviceConfigArgs)
         : PeripheralFactory(type, type, std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 

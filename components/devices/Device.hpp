@@ -176,13 +176,13 @@ std::shared_ptr<MqttRoot> initMqtt(const std::shared_ptr<ModuleStates>& states, 
 void registerBasicCommands(const std::shared_ptr<MqttRoot>& mqttRoot) {
     mqttRoot->registerCommand("restart", [](const JsonObject&, JsonObject&) {
         printf("Restarting...\n");
-        fflush(stdout);
+        (void) fflush(stdout);
         fsync(fileno(stdout));
         esp_restart();
     });
     mqttRoot->registerCommand("sleep", [](const JsonObject& request, JsonObject& response) {
         seconds duration = seconds(request["duration"].as<long>());
-        esp_sleep_enable_timer_wakeup(((microseconds) duration).count());
+        esp_sleep_enable_timer_wakeup((microseconds(duration)).count());
         LOGI("Sleeping for %lld seconds in light sleep mode",
             duration.count());
         esp_deep_sleep_start();

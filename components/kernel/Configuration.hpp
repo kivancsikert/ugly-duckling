@@ -19,7 +19,7 @@ namespace farmhub::kernel {
 class ConfigurationException
     : public std::exception {
 public:
-    ConfigurationException(const std::string& message)
+    explicit ConfigurationException(const std::string& message)
         : message("ConfigurationException: " + message) {
     }
 
@@ -34,7 +34,7 @@ class JsonAsString {
 public:
     JsonAsString() = default;
 
-    JsonAsString(const std::string& value)
+    explicit JsonAsString(const std::string& value)
         : value(value) {
     }
 
