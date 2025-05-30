@@ -17,7 +17,7 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::environment {
 
-class Sht3xComponent
+class Sht3xComponent final
     : public Component,
       public TelemetryProvider {
 public:

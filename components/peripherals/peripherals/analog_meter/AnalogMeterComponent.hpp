@@ -17,7 +17,7 @@ using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::peripherals::analog_meter {
 
-class AnalogMeterComponent
+class AnalogMeterComponent final
     : public Component,
       public TelemetryProvider {
 public:

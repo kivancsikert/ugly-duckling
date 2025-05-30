@@ -23,6 +23,8 @@ enum class SwitchMode : uint8_t {
 
 class Switch {
 public:
+    virtual ~Switch() = default;
+
     virtual const std::string& getName() const = 0;
     virtual InternalPinPtr getPin() const = 0;
     virtual bool isEngaged() const = 0;
@@ -30,7 +32,7 @@ public:
 
 static void handleSwitchInterrupt(void* arg);
 
-class SwitchManager {
+class SwitchManager final {
 public:
     SwitchManager() {
         Task::loop("switch-manager", 3072, [this](Task& task) {
@@ -87,7 +89,7 @@ public:
     }
 
 private:
-    struct SwitchState : public Switch {
+    struct SwitchState final : public Switch {
     public:
         const std::string& getName() const override {
             return name;

@@ -62,7 +62,7 @@ public:
         });
     }
 
-    virtual ~FlowMeterComponent() = default;
+    ~FlowMeterComponent() override = default;
 
     void populateTelemetry(JsonObject& json) override {
         Lock lock(updateMutex);

@@ -22,7 +22,7 @@ public:
     Property<uint16_t> water { this, "water", 1000 };
 };
 
-class SoilMoistureSensorComponent
+class SoilMoistureSensorComponent final
     : public Component,
       public TelemetryProvider {
 public:

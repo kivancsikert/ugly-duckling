@@ -21,7 +21,7 @@ namespace farmhub::peripherals::environment {
  *
  * Note: Needs a 4.7k pull-up resistor between the data and power lines.
  */
-class Ds18B20SoilSensorComponent
+class Ds18B20SoilSensorComponent final
     : public Component,
       public TelemetryProvider {
 public:

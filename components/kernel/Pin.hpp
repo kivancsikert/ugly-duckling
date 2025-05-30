@@ -59,12 +59,12 @@ public:
         BY_NAME[name] = std::move(pin);
     }
 
+    virtual ~Pin() = default;
+
 protected:
     Pin(const std::string& name)
         : name(name) {
     }
-
-    virtual ~Pin() = default;
 
 
     const std::string name;

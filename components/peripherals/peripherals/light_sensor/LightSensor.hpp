@@ -35,6 +35,8 @@ public:
         , level(latencyInterval.count() / measurementFrequency.count()) {
     }
 
+    ~LightSensorComponent() override = default;
+
     double getCurrentLevel() {
         Lock lock(updateAverageMutex);
         return level.getAverage();

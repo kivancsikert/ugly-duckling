@@ -113,7 +113,7 @@ public:
 };
 
 template <std::derived_from<LightSensorComponent> TLightSensorComponent>
-class ChickenDoorComponent
+class ChickenDoorComponent final
     : public Component,
       public TelemetryProvider {
 public:
@@ -430,7 +430,8 @@ private:
     ChickenDoorComponent<TLightSensorComponent> doorComponent;
 };
 
-class NoLightSensorComponent : public LightSensorComponent {
+class NoLightSensorComponent final
+    : public LightSensorComponent {
 public:
     NoLightSensorComponent(
         const std::string& name,

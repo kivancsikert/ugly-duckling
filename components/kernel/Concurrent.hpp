@@ -21,11 +21,11 @@ protected:
         , queue(xQueueCreate(capacity, messageSize)) {
     }
 
+public:
     virtual ~BaseQueue() {
         vQueueDelete(queue);
     }
 
-public:
     virtual void clear() = 0;
 
     UBaseType_t size() {
@@ -218,6 +218,8 @@ public:
 
 class MutexBase {
 public:
+    virtual ~MutexBase() = default;
+
     void lock() {
         while (!lockIn(ticks::max())) { }
     }
@@ -237,7 +239,7 @@ public:
         : mutex(xSemaphoreCreateMutex()) {
     }
 
-    ~Mutex() {
+    ~Mutex() override {
         vSemaphoreDelete(mutex);
     }
 
@@ -259,7 +261,7 @@ public:
         : mutex(xSemaphoreCreateRecursiveMutex()) {
     }
 
-    ~RecursiveMutex() {
+    ~RecursiveMutex() override {
         vSemaphoreDelete(mutex);
     }
 

@@ -39,7 +39,7 @@ void convertFromJson(JsonVariantConst src, FencePinConfig& dst) {
     dst.voltage = src["voltage"];
 }
 
-class ElectricFenceMonitorComponent
+class ElectricFenceMonitorComponent final
     : public Component,
       public TelemetryProvider {
 public:

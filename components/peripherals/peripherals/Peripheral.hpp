@@ -38,7 +38,7 @@ public:
         });
     }
 
-    virtual ~PeripheralBase() = default;
+    ~PeripheralBase() override = default;
 
     void publishTelemetry() {
         JsonDocument telemetryDoc;

@@ -20,7 +20,7 @@ namespace farmhub::peripherals::environment {
 /**
  * @brief Works with SHT2x or HTU2x.
  */
-class Sht2xComponent
+class Sht2xComponent final
     : public Component,
       public TelemetryProvider {
 public:

@@ -32,7 +32,7 @@ public:
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
 };
 
-class Bh1750Component
+class Bh1750Component final
     : public LightSensorComponent {
 public:
     Bh1750Component(

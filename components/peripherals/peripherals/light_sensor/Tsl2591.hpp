@@ -32,7 +32,7 @@ public:
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
 };
 
-class Tsl2591Component
+class Tsl2591Component final
     : public LightSensorComponent {
 public:
     Tsl2591Component(

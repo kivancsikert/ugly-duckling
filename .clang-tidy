@@ -29,7 +29,6 @@ Checks: >
   -cppcoreguidelines-pro-type-reinterpret-cast,
   -cppcoreguidelines-pro-type-union-access,
   -cppcoreguidelines-special-member-functions,
-  -cppcoreguidelines-virtual-class-destructor,
 
 
 CheckOptions:
