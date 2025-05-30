@@ -93,7 +93,7 @@ public:
 
             runEventLoop(task);
         });
-        Task::loop("mqtt:incoming", 4096, [this](Task& task) {
+        Task::loop("mqtt:incoming", 4096, [this](Task& /*task*/) {
             incomingQueue.take([this](const IncomingMessage& message) {
                 processIncomingMessage(message);
             });
@@ -208,7 +208,7 @@ private:
         const std::string payload;
         const Retention retain;
         const QoS qos;
-        const TaskHandle_t waitingTask;
+        TaskHandle_t waitingTask;
         const LogPublish log;
     };
 
@@ -403,7 +403,7 @@ private:
         std::unordered_map<int, TaskHandle_t> messages;
     };
 
-    void runEventLoop(Task& task) {
+    void runEventLoop(Task& /*task*/) {
         // We are not yet connected
         auto state = MqttState::Disconnected;
         auto connectionStarted = boot_clock::zero();
@@ -539,7 +539,7 @@ private:
 
     bool clientRunning = false;
 
-    static void handleMqttEventCallback(void* userData, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
+    static void handleMqttEventCallback(void* userData, esp_event_base_t /*eventBase*/, int32_t eventId, void* eventData) {
         auto* event = static_cast<esp_mqtt_event_handle_t>(eventData);
         // LOGTV(Tag::MQTT, "Event dispatched from event loop: base=%s, event_id=%d, client=%p, data=%p, data_len=%d, topic=%p, topic_len=%d, msg_id=%d",
         //     eventBase, event->event_id, event->client, event->data, event->data_len, event->topic, event->topic_len, event->msg_id);
@@ -709,7 +709,7 @@ private:
 #endif
         for (const auto& subscription : subscriptions) {
             if (topicMatches(subscription.topic.c_str(), topic.c_str())) {
-                Task::run("mqtt:incoming-handler", 4096, [topic, payload, subscription](Task& task) {
+                Task::run("mqtt:incoming-handler", 4096, [topic, payload, subscription](Task& /*task*/) {
                     JsonDocument json;
                     deserializeJson(json, payload);
                     subscription.handle(topic, json.as<JsonObject>());

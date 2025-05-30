@@ -180,7 +180,7 @@ void registerBasicCommands(const std::shared_ptr<MqttRoot>& mqttRoot) {
         fsync(fileno(stdout));
         esp_restart();
     });
-    mqttRoot->registerCommand("sleep", [](const JsonObject& request, JsonObject& response) {
+    mqttRoot->registerCommand("sleep", [](const JsonObject& request, JsonObject& /*response*/) {
         seconds duration = seconds(request["duration"].as<int64_t>());
         esp_sleep_enable_timer_wakeup((microseconds(duration)).count());
         LOGI("Sleeping for %lld seconds in light sleep mode",

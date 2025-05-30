@@ -88,7 +88,7 @@ public:
 
 class UglyDucklingMk6 : public DeviceDefinition<Mk6Config> {
 public:
-    explicit UglyDucklingMk6(const std::shared_ptr<Mk6Config>& config)
+    explicit UglyDucklingMk6(const std::shared_ptr<Mk6Config>& /*config*/)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
         // Switch off strapping pin
         // TODO(lptr): Add a LED driver instead
@@ -96,7 +96,7 @@ public:
         pins::LEDA_RED->digitalWrite(1);
     }
 
-    static std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& i2c) {
+    static std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& /*i2c*/) {
         return std::make_shared<AnalogBatteryDriver>(
             pins::BATTERY,
             1.2424,
@@ -118,7 +118,7 @@ protected:
             pins::NFault,
             deviceConfig->motorNSleepPin.get());
 
-        std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a",  motorDriver->getMotorA() }, { "b",  motorDriver->getMotorB() } };
+        std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorDriver->getMotorA() }, { "b", motorDriver->getMotorB() } };
 
         peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());

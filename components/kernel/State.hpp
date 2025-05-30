@@ -3,8 +3,8 @@
 #include <chrono>
 #include <list>
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/event_groups.h>
+#include <freertos/FreeRTOS.h>        // NOLINT(misc-header-include-cycle)
+#include <freertos/event_groups.h>    // NOLINT(misc-header-include-cycle)
 
 #include <Time.hpp>
 
@@ -62,8 +62,8 @@ protected:
     }
 
     const std::string name;
-    const EventGroupHandle_t eventGroup;
-    const EventBits_t eventBits;
+    EventGroupHandle_t eventGroup;
+    EventBits_t eventBits;
 
     friend StateManager;
 };

@@ -55,7 +55,7 @@ public:
     }
 
 private:
-    const EventGroupHandle_t eventGroup;
+    EventGroupHandle_t eventGroup;
     int nextEventBit = 1;
 };
 

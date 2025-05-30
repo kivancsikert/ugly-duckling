@@ -171,9 +171,9 @@ public:
             response["overrideState"] = overrideState;
         });
 
-        Task::run(name, 4096, 2, [this](Task& task) {
+        Task::run(name, 4096, 2, [this](Task& /*task*/) {
             while (operationState == OperationState::RUNNING) {
-                runLoop(task);
+                runLoop();
             }
         });
     }
@@ -202,7 +202,7 @@ public:
     }
 
 private:
-    void runLoop(Task& task) {
+    void runLoop() {
         DoorState currentState = determineCurrentState();
         DoorState targetState = determineTargetState(currentState);
         if (currentState == DoorState::NONE && targetState == lastState) {
@@ -437,8 +437,8 @@ public:
     NoLightSensorComponent(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        const std::shared_ptr<I2CManager>& i2c,
-        const I2CConfig& config,
+        const std::shared_ptr<I2CManager>& /*i2c*/,
+        const I2CConfig& /*config*/,
         seconds measurementFrequency,
         seconds latencyInterval)
         : LightSensorComponent(name, std::move(mqttRoot), measurementFrequency, latencyInterval) {

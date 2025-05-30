@@ -1,0 +1,16 @@
+---
+MainSourceFile:  'D:/Workspace/kivancsi/ugly-duckling/main\main.cpp'
+Diagnostics:
+  - DiagnosticName:  misc-unused-parameters
+    DiagnosticMessage:
+      Message:         'parameter ''task'' is unused'
+      FilePath:        'D:/Workspace/kivancsi/ugly-duckling/components/peripherals/peripherals/chicken_door/ChickenDoor.hpp'
+      FileOffset:      5671
+      Replacements:
+        - FilePath:        'D:/Workspace/kivancsi/ugly-duckling/components/peripherals/peripherals/chicken_door/ChickenDoor.hpp'
+          Offset:          5671
+          Length:          4
+          ReplacementText: ' /*task*/'
+    Level:           Error
+    BuildDirectory:  'D:/Workspace/kivancsi/ugly-duckling/build'
+...

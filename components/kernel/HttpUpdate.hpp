@@ -24,7 +24,7 @@ public:
         std::string content;
         serializeJson(doc, content);
         fs->writeAll(HttpUpdater::UPDATE_FILE, content);
-        Task::run("update", 3072, [](Task& task) {
+        Task::run("update", 3072, [](Task& /*task*/) {
             LOGI("Restarting in 5 seconds to apply update");
             Task::delay(5s);
             esp_restart();

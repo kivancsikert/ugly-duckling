@@ -251,7 +251,7 @@ public:
             response["state"] = state;
         });
 
-        Task::loop(name, 4096, [this, name](Task& task) {
+        Task::loop(name, 4096, [this, name](Task& /*task*/) {
             auto now = system_clock::now();
             if (overrideState != ValveState::NONE && now >= overrideUntil.load()) {
                 LOGI("Valve '%s' override expired", name.c_str());

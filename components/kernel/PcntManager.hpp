@@ -43,7 +43,7 @@ struct PulseCounterUnit {
     }
 
 private:
-    const pcnt_unit_handle_t unit;
+    pcnt_unit_handle_t unit;
     const InternalPinPtr pin;
 };
 

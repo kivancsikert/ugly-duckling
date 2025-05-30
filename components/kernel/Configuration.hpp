@@ -270,7 +270,7 @@ public:
         entries.clear();
     }
 
-    void store(JsonObject& json, bool inlineDefaults) const override {
+    void store(JsonObject& json, bool /*inlineDefaults*/) const override {
         auto jsonArray = json[name].to<JsonArray>();
         for (auto& entry : entries) {
             jsonArray.add(entry);
