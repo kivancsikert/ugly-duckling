@@ -62,12 +62,21 @@ jobs:
           target: ${{ matrix.target }}
           extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache
           command: |
-            ccache --max-size=${{ env.CCACHE_MAXSIZE }} --set-config compress=true
-            idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }}
-            ./generate-clang-tidy-compile-db.py
+            ccache --max-size=${{ env.CCACHE_MAXSIZE }} --set-config compress=true && \
+            idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }} && \
+            ccache -s
+
+      - name: clang-tidy
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: ${{ env.ESP_IDF_VERSION }}
+          esp_idf_docker_image: lptr/esp-idf-clang
+          target: ${{ matrix.target }}
+          extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache
+          command: |
+            ccache --max-size=${{ env.CCACHE_MAXSIZE }} --set-config compress=true && \
+            ./generate-clang-tidy-compile-db.py && \
             clang-tidy -p build/clang-tidy main/main.cpp
-            echo "Cleaning ccache..."
-            ccache -cs
 
       - name: Rename firmware artifact
         run: |
