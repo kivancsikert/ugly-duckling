@@ -89,6 +89,7 @@ private:
 
         if (ip_info.ip.addr != 0) {
             static char ip_str[32];
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
             snprintf(ip_str, sizeof(ip_str), "\033[0;33m" IPSTR "\033[0m", IP2STR(&ip_info.ip));
             return ip_str;
         }

@@ -69,7 +69,7 @@ private:
             summary.exc_task, excCause);
 
         json["dump-version"] = summary.core_dump_version;
-        json["elf-sha256"] = std::string((const char*) summary.app_elf_sha256);
+        json["elf-sha256"] = std::string(reinterpret_cast<const char*>(summary.app_elf_sha256));
         json["task"] = std::string(summary.exc_task);
         json["cause"] = excCause;
 

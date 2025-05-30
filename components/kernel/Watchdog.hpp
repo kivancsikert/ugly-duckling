@@ -30,7 +30,7 @@ public:
         , callback(std::move(callback)) {
         esp_timer_create_args_t config = {
             .callback = [](void* arg) {
-                auto* watchdog = (Watchdog*) arg;
+                auto* watchdog = static_cast<Watchdog*>(arg);
                 watchdog->callback(WatchdogState::TimedOut);
             },
             .arg = this,

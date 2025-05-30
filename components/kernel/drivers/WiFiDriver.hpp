@@ -127,7 +127,7 @@ private:
             }
             case WIFI_EVENT_STA_CONNECTED: {
                 auto* event = static_cast<wifi_event_sta_connected_t*>(eventData);
-                std::string newSsid((const char*) event->ssid, event->ssid_len);
+                std::string newSsid(reinterpret_cast<const char*>(event->ssid), event->ssid_len);
                 {
                     Lock lock(metadataMutex);
                     ssid = newSsid;
@@ -144,8 +144,8 @@ private:
                     ssid.reset();
                 }
                 eventQueue.offer(WiFiEvent::DISCONNECTED);
-                LOGTD(Tag::WIFI, "Disconnected from the AP %s, reason: %d",
-                    std::string((const char*) event->ssid, event->ssid_len).c_str(), event->reason);
+                LOGTD(Tag::WIFI, "Disconnected from the AP %.*s, reason: %d",
+                    event->ssid_len, reinterpret_cast<const char*>(event->ssid), event->reason);
                 break;
             }
             case WIFI_EVENT_AP_STACONNECTED: {
@@ -171,6 +171,7 @@ private:
                     ip = event->ip_info.ip;
                 }
                 eventQueue.offer(WiFiEvent::CONNECTED);
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
                 LOGTD(Tag::WIFI, "Got IP - " IPSTR, IP2STR(&event->ip_info.ip));
                 break;
             }
@@ -197,8 +198,8 @@ private:
             }
             case WIFI_PROV_CRED_RECV: {
                 auto* wifiConfig = static_cast<wifi_sta_config_t*>(eventData);
-                LOGD("Received Wi-Fi credentials for SSID '%s'",
-                    (const char*) wifiConfig->ssid);
+                LOGTD(Tag::WIFI, "Received Wi-Fi credentials for SSID '%s'",
+                    reinterpret_cast<const char*>(wifiConfig->ssid));
                 break;
             }
             case WIFI_PROV_CRED_FAIL: {
