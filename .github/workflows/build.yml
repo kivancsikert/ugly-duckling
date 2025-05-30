@@ -111,7 +111,7 @@ jobs:
           path: test/unit-tests
           command: |
             ccache --max-size=${CCACHE_MAXSIZE}
-            idf.py -DUD_GEN=MK6 build
+            idf.py build
             ccache -s
 
       - name: Run a Wokwi CI server
