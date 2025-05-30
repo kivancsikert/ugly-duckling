@@ -62,7 +62,7 @@ jobs:
           target: ${{ matrix.target }}
           extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache
           command: |
-            ccache --max-size=${{ env.CCACHE_MAXSIZE }} --set-config compress=true && \
+            ccache --max-size=${{ env.CCACHE_MAXSIZE }} && \
             idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }} && \
             ccache -s
 
@@ -74,7 +74,7 @@ jobs:
           target: ${{ matrix.target }}
           extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache
           command: |
-            ccache --max-size=${{ env.CCACHE_MAXSIZE }} --set-config compress=true && \
+            ccache --max-size=${{ env.CCACHE_MAXSIZE }} && \
             ./generate-clang-tidy-compile-db.py && \
             clang-tidy -p build/clang-tidy main/main.cpp
 
@@ -120,8 +120,8 @@ jobs:
           path: test/unit-tests
           extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache
           command: |
-            ccache --max-size=${{ env.CCACHE_MAXSIZE }} --set-config compress=true
-            idf.py build
+            ccache --max-size=${{ env.CCACHE_MAXSIZE }} && \
+            idf.py build && \
             ccache -s
 
       - name: Run a Wokwi CI server
@@ -129,7 +129,13 @@ jobs:
 
       - name: esp-idf test
         run: |
-          docker run -v .:/project -w /project/test/unit-tests -e HOME=/tmp -e WOKWI_CLI_TOKEN=${{ secrets.WOKWI_CLI_TOKEN }} lptr/pytest-embedded:latest pytest --embedded-services idf,wokwi ./pytest_unit-tests.py
+            docker run \
+            -v .:/project \
+            -w /project/test/unit-tests \
+            -e HOME=/tmp \
+            -e WOKWI_CLI_TOKEN=${{ secrets.WOKWI_CLI_TOKEN }} \
+            lptr/pytest-embedded:latest \
+            pytest --embedded-services idf,wokwi ./pytest_unit-tests.py
 
   integ-test:
     runs-on: ubuntu-latest
@@ -165,8 +171,8 @@ jobs:
           path: test/integ-tests
           extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache
           command: |
-            ccache --max-size=${{ env.CCACHE_MAXSIZE }} --set-config compress=true
-            idf.py -DUD_GEN=MK6 -DUD_DEBUG=1 -DFSUPLOAD=1 -DWOKWI=1 -DWOKWI_MQTT_HOST=${{ env.HOSTNAME }} build
+            ccache --max-size=${{ env.CCACHE_MAXSIZE }} && \
+            idf.py -DUD_GEN=MK6 -DUD_DEBUG=1 -DFSUPLOAD=1 -DWOKWI=1 -DWOKWI_MQTT_HOST=${{ env.HOSTNAME }} build && \
             ccache -s
 
       - name: Run a Wokwi CI server
