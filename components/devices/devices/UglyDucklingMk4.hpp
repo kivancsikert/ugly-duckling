@@ -73,7 +73,7 @@ public:
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk4Config>& deviceConfig) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk4Config>& /*deviceConfig*/) override {
         auto motor = std::make_shared<Drv8801Driver>(
             services.pwmManager,
             pins::VALVE_EN,
