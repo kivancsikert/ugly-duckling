@@ -39,29 +39,39 @@ jobs:
             ud_debug: 0
             target: esp32c6
 
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 1536M
+      CCACHE_COMPRESS: true
+
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: "recursive"
 
+      # 🧠 Restore ccache directory from GitHub Actions cache
+      - name: Restore ccache cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-${{ env.ESP_IDF_VERSION }}-${{ matrix.environment }}
+
+      # 🛠️ Configure ccache to use max size
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: ${{ env.ESP_IDF_VERSION }}
           esp_idf_docker_image: lptr/esp-idf-clang
+          extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache -e CCACHE_DIR=/root/.ccache -e CCACHE_MAXSIZE=${{ env.CCACHE_MAXSIZE }} -e CCACHE_COMPRESS=${{ env.CCACHE_COMPRESS }}
           target: ${{ matrix.target }}
           command: |
-            clang-tidy --version
+            ccache -s
             idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }}
             ./generate-clang-tidy-compile-db.py
-            # idf.py clang-check \
-            #   --exit-code \
-            #   --exclude-paths managed_components \
-            #   --run-clang-tidy-options "-p build/clang-tidy" \
-            ##   --run-clang-tidy-options "-config-file $PWD/.clang-tidy"
-            clang-tidy --version
             clang-tidy -p build/clang-tidy main/main.cpp
+            ccache --max-size=${CCACHE_MAXSIZE}
+            ccache -s
 
       - name: Rename firmware artifact
         run: |
