@@ -229,7 +229,7 @@ private:
     // NOLINTBEGIN(cppcoreguidelines-avoid-goto)
     void runLoop() {
         bool connected = false;
-        std::optional<time_point<boot_clock>> connectingSince;
+        time_point<boot_clock> connectingSince;
         while (true) {
             if (!connected) {
                 if (configPortalRunning.isSet()) {
@@ -238,7 +238,7 @@ private:
                     goto handleEvents;
                 }
                 if (networkConnecting.isSet()) {
-                    if (boot_clock::now() - connectingSince.value() < WIFI_CONNECTION_TIMEOUT) {
+                    if (boot_clock::now() - connectingSince < WIFI_CONNECTION_TIMEOUT) {
                         LOGTV(Tag::WIFI, "Already connecting");
                         goto handleEvents;
                     }
@@ -265,7 +265,6 @@ private:
                         break;
                     case WiFiEvent::CONNECTED:
                         connected = true;
-                        connectingSince.reset();
                         networkConnecting.clear();
                         LOGTD(Tag::WIFI, "Connected to the network");
                         break;
