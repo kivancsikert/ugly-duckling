@@ -28,6 +28,8 @@ Checks: >
   -cppcoreguidelines-pro-type-member-init,
   -cppcoreguidelines-pro-type-reinterpret-cast,
   -cppcoreguidelines-special-member-functions,
+  cert-*
+  concurrency-*
 
 CheckOptions:
   readability-function-cognitive-complexity.Threshold: 200
