@@ -66,7 +66,6 @@ protected:
         : name(name) {
     }
 
-
     const std::string name;
 
     static std::map<std::string, PinPtr> BY_NAME;
@@ -100,8 +99,8 @@ public:
         if (it == INTERNAL_BY_GPIO.end()) {
             std::string name = "GPIO_NUM_" + std::to_string(static_cast<int>(pin));
             return registerPin(name, pin);
-        }             return it->second;
-
+        }
+        return it->second;
     }
 
     InternalPin(const std::string& name, gpio_num_t gpio)
@@ -186,11 +185,8 @@ private:
     static adc_oneshot_unit_handle_t getUnitHandle(adc_unit_t unit) {
         adc_oneshot_unit_handle_t handle = ANALOG_UNITS[unit];
         if (handle == nullptr) {
-            adc_oneshot_unit_init_cfg_t config = {
-                .unit_id = unit,
-                .clk_src = ADC_RTC_CLK_SRC_DEFAULT,
-                .ulp_mode = ADC_ULP_MODE_DISABLE,
-            };
+            adc_oneshot_unit_init_cfg_t config = {};
+            config.unit_id = unit;
             ESP_ERROR_THROW(adc_oneshot_new_unit(&config, &handle));
             ANALOG_UNITS[unit] = handle;
         }
@@ -230,8 +226,8 @@ struct Converter<PinPtr> {
     static PinPtr fromJson(JsonVariantConst src) {
         if (src.is<const char*>()) {
             return Pin::byName(src.as<const char*>());
-        }             throw std::runtime_error(std::string("Invalid pin name: " + src.as<std::string>()).c_str());
-
+        }
+        throw std::runtime_error(std::string("Invalid pin name: " + src.as<std::string>()).c_str());
     }
 
     static bool checkJson(JsonVariantConst src) {
@@ -254,8 +250,8 @@ struct Converter<InternalPinPtr> {
     static InternalPinPtr fromJson(JsonVariantConst src) {
         if (src.is<const char*>()) {
             return InternalPin::byName(src.as<const char*>());
-        }             return InternalPin::byGpio(static_cast<gpio_num_t>(src.as<int>()));
-
+        }
+        return InternalPin::byGpio(static_cast<gpio_num_t>(src.as<int>()));
     }
 
     static bool checkJson(JsonVariantConst src) {
