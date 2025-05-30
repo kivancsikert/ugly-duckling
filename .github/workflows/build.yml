@@ -5,6 +5,9 @@ on:
     types: [published]
 
 env:
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_MAXSIZE: 256M
+  CCACHE_COMPRESS: true
   ESP_IDF_VERSION: v5.4.1
 
 jobs:
@@ -39,11 +42,6 @@ jobs:
             ud_debug: 0
             target: esp32c6
 
-    env:
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_MAXSIZE: 1536M
-      CCACHE_COMPRESS: true
-
     steps:
       - uses: actions/checkout@v4
         with:
@@ -66,11 +64,10 @@ jobs:
           extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache -e CCACHE_DIR=/root/.ccache -e CCACHE_MAXSIZE=${{ env.CCACHE_MAXSIZE }} -e CCACHE_COMPRESS=${{ env.CCACHE_COMPRESS }}
           target: ${{ matrix.target }}
           command: |
-            ccache -s
+            ccache --max-size=${CCACHE_MAXSIZE}
             idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }}
             ./generate-clang-tidy-compile-db.py
             clang-tidy -p build/clang-tidy main/main.cpp
-            ccache --max-size=${CCACHE_MAXSIZE}
             ccache -s
 
       - name: Rename firmware artifact
