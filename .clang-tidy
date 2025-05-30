@@ -35,3 +35,5 @@ CheckOptions:
   cppcoreguidelines-avoid-do-while.IgnoreMacros: true
 
 HeaderFilterRegex: '/ugly-duckling/(main|components)/'
+
+WarningsAsErrors: '*'
