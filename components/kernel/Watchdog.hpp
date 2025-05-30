@@ -34,7 +34,9 @@ public:
                 watchdog->callback(WatchdogState::TimedOut);
             },
             .arg = this,
+            .dispatch_method = ESP_TIMER_TASK,
             .name = this->name.c_str(),
+            .skip_unhandled_events = false,
         };
         esp_err_t ret = esp_timer_create(&config, &timer);
         if (ret != ESP_OK) {

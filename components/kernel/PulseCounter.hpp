@@ -167,15 +167,20 @@ public:
 
             // Make sure we handle any state changes when the device wakes up due to a GPIO interrupt
             esp_pm_sleep_cbs_register_config_t sleepCallbackConfig = {
+                .enter_cb = nullptr,
                 .exit_cb = [](int64_t timeSleptInUs, void* arg) {
-                if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
-                    auto* self = static_cast<PulseCounterManager*>(arg);
-                    for (auto& counter : self->counters) {
-                        counter->handlePotentialStateChange();
+                    if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
+                        auto* self = static_cast<PulseCounterManager*>(arg);
+                        for (auto& counter : self->counters) {
+                            counter->handlePotentialStateChange();
+                        }
                     }
-                }
-                return ESP_OK; },
+                    return ESP_OK;
+                },
+                .enter_cb_user_arg = nullptr,
                 .exit_cb_user_arg = this,
+                .enter_cb_prior = 0,
+                .exit_cb_prior = 0,
             };
             ESP_ERROR_THROW(esp_pm_light_sleep_register_cbs(&sleepCallbackConfig));
         }

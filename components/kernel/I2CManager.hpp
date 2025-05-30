@@ -43,6 +43,7 @@ public:
         , device({
               .port = bus->port,
               .cfg = {
+                  .mode = I2C_MODE_SLAVE,
                   .sda_io_num = bus->sda->getGpio(),
                   .scl_io_num = bus->scl->getGpio(),
                   // TODO Allow this to be configred
@@ -52,8 +53,11 @@ public:
                       // TODO Allow clock speed to be configured
                       .clk_speed = 400000,
                   },
+                  .clk_flags = 0,    // Use default clock flags
               },
               .addr = address,
+              .mutex = nullptr,      // Will be created in the constructor
+              .timeout_ticks = 0,    // Use default timeout
           }) {
         // TODO Do we need a mutex here?
         i2c_dev_create_mutex(&device);

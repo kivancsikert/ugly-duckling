@@ -289,13 +289,11 @@ private:
 
 #ifdef WOKWI
         LOGTD(Tag::WIFI, "Skipping provisioning on Wokwi");
-        wifi_config_t wifiConfig = {
-            .sta = {
-                .ssid = "Wokwi-GUEST",
-                .password = "",
-                .channel = 6,
-            }
-        };
+        wifi_config_t wifiConfig = {};
+        strncpy(reinterpret_cast<char*>(wifiConfig.sta.ssid), "Wokwi-GUEST", sizeof(wifiConfig.sta.ssid) - 1);
+        wifiConfig.sta.ssid[sizeof(wifiConfig.sta.ssid) - 1] = '\0';
+        wifiConfig.sta.password[0] = '\0';
+        wifiConfig.sta.channel = 6;
         connectToStation(wifiConfig);
 #else
         bool provisioned = false;
@@ -369,7 +367,12 @@ private:
         // Initialize provisioning manager
         wifi_prov_mgr_config_t config = {
             .scheme = wifi_prov_scheme_softap,
-            .scheme_event_handler = WIFI_PROV_EVENT_HANDLER_NONE
+            .scheme_event_handler = WIFI_PROV_EVENT_HANDLER_NONE,
+            .app_event_handler = WIFI_PROV_EVENT_HANDLER_NONE,
+            .wifi_prov_conn_cfg = {
+                // TODO Shall we limit the number of connection attempts?
+                .wifi_conn_attempts = 0,    // Infinite attempts
+            },
         };
         ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
 

@@ -48,9 +48,9 @@ enum class PublishStatus : uint8_t {
     QueueFull = 4
 };
 
-using CommandHandler = std::function<void (const JsonObject &, JsonObject &)>;
+using CommandHandler = std::function<void(const JsonObject&, JsonObject&)>;
 
-using SubscriptionHandler = std::function<void (const std::string &, const JsonObject &)>;
+using SubscriptionHandler = std::function<void(const std::string&, const JsonObject&)>;
 
 class MqttRoot;
 
@@ -132,20 +132,43 @@ public:
         config = {
             .broker {
                 .address {
+                    .uri = nullptr,
                     .hostname = hostname.c_str(),
+                    .transport = MQTT_TRANSPORT_OVER_TCP,
+                    .path = nullptr,
                     .port = port,
                 },
+                .verification {},
             },
             .credentials {
+                .username = nullptr,
                 .client_id = clientId.c_str(),
+                .set_null_client_id = false,
+                .authentication {},
+            },
+            // TODO Configure last will
+            .session {
+                .last_will {},
+                .disable_clean_session = false,
+                .keepalive = duration_cast<seconds>(MQTT_SESSION_KEEP_ALIVE).count(),
+                .disable_keepalive = false,
+                .protocol_ver = MQTT_PROTOCOL_UNDEFINED,    // Default MQTT version
+                .message_retransmit_timeout = 0,            // Default retransmit timeout
             },
             .network {
+                .reconnect_timeout_ms = duration_cast<milliseconds>(MQTT_CONNECTION_TIMEOUT).count(),
                 .timeout_ms = duration_cast<milliseconds>(MQTT_NETWORK_TIMEOUT).count(),
+                .refresh_connection_after_ms = 0,    // No need to refresh connection
+                .disable_auto_reconnect = false,
+                .transport = nullptr,    // Use default transport
+                .if_name = nullptr,      // Use default interface
             },
+            .task {},
             .buffer {
                 .size = 8192,
                 .out_size = 4096,
-            }
+            },
+            .outbox {},
         };
 
         LOGTD(Tag::MQTT, "server: %s:%" PRIu32 ", client ID is '%s'",
@@ -160,20 +183,17 @@ public:
                 config.broker.verification.certificate);
 
             if (!configClientCert.empty() && !configClientKey.empty()) {
-                config.credentials.authentication = {
-                    .certificate = configClientCert.c_str(),
-                    .key = configClientKey.c_str(),
-                };
+                config.credentials.authentication.certificate = configClientCert.c_str();
+                config.credentials.authentication.key = configClientKey.c_str();
                 LOGTV(Tag::MQTT, "Client cert:\n%s",
                     config.credentials.authentication.certificate);
             }
-        } else {
-            config.broker.address.transport = MQTT_TRANSPORT_OVER_TCP;
         }
     }
 
     static constexpr milliseconds MQTT_NETWORK_TIMEOUT = 15s;
     static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = MQTT_NETWORK_TIMEOUT;
+    static constexpr milliseconds MQTT_SESSION_KEEP_ALIVE = 120s;
     static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
 

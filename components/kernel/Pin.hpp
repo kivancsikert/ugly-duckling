@@ -115,6 +115,7 @@ public:
             .mode = mode == Mode::Output ? GPIO_MODE_OUTPUT : GPIO_MODE_INPUT,
             .pull_up_en = mode == Mode::InputPullUp ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE,
             .pull_down_en = mode == Mode::InputPullDown ? GPIO_PULLDOWN_ENABLE : GPIO_PULLDOWN_DISABLE,
+            .intr_type = GPIO_INTR_DISABLE,
         };
         gpio_sleep_set_direction(gpio, conf.mode);
         ESP_ERROR_THROW(gpio_config(&conf));
@@ -187,6 +188,7 @@ private:
         if (handle == nullptr) {
             adc_oneshot_unit_init_cfg_t config = {
                 .unit_id = unit,
+                .clk_src = ADC_RTC_CLK_SRC_DEFAULT,
                 .ulp_mode = ADC_ULP_MODE_DISABLE,
             };
             ESP_ERROR_THROW(adc_oneshot_new_unit(&config, &handle));

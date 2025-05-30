@@ -82,20 +82,20 @@ private:
             return;
         }
 
-        esp_http_client_config_t httpConfig = {
-            .url = url.c_str(),
-            .event_handler = httpEventHandler,
-            // Additional buffers to fit headers
-            // Updating directly via GitHub's release links requires these
-            .buffer_size = 4 * 1024,
-            .buffer_size_tx = 12 * 1024,
-            .user_data = this,
-            .crt_bundle_attach = esp_crt_bundle_attach,
-            .keep_alive_enable = true,
-        };
-        esp_https_ota_config_t otaConfig = {
-            .http_config = &httpConfig,
-        };
+        esp_http_client_config_t httpConfig = {};
+        httpConfig.url = url.c_str();
+        httpConfig.event_handler = httpEventHandler;
+        // Additional buffers to fit headers
+        // Updating directly via GitHub's release links requires these
+        httpConfig.buffer_size = 4 * 1024;
+        httpConfig.buffer_size_tx = 12 * 1024;
+        httpConfig.user_data = this;
+        httpConfig.crt_bundle_attach = esp_crt_bundle_attach;
+        httpConfig.keep_alive_enable = true;
+
+        esp_https_ota_config_t otaConfig = {};
+        otaConfig.http_config = &httpConfig;
+
         esp_err_t ret = esp_https_ota(&otaConfig);
         if (ret == ESP_OK) {
             LOGI("Update succeeded, rebooting in 5 seconds...");
