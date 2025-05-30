@@ -8,6 +8,7 @@
 
 #include <Log.hpp>
 #include <Time.hpp>
+#include <utility>
 
 using namespace std::chrono;
 
@@ -17,7 +18,7 @@ static const unsigned int DEFAULT_PRIORITY = 1;
 
 class Task;
 
-typedef std::function<void(Task&)> TaskFunction;
+using TaskFunction = std::function<void (Task &)>;
 
 class TaskHandle {
 public:
@@ -34,7 +35,7 @@ public:
     }
 
     TaskHandle& operator=(const TaskHandle& other) {
-        if (this != &other) { // Self-assignment check
+        if (this != &other) {    // Self-assignment check
             handle = other.handle;
         }
         return *this;
@@ -58,8 +59,9 @@ public:
 
     bool abortDelay() {
         if (isValid()) {
-            return xTaskAbortDelay(handle);
+            return xTaskAbortDelay(handle) != 0;
         }
+        return false;
     }
 
 private:
@@ -68,32 +70,32 @@ private:
 
 class Task {
 public:
-    static TaskHandle inline run(const std::string& name, uint32_t stackSize, const TaskFunction runFunction) {
+    static TaskHandle run(const std::string& name, uint32_t stackSize, const TaskFunction& runFunction) {
         return Task::run(name, stackSize, DEFAULT_PRIORITY, runFunction);
     }
-    static TaskHandle run(const std::string& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction runFunction) {
-        TaskFunction* taskFunction = new TaskFunction(runFunction);
-        LOGD("Creating task %s with priority %d and stack size %ld",
+    static TaskHandle run(const std::string& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction& runFunction) {
+        auto* taskFunction = new TaskFunction(runFunction);
+        LOGD("Creating task %s with priority %u and stack size %" PRIu32,
             name.c_str(), priority, stackSize);
         TaskHandle_t handle = nullptr;
         auto result = xTaskCreate(executeTask, name.c_str(), stackSize, taskFunction, priority, &handle);
         if (result != pdPASS) {
             LOGE("Failed to create task %s: %d", name.c_str(), result);
             delete taskFunction;
-            return TaskHandle();
+            return {};
         }
-        return TaskHandle(handle);
+        return { handle };
     }
 
-    enum class RunResult {
+    enum class RunResult : uint8_t {
         OK,
         TIMEOUT,
     };
 
-    static TaskHandle inline loop(const std::string& name, uint32_t stackSize, TaskFunction loopFunction) {
+    static TaskHandle loop(const std::string& name, uint32_t stackSize, const TaskFunction& loopFunction) {
         return Task::loop(name, stackSize, DEFAULT_PRIORITY, loopFunction);
     }
-    static TaskHandle loop(const std::string& name, uint32_t stackSize, UBaseType_t priority, TaskFunction loopFunction) {
+    static TaskHandle loop(const std::string& name, uint32_t stackSize, UBaseType_t priority, const TaskFunction& loopFunction) {
         return Task::run(name, stackSize, priority, [loopFunction](Task& task) {
             while (true) {
                 loopFunction(task);
@@ -101,7 +103,7 @@ public:
         });
     }
 
-    static inline void delay(ticks time) {
+    static void delay(ticks time) {
         // LOGV("Task '%s' delaying for %lld ms",
         //     pcTaskGetName(nullptr), duration_cast<milliseconds>(time).count());
         vTaskDelay(time.count());
@@ -121,7 +123,7 @@ public:
     bool delayUntilAtLeast(ticks time) {
         // LOGV("Task '%s' delaying until %lld ms",
         //     pcTaskGetName(nullptr), duration_cast<milliseconds>(time).count());
-        return xTaskDelayUntil(&lastWakeTime, time.count());
+        return xTaskDelayUntil(&lastWakeTime, time.count()) != 0;
     }
 
     /**
@@ -131,19 +133,18 @@ public:
      * @return ticks The number of ticks to delay until the given `time` has elapsed since the last wake time,
      *     or zero if the time has already elapsed.
      */
-    ticks ticksUntil(ticks time) {
+    ticks ticksUntil(ticks time) const {
         auto currentTime = ticks(xTaskGetTickCount());
         // Handling tick overflow. If 'currentTime' is less than 'lastWakeTime',
         // it means the tick count has rolled over.
         if (currentTime - ticks(lastWakeTime) < time) {
             // This means 'targetTime' is still in the future, taking into account possible overflow.
             return time - (currentTime - ticks(lastWakeTime));
-        } else {
-            // 'currentTime' has surpassed our target time, indicating the delay has expired.
-            // printf("Task '%s' is already past deadline by %lld ms\n",
-            //     pcTaskGetName(nullptr), duration_cast<milliseconds>(currentTime - ticks(lastWakeTime)).count());
-            return ticks::zero();
         }
+        // 'currentTime' has surpassed our target time, indicating the delay has expired.
+        // printf("Task '%s' is already past deadline by %lld ms\n",
+        //     pcTaskGetName(nullptr), duration_cast<milliseconds>(currentTime - ticks(lastWakeTime)).count());
+        return ticks::zero();
     }
 
     /**
@@ -153,11 +154,11 @@ public:
         lastWakeTime = xTaskGetTickCount();
     }
 
-    void suspend() {
+    static void suspend() {
         vTaskSuspend(nullptr);
     }
 
-    void yield() {
+    static void yield() {
         taskYIELD();
     }
 
@@ -169,7 +170,7 @@ private:
     }
 
     static void executeTask(void* parameters) {
-        auto taskFunction = static_cast<TaskFunction*>(parameters);
+        auto* taskFunction = static_cast<TaskFunction*>(parameters);
         Task task;
         (*taskFunction)(task);
         delete taskFunction;

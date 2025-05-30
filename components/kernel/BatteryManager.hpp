@@ -10,6 +10,7 @@
 #include <Task.hpp>
 #include <Telemetry.hpp>
 #include <drivers/BatteryDriver.hpp>
+#include <utility>
 
 using namespace farmhub::kernel::drivers;
 
@@ -27,19 +28,19 @@ static constexpr microseconds LOW_POWER_SLEEP_CHECK_INTERVAL = 10s;
     abort();
 }
 
-class BatteryManager : public TelemetryProvider {
+class BatteryManager final : public TelemetryProvider {
 public:
     BatteryManager(
         std::shared_ptr<BatteryDriver> battery,
         std::shared_ptr<ShutdownManager> shutdownManager)
-        : battery(battery)
-        , shutdownManager(shutdownManager) {
+        : battery(std::move(battery))
+        , shutdownManager(std::move(shutdownManager)) {
         Task::loop("battery", 2560, [this](Task& task) {
             checkBatteryVoltage(task);
         });
     }
 
-    float getVoltage() {
+    double getVoltage() {
         return batteryVoltage.getAverage();
     }
 

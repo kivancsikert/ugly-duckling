@@ -9,7 +9,7 @@ namespace farmhub::kernel {
 
 class ShutdownManager {
 public:
-    void registerShutdownListener(std::function<void()> listener) {
+    void registerShutdownListener(const std::function<void()>& listener) {
         shutdownListeners.push_back(listener);
     }
 

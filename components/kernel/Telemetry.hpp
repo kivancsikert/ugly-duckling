@@ -12,6 +12,8 @@ namespace farmhub::kernel {
 
 class TelemetryProvider {
 public:
+    virtual ~TelemetryProvider() = default;
+
     virtual void populateTelemetry(JsonObject& json) = 0;
 };
 
@@ -20,7 +22,7 @@ public:
     void collect(JsonObject& root) {
         root["uptime"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
         for (auto& entry : providers) {
-            auto& name = entry.first;
+            const auto& name = entry.first;
             auto& provider = entry.second;
             JsonObject telemetryRoot = root[name].to<JsonObject>();
             provider->populateTelemetry(telemetryRoot);
@@ -39,6 +41,8 @@ private:
 
 class TelemetryPublisher {
 public:
+    virtual ~TelemetryPublisher() = default;
+
     virtual void publishTelemetry() = 0;
 };
 

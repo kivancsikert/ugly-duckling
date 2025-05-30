@@ -32,7 +32,7 @@ public:
     Property<seconds> publishInterval { this, "publishInterval", 1min };
     Property<Level> publishLogs { this, "publishLogs", Level::Info };
 
-    virtual const std::string getHostname() {
+    std::string getHostname() const {
         std::string hostname = instance.get();
         std::replace(hostname.begin(), hostname.end(), ':', '-');
         std::erase(hostname, '?');

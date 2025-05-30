@@ -11,6 +11,7 @@
 #include <Task.hpp>
 #include <Telemetry.hpp>
 #include <mqtt/MqttDriver.hpp>
+#include <utility>
 
 using namespace farmhub::kernel::mqtt;
 
@@ -23,11 +24,11 @@ public:
     FlowMeterComponent(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<PulseCounterManager> pulseCounterManager,
-        InternalPinPtr pin,
+        const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
+        const InternalPinPtr& pin,
         double qFactor,
         milliseconds measurementFrequency)
-        : Component(name, mqttRoot)
+        : Component(name, std::move(mqttRoot))
         , qFactor(qFactor) {
 
         LOGI("Initializing flow meter on pin %s with Q = %.2f",
@@ -50,9 +51,9 @@ public:
 
                 if (pulses > 0) {
                     Lock lock(updateMutex);
-                    double currentVolume = pulses / this->qFactor / 60.0f;
-                    LOGV("Counted %lu pulses, %.2f l/min, %.2f l",
-                        pulses, currentVolume / (elapsed.count() / 1000.0f / 60.0f), currentVolume);
+                    double currentVolume = pulses / this->qFactor / 60.0F;
+                    LOGV("Counted %" PRIu32 " pulses, %.2f l/min, %.2f l",
+                        pulses, currentVolume / (elapsed.count() / 1000.0F / 60.0F), currentVolume);
                     volume += currentVolume;
                     lastSeenFlow = now;
                 }
@@ -61,15 +62,15 @@ public:
         });
     }
 
-    virtual ~FlowMeterComponent() = default;
+    ~FlowMeterComponent() override = default;
 
     void populateTelemetry(JsonObject& json) override {
         Lock lock(updateMutex);
-        pupulateTelemetryUnderLock(json);
+        populateTelemetryUnderLock(json);
     }
 
 private:
-    void inline pupulateTelemetryUnderLock(JsonObject& json) {
+    void populateTelemetryUnderLock(JsonObject& json) {
         auto currentVolume = volume;
         volume = 0;
         // Volume is measured in liters
@@ -77,7 +78,7 @@ private:
         auto duration = duration_cast<microseconds>(lastMeasurement - lastPublished);
         if (duration > microseconds::zero()) {
             // Flow rate is measured in in liters / min
-            json["flowRate"] = currentVolume / duration.count() * 1000 * 1000 * 60;
+            json["flowRate"] = currentVolume / static_cast<double>(duration.count()) * 1000 * 1000 * 60;
         }
         lastPublished = lastMeasurement;
     }

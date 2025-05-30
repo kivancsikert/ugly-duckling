@@ -30,25 +30,25 @@ public:
 };
 
 namespace pins {
-static InternalPinPtr BOOT = InternalPin::registerPin("BOOT", GPIO_NUM_0);
-static InternalPinPtr STATUS = InternalPin::registerPin("STATUS", GPIO_NUM_26);
+static const InternalPinPtr BOOT = InternalPin::registerPin("BOOT", GPIO_NUM_0);
+static const InternalPinPtr STATUS = InternalPin::registerPin("STATUS", GPIO_NUM_26);
 
-static InternalPinPtr SOIL_MOISTURE = InternalPin::registerPin("SOIL_MOISTURE", GPIO_NUM_6);
-static InternalPinPtr SOIL_TEMP = InternalPin::registerPin("SOIL_TEMP", GPIO_NUM_7);
+static const InternalPinPtr SOIL_MOISTURE = InternalPin::registerPin("SOIL_MOISTURE", GPIO_NUM_6);
+static const InternalPinPtr SOIL_TEMP = InternalPin::registerPin("SOIL_TEMP", GPIO_NUM_7);
 
-static InternalPinPtr VALVE_EN = InternalPin::registerPin("VALVE_EN", GPIO_NUM_10);
-static InternalPinPtr VALVE_PH = InternalPin::registerPin("VALVE_PH", GPIO_NUM_11);
-static InternalPinPtr VALVE_FAULT = InternalPin::registerPin("VALVE_FAULT", GPIO_NUM_12);
-static InternalPinPtr VALVE_SLEEP = InternalPin::registerPin("VALVE_SLEEP", GPIO_NUM_13);
-static InternalPinPtr VALVE_MODE1 = InternalPin::registerPin("VALVE_MODE1", GPIO_NUM_14);
-static InternalPinPtr VALVE_MODE2 = InternalPin::registerPin("VALVE_MODE2", GPIO_NUM_15);
-static InternalPinPtr VALVE_CURRENT = InternalPin::registerPin("VALVE_CURRENT", GPIO_NUM_16);
-static InternalPinPtr FLOW = InternalPin::registerPin("FLOW", GPIO_NUM_17);
+static const InternalPinPtr VALVE_EN = InternalPin::registerPin("VALVE_EN", GPIO_NUM_10);
+static const InternalPinPtr VALVE_PH = InternalPin::registerPin("VALVE_PH", GPIO_NUM_11);
+static const InternalPinPtr VALVE_FAULT = InternalPin::registerPin("VALVE_FAULT", GPIO_NUM_12);
+static const InternalPinPtr VALVE_SLEEP = InternalPin::registerPin("VALVE_SLEEP", GPIO_NUM_13);
+static const InternalPinPtr VALVE_MODE1 = InternalPin::registerPin("VALVE_MODE1", GPIO_NUM_14);
+static const InternalPinPtr VALVE_MODE2 = InternalPin::registerPin("VALVE_MODE2", GPIO_NUM_15);
+static const InternalPinPtr VALVE_CURRENT = InternalPin::registerPin("VALVE_CURRENT", GPIO_NUM_16);
+static const InternalPinPtr FLOW = InternalPin::registerPin("FLOW", GPIO_NUM_17);
 
-static InternalPinPtr SDA = InternalPin::registerPin("SDA", GPIO_NUM_8);
-static InternalPinPtr SCL = InternalPin::registerPin("SCL", GPIO_NUM_9);
-static InternalPinPtr RXD0 = InternalPin::registerPin("RXD0", GPIO_NUM_44);
-static InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43);
+static const InternalPinPtr SDA = InternalPin::registerPin("SDA", GPIO_NUM_8);
+static const InternalPinPtr SCL = InternalPin::registerPin("SCL", GPIO_NUM_9);
+static const InternalPinPtr RXD0 = InternalPin::registerPin("RXD0", GPIO_NUM_44);
+static const InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43);
 }    // namespace pins
 
 class UglyDucklingMk4 : public DeviceDefinition<Mk4Config> {
@@ -73,7 +73,7 @@ public:
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<Mk4Config> deviceConfig) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk4Config>& deviceConfig) override {
         auto motor = std::make_shared<Drv8801Driver>(
             services.pwmManager,
             pins::VALVE_EN,

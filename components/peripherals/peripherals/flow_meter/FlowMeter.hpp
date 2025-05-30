@@ -7,6 +7,7 @@
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/flow_meter/FlowMeterComponent.hpp>
 #include <peripherals/flow_meter/FlowMeterConfig.hpp>
+#include <utility>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::mqtt;
@@ -19,9 +20,9 @@ class FlowMeter
 public:
     FlowMeter(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<PulseCounterManager> pulseCounterManager,
-        InternalPinPtr pin,
+        const std::shared_ptr<MqttRoot>& mqttRoot,
+        const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
+        const InternalPinPtr& pin,
         double qFactor,
         milliseconds measurementFrequency)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)

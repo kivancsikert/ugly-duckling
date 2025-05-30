@@ -32,16 +32,14 @@ public:
 
 class JsonAsString {
 public:
-    JsonAsString() {
-    }
+    JsonAsString() = default;
 
     JsonAsString(const std::string& value)
         : value(value) {
     }
 
     JsonAsString(const JsonAsString& other)
-        : value(other.value) {
-    }
+        = default;
 
     JsonAsString& operator=(const JsonAsString& other) = default;
 
@@ -79,6 +77,8 @@ bool convertFromJson(JsonVariantConst src, JsonAsString& dst) {
 
 class ConfigurationEntry {
 public:
+    virtual ~ConfigurationEntry() = default;
+
     void loadFromString(const std::string& json) {
         JsonDocument jsonDocument;
         DeserializationError error = deserializeJson(jsonDocument, json);
@@ -104,26 +104,26 @@ public:
         entries.push_back(reference);
     }
 
-    virtual void load(const JsonObject& json) override {
+    void load(const JsonObject& json) override {
         for (auto& entry : entries) {
             entry.get().load(json);
         }
     }
 
-    virtual void reset() override {
+    void reset() override {
         for (auto& entry : entries) {
             entry.get().reset();
         }
     }
 
-    virtual void store(JsonObject& json, bool inlineDefaults) const override {
-        for (auto& entry : entries) {
+    void store(JsonObject& json, bool inlineDefaults) const override {
+        for (const auto& entry : entries) {
             entry.get().store(json, inlineDefaults);
         }
     }
 
-    virtual bool hasValue() const override {
-        for (auto& entry : entries) {
+    bool hasValue() const override {
+        for (const auto& entry : entries) {
             if (entry.get().hasValue()) {
                 return true;
             }
@@ -147,7 +147,7 @@ public:
     }
 
     template <typename... Args>
-    requires std::constructible_from<TDelegateEntry, Args...>
+        requires std::constructible_from<TDelegateEntry, Args...>
     NamedConfigurationEntry(ConfigurationSection* parent, const std::string& name, Args&&... args)
         : NamedConfigurationEntry(parent, name, std::make_shared<TDelegateEntry>(std::forward<Args>(args)...)) {
     }
@@ -177,7 +177,7 @@ public:
         delegate->reset();
     }
 
-    const std::shared_ptr<TDelegateEntry> get() const {
+    std::shared_ptr<TDelegateEntry> get() const {
         return delegate;
     }
 
@@ -285,7 +285,7 @@ private:
 template <std::derived_from<ConfigurationSection> TConfiguration>
 class ConfigurationFile {
 public:
-    ConfigurationFile(const std::shared_ptr<FileSystem> fs, const std::string& path, std::shared_ptr<TConfiguration> config)
+    ConfigurationFile(const std::shared_ptr<FileSystem>& fs, const std::string& path, std::shared_ptr<TConfiguration> config)
         : path(path)
         , config(config) {
         if (!fs->exists(path)) {
@@ -316,7 +316,7 @@ public:
         onUpdate([fs, path](const JsonObject& json) {
             std::string contents;
             serializeJson(json, contents);
-            bool success = fs->writeAll(path, contents);
+            bool success = fs->writeAll(path, contents) != 0U;
             if (!success) {
                 throw ConfigurationException("Cannot write config file " + path);
             }
@@ -335,7 +335,7 @@ public:
         }
     }
 
-    void onUpdate(const std::function<void(const JsonObject&)> callback) {
+    void onUpdate(const std::function<void(const JsonObject&)>& callback) {
         callbacks.push_back(callback);
     }
 

@@ -8,6 +8,7 @@
 #include <Configuration.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/SinglePinDeviceConfig.hpp>
+#include <utility>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::mqtt;
@@ -20,15 +21,15 @@ namespace farmhub::peripherals::environment {
  *
  * Note: Needs a 4.7k pull-up resistor between the data and power lines.
  */
-class Ds18B20SoilSensorComponent
+class Ds18B20SoilSensorComponent final
     : public Component,
       public TelemetryProvider {
 public:
     Ds18B20SoilSensorComponent(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        InternalPinPtr pin)
-        : Component(name, mqttRoot)
+        const InternalPinPtr& pin)
+        : Component(name, std::move(mqttRoot))
         , pin(pin) {
 
         LOGI("Initializing DS18B20 soil temperature sensor on pin %s",
@@ -43,7 +44,7 @@ public:
 
         esp_err_t searchResult = ds18x20_scan_devices(pin->getGpio(), &sensor, maxSensors, &sensorCount);
         if (searchResult == ESP_OK) {
-            if (!sensorCount) {
+            if (sensorCount == 0U) {
                 throw PeripheralCreationException("No DS18B20 sensors found on bus");
             }
             LOGD("Found a DS18B20 at address: %016llX", sensor);
@@ -67,7 +68,7 @@ private:
 class Ds18B20SoilSensor
     : public Peripheral<EmptyConfiguration> {
 public:
-    Ds18B20SoilSensor(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot, InternalPinPtr pin)
+    Ds18B20SoilSensor(const std::string& name, const std::shared_ptr<MqttRoot>& mqttRoot, const InternalPinPtr& pin)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , sensor(name, mqttRoot, pin) {
     }

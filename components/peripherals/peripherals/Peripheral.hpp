@@ -14,6 +14,7 @@
 #include <Telemetry.hpp>
 #include <drivers/SwitchManager.hpp>
 #include <mqtt/MqttRoot.hpp>
+#include <utility>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
@@ -27,10 +28,9 @@ class PeripheralBase
     : public TelemetryProvider,
       public Named {
 public:
-    PeripheralBase(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot, size_t telemetrySize = 2048)
+    PeripheralBase(const std::string& name, const std::shared_ptr<MqttRoot>& mqttRoot)
         : Named(name)
-        , mqttRoot(mqttRoot)
-        , telemetrySize(telemetrySize) {
+        , mqttRoot(mqttRoot) {
         mqttRoot->registerCommand("ping", [this](const JsonObject& request, JsonObject& response) {
             LOGV("Received ping request");
             publishTelemetry();
@@ -38,7 +38,7 @@ public:
         });
     }
 
-    virtual ~PeripheralBase() = default;
+    ~PeripheralBase() override = default;
 
     void publishTelemetry() {
         JsonDocument telemetryDoc;
@@ -52,7 +52,7 @@ public:
         mqttRoot->publish("telemetry", telemetryDoc, Retention::NoRetain, QoS::AtLeastOnce);
     }
 
-    virtual void populateTelemetry(JsonObject& telemetryJson) override {
+    void populateTelemetry(JsonObject& telemetryJson) override {
     }
 
     struct ShutdownParameters {
@@ -64,9 +64,6 @@ public:
 
 protected:
     std::shared_ptr<MqttRoot> mqttRoot;
-
-private:
-    const size_t telemetrySize;
 };
 
 template <std::derived_from<ConfigurationSection> TConfig>
@@ -106,6 +103,8 @@ public:
         : factoryType(factoryType)
         , peripheralType(peripheralType) {
     }
+
+    virtual ~PeripheralFactoryBase() = default;
 
     virtual std::unique_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<FileSystem> fs, const PeripheralServices& services, JsonObject& initConfigJson) = 0;
 
@@ -153,7 +152,7 @@ public:
         return peripheral;
     }
 
-    virtual std::unique_ptr<Peripheral<TConfig>> createPeripheral(const std::string& name, const std::shared_ptr<TDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) = 0;
+    virtual std::unique_ptr<Peripheral<TConfig>> createPeripheral(const std::string& name, std::shared_ptr<TDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) = 0;
 
 private:
     std::tuple<TDeviceConfigArgs...> deviceConfigArgs;
@@ -161,15 +160,15 @@ private:
 
 // Peripheral manager
 
-class PeripheralManager
+class PeripheralManager final
     : public TelemetryPublisher {
 public:
     PeripheralManager(
         std::shared_ptr<FileSystem> fs,
         PeripheralServices services,
-        const std::shared_ptr<MqttRoot> mqttDeviceRoot)
-        : fs(fs)
-        , services(services)
+        const std::shared_ptr<MqttRoot>& mqttDeviceRoot)
+        : fs(std::move(fs))
+        , services(std::move(services))
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 
@@ -193,7 +192,7 @@ public:
 
         std::string name = deviceConfig->name.get();
         std::string type = deviceConfig->type.get();
-        JsonObject initJson = peripheralsInitJson.add<JsonObject>();
+        auto initJson = peripheralsInitJson.add<JsonObject>();
         deviceConfig->store(initJson, true);
         try {
             Lock lock(stateMutex);
@@ -206,7 +205,7 @@ public:
             JsonObject initConfigJson = initConfigDoc.to<JsonObject>();
             std::unique_ptr<PeripheralBase> peripheral = createPeripheral(name, type, deviceConfig->params.get().get(), initConfigJson);
             initJson["config"].to<JsonObject>().set(initConfigJson);
-            peripherals.push_back(move(peripheral));
+            peripherals.push_back(std::move(peripheral));
 
             return true;
         } catch (const std::exception& e) {
@@ -264,12 +263,12 @@ private:
         if (it == factories.end()) {
             throw PeripheralCreationException("Factory not found: '" + factoryType + "'");
         }
-        const std::string& peripheralType = it->second.get()->peripheralType;
+        const std::string& peripheralType = it->second->peripheralType;
         std::shared_ptr<MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
-        return it->second.get()->createPeripheral(name, configJson, mqttRoot, fs, services, initConfigJson);
+        return it->second->createPeripheral(name, configJson, mqttRoot, fs, services, initConfigJson);
     }
 
-    enum class State {
+    enum class State : uint8_t {
         Running,
         Stopped
     };

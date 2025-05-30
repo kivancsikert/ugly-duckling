@@ -24,17 +24,17 @@ public:
             throw std::runtime_error("Too many states");
         }
         EventBits_t eventBits = 1 << nextEventBit++;
-        return StateSource(name, eventGroup, eventBits);
+        return { name, eventGroup, eventBits };
     }
 
     State combineStates(const std::string& name, const std::list<State>& states) const {
         LOGD("Creating combined state: %s",
             name.c_str());
-        int eventBits = 0;
-        for (auto& state : states) {
+        EventBits_t eventBits = 0;
+        for (const auto& state : states) {
             eventBits |= state.eventBits;
         }
-        return State(name, eventGroup, eventBits);
+        return { name, eventGroup, eventBits };
     }
 
     /**
@@ -51,7 +51,7 @@ public:
      */
     bool awaitStateChange(ticks timeout) const {
         // Since this is bit 0, we can just return the result directly
-        return xEventGroupWaitBits(eventGroup, STATE_CHANGE_BIT_MASK, true, true, timeout.count());
+        return xEventGroupWaitBits(eventGroup, STATE_CHANGE_BIT_MASK, 1, 1, timeout.count()) != 0U;
     }
 
 private:

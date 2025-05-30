@@ -2,7 +2,7 @@
 
 namespace farmhub::kernel::drivers {
 
-enum class MotorPhase {
+enum class MotorPhase : int8_t {
     FORWARD = 1,
     REVERSE = -1
 };
@@ -15,6 +15,8 @@ MotorPhase operator-(MotorPhase phase) {
 
 class PwmMotorDriver {
 public:
+    virtual ~PwmMotorDriver() = default;
+
     void stop() {
         drive(MotorPhase::FORWARD, 0);
     };

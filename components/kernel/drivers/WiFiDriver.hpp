@@ -20,7 +20,7 @@ using namespace farmhub::kernel;
 
 namespace farmhub::kernel::drivers {
 
-class WiFiDriver
+class WiFiDriver final
     : public TelemetryProvider {
 public:
     WiFiDriver(
@@ -56,7 +56,7 @@ public:
         });
     }
 
-    void setPowerSaveMode(bool enable) {
+    static void setPowerSaveMode(bool enable) {
         ESP_ERROR_CHECK(esp_wifi_set_ps(enable
                 ? WIFI_PS_MAX_MODEM
                 : WIFI_PS_MIN_MODEM));
@@ -108,7 +108,7 @@ private:
         } else if (eventBase == IP_EVENT) {
             driver->onIpEvent(eventId, eventData);
         } else if (eventBase == WIFI_PROV_EVENT) {
-            driver->onWiFiProvEvent(eventId, eventData);
+            WiFiDriver::onWiFiProvEvent(eventId, eventData);
         }
     }
 
@@ -126,8 +126,8 @@ private:
                 break;
             }
             case WIFI_EVENT_STA_CONNECTED: {
-                auto event = static_cast<wifi_event_sta_connected_t*>(eventData);
-                std::string newSsid((const char*) event->ssid, event->ssid_len);
+                auto* event = static_cast<wifi_event_sta_connected_t*>(eventData);
+                std::string newSsid(reinterpret_cast<const char*>(event->ssid), event->ssid_len);
                 {
                     Lock lock(metadataMutex);
                     ssid = newSsid;
@@ -137,15 +137,15 @@ private:
                 break;
             }
             case WIFI_EVENT_STA_DISCONNECTED: {
-                auto event = static_cast<wifi_event_sta_disconnected_t*>(eventData);
+                auto* event = static_cast<wifi_event_sta_disconnected_t*>(eventData);
                 networkReady.clear();
                 {
                     Lock lock(metadataMutex);
                     ssid.reset();
                 }
                 eventQueue.offer(WiFiEvent::DISCONNECTED);
-                LOGTD(Tag::WIFI, "Disconnected from the AP %s, reason: %d",
-                    std::string((const char*) event->ssid, event->ssid_len).c_str(), event->reason);
+                LOGTD(Tag::WIFI, "Disconnected from the AP %.*s, reason: %d",
+                    event->ssid_len, reinterpret_cast<const char*>(event->ssid), event->reason);
                 break;
             }
             case WIFI_EVENT_AP_STACONNECTED: {
@@ -156,6 +156,8 @@ private:
                 LOGTI(Tag::WIFI, "SoftAP transport disconnected");
                 break;
             }
+            default:
+                break;
         }
     }
 
@@ -169,6 +171,7 @@ private:
                     ip = event->ip_info.ip;
                 }
                 eventQueue.offer(WiFiEvent::CONNECTED);
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
                 LOGTD(Tag::WIFI, "Got IP - " IPSTR, IP2STR(&event->ip_info.ip));
                 break;
             }
@@ -182,19 +185,21 @@ private:
                 LOGTD(Tag::WIFI, "Lost IP");
                 break;
             }
+            default:
+                break;
         }
     }
 
-    void onWiFiProvEvent(int32_t eventId, void* eventData) {
+    static void onWiFiProvEvent(int32_t eventId, void* eventData) {
         switch (eventId) {
             case WIFI_PROV_START: {
                 LOGTD(Tag::WIFI, "provisioning started");
                 break;
             }
             case WIFI_PROV_CRED_RECV: {
-                auto wifiConfig = static_cast<wifi_sta_config_t*>(eventData);
-                LOGD("Received Wi-Fi credentials for SSID '%s'",
-                    (const char*) wifiConfig->ssid);
+                auto* wifiConfig = static_cast<wifi_sta_config_t*>(eventData);
+                LOGTD(Tag::WIFI, "Received Wi-Fi credentials for SSID '%s'",
+                    reinterpret_cast<const char*>(wifiConfig->ssid));
                 break;
             }
             case WIFI_PROV_CRED_FAIL: {
@@ -215,9 +220,13 @@ private:
                 wifi_prov_mgr_deinit();
                 break;
             }
+            default:
+                break;
         }
     }
 
+    // TODO Refactor this to avoid using goto
+    // NOLINTBEGIN(cppcoreguidelines-avoid-goto)
     void runLoop() {
         bool connected = false;
         std::optional<time_point<boot_clock>> connectingSince;
@@ -273,6 +282,7 @@ private:
             }
         }
     }
+    // NOLINTEND(cppcoreguidelines-avoid-goto)
 
     void connect() {
         networkConnecting.set();
@@ -355,7 +365,7 @@ private:
         ensureWifiStationStarted(config);
     }
 
-    void startProvisioning() {
+    static void startProvisioning() {
         // Initialize provisioning manager
         wifi_prov_mgr_config_t config = {
             .scheme = wifi_prov_scheme_softap,
@@ -387,10 +397,9 @@ private:
     const std::string hostname;
 
     StateManager internalStates;
-    bool wifiInitialized = false;
     StateSource stationStarted = internalStates.createStateSource("wifi:station-started");
 
-    enum class WiFiEvent {
+    enum class WiFiEvent : uint8_t {
         STARTED,
         CONNECTED,
         DISCONNECTED,

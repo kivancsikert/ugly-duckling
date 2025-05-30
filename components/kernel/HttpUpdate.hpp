@@ -12,12 +12,13 @@
 #include <Log.hpp>
 #include <Watchdog.hpp>
 #include <drivers/WiFiDriver.hpp>
+#include <utility>
 
 namespace farmhub::kernel {
 
 class HttpUpdater {
 public:
-    static void startUpdate(const std::string& url, std::shared_ptr<FileSystem> fs) {
+    static void startUpdate(const std::string& url, const std::shared_ptr<FileSystem>& fs) {
         JsonDocument doc;
         doc["url"] = url;
         std::string content;
@@ -30,7 +31,7 @@ public:
         });
     }
 
-    static void performPendingHttpUpdateIfNecessary(std::shared_ptr<FileSystem> fs, std::shared_ptr<WiFiDriver> wifi, std::shared_ptr<Watchdog> watchdog) {
+    static void performPendingHttpUpdateIfNecessary(const std::shared_ptr<FileSystem>& fs, const std::shared_ptr<WiFiDriver>& wifi, std::shared_ptr<Watchdog> watchdog) {
         // Do we need to update?
         if (!fs->exists(UPDATE_FILE)) {
             LOGV("No update file found, not updating");
@@ -40,11 +41,12 @@ public:
         auto contents = fs->readAll(UPDATE_FILE);
         if (!contents.has_value()) {
             LOGE("Failed to read update file");
+            return;
         }
         JsonDocument doc;
         auto error = deserializeJson(doc, contents.value());
         int deleteError = fs->remove(UPDATE_FILE);
-        if (deleteError) {
+        if (deleteError != 0) {
             LOGE("Failed to delete update file");
             return;
         }
@@ -59,7 +61,7 @@ public:
             return;
         }
 
-        HttpUpdater updater(watchdog);
+        HttpUpdater updater(std::move(watchdog));
         updater.performPendingHttpUpdate(url, wifi);
     }
 
@@ -67,10 +69,10 @@ public:
 
 private:
     HttpUpdater(std::shared_ptr<Watchdog> watchdog)
-        : watchdog(watchdog) {
+        : watchdog(std::move(watchdog)) {
     }
 
-    void performPendingHttpUpdate(const std::string& url, std::shared_ptr<WiFiDriver> wifi) {
+    void performPendingHttpUpdate(const std::string& url, const std::shared_ptr<WiFiDriver>& wifi) {
         LOGI("Updating from version %s via URL %s",
             farmhubVersion, url.c_str());
 
@@ -107,7 +109,7 @@ private:
     }
 
     static esp_err_t httpEventHandler(esp_http_client_event_t* event) {
-        auto updater = static_cast<HttpUpdater*>(event->user_data);
+        auto* updater = static_cast<HttpUpdater*>(event->user_data);
         return updater->handleEvent(event);
     }
 

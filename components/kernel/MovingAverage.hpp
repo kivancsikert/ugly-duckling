@@ -10,8 +10,6 @@ public:
     explicit MovingAverage(std::size_t maxMeasurements)
         : maxMeasurements(maxMeasurements)
         , measurements(maxMeasurements, T(0))
-        , currentIndex(0)
-        , count(0)
         , sum(0)
         , average(0) {
     }
@@ -37,8 +35,8 @@ public:
 private:
     const std::size_t maxMeasurements;
     std::vector<T> measurements;
-    std::size_t currentIndex;
-    std::size_t count;
+    std::size_t currentIndex{0};
+    std::size_t count{0};
     T sum;
     T average;
 };

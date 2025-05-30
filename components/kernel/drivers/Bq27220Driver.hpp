@@ -7,7 +7,7 @@ using namespace farmhub::kernel;
 
 namespace farmhub::kernel::drivers {
 
-class Bq27220Driver : public BatteryDriver {
+class Bq27220Driver final : public BatteryDriver {
 public:
     Bq27220Driver(std::shared_ptr<I2CManager> i2c, InternalPinPtr sda, InternalPinPtr scl, const BatteryParameters& parameters)
         : Bq27220Driver(i2c, sda, scl, 0x55, parameters) {
@@ -30,7 +30,7 @@ public:
             address, readControlWord(0x0002), readControlWord(0x0003));
     }
 
-    float getVoltage() override {
+    double getVoltage() override {
         // LOGV("Capacityt: %d/%d", readRegWord(0x10), readRegWord(0x12));
         return device->readRegWord(0x08) / 1000.0;
     }

@@ -13,6 +13,7 @@
 #include <peripherals/I2CConfig.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/light_sensor/LightSensor.hpp>
+#include <utility>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -31,17 +32,17 @@ public:
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
 };
 
-class Tsl2591Component
+class Tsl2591Component final
     : public LightSensorComponent {
 public:
     Tsl2591Component(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<I2CManager> i2c,
-        I2CConfig config,
+        const std::shared_ptr<I2CManager>& i2c,
+        const I2CConfig& config,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval)
+        : LightSensorComponent(name, std::move(mqttRoot), measurementFrequency, latencyInterval)
         , bus(i2c->getBusFor(config)) {
 
         LOGI("Initializing TSL2591 light sensor with %s",
@@ -61,14 +62,13 @@ public:
 
 protected:
     double readLightLevel() override {
-        esp_err_t res;
         float lux;
-        if ((res = tsl2591_get_lux(&sensor, &lux)) != ESP_OK) {
+        esp_err_t res = tsl2591_get_lux(&sensor, &lux);
+        if (res != ESP_OK) {
             LOGD("Could not read light level: %s", esp_err_to_name(res));
             return std::numeric_limits<double>::quiet_NaN();
-        } else {
-            return lux;
         }
+        return lux;
     }
 
 private:
@@ -82,8 +82,8 @@ class Tsl2591
 public:
     Tsl2591(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<I2CManager> i2c,
+        const std::shared_ptr<MqttRoot>& mqttRoot,
+        const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config,
         seconds measurementFrequency,
         seconds latencyInterval)

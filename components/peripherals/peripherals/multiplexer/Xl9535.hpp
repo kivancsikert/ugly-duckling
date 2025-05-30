@@ -3,6 +3,7 @@
 #include <Component.hpp>
 #include <Configuration.hpp>
 #include <Pin.hpp>
+#include <utility>
 
 namespace farmhub::peripherals::multiplexer {
 
@@ -17,9 +18,9 @@ public:
     Xl9535Component(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<I2CManager> i2c,
-        I2CConfig config)
-        : Component(name, mqttRoot)
+        const std::shared_ptr<I2CManager>& i2c,
+        const I2CConfig& config)
+        : Component(name, std::move(mqttRoot))
         , device(i2c->createDevice(name, config)) {
         LOGI("Initializing XL9535 multiplexer with %s",
             config.toString().c_str());
@@ -76,12 +77,11 @@ private:
 
     std::shared_ptr<I2CDevice> device;
 
-    uint16_t polarity = 0;
     uint16_t direction = 0xFFFF;
     uint16_t output = 0;
 };
 
-class Xl9535Pin : public Pin {
+class Xl9535Pin final : public Pin {
 public:
     Xl9535Pin(const std::string& name, Xl9535Component& mpx, uint8_t pin)
         : Pin(name)
@@ -109,7 +109,7 @@ private:
 class Xl9535
     : public Peripheral<EmptyConfiguration> {
 public:
-    Xl9535(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<I2CManager> i2c, I2CConfig config)
+    Xl9535(const std::string& name, const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<I2CManager>& i2c, const I2CConfig& config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , component(name, mqttRoot, i2c, config) {
 

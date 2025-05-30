@@ -11,6 +11,7 @@
 
 #include <peripherals/I2CConfig.hpp>
 #include <peripherals/Peripheral.hpp>
+#include <utility>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -29,10 +30,12 @@ public:
         std::shared_ptr<MqttRoot> mqttRoot,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : Component(name, mqttRoot)
+        : Component(name, std::move(mqttRoot))
         , measurementFrequency(measurementFrequency)
         , level(latencyInterval.count() / measurementFrequency.count()) {
     }
+
+    ~LightSensorComponent() override = default;
 
     double getCurrentLevel() {
         Lock lock(updateAverageMutex);

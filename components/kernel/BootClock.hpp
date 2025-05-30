@@ -11,10 +11,10 @@ namespace farmhub::kernel {
  *  Time returned has the property of only increasing at a uniform rate.
  */
 struct boot_clock {
-    typedef std::chrono::microseconds duration;
-    typedef duration::rep rep;
-    typedef duration::period period;
-    typedef std::chrono::time_point<boot_clock, duration> time_point;
+    using duration = std::chrono::microseconds;
+    using rep = duration::rep;
+    using period = duration::period;
+    using time_point = std::chrono::time_point<boot_clock, duration>;
 
     static constexpr bool is_steady = true;
 

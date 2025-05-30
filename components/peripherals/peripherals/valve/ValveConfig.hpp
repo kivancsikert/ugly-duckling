@@ -17,7 +17,7 @@ using namespace farmhub::kernel;
 
 namespace farmhub::peripherals::valve {
 
-enum class ValveControlStrategyType {
+enum class ValveControlStrategyType : uint8_t {
     NormallyOpen,
     NormallyClosed,
     Latching
@@ -112,7 +112,7 @@ bool convertToJson(const ValveControlStrategyType& src, JsonVariant dst) {
     }
 }
 void convertFromJson(JsonVariantConst src, ValveControlStrategyType& dst) {
-    std::string strategy = src.as<std::string>();
+    auto strategy = src.as<std::string>();
     if (strategy == "NO") {
         dst = ValveControlStrategyType::NormallyOpen;
     } else if (strategy == "NC") {

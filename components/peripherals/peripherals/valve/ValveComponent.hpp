@@ -4,6 +4,7 @@
 #include <chrono>
 #include <list>
 #include <memory>
+#include <utility>
 #include <variant>
 
 #include <ArduinoJson.h>
@@ -27,6 +28,8 @@ namespace farmhub::peripherals::valve {
 
 class ValveControlStrategy {
 public:
+    virtual ~ValveControlStrategy() = default;
+
     virtual void open() = 0;
     virtual void close() = 0;
     virtual ValveState getDefaultState() const = 0;
@@ -38,7 +41,7 @@ class MotorValveControlStrategy
     : public ValveControlStrategy {
 public:
     MotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller)
-        : controller(controller) {
+        : controller(std::move(controller)) {
     }
 
 protected:
@@ -50,7 +53,7 @@ class HoldingMotorValveControlStrategy
 
 public:
     HoldingMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double holdDuty)
-        : MotorValveControlStrategy(controller)
+        : MotorValveControlStrategy(std::move(controller))
         , switchDuration(switchDuration)
         , holdDuty(holdDuty) {
     }
@@ -85,7 +88,7 @@ class NormallyClosedMotorValveControlStrategy
     : public HoldingMotorValveControlStrategy {
 public:
     NormallyClosedMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double holdDuty)
-        : HoldingMotorValveControlStrategy(controller, switchDuration, holdDuty) {
+        : HoldingMotorValveControlStrategy(std::move(controller), switchDuration, holdDuty) {
     }
 
     void open() override {
@@ -109,7 +112,7 @@ class NormallyOpenMotorValveControlStrategy
     : public HoldingMotorValveControlStrategy {
 public:
     NormallyOpenMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double holdDuty)
-        : HoldingMotorValveControlStrategy(controller, switchDuration, holdDuty) {
+        : HoldingMotorValveControlStrategy(std::move(controller), switchDuration, holdDuty) {
     }
 
     void open() override {
@@ -133,7 +136,7 @@ class LatchingMotorValveControlStrategy
     : public MotorValveControlStrategy {
 public:
     LatchingMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double switchDuty = 1.0)
-        : MotorValveControlStrategy(controller)
+        : MotorValveControlStrategy(std::move(controller))
         , switchDuration(switchDuration)
         , switchDuty(switchDuty) {
     }
@@ -166,7 +169,7 @@ private:
 class LatchingPinValveControlStrategy
     : public ValveControlStrategy {
 public:
-    LatchingPinValveControlStrategy(PinPtr pin)
+    LatchingPinValveControlStrategy(const PinPtr& pin)
         : pin(pin) {
         pin->pinMode(Pin::Mode::Output);
     }
@@ -196,12 +199,12 @@ public:
     ValveComponent(
         const std::string& name,
         std::unique_ptr<ValveControlStrategy> _strategy,
-        std::shared_ptr<MqttRoot> mqttRoot,
+        const std::shared_ptr<MqttRoot>& mqttRoot,
         std::function<void()> publishTelemetry)
         : Component(name, mqttRoot)
         , nvs(name)
         , strategy(std::move(_strategy))
-        , publishTelemetry(publishTelemetry) {
+        , publishTelemetry(std::move(publishTelemetry)) {
 
         LOGI("Creating valve '%s' with strategy %s",
             name.c_str(), strategy->describe().c_str());
@@ -235,7 +238,7 @@ public:
         doTransitionTo(initState);
 
         mqttRoot->registerCommand("override", [this](const JsonObject& request, JsonObject& response) {
-            ValveState targetState = request["state"].as<ValveState>();
+            auto targetState = request["state"].as<ValveState>();
             if (targetState == ValveState::NONE) {
                 override(ValveState::NONE, time_point<system_clock>());
             } else {
@@ -305,7 +308,7 @@ public:
         auto overrideUntil = this->overrideUntil.load();
         if (overrideUntil != time_point<system_clock>()) {
             time_t rawtime = system_clock::to_time_t(overrideUntil);
-            auto timeinfo = gmtime(&rawtime);
+            auto* timeinfo = gmtime(&rawtime);
             char buffer[80];
             strftime(buffer, 80, "%FT%TZ", timeinfo);
             telemetry["overrideEnd"] = std::string(buffer);
@@ -356,9 +359,7 @@ private:
         }
         doTransitionTo(state);
 
-        mqttRoot->publish("events/state", [=](JsonObject& json) {
-            json["state"] = state;
-        }, Retention::NoRetain, QoS::AtLeastOnce);
+        mqttRoot->publish("events/state", [=](JsonObject& json) { json["state"] = state; }, Retention::NoRetain, QoS::AtLeastOnce);
         publishTelemetry();
     }
 
@@ -401,9 +402,9 @@ private:
         std::list<ValveSchedule> schedules;
     };
 
-    std::list<ValveSchedule> schedules = {};
+    std::list<ValveSchedule> schedules;
     std::atomic<ValveState> overrideState = ValveState::NONE;
-    std::atomic<time_point<system_clock>> overrideUntil = time_point<system_clock>();
+    std::atomic<time_point<system_clock>> overrideUntil;
     Queue<std::variant<OverrideSpec, ScheduleSpec>> updateQueue { "eventQueue", 1 };
 };
 

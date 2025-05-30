@@ -7,7 +7,7 @@ using namespace farmhub::kernel;
 
 namespace farmhub::devices {
 
-class MemoryTelemetryProvider : public TelemetryProvider {
+class MemoryTelemetryProvider final : public TelemetryProvider {
 public:
     void populateTelemetry(JsonObject& json) override {
         json["free-heap"] = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);

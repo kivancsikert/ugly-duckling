@@ -31,7 +31,7 @@ public:
         ESP_ERROR_CHECK(ledc_timer_rst(speedMode, timerNum));
     }
 
-    inline bool isSameConfig(ledc_mode_t otherSpeedMode, ledc_timer_bit_t otherDutyResolution, uint32_t otherFreqHz, ledc_clk_cfg_t otherClkCfg) {
+    bool isSameConfig(ledc_mode_t otherSpeedMode, ledc_timer_bit_t otherDutyResolution, uint32_t otherFreqHz, ledc_clk_cfg_t otherClkCfg) {
         return speedMode == otherSpeedMode && dutyResolution == otherDutyResolution && freqHz == otherFreqHz && clkSrc == otherClkCfg;
     }
 
@@ -52,7 +52,7 @@ private:
 
 class PwmPin {
 public:
-    PwmPin(InternalPinPtr pin, const LedcTimer& timer, ledc_channel_t channel)
+    PwmPin(const InternalPinPtr& pin, const LedcTimer& timer, ledc_channel_t channel)
         : pin(pin)
         , timer(timer)
         , channel(channel) {
@@ -92,16 +92,16 @@ private:
 
 class PwmManager {
 public:
-    PwmPin& registerPin(InternalPinPtr pin, uint32_t freq, ledc_timer_bit_t dutyResolution = LEDC_TIMER_8_BIT, ledc_clk_cfg_t clkSrc = LEDC_AUTO_CLK) {
+    PwmPin& registerPin(const InternalPinPtr& pin, uint32_t freq, ledc_timer_bit_t dutyResolution = LEDC_TIMER_8_BIT, ledc_clk_cfg_t clkSrc = LEDC_AUTO_CLK) {
         LedcTimer& timer = getOrCreateTimer(LEDC_LOW_SPEED_MODE, dutyResolution, freq, clkSrc);
 
-        ledc_channel_t channel = static_cast<ledc_channel_t>(pins.size());
+        auto channel = static_cast<ledc_channel_t>(pins.size());
         if (channel >= LEDC_CHANNEL_MAX) {
             throw std::runtime_error("No more LEDC channels available");
         }
 
         pins.emplace_back(pin, timer, channel);
-        LOGTD("ledc", "Registered PWM channel on pin %s with freq %ld and resolution %d",
+        LOGTD("ledc", "Registered PWM channel on pin %s with freq %" PRIu32 " and resolution %d",
             pin->getName().c_str(), freq, dutyResolution);
         return pins.back();
     }
@@ -113,13 +113,13 @@ private:
                 return timer;
             }
         }
-        ledc_timer_t timerNum = static_cast<ledc_timer_t>(timers.size());
+        auto timerNum = static_cast<ledc_timer_t>(timers.size());
         if (timerNum >= LEDC_TIMER_MAX) {
             throw std::runtime_error("No more LEDC timers available");
         }
 
         timers.emplace_back(speedMode, dutyResolution, timerNum, freqHz, clkSrc);
-        LOGTD("ledc", "Created LEDC timer %d with freq %ld and resolution %d bits",
+        LOGTD("ledc", "Created LEDC timer %d with freq %" PRIu32 " and resolution %d bits",
             timerNum, freqHz, dutyResolution);
         return timers.back();
     }

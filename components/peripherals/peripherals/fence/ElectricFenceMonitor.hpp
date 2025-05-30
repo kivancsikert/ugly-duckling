@@ -9,6 +9,7 @@
 #include <Telemetry.hpp>
 
 #include <peripherals/Peripheral.hpp>
+#include <utility>
 
 using namespace std::chrono_literals;
 using namespace farmhub::kernel;
@@ -38,26 +39,27 @@ void convertFromJson(JsonVariantConst src, FencePinConfig& dst) {
     dst.voltage = src["voltage"];
 }
 
-class ElectricFenceMonitorComponent
+class ElectricFenceMonitorComponent final
     : public Component,
       public TelemetryProvider {
 public:
     ElectricFenceMonitorComponent(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<PulseCounterManager> pulseCounterManager,
-        const std::shared_ptr<ElectricFenceMonitorDeviceConfig> config)
-        : Component(name, mqttRoot) {
+        const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
+        const std::shared_ptr<ElectricFenceMonitorDeviceConfig>& config)
+        : Component(name, std::move(mqttRoot)) {
 
         std::string pinsDescription;
-        for (auto& pinConfig : config->pins.get()) {
-            if (pinsDescription.length() > 0)
+        for (const auto& pinConfig : config->pins.get()) {
+            if (!pinsDescription.empty()) {
                 pinsDescription += ", ";
+            }
             pinsDescription += pinConfig.pin->getName() + "=" + std::to_string(pinConfig.voltage) + "V";
         }
         LOGI("Initializing electric fence with pins %s", pinsDescription.c_str());
 
-        for (auto& pinConfig : config->pins.get()) {
+        for (const auto& pinConfig : config->pins.get()) {
             auto unit = pulseCounterManager->create(pinConfig.pin);
             pins.emplace_back(pinConfig.voltage, unit);
         }
@@ -70,7 +72,7 @@ public:
 
                 if (count > 0) {
                     lastVoltage = std::max(pin.voltage, lastVoltage);
-                    LOGV("Counted %ld pulses on pin %s (voltage: %dV)",
+                    LOGV("Counted %" PRIu32 " pulses on pin %s (voltage: %dV)",
                         count, pin.counter->getPin()->getName().c_str(), pin.voltage);
                 }
             }
@@ -101,9 +103,9 @@ class ElectricFenceMonitor
 public:
     ElectricFenceMonitor(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<PulseCounterManager> pulseCounterManager,
-        const std::shared_ptr<ElectricFenceMonitorDeviceConfig> config)
+        const std::shared_ptr<MqttRoot>& mqttRoot,
+        const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
+        const std::shared_ptr<ElectricFenceMonitorDeviceConfig>& config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , monitor(name, mqttRoot, pulseCounterManager, config) {
     }

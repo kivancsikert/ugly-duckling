@@ -5,12 +5,13 @@
 #include <unordered_map>
 
 #include <mqtt/MqttDriver.hpp>
+#include <utility>
 
 namespace farmhub::kernel::mqtt {
 
 class MqttRoot {
 public:
-    MqttRoot(const std::shared_ptr<MqttDriver> mqtt, const std::string& rootTopic)
+    MqttRoot(const std::shared_ptr<MqttDriver>& mqtt, const std::string& rootTopic)
         : mqtt(mqtt)
         , rootTopic(rootTopic) {
         const std::string commandsTopic = fullTopic("commands/#");
@@ -39,7 +40,7 @@ public:
         return mqtt->publish(fullTopic(suffix), json, retain, qos, timeout, log);
     }
 
-    PublishStatus publish(const std::string& suffix, std::function<void(JsonObject&)> populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_NETWORK_TIMEOUT, LogPublish log = LogPublish::Log) {
+    PublishStatus publish(const std::string& suffix, const std::function<void(JsonObject&)>& populate, Retention retain = Retention::NoRetain, QoS qos = QoS::AtMostOnce, ticks timeout = MqttDriver::MQTT_NETWORK_TIMEOUT, LogPublish log = LogPublish::Log) {
         JsonDocument doc;
         JsonObject root = doc.to<JsonObject>();
         populate(root);
@@ -51,10 +52,10 @@ public:
     }
 
     bool subscribe(const std::string& suffix, SubscriptionHandler handler) {
-        return subscribe(suffix, QoS::ExactlyOnce, handler);
+        return subscribe(suffix, QoS::ExactlyOnce, std::move(handler));
     }
 
-    void registerCommand(const std::string& name, CommandHandler handler) {
+    void registerCommand(const std::string& name, const CommandHandler& handler) {
         commandHandlers.emplace(name, handler);
     }
 
@@ -64,7 +65,7 @@ public:
      * Note that subscription does not support wildcards.
      */
     bool subscribe(const std::string& suffix, QoS qos, SubscriptionHandler handler) {
-        return mqtt->subscribe(fullTopic(suffix), qos, handler);
+        return mqtt->subscribe(fullTopic(suffix), qos, std::move(handler));
     }
 
 private:

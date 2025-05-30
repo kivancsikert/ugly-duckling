@@ -10,13 +10,14 @@
 
 #include <peripherals/I2CConfig.hpp>
 #include <peripherals/Peripheral.hpp>
+#include <utility>
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::environment {
 
-class Sht3xComponent
+class Sht3xComponent final
     : public Component,
       public TelemetryProvider {
 public:
@@ -24,9 +25,9 @@ public:
         const std::string& name,
         const std::string& sensorType,
         std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<I2CManager> i2c,
-        I2CConfig config)
-        : Component(name, mqttRoot)
+        const std::shared_ptr<I2CManager>& i2c,
+        const I2CConfig& config)
+        : Component(name, std::move(mqttRoot))
         , bus(i2c->getBusFor(config)) {
 
         // TODO Add commands to soft/hard reset the sensor

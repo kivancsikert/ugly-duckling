@@ -4,6 +4,7 @@
 #include <concepts>
 #include <limits>
 #include <list>
+#include <utility>
 #include <variant>
 
 #include <Component.hpp>
@@ -29,7 +30,7 @@ using namespace std::chrono;
 using namespace std::chrono_literals;
 namespace farmhub::peripherals::chicken_door {
 
-enum class DoorState {
+enum class DoorState : int8_t {
     INITIALIZED = -2,
     CLOSED = -1,
     NONE = 0,
@@ -43,7 +44,7 @@ void convertFromJson(JsonVariantConst src, DoorState& dst) {
     dst = static_cast<DoorState>(src.as<int>());
 }
 
-enum class OperationState {
+enum class OperationState : uint8_t {
     RUNNING,
     WATCHDOG_TIMEOUT
 };
@@ -112,7 +113,7 @@ public:
 };
 
 template <std::derived_from<LightSensorComponent> TLightSensorComponent>
-class ChickenDoorComponent
+class ChickenDoorComponent final
     : public Component,
       public TelemetryProvider {
 public:
@@ -120,7 +121,7 @@ public:
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
         std::shared_ptr<SwitchManager> switches,
-        std::shared_ptr<PwmMotorDriver> motor,
+        const std::shared_ptr<PwmMotorDriver>& motor,
         TLightSensorComponent& lightSensor,
         InternalPinPtr openPin,
         InternalPinPtr closedPin,
@@ -146,7 +147,7 @@ public:
         , watchdog(name + ":watchdog", movementTimeout, false, [this](WatchdogState state) {
             handleWatchdogEvent(state);
         })
-        , publishTelemetry(publishTelemetry)
+        , publishTelemetry(std::move(publishTelemetry))
     // TODO Make this configurable
     {
 
@@ -157,7 +158,7 @@ public:
         motor->stop();
 
         mqttRoot->registerCommand("override", [this](const JsonObject& request, JsonObject& response) {
-            DoorState overrideState = request["state"].as<DoorState>();
+            auto overrideState = request["state"].as<DoorState>();
             if (overrideState == DoorState::NONE) {
                 updateQueue.put(StateOverride { DoorState::NONE, time_point<system_clock>::min() });
             } else {
@@ -184,7 +185,7 @@ public:
         telemetry["operationState"] = operationState;
         if (overrideState != DoorState::NONE) {
             time_t rawtime = system_clock::to_time_t(overrideUntil);
-            auto timeinfo = gmtime(&rawtime);
+            auto* timeinfo = gmtime(&rawtime);
             char buffer[80];
             strftime(buffer, 80, "%FT%TZ", timeinfo);
             telemetry["overrideEnd"] = std::string(buffer);
@@ -192,7 +193,7 @@ public:
         }
     }
 
-    void configure(const std::shared_ptr<ChickenDoorConfig> config) {
+    void configure(const std::shared_ptr<ChickenDoorConfig>& config) {
         openLevel = config->openLevel.get();
         closeLevel = config->closeLevel.get();
         LOGI("Configured chicken door %s to close at %.2f lux, and open at %.2f lux",
@@ -312,35 +313,36 @@ private:
         if (open && close) {
             LOGD("Both open and close switches are engaged");
             return DoorState::NONE;
-        } else if (open) {
-            return DoorState::OPEN;
-        } else if (close) {
-            return DoorState::CLOSED;
-        } else {
-            return DoorState::NONE;
         }
+        if (open) {
+            return DoorState::OPEN;
+        }
+        if (close) {
+            return DoorState::CLOSED;
+        }
+        return DoorState::NONE;
     }
 
     DoorState determineTargetState(DoorState currentState) {
         if (overrideUntil >= system_clock::now()) {
             return overrideState;
-        } else {
-            if (overrideState != DoorState::NONE) {
-                LOGI("Override expired, returning to scheduled state");
-                Lock lock(stateMutex);
-                overrideState = DoorState::NONE;
-                overrideUntil = time_point<system_clock>::min();
-            }
-            auto lightLevel = lightSensor.getCurrentLevel();
-            if (lightLevel >= openLevel) {
-                return DoorState::OPEN;
-            } else if (lightLevel <= closeLevel) {
-                return DoorState::CLOSED;
-            }
-            return currentState == DoorState::NONE
-                ? DoorState::CLOSED
-                : currentState;
         }
+        if (overrideState != DoorState::NONE) {
+            LOGI("Override expired, returning to scheduled state");
+            Lock lock(stateMutex);
+            overrideState = DoorState::NONE;
+            overrideUntil = time_point<system_clock>::min();
+        }
+        auto lightLevel = lightSensor.getCurrentLevel();
+        if (lightLevel >= openLevel) {
+            return DoorState::OPEN;
+        }
+        if (lightLevel <= closeLevel) {
+            return DoorState::CLOSED;
+        }
+        return currentState == DoorState::NONE
+            ? DoorState::CLOSED
+            : currentState;
     }
 
     const std::shared_ptr<PwmMotorDriver> motor;
@@ -428,16 +430,17 @@ private:
     ChickenDoorComponent<TLightSensorComponent> doorComponent;
 };
 
-class NoLightSensorComponent : public LightSensorComponent {
+class NoLightSensorComponent final
+    : public LightSensorComponent {
 public:
     NoLightSensorComponent(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<I2CManager> i2c,
-        I2CConfig config,
+        const std::shared_ptr<I2CManager>& i2c,
+        const I2CConfig& config,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval) {
+        : LightSensorComponent(name, std::move(mqttRoot), measurementFrequency, latencyInterval) {
         runLoop();
     }
 
@@ -462,11 +465,12 @@ public:
         try {
             if (lightSensorType == "bh1750") {
                 return std::make_unique<ChickenDoor<Bh1750Component>>(name, mqttRoot, services.i2c, 0x23, services.switches, motor, deviceConfig);
-            } else if (lightSensorType == "tsl2591") {
-                return std::make_unique<ChickenDoor<Tsl2591Component>>(name, mqttRoot, services.i2c, TSL2591_ADDR, services.switches, motor, deviceConfig);
-            } else {
-                throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
             }
+            if (lightSensorType == "tsl2591") {
+                return std::make_unique<ChickenDoor<Tsl2591Component>>(name, mqttRoot, services.i2c, TSL2591_ADDR, services.switches, motor, deviceConfig);
+            }
+            throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
+
         } catch (const std::exception& e) {
             LOGE("Could not initialize light sensor because %s", e.what());
             LOGW("Initializing without a light sensor");

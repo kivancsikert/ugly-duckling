@@ -5,6 +5,7 @@
 
 #include <Pin.hpp>
 #include <Telemetry.hpp>
+#include <utility>
 
 using farmhub::kernel::PinPtr;
 
@@ -29,7 +30,9 @@ public:
         : parameters(parameters) {
     }
 
-    virtual float getVoltage() = 0;
+    virtual ~BatteryDriver() = default;
+
+    virtual double getVoltage() = 0;
 
     const BatteryParameters parameters;
 };
@@ -37,7 +40,7 @@ public:
 class AnalogBatteryDriver
     : public BatteryDriver {
 public:
-    AnalogBatteryDriver(InternalPinPtr pin, float voltageDividerRatio, const BatteryParameters& parameters)
+    AnalogBatteryDriver(const InternalPinPtr& pin, float voltageDividerRatio, const BatteryParameters& parameters)
         : BatteryDriver(parameters)
         , analogPin(pin)
         , voltageDividerRatio(voltageDividerRatio) {
@@ -45,7 +48,7 @@ public:
             analogPin.getName().c_str());
     }
 
-    float getVoltage() {
+    double getVoltage() override {
         for (int trial = 0; trial < 5; trial++) {
             auto batteryLevel = analogPin.analogRead();
             if (!batteryLevel.has_value()) {

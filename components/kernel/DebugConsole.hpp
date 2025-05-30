@@ -14,7 +14,7 @@ namespace farmhub::kernel {
 #ifdef FARMHUB_DEBUG
 class DebugConsole {
 public:
-    DebugConsole(const std::shared_ptr<BatteryManager> battery, const std::shared_ptr<WiFiDriver> wifi)
+    DebugConsole(const std::shared_ptr<BatteryManager>& battery, const std::shared_ptr<WiFiDriver>& wifi)
         : battery(battery)
         , wifi(wifi) {
         status.reserve(256);
@@ -27,17 +27,17 @@ public:
 private:
     void printStatus() {
         static const char* spinner = "|/-\\";
-        static const int spinnerLength = strlen(spinner);
+        static const size_t spinnerLength = strlen(spinner);
         auto uptime = duration_cast<milliseconds>(boot_clock::now().time_since_epoch());
 
         counter = (counter + 1) % spinnerLength;
         status.clear();
         status += "[" + std::string(1, spinner[counter]) + "] ";
         status += "\033[33m" + std::string(farmhubVersion) + "\033[0m";
-        status += ", uptime: \033[33m" + toStringWithPrecision(uptime.count() / 1000.0f, 1) + "\033[0m s";
+        status += ", uptime: \033[33m" + toStringWithPrecision(static_cast<double>(uptime.count()) / 1000.0, 1) + "\033[0m s";
         status += ", WIFI: " + std::string(wifiStatus());
         status += ", RTC \033[33m" + std::string(RtcDriver::isTimeSet() ? "OK" : "UNSYNCED") + "\033[0m";
-        status += ", heap \033[33m" + toStringWithPrecision(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024.0f, 2) + "\033[0m kB";
+        status += ", heap \033[33m" + toStringWithPrecision(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024.0, 2) + "\033[0m kB";
         status += ", CPU: \033[33m" + std::to_string(esp_clk_cpu_freq() / 1000000) + "\033[0m MHz";
 
         if (battery != nullptr) {
@@ -50,8 +50,8 @@ private:
     }
 
     static const char* wifiStatus() {
-        auto netif = esp_netif_get_default_netif();
-        if (!netif) {
+        auto* netif = esp_netif_get_default_netif();
+        if (netif == nullptr) {
             return "\033[0;33moff\033[0m";
         }
 
@@ -89,17 +89,17 @@ private:
 
         if (ip_info.ip.addr != 0) {
             static char ip_str[32];
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
             snprintf(ip_str, sizeof(ip_str), "\033[0;33m" IPSTR "\033[0m", IP2STR(&ip_info.ip));
             return ip_str;
-        } else {
-            return "\033[0;33mIP?\033[0m";
         }
+        return "\033[0;33mIP?\033[0m";
     }
 
     const std::shared_ptr<BatteryManager> battery;
     const std::shared_ptr<WiFiDriver> wifi;
 
-    int counter;
+    size_t counter;
     std::string status;
 };
 #endif

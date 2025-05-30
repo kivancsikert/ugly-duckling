@@ -84,7 +84,7 @@ public:
         return unlink(resolve(path).c_str());
     }
 
-    bool readDir(const std::string& path, std::function<void(const std::string&, size_t)> callback) const {
+    bool readDir(const std::string& path, const std::function<void(const std::string&, size_t)>& callback) const {
         DIR* dir = opendir(resolve(path).c_str());
         if (dir == nullptr) {
             LOGTE(Tag::FS, "Failed to open directory: %s", path.c_str());
@@ -108,10 +108,9 @@ public:
         if (ret == ESP_OK) {
             LOGTV(Tag::FS, "SPIFFS partition '%s' formatted successfully", PARTITION);
             return true;
-        } else {
-            LOGTE(Tag::FS, "Error formatting SPIFFS partition '%s': %s\n", PARTITION, esp_err_to_name(ret));
-            return false;
         }
+        LOGTE(Tag::FS, "Error formatting SPIFFS partition '%s': %s\n", PARTITION, esp_err_to_name(ret));
+        return false;
     }
 
     FileSystem()

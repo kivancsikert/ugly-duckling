@@ -11,6 +11,7 @@
 #include <State.hpp>
 #include <Task.hpp>
 #include <drivers/MdnsDriver.hpp>
+#include <utility>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -35,9 +36,8 @@ public:
         Property<std::string> host { this, "host", "" };
     };
 
-    RtcDriver(State& networkReady, std::shared_ptr<MdnsDriver> mdns, const std::shared_ptr<Config> ntpConfig, StateSource& rtcInSync)
-        : networkReady(networkReady)
-        , mdns(mdns)
+    RtcDriver(State& networkReady, std::shared_ptr<MdnsDriver> mdns, const std::shared_ptr<Config>& ntpConfig, StateSource& rtcInSync)
+        : mdns(std::move(mdns))
         , ntpConfig(ntpConfig)
         , rtcInSync(rtcInSync) {
 
@@ -132,23 +132,22 @@ private:
         return success;
     }
 
-    static void printServers(void) {
+    static void printServers() {
         LOGD("List of configured NTP servers:");
 
         for (uint8_t i = 0; i < SNTP_MAX_SERVERS; ++i) {
-            if (esp_sntp_getservername(i)) {
+            if (esp_sntp_getservername(i) != nullptr) {
                 LOGD(" - server %d: '%s'", i, esp_sntp_getservername(i));
             } else {
                 char buff[48];
                 ip_addr_t const* ip = esp_sntp_getserver(i);
-                if (ipaddr_ntoa_r(ip, buff, 48) != NULL) {
+                if (ipaddr_ntoa_r(ip, buff, 48) != nullptr) {
                     LOGD(" - server %d: %s", i, buff);
                 }
             }
         }
     }
 
-    State& networkReady;
     const std::shared_ptr<MdnsDriver> mdns;
     const std::shared_ptr<Config> ntpConfig;
     StateSource& rtcInSync;

@@ -10,6 +10,7 @@
 
 #include <peripherals/I2CConfig.hpp>
 #include <peripherals/Peripheral.hpp>
+#include <utility>
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
@@ -19,7 +20,7 @@ namespace farmhub::peripherals::environment {
 /**
  * @brief Works with SHT2x or HTU2x.
  */
-class Sht2xComponent
+class Sht2xComponent final
     : public Component,
       public TelemetryProvider {
 public:
@@ -27,9 +28,9 @@ public:
         const std::string& name,
         const std::string& sensorType,
         std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<I2CManager> i2c,
+        const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config)
-        : Component(name, mqttRoot)
+        : Component(name, std::move(mqttRoot))
         , bus(i2c->getBusFor(config)) {
 
         // TODO Add commands to soft/hard reset the sensor
@@ -54,9 +55,8 @@ private:
         if (res != ESP_OK) {
             LOGD("Could not measure temperature: %s", esp_err_to_name(res));
             return std::numeric_limits<float>::quiet_NaN();
-        } else {
-            return value;
         }
+        return value;
     }
 
     float getHumidity() {
@@ -65,9 +65,8 @@ private:
         if (res != ESP_OK) {
             LOGD("Could not measure humidity: %s", esp_err_to_name(res));
             return std::numeric_limits<float>::quiet_NaN();
-        } else {
-            return value;
         }
+        return value;
     }
 
     std::shared_ptr<I2CBus> bus;

@@ -41,14 +41,14 @@ struct MdnsRecord {
     std::string ipOrHost() const {
         if (hasIp()) {
             return ipAsString();
-        } else {
-            return hostname;
         }
+        return hostname;
     }
 
     std::string toString() const {
         std::string result = ipOrHost();
-        result += ":" + port;
+        result += ":";
+        result += std::to_string(port);
         return result;
     }
 };
@@ -106,11 +106,10 @@ private:
                     LOGTD(Tag::MDNS, "found %s in NVS cache: %s",
                         cacheKey.c_str(), record.hostname.c_str());
                     return true;
-                } else {
-                    LOGTD(Tag::MDNS, "invalid record in NVS cache for %s, removing",
-                        cacheKey.c_str());
-                    nvs.remove(cacheKey);
                 }
+                LOGTD(Tag::MDNS, "invalid record in NVS cache for %s, removing",
+                    cacheKey.c_str());
+                nvs.remove(cacheKey);
             }
         } else {
             LOGTD(Tag::MDNS, "removing untrusted record for %s from NVS cache",
@@ -123,7 +122,7 @@ private:
 
         mdns_result_t* results = nullptr;
         esp_err_t err = mdns_query_ptr(std::string("_" + serviceName).c_str(), std::string("_" + port).c_str(), timeout.count(), 1, &results);
-        if (err) {
+        if (err != 0) {
             LOGTE(Tag::MDNS, "query failed for %s.%s: %d",
                 serviceName.c_str(), port.c_str(), err);
             return false;
@@ -139,6 +138,7 @@ private:
             record.hostname = result.hostname;
         }
         if (result.addr != nullptr) {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
             record.ip = result.addr->addr.u_addr.ip4;
         }
         record.port = result.port;
@@ -179,7 +179,7 @@ void convertFromJson(JsonVariantConst src, MdnsRecord& dst) {
         dst.hostname = "";
     }
     if (jsonRecord["ip"].is<std::string>()) {
-        const char* ipStr = jsonRecord["ip"].as<std::string>().c_str();
+        const char* ipStr = jsonRecord["ip"].as<const char*>();
         dst.ip.addr = esp_ip4addr_aton(ipStr);
     } else {
         dst.ip.addr = 0;

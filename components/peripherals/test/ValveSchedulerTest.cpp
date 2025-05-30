@@ -77,7 +77,7 @@ std::string toJson(const ValveSchedule& schedule) {
 const time_point<system_clock> base = parseTime("2024-01-01 00:00:00");
 
 TEST_CASE("can parse schedule") {
-    char json[] = R"({
+    const char json[] = R"({
         "start": "2024-01-01T00:00:00Z",
         "period": 3600,
         "duration": 900

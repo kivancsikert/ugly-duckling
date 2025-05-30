@@ -8,10 +8,10 @@ namespace farmhub::kernel {
 
 static const std::string& getMacAddress() {
     static std::string macAddress;
-    if (macAddress.length() == 0) {
+    if (macAddress.empty()) {
         uint8_t rawMac[6];
-        for (int i = 0; i < 6; i++) {
-            rawMac[i] = 0;
+        for (unsigned char& i : rawMac) {
+            i = 0;
         }
         if (esp_read_mac(rawMac, ESP_MAC_WIFI_STA) != ESP_OK) {
             macAddress = "??:??:??:??:??:??:??:??";

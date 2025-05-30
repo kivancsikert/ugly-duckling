@@ -15,6 +15,7 @@
 #include <peripherals/I2CConfig.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/light_sensor/LightSensor.hpp>
+#include <utility>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -31,17 +32,17 @@ public:
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
 };
 
-class Bh1750Component
+class Bh1750Component final
     : public LightSensorComponent {
 public:
     Bh1750Component(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<I2CManager> i2c,
-        I2CConfig config,
+        const std::shared_ptr<I2CManager>& i2c,
+        const I2CConfig& config,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : LightSensorComponent(name, mqttRoot, measurementFrequency, latencyInterval) {
+        : LightSensorComponent(name, std::move(mqttRoot), measurementFrequency, latencyInterval) {
 
         LOGI("Initializing BH1750 light sensor with %s",
             config.toString().c_str());
@@ -72,8 +73,8 @@ class Bh1750
 public:
     Bh1750(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<I2CManager> i2c,
+        const std::shared_ptr<MqttRoot>& mqttRoot,
+        const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config,
         seconds measurementFrequency,
         seconds latencyInterval)

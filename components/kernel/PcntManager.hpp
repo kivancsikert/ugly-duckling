@@ -5,6 +5,7 @@
 #include <driver/pulse_cnt.h>
 
 #include <EspException.hpp>
+#include <utility>
 
 namespace farmhub::kernel {
 
@@ -12,7 +13,7 @@ namespace farmhub::kernel {
 struct PulseCounterUnit {
     PulseCounterUnit(pcnt_unit_handle_t unit, InternalPinPtr pin)
         : unit(unit)
-        , pin(pin) {
+        , pin(std::move(pin)) {
     }
 
     int getCount() const {
@@ -29,8 +30,8 @@ struct PulseCounterUnit {
             pin->getName().c_str());
     }
 
-    int16_t getAndClearCount() {
-        int16_t count = getCount();
+    int getAndClearCount() {
+        int count = getCount();
         if (count != 0) {
             clear();
         }
@@ -48,7 +49,7 @@ private:
 
 class PcntManager {
 public:
-    std::shared_ptr<PulseCounterUnit> registerUnit(InternalPinPtr pin, nanoseconds maxGlitchDuration = 1000ns) {
+    static std::shared_ptr<PulseCounterUnit> registerUnit(const InternalPinPtr& pin, nanoseconds maxGlitchDuration = 1000ns) {
         pcnt_unit_config_t unitConfig = {
             .low_limit = std::numeric_limits<int16_t>::min(),
             .high_limit = std::numeric_limits<int16_t>::max(),

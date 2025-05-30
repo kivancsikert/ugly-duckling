@@ -61,7 +61,7 @@ private:
     PowerManagementLock& lock;
 };
 
-class PowerManager : public TelemetryProvider {
+class PowerManager final : public TelemetryProvider {
 public:
     PowerManager(bool requestedSleepWhenIdle)
         : sleepWhenIdle(shouldSleepWhenIdle(requestedSleepWhenIdle)) {
@@ -79,7 +79,7 @@ public:
         esp_pm_sleep_cbs_register_config_t cbs_conf = {
             .enter_cb = nullptr,
             .exit_cb = [](int64_t timeSleptInUs, void* arg) {
-                auto self = static_cast<PowerManager*>(arg);
+                auto* self = static_cast<PowerManager*>(arg);
                 self->lightSleepTime += microseconds(timeSleptInUs);
                 self->lightSleepCount++;
                 return ESP_OK;
@@ -110,7 +110,7 @@ public:
         auto now = boot_clock::now();
         microseconds duration = now - sleepTimeLastReported;
         if (duration.count() > 0) {
-            auto currentLightSleepRatio = static_cast<double>(lightSleepTime.count()) / duration.count();
+            double currentLightSleepRatio = static_cast<double>(lightSleepTime.count()) / static_cast<double>(duration.count());
             auto currentLightSleepCount = lightSleepCount;
             sleepTimeLastReported = now;
             lightSleepTime = microseconds::zero();

@@ -29,7 +29,9 @@ using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::kernel {
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 static RTC_DATA_ATTR int bootCount = 0;
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 class KernelStatusTask;
 
@@ -50,14 +52,14 @@ public:
 
 class KernelStatusTask {
 public:
-    static void init(std::shared_ptr<LedDriver> statusLed, std::shared_ptr<ModuleStates> states) {
+    static void init(const std::shared_ptr<LedDriver>& statusLed, const std::shared_ptr<ModuleStates>& states) {
         Task::run("status-update", 3072, [statusLed, states](Task&) {
             updateState(statusLed, states);
         });
     }
 
 private:
-    enum class KernelState {
+    enum class KernelState : uint8_t{
         BOOTING,
         NETWORK_CONNECTING,
         NETWORK_CONFIGURING,
@@ -68,7 +70,7 @@ private:
         IDLE
     };
 
-    static void updateState(std::shared_ptr<LedDriver> statusLed, std::shared_ptr<ModuleStates> states) {
+    static void updateState(const std::shared_ptr<LedDriver>& statusLed, const std::shared_ptr<ModuleStates>& states) {
         KernelState state = KernelState::BOOTING;
         while (true) {
             KernelState newState;
@@ -116,8 +118,6 @@ private:
                         statusLed->blink(1500ms);
                         break;
                     case KernelState::TRANSMITTING:
-                        statusLed->turnOff();
-                        break;
                     case KernelState::IDLE:
                         statusLed->turnOff();
                         break;

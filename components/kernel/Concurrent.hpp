@@ -2,13 +2,13 @@
 
 #include <chrono>
 #include <functional>
-#include <optional>
 #include <memory>
+#include <optional>
 
 #include <freertos/FreeRTOS.h>
 
-#include <Time.hpp>
 #include <BootClock.hpp>
+#include <Time.hpp>
 
 using namespace std::chrono;
 
@@ -21,11 +21,11 @@ protected:
         , queue(xQueueCreate(capacity, messageSize)) {
     }
 
-    ~BaseQueue() {
+public:
+    virtual ~BaseQueue() {
         vQueueDelete(queue);
     }
 
-public:
     virtual void clear() = 0;
 
     UBaseType_t size() {
@@ -33,7 +33,6 @@ public:
     }
 
 protected:
-
     const std::string name;
     const QueueHandle_t queue;
 };
@@ -46,22 +45,22 @@ public:
     }
 
     template <typename... Args>
-    requires std::constructible_from<TMessage, Args...>
+        requires std::constructible_from<TMessage, Args...>
     void put(Args&&... args) {
         while (!offerIn(ticks::max(), std::forward<Args>(args)...)) { }
     }
 
     template <typename... Args>
-    requires std::constructible_from<TMessage, Args...>
+        requires std::constructible_from<TMessage, Args...>
     bool offer(Args&&... args) {
         return offerIn(ticks::zero(), std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    requires std::constructible_from<TMessage, Args...>
+        requires std::constructible_from<TMessage, Args...>
     bool offerIn(ticks timeout, Args&&... args) {
-        TMessage* copy = new TMessage(std::forward<Args>(args)...);
-        bool sentWithoutDropping = xQueueSend(this->queue, &copy, timeout.count()) == pdTRUE;
+        auto* copy = new TMessage(std::forward<Args>(args)...);
+        bool sentWithoutDropping = xQueueSend(this->queue, reinterpret_cast<const void*>(&copy), timeout.count()) == pdTRUE;
         if (!sentWithoutDropping) {
             printf("Overflow in queue '%s', dropping message\n",
                 this->name.c_str());
@@ -70,7 +69,7 @@ public:
         return sentWithoutDropping;
     }
 
-    typedef std::function<void(TMessage&)> MessageHandler;
+    using MessageHandler = std::function<void (TMessage &)>;
 
     size_t drain(MessageHandler handler) {
         return drain(SIZE_MAX, handler);
@@ -116,7 +115,7 @@ public:
     }
 
     void take() {
-        take([](const TMessage& message) {});
+        take([](const TMessage& message) { });
     }
 
     void take(MessageHandler handler) {
@@ -124,7 +123,7 @@ public:
     }
 
     bool poll() {
-        return poll([](const TMessage& message) {});
+        return poll([](const TMessage& message) { });
     }
 
     bool poll(MessageHandler handler) {
@@ -132,12 +131,12 @@ public:
     }
 
     bool pollIn(ticks timeout) {
-        return pollIn(timeout, [](const TMessage& message) {});
+        return pollIn(timeout, [](const TMessage& message) { });
     }
 
     bool pollIn(ticks timeout, MessageHandler handler) {
         TMessage* message;
-        if (!xQueueReceive(this->queue, &message, timeout.count())) {
+        if (!xQueueReceive(this->queue, reinterpret_cast<void*>(&message), timeout.count())) {
             return false;
         }
         handler(*message);
@@ -146,7 +145,7 @@ public:
     }
 
     void clear() override {
-        this->drain([](const TMessage& message) {});
+        this->drain([](const TMessage& message) { });
     }
 };
 
@@ -212,13 +211,15 @@ public:
         return std::nullopt;
     }
 
-    void clear() {
+    void clear() override {
         xQueueReset(this->queue);
     }
 };
 
 class MutexBase {
 public:
+    virtual ~MutexBase() = default;
+
     void lock() {
         while (!lockIn(ticks::max())) { }
     }
@@ -238,7 +239,7 @@ public:
         : mutex(xSemaphoreCreateMutex()) {
     }
 
-    ~Mutex() {
+    ~Mutex() override {
         vSemaphoreDelete(mutex);
     }
 
@@ -260,7 +261,7 @@ public:
         : mutex(xSemaphoreCreateRecursiveMutex()) {
     }
 
-    ~RecursiveMutex() {
+    ~RecursiveMutex() override {
         vSemaphoreDelete(mutex);
     }
 
@@ -276,7 +277,7 @@ private:
     const SemaphoreHandle_t mutex;
 };
 
-class  Lock {
+class Lock {
 public:
     Lock(MutexBase& mutex)
         : mutex(mutex) {

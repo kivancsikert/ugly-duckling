@@ -6,6 +6,7 @@
 #include <Telemetry.hpp>
 
 #include <peripherals/Peripheral.hpp>
+#include <utility>
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
@@ -21,15 +22,15 @@ public:
     Property<uint16_t> water { this, "water", 1000 };
 };
 
-class SoilMoistureSensorComponent
+class SoilMoistureSensorComponent final
     : public Component,
       public TelemetryProvider {
 public:
     SoilMoistureSensorComponent(
         const std::string& name,
         std::shared_ptr<MqttRoot> mqttRoot,
-        const std::shared_ptr<SoilMoistureSensorDeviceConfig> config)
-        : Component(name, mqttRoot)
+        const std::shared_ptr<SoilMoistureSensorDeviceConfig>& config)
+        : Component(name, std::move(mqttRoot))
         , airValue(config->air.get())
         , waterValue(config->water.get())
         , pin(config->pin.get()) {
@@ -64,7 +65,7 @@ private:
 class SoilMoistureSensor
     : public Peripheral<EmptyConfiguration> {
 public:
-    SoilMoistureSensor(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot, const std::shared_ptr<SoilMoistureSensorDeviceConfig> config)
+    SoilMoistureSensor(const std::string& name, const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<SoilMoistureSensorDeviceConfig>& config)
         : Peripheral<EmptyConfiguration>(name, mqttRoot)
         , sensor(name, mqttRoot, config) {
     }

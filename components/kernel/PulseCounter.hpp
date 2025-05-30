@@ -27,7 +27,7 @@ class PulseCounterManager;
  */
 class PulseCounter {
 public:
-    PulseCounter(InternalPinPtr pin)
+    PulseCounter(const InternalPinPtr& pin)
         : pin(pin) {
         auto gpio = pin->getGpio();
 
@@ -61,14 +61,14 @@ public:
 
     uint32_t getCount() const {
         uint32_t count = counter.load();
-        LOGTV(Tag::PCNT, "Counted %lu pulses on pin %s",
+        LOGTV(Tag::PCNT, "Counted %" PRIu32 " pulses on pin %s",
             count, pin->getName().c_str());
         return count;
     }
 
     uint32_t reset() {
         uint32_t count = counter.exchange(0);
-        LOGTV(Tag::PCNT, "Counted %lu pulses and cleared on pin %s",
+        LOGTV(Tag::PCNT, "Counted %" PRIu32 " pulses and cleared on pin %s",
             count, pin->getName().c_str());
         return count;
     }
@@ -78,13 +78,13 @@ public:
     }
 
 private:
-    enum class EdgeKind {
+    enum class EdgeKind : uint8_t {
         Rising,
         Falling,
     };
 
     static void IRAM_ATTR interruptHandler(void* arg) {
-        auto self = static_cast<PulseCounter*>(arg);
+        auto* self = static_cast<PulseCounter*>(arg);
         self->handlePotentialStateChange();
     }
 
@@ -93,7 +93,7 @@ private:
     }
 
     IRAM_ATTR EdgeKind takeSample() {
-        return pin->digitalRead()
+        return (pin->digitalRead() != 0)
             ? EdgeKind::Rising
             : EdgeKind::Falling;
     }
@@ -161,7 +161,7 @@ private:
 
 class PulseCounterManager {
 public:
-    std::shared_ptr<PulseCounter> create(InternalPinPtr pin) {
+    std::shared_ptr<PulseCounter> create(const InternalPinPtr& pin) {
         if (!initialized) {
             initialized = true;
 
@@ -169,7 +169,7 @@ public:
             esp_pm_sleep_cbs_register_config_t sleepCallbackConfig = {
                 .exit_cb = [](int64_t timeSleptInUs, void* arg) {
                 if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
-                    auto self = static_cast<PulseCounterManager*>(arg);
+                    auto* self = static_cast<PulseCounterManager*>(arg);
                     for (auto& counter : self->counters) {
                         counter->handlePotentialStateChange();
                     }

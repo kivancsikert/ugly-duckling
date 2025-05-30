@@ -13,8 +13,8 @@ using namespace farmhub::kernel;
 namespace farmhub::devices {
 
 namespace pins {
-static InternalPinPtr BOOT = InternalPin::registerPin("BOOT", GPIO_NUM_9);
-static InternalPinPtr STATUS = InternalPin::registerPin("STATUS", GPIO_NUM_1);
+static const InternalPinPtr BOOT = InternalPin::registerPin("BOOT", GPIO_NUM_9);
+static const InternalPinPtr STATUS = InternalPin::registerPin("STATUS", GPIO_NUM_1);
 }    // namespace pins
 
 class Mk8Config
@@ -32,7 +32,7 @@ public:
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<Mk8Config> deviceConfig) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk8Config>& deviceConfig) override {
     }
 };
 

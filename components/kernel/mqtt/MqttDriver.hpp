@@ -5,6 +5,7 @@
 #include <list>
 #include <memory>
 #include <optional>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -23,23 +24,23 @@ using namespace farmhub::kernel::drivers;
 
 namespace farmhub::kernel::mqtt {
 
-enum class Retention {
+enum class Retention : uint8_t {
     NoRetain,
     Retain
 };
 
-enum class QoS {
+enum class QoS : uint8_t {
     AtMostOnce = 0,
     AtLeastOnce = 1,
     ExactlyOnce = 2
 };
 
-enum class LogPublish {
+enum class LogPublish : uint8_t {
     Log,
     Silent
 };
 
-enum class PublishStatus {
+enum class PublishStatus : uint8_t {
     TimeOut = 0,
     Success = 1,
     Failed = 2,
@@ -47,9 +48,9 @@ enum class PublishStatus {
     QueueFull = 4
 };
 
-typedef std::function<void(const JsonObject&, JsonObject&)> CommandHandler;
+using CommandHandler = std::function<void (const JsonObject &, JsonObject &)>;
 
-typedef std::function<void(const std::string&, const JsonObject&)> SubscriptionHandler;
+using SubscriptionHandler = std::function<void (const std::string &, const JsonObject &)>;
 
 class MqttRoot;
 
@@ -69,11 +70,11 @@ public:
     MqttDriver(
         State& networkReady,
         std::shared_ptr<MdnsDriver> mdns,
-        const std::shared_ptr<Config> config,
+        const std::shared_ptr<Config>& config,
         const std::string& instanceName,
         StateSource& ready)
         : networkReady(networkReady)
-        , mdns(mdns)
+        , mdns(std::move(mdns))
         , configHostname(config->host.get())
         , configPort(config->port.get())
         , configServerCert(joinStrings(config->serverCert.get()))
@@ -147,7 +148,7 @@ public:
             }
         };
 
-        LOGTD(Tag::MQTT, "server: %s:%ld, client ID is '%s'",
+        LOGTD(Tag::MQTT, "server: %s:%" PRIu32 ", client ID is '%s'",
             config.broker.address.hostname,
             config.broker.address.port,
             config.credentials.client_id);
@@ -290,21 +291,21 @@ private:
             Subscription {
                 topic,
                 qos,
-                handler });
+                std::move(handler) });
     }
 
-    static std::string joinStrings(std::list<std::string> strings) {
+    static std::string joinStrings(const std::list<std::string>& strings) {
         if (strings.empty()) {
             return "";
         }
         std::string result;
-        for (auto& str : strings) {
+        for (const auto& str : strings) {
             result += str + "\n";
         }
         return result;
     }
 
-    enum class MqttState {
+    enum class MqttState : uint8_t {
         Disconnected,
         Connecting,
         Connected,
@@ -404,9 +405,8 @@ private:
                     // Force next session to start clean, so we can re-subscribe
                     nextSessionShouldBeClean = true;
                     return true;
-                } else {
-                    return false;
                 }
+                return false;
             });
 
             switch (state) {
@@ -497,7 +497,7 @@ private:
         configMqttClient(mqttConfig);
         mqttConfig.session.disable_clean_session = !startCleanSession;
         esp_mqtt_set_config(client, &mqttConfig);
-        LOGTI(Tag::MQTT, "Connecting to %s:%lu, clean session: %d",
+        LOGTI(Tag::MQTT, "Connecting to %s:%" PRIu32 ", clean session: %d",
             mqttConfig.broker.address.hostname, mqttConfig.broker.address.port, startCleanSession);
         ESP_ERROR_CHECK(esp_mqtt_client_start(client));
         clientRunning = true;
@@ -520,7 +520,7 @@ private:
     bool clientRunning = false;
 
     static void handleMqttEventCallback(void* userData, esp_event_base_t eventBase, int32_t eventId, void* eventData) {
-        auto event = static_cast<esp_mqtt_event_handle_t>(eventData);
+        auto* event = static_cast<esp_mqtt_event_handle_t>(eventData);
         // LOGTV(Tag::MQTT, "Event dispatched from event loop: base=%s, event_id=%d, client=%p, data=%p, data_len=%d, topic=%p, topic_len=%d, msg_id=%d",
         //     eventBase, event->event_id, event->client, event->data, event->data_len, event->topic, event->topic_len, event->msg_id);
         auto* driver = static_cast<MqttDriver*>(userData);
@@ -530,7 +530,7 @@ private:
     void handleMqttEvent(int eventId, esp_mqtt_event_handle_t event) {
         switch (eventId) {
             case MQTT_EVENT_BEFORE_CONNECT: {
-                LOGTD(Tag::MQTT, "Connecting to MQTT server %s:%lu", hostname.c_str(), port);
+                LOGTD(Tag::MQTT, "Connecting to MQTT server %s:%" PRIu32, hostname.c_str(), port);
                 break;
             }
             case MQTT_EVENT_CONNECTED: {
@@ -617,9 +617,9 @@ private:
             client,
             message.topic.c_str(),
             message.payload.c_str(),
-            message.payload.length(),
+            (int) message.payload.length(),
             static_cast<int>(message.qos),
-            message.retain == Retention::Retain,
+            static_cast<int>(message.retain == Retention::Retain),
             true);
 
         if (ret < 0) {
@@ -655,7 +655,7 @@ private:
     }
 
     void processSubscriptionBatch(const std::vector<esp_mqtt_topic_t>& topics, std::list<PendingSubscription>& pendingSubscriptions) {
-        int ret = esp_mqtt_client_subscribe_multiple(client, topics.data(), topics.size());
+        int ret = esp_mqtt_client_subscribe_multiple(client, topics.data(), (int) topics.size());
 
         if (ret < 0) {
             LOGTD(Tag::MQTT, "Error subscribing: %s",
@@ -687,7 +687,7 @@ private:
         LOGTD(Tag::MQTT, "Received '%s' (size: %d)",
             topic.c_str(), payload.length());
 #endif
-        for (auto subscription : subscriptions) {
+        for (const auto& subscription : subscriptions) {
             if (topicMatches(subscription.topic.c_str(), topic.c_str())) {
                 Task::run("mqtt:incoming-handler", 4096, [topic, payload, subscription](Task& task) {
                     JsonDocument json;
@@ -702,24 +702,24 @@ private:
     }
 
     static std::string getClientId(const std::string& clientId, const std::string& instanceName) {
-        if (clientId.length() > 0) {
+        if (!clientId.empty()) {
             return clientId;
         }
         return "ugly-duckling-" + instanceName;
     }
 
-    static bool topicMatches(const char *pattern, const char *topic) {
-        const char *pat_ptr = pattern;
-        const char *top_ptr = topic;
+    static bool topicMatches(const char* pattern, const char* topic) {
+        const char* pat_ptr = pattern;
+        const char* top_ptr = topic;
 
-        while (*pat_ptr && *top_ptr) {
+        while ((*pat_ptr != 0) && (*top_ptr != 0)) {
             // Extract pattern level
-            const char *pat_end = strchr(pat_ptr, '/');
-            size_t pat_len = pat_end ? (size_t)(pat_end - pat_ptr) : strlen(pat_ptr);
+            const char* pat_end = strchr(pat_ptr, '/');
+            size_t pat_len = (pat_end != nullptr) ? (size_t) (pat_end - pat_ptr) : strlen(pat_ptr);
 
             // Extract topic level
-            const char *top_end = strchr(top_ptr, '/');
-            size_t top_len = top_end ? (size_t)(top_end - top_ptr) : strlen(top_ptr);
+            const char* top_end = strchr(top_ptr, '/');
+            size_t top_len = (top_end != nullptr) ? (size_t) (top_end - top_ptr) : strlen(top_ptr);
 
             // Handle wildcard +
             if (strncmp(pat_ptr, "+", pat_len) == 0) {
@@ -735,15 +735,23 @@ private:
             }
 
             // Move to next level
-            if (pat_end) pat_ptr = pat_end + 1;
-            else pat_ptr += pat_len;
+            if (pat_end != nullptr) {
+                pat_ptr = pat_end + 1;
+            } else {
+                pat_ptr += pat_len;
+            }
 
-            if (top_end) top_ptr = top_end + 1;
-            else top_ptr += top_len;
+            if (top_end != nullptr) {
+                top_ptr = top_end + 1;
+            } else {
+                top_ptr += top_len;
+            }
         }
 
         // Handle cases like pattern: "foo/#", topic: "foo"
-        if (*pat_ptr == '#' && *(pat_ptr + 1) == '\0') return true;
+        if (*pat_ptr == '#' && *(pat_ptr + 1) == '\0') {
+            return true;
+        }
 
         return *pat_ptr == '\0' && *top_ptr == '\0';
     }
@@ -753,7 +761,7 @@ private:
     std::atomic<bool> trustMdnsCache = true;
 
     const std::string configHostname;
-    const int configPort;
+    const unsigned int configPort;
     const std::string configServerCert;
     const std::string configClientCert;
     const std::string configClientKey;

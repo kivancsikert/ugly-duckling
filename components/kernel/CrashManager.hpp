@@ -65,11 +65,11 @@ private:
             summary.ex_info.mcause;
 #endif
 
-        LOGD("Core dump found: task: %s, cause: %ld",
+        LOGD("Core dump found: task: %s, cause: %" PRIu32,
             summary.exc_task, excCause);
 
         json["dump-version"] = summary.core_dump_version;
-        json["elf-sha256"] = std::string((const char*) summary.app_elf_sha256);
+        json["elf-sha256"] = std::string(reinterpret_cast<const char*>(summary.app_elf_sha256));
         json["task"] = std::string(summary.exc_task);
         json["cause"] = excCause;
 
@@ -84,13 +84,13 @@ private:
         auto backtraceJson = json["backtrace"].to<JsonObject>();
 
         if (summary.exc_bt_info.corrupted) {
-            LOGD("Backtrace corrupted, depth %lu", summary.exc_bt_info.depth);
+            LOGD("Backtrace corrupted, depth %" PRIu32, summary.exc_bt_info.depth);
             backtraceJson["corrupted"] = true;
         }
 
         auto framesJson = backtraceJson["frames"].to<JsonArray>();
         for (int i = 0; i < summary.exc_bt_info.depth; i++) {
-            auto& frame = summary.exc_bt_info.bt[i];
+            const auto& frame = summary.exc_bt_info.bt[i];
             framesJson.add("0x" + toHexString(frame));
         }
 #else

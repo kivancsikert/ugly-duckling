@@ -50,18 +50,18 @@ public:
             size_t length = 0;
             esp_err_t err = nvs_get_str(handle, key, nullptr, &length);
             if (err != ESP_OK) {
-                LOGTV(Tag::NVS, "get(%s) = failed to read: %s", key, esp_err_to_name(err));
+                LOGTV(Tag::NVS, "get(%s) = failed to read length: %s", key, esp_err_to_name(err));
                 return err;
             }
 
-            char json[length];
-            err = nvs_get_str(handle, key, json, &length);
+            std::string json(length, '\0');
+            err = nvs_get_str(handle, key, json.data(), &length);
             if (err != ESP_OK) {
-                LOGTE(Tag::NVS, "get(%s) = failed to read: %s", key, esp_err_to_name(err));
+                LOGTE(Tag::NVS, "get(%s) = failed to read data: %s", key, esp_err_to_name(err));
                 return err;
             }
 
-            LOGTV(Tag::NVS, "get(%s) = %s", key, json);
+            LOGTV(Tag::NVS, "get(%s) = %s", key, json.c_str());
 
             JsonDocument jsonDocument;
             DeserializationError jsonError = deserializeJson(jsonDocument, json);
@@ -118,7 +118,7 @@ public:
     }
 
 private:
-    esp_err_t withPreferences(bool readOnly, std::function<esp_err_t(nvs_handle_t)> action) {
+    esp_err_t withPreferences(bool readOnly, const std::function<esp_err_t(nvs_handle_t)>& action) {
         Lock lock(preferencesMutex);
         LOGTV(Tag::NVS, "%s '%s'", readOnly ? "read" : "write", name.c_str());
 
