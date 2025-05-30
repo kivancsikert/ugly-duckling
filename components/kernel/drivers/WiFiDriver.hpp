@@ -252,8 +252,8 @@ private:
             }
 
         handleEvents:
-            auto event = eventQueue.pollIn(WIFI_CHECK_INTERVAL);
-            while (event.has_value()) {
+            for (auto event = eventQueue.pollIn(WIFI_CHECK_INTERVAL); event.has_value(); event = eventQueue.poll()) {
+                // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
                 switch (event.value()) {
                     case WiFiEvent::STARTED:
                         if (!configPortalRunning.isSet()) {
@@ -279,7 +279,6 @@ private:
                         configPortalRunning.clear();
                         break;
                 }
-                event = eventQueue.poll();
             }
         }
     }

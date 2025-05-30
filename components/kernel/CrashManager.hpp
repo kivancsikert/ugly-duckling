@@ -95,13 +95,19 @@ private:
         }
 #else
         size_t encodedLen = (summary.exc_bt_info.dump_size + 2) / 3 * 4 + 1;
-        unsigned char encoded[encodedLen];
+        std::string encoded(encodedLen, '\0');
 
         size_t writtenLen = 0;
-        int ret = mbedtls_base64_encode(encoded, sizeof(encoded), &writtenLen, summary.exc_bt_info.stackdump, summary.exc_bt_info.dump_size);
+        int ret = mbedtls_base64_encode(
+            reinterpret_cast<unsigned char*>(encoded.data()),
+            encoded.size(),
+            &writtenLen,
+            summary.exc_bt_info.stackdump,
+            summary.exc_bt_info.dump_size);
 
         if (ret == 0) {
-            encoded[writtenLen] = '\0';    // Null-terminate the output string
+            // Resize to actual length
+            encoded.resize(writtenLen);
             json["stackdump"] = encoded;
         } else {
             LOGE("Failed to encode stackdump: %d", ret);

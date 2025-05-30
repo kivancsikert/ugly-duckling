@@ -28,12 +28,12 @@ private:
 public:
     // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
     Drv8874Driver(
-        std::shared_ptr<PwmManager> pwm,
-        InternalPinPtr in1Pin,
-        InternalPinPtr in2Pin,
-        PinPtr currentPin,
-        PinPtr faultPin,
-        PinPtr sleepPin)
+        const std::shared_ptr<PwmManager>& pwm,
+        const InternalPinPtr& in1Pin,
+        const InternalPinPtr& in2Pin,
+        const PinPtr& currentPin,
+        const PinPtr& faultPin,
+        const PinPtr& sleepPin)
         : in1Channel(pwm->registerPin(in1Pin, PWM_FREQ, PWM_RESOLUTION))
         , in2Channel(pwm->registerPin(in2Pin, PWM_FREQ, PWM_RESOLUTION))
         , currentPin(currentPin)
@@ -62,10 +62,10 @@ public:
         }
         wakeUp();
 
-        int dutyValue = in1Channel.maxValue() / 2 + (int) (in1Channel.maxValue() / 2 * duty);
-        LOGD("Driving motor %s at %d%%",
+        int dutyValue = static_cast<int>((in1Channel.maxValue() + in1Channel.maxValue() * duty) / 2);
+        LOGD("Driving motor %s at %.2f%%",
             phase == MotorPhase::FORWARD ? "forward" : "reverse",
-            (int) (duty * 100));
+            duty * 100);
 
         switch (phase) {
             case MotorPhase::FORWARD:

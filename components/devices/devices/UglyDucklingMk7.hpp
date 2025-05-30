@@ -82,7 +82,7 @@ public:
 
 class UglyDucklingMk7 : public DeviceDefinition<Mk7Config> {
 public:
-    UglyDucklingMk7(std::shared_ptr<Mk7Config> config)
+    UglyDucklingMk7(const std::shared_ptr<Mk7Config>& config)
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
         // Switch off strapping pin
         // TODO: Add a LED driver instead
@@ -90,7 +90,7 @@ public:
         pins::STATUS2->digitalWrite(1);
     }
 
-    static std::shared_ptr<BatteryDriver> createBatteryDriver(std::shared_ptr<I2CManager> i2c) {
+    static std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& i2c) {
         return std::make_shared<Bq27220Driver>(i2c, pins::SDA, pins::SCL, BatteryParameters {
             .maximumVoltage = 4.1,
             .bootThreshold = 3.7,
