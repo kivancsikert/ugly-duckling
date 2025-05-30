@@ -138,6 +138,7 @@ private:
             record.hostname = result.hostname;
         }
         if (result.addr != nullptr) {
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
             record.ip = result.addr->addr.u_addr.ip4;
         }
         record.port = result.port;
