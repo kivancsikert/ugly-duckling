@@ -13,12 +13,10 @@ namespace farmhub::devices {
 
 class DeviceConfiguration : public ConfigurationSection {
 public:
-    explicit DeviceConfiguration(const std::string& defaultModel)
-        : model(this, "model", defaultModel)
-        , instance(this, "instance", getMacAddress()) {
+    explicit DeviceConfiguration()
+        : instance(this, "instance", getMacAddress()) {
     }
 
-    Property<std::string> model;
     Property<std::string> id { this, "id", "UNIDENTIFIED" };
     Property<std::string> instance;
     Property<std::string> location { this, "location" };

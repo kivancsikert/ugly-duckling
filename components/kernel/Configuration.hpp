@@ -202,6 +202,10 @@ public:
         return configured ? value : defaultValue;
     }
 
+    const T& getOrDefault(const T& defaultValue) const {
+        return configured ? value : defaultValue;
+    }
+
     void load(const JsonObject& json) override {
         if (json[name].is<JsonVariant>()) {
             value = json[name].as<T>();
@@ -357,6 +361,13 @@ private:
     std::shared_ptr<TConfiguration> config;
     std::list<std::function<void(const JsonObject&)>> callbacks;
 };
+
+template <std::derived_from<ConfigurationSection> TConfiguration>
+std::shared_ptr<TConfiguration> loadConfiguration(const std::shared_ptr<FileSystem>& fs, const std::string& path) {
+    auto config = std::make_shared<TConfiguration>();
+    ConfigurationFile<TConfiguration> configFile(fs, path, config);
+    return config;
+}
 
 }    // namespace farmhub::kernel
 

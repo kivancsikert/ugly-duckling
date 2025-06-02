@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 
+#include <Configuration.hpp>
 #include <FileSystem.hpp>
 #include <Pin.hpp>
 #include <drivers/BatteryDriver.hpp>
@@ -23,7 +24,7 @@ using namespace farmhub::peripherals::flow_control;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
 
-namespace farmhub::devices {
+namespace farmhub::devices::mk6 {
 
 namespace pins {
 static const InternalPinPtr BOOT = InternalPin::registerPin("BOOT", GPIO_NUM_0);
@@ -72,11 +73,10 @@ static const InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43)
 static const InternalPinPtr LOADEN = InternalPin::registerPin("LOADEN", GPIO_NUM_10);
 }    // namespace pins
 
-class Mk6Config
+class Config
     : public DeviceConfiguration {
 public:
-    Mk6Config()
-        : DeviceConfiguration("mk6") {
+    Config() {
     }
 
     /**
@@ -86,17 +86,47 @@ public:
     Property<PinPtr> motorNSleepPin { this, "motorNSleepPin", pins::IOC2 };
 };
 
-class UglyDucklingMk6 : public DeviceDefinition<Mk6Config> {
+class Definition : public TypedDeviceDefinition<Config> {
 public:
-    explicit UglyDucklingMk6(const std::shared_ptr<Mk6Config>& /*config*/)
-        : DeviceDefinition(pins::STATUS, pins::BOOT) {
+    explicit Definition(Revision revision, const std::shared_ptr<Config>& config, PinPtr& defaultMotorSleepPin)
+        : TypedDeviceDefinition("mk6", revision, pins::STATUS, pins::BOOT, config)
+        , motorSleepPin(config->motorNSleepPin.getOrDefault(defaultMotorSleepPin)) {
         // Switch off strapping pin
         // TODO(lptr): Add a LED driver instead
         pins::LEDA_RED->pinMode(Pin::Mode::Output);
         pins::LEDA_RED->digitalWrite(1);
     }
 
-    static std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& /*i2c*/) {
+protected:
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services) override {
+        auto motorDriver = Drv8833Driver::create(
+            services.pwmManager,
+            pins::AIN1,
+            pins::AIN2,
+            pins::BIN1,
+            pins::BIN2,
+            pins::NFault,
+            motorSleepPin);
+
+        std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorDriver->getMotorA() }, { "b", motorDriver->getMotorB() } };
+
+        peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::Latching));
+        peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
+        peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::Latching));
+        peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
+    }
+
+private:
+    PinPtr motorSleepPin;    // The pin that controls the motor driver's nSLEEP pin
+};
+
+class Factory : public DeviceFactory {
+public:
+    Factory(Revision revision)
+        : DeviceFactory(revision) {
+    }
+
+    std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& i2c) override {
         return std::make_shared<AnalogBatteryDriver>(
             pins::BATTERY,
             1.2424,
@@ -107,24 +137,13 @@ public:
             });
     }
 
-protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk6Config>& deviceConfig) override {
-        auto motorDriver = Drv8833Driver::create(
-            services.pwmManager,
-            pins::AIN1,
-            pins::AIN2,
-            pins::BIN1,
-            pins::BIN2,
-            pins::NFault,
-            deviceConfig->motorNSleepPin.get());
-
-        std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorDriver->getMotorA() }, { "b", motorDriver->getMotorB() } };
-
-        peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::Latching));
-        peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
-        peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::Latching));
-        peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
+    std::shared_ptr<DeviceDefinition> createDeviceDefinition(const std::shared_ptr<FileSystem>& fileSystem, const std::string& configPath) override {
+        PinPtr defaultMotorSleepPin = revision == Revision::Rev3
+            ? pins::LOADEN
+            : pins::IOC2;    // LOADEN is only available on MK6 Rev3+
+        auto config = loadConfiguration<Config>(fileSystem, configPath);
+        return std::make_shared<Definition>(revision, config, defaultMotorSleepPin);
     }
 };
 
-}    // namespace farmhub::devices
+}    // namespace farmhub::devices::mk6

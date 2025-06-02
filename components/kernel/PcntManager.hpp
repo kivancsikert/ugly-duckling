@@ -1,11 +1,13 @@
 #pragma once
 
 #include <limits>
+#include <utility>
 
 #include <driver/pulse_cnt.h>
 
 #include <EspException.hpp>
-#include <utility>
+#include <Pin.hpp>
+#include <Time.hpp>
 
 namespace farmhub::kernel {
 
