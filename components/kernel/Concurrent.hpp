@@ -35,7 +35,7 @@ public:
 protected:
     const std::string name;
 
-    QueueHandle_t getQueueHandle() const {
+    constexpr IRAM_ATTR QueueHandle_t getQueueHandle() const {
         return queue;
     }
 

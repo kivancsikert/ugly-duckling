@@ -136,7 +136,9 @@ private:
 // ISR handler for GPIO interrupt
 static void IRAM_ATTR handleSwitchInterrupt(void* arg) {
     auto* state = static_cast<SwitchManager::SwitchState*>(arg);
-    bool engaged = state->pin->digitalRead() == (state->mode == SwitchMode::PullUp ? 0 : 1);
+    // Must use gpio_get_level() to read the pin state instead of pin->digitalRead()
+    // because we cannot call virtual methods from an ISR
+    bool engaged = gpio_get_level(state->pin->getGpio()) == (state->mode == SwitchMode::PullUp ? 0 : 1);
     state->manager->queueSwitchStateChange(state, engaged);
 }
 

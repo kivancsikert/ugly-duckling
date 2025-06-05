@@ -17,6 +17,7 @@
 namespace farmhub::kernel {
 
 class PulseCounterManager;
+static void pulseCounterInterruptHandler(void* arg);
 
 /**
  * Interrupt-based pulse-counter for low-frequency signals.
@@ -25,6 +26,19 @@ class PulseCounterManager;
  * Keeps the device out of light sleep while a pulse is being detected.
  *
  */
+enum class EdgeKind : uint8_t {
+    Rising,
+    Falling,
+};
+
+static IRAM_ATTR EdgeKind takePulseCounterSample(gpio_num_t gpio) {
+    // Must use gpio_get_level() to read the pin state instead of pin->digitalRead()
+    // because we cannot call virtual methods from an ISR
+    return (gpio_get_level(gpio) != 0)
+        ? EdgeKind::Rising
+        : EdgeKind::Falling;
+}
+
 class PulseCounter {
 public:
     explicit PulseCounter(const InternalPinPtr& pin)
@@ -48,7 +62,7 @@ public:
         ESP_ERROR_THROW(esp_sleep_enable_gpio_wakeup());
 
         // Attach the ISR handler to the GPIO pin
-        ESP_ERROR_THROW(gpio_isr_handler_add(gpio, interruptHandler, this));
+        ESP_ERROR_THROW(gpio_isr_handler_add(gpio, pulseCounterInterruptHandler, this));
 
         LOGTD(Tag::PCNT, "Registered interrupt-based pulse counter unit on pin %s",
             pin->getName().c_str());
@@ -78,24 +92,8 @@ public:
     }
 
 private:
-    enum class EdgeKind : uint8_t {
-        Rising,
-        Falling,
-    };
-
-    static void IRAM_ATTR interruptHandler(void* arg) {
-        auto* self = static_cast<PulseCounter*>(arg);
-        self->handlePotentialStateChange();
-    }
-
-    IRAM_ATTR void handlePotentialStateChange() {
-        eventQueue.offerFromISR(takeSample());
-    }
-
-    IRAM_ATTR EdgeKind takeSample() {
-        return (pin->digitalRead() != 0)
-            ? EdgeKind::Rising
-            : EdgeKind::Falling;
+    void handlePotentialStateChange() {
+        eventQueue.offer(takePulseCounterSample(pin->getGpio()));
     }
 
     // The amount of time to keep the device awake after detecting an edge to make sure we detect the next edge, too
@@ -103,7 +101,7 @@ private:
 
     void runLoop() {
         std::optional<std::pair<PowerManagementLockGuard, time_point<boot_clock>>> sleepLock;
-        EdgeKind lastEdge = takeSample();
+        EdgeKind lastEdge = takePulseCounterSample(pin->getGpio());
         bool seenNewEdge = true;
 
         while (true) {
@@ -156,8 +154,15 @@ private:
 
     CopyQueue<EdgeKind> eventQueue { pin->getName(), 16 };
 
+    friend void pulseCounterInterruptHandler(void* arg);
     friend class PulseCounterManager;
 };
+
+static void IRAM_ATTR pulseCounterInterruptHandler(void* arg) {
+    auto* self = static_cast<PulseCounter*>(arg);
+    // Must duplicate handlePotentialStateChange() here because of ISR restrictions
+    self->eventQueue.offerFromISR(takePulseCounterSample(self->pin->getGpio()));
+}
 
 class PulseCounterManager {
 public:

@@ -51,7 +51,7 @@ public:
 
     virtual int digitalRead() const = 0;
 
-    const std::string& getName() const {
+    constexpr const std::string& getName() const {
         return name;
     }
 
@@ -128,7 +128,7 @@ public:
         return gpio_get_level(gpio);
     }
 
-    gpio_num_t getGpio() const {
+    constexpr IRAM_ATTR gpio_num_t getGpio() const {
         return gpio;
     }
 
@@ -177,7 +177,7 @@ public:
         }
     }
 
-    const std::string& getName() const {
+    constexpr const std::string& getName() const {
         return pin->getName();
     }
 
