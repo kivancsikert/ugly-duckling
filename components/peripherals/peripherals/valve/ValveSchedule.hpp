@@ -20,15 +20,15 @@ public:
         , duration(duration) {
     }
 
-    time_point<system_clock> getStart() const {
+    constexpr time_point<system_clock> getStart() const {
         return start;
     }
 
-    seconds getPeriod() const {
+    constexpr seconds getPeriod() const {
         return period;
     }
 
-    seconds getDuration() const {
+    constexpr seconds getDuration() const {
         return duration;
     }
 

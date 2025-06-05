@@ -28,7 +28,7 @@ public:
         currentIndex = (currentIndex + 1) % maxMeasurements;
     }
 
-    T getAverage() const {
+    constexpr T getAverage() const {
         return average;
     }
 
