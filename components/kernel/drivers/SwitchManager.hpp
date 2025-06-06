@@ -30,6 +30,11 @@ public:
     virtual bool isEngaged() const = 0;
 };
 
+struct SwitchStateChange {
+    gpio_num_t gpio;
+    bool engaged;
+};
+
 static void handleSwitchInterrupt(void* arg);
 
 class SwitchManager final {
@@ -37,34 +42,43 @@ public:
     SwitchManager() {
         Task::loop("switch-manager", 3072, [this](Task& /*task*/) {
             SwitchStateChange stateChange = switchStateInterrupts.take();
-            auto* state = stateChange.switchState;
+            std::shared_ptr<SwitchState> state;
+            {
+                Lock lock(switchStatesMutex);
+                auto it = switchStates.find(stateChange.gpio);
+                if (it == switchStates.end()) {
+                    LOGE("Switch state change for unknown GPIO %d", stateChange.gpio);
+                    return;
+                }
+                state = it->second;
+            }
             auto engaged = stateChange.engaged;
             LOGV("Switch %s is %s",
                 state->name.c_str(), engaged ? "engaged" : "released");
             if (engaged) {
                 state->engagementStarted = system_clock::now();
-                state->engagementHandler(*state);
+                state->engagementHandler(state);
             } else if (state->engagementStarted.time_since_epoch().count() > 0) {
                 auto duration = duration_cast<milliseconds>(system_clock::now() - state->engagementStarted);
-                state->releaseHandler(*state, duration);
+                state->releaseHandler(state, duration);
             }
         });
     }
 
-    using SwitchEngagementHandler = std::function<void(const Switch&)>;
-    using SwitchReleaseHandler = std::function<void(const Switch&, milliseconds)>;
+    using SwitchEngagementHandler = std::function<void(const std::shared_ptr<Switch>&)>;
+    using SwitchReleaseHandler = std::function<void(const std::shared_ptr<Switch>&, milliseconds)>;
 
-    const Switch& onEngaged(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
+    std::shared_ptr<Switch> onEngaged(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
         return registerHandler(
-            name, pin, mode, std::move(engagementHandler), [](const Switch&, milliseconds) { });
+            name, pin, mode, std::move(engagementHandler), [](const std::shared_ptr<Switch>&, milliseconds) { });
     }
 
-    const Switch& onReleased(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
+    std::shared_ptr<Switch> onReleased(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
         return registerHandler(
-            name, pin, mode, [](const Switch&) { }, std::move(releaseHandler));
+            name, pin, mode, [](const std::shared_ptr<Switch>&) { }, std::move(releaseHandler));
     }
 
-    const Switch& registerHandler(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
+    std::shared_ptr<Switch> registerHandler(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
         LOGI("Registering switch %s on pin %s, mode %s",
             name.c_str(), pin->getName().c_str(), mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
 
@@ -73,25 +87,33 @@ public:
         // gpio_set_direction(pin, GPIO_MODE_INPUT);
         // gpio_set_pull_mode(pin, mode == SwitchMode::PullUp ? GPIO_PULLUP_ONLY : GPIO_PULLDOWN_ONLY);
 
-        auto* switchState = new SwitchState();
-        switchState->name = name;
-        switchState->pin = pin;
-        switchState->mode = mode;
-        switchState->manager = this;
-        switchState->engagementHandler = std::move(engagementHandler);
-        switchState->releaseHandler = std::move(releaseHandler);
+        auto switchState = std::make_shared<SwitchState>(name, pin, mode, this, std::move(engagementHandler), std::move(releaseHandler));
+        {
+            Lock lock(switchStatesMutex);
+            switchStates.emplace(pin->getGpio(), switchState);
+        }
 
         // Install GPIO ISR
-        gpio_isr_handler_add(pin->getGpio(), handleSwitchInterrupt, switchState);
         gpio_set_intr_type(pin->getGpio(), GPIO_INTR_ANYEDGE);
+        gpio_isr_handler_add(pin->getGpio(), handleSwitchInterrupt, switchState.get());
 
-        return *switchState;
+        return switchState;
     }
 
 private:
     struct SwitchState final : public Switch {
     public:
-        SwitchState() = default;
+        SwitchState(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchManager* manager,
+            SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler)
+            : name(name)
+            , pin(pin)
+            , mode(mode)
+            , manager(manager)
+            , engagementHandler(std::move(engagementHandler))
+            , releaseHandler(std::move(releaseHandler)) {
+            // Initialize engagementStarted to an invalid time point
+            engagementStarted = system_clock::time_point();
+        }
 
         const std::string& getName() const override {
             return name;
@@ -111,25 +133,19 @@ private:
         // ISR-safe GPIO number
         gpio_num_t gpio = pin->getGpio();
         SwitchMode mode;
+        SwitchManager* manager;
 
         SwitchEngagementHandler engagementHandler;
         SwitchReleaseHandler releaseHandler;
 
         time_point<system_clock> engagementStarted;
-        SwitchManager* manager {};
 
         friend class SwitchManager;
         friend void handleSwitchInterrupt(void* arg);
     };
 
-    struct SwitchStateChange {
-        SwitchState* switchState;
-        bool engaged;
-    };
-
-    void queueSwitchStateChange(SwitchState* state, bool engaged) {
-        switchStateInterrupts.offerFromISR(SwitchStateChange { state, engaged });
-    }
+    Mutex switchStatesMutex;
+    std::unordered_map<gpio_num_t, std::shared_ptr<SwitchState>> switchStates;
 
     CopyQueue<SwitchStateChange> switchStateInterrupts { "switchState-state-interrupts", 4 };
     friend void handleSwitchInterrupt(void* arg);
@@ -141,7 +157,7 @@ static void IRAM_ATTR handleSwitchInterrupt(void* arg) {
     // Must use gpio_get_level() to read the pin state instead of pin->digitalRead()
     // because we cannot call virtual methods from an ISR
     bool engaged = gpio_get_level(state->gpio) == (state->mode == SwitchMode::PullUp ? 0 : 1);
-    state->manager->queueSwitchStateChange(state, engaged);
+    state->manager->switchStateInterrupts.offerFromISR(SwitchStateChange { state->gpio, engaged });
 }
 
 }    // namespace farmhub::kernel::drivers
