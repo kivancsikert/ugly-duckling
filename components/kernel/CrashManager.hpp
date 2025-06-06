@@ -83,12 +83,17 @@ private:
         static constexpr size_t PANIC_REASON_SIZE = 256;
         char panicReason[PANIC_REASON_SIZE];
         esp_err_t panicReasonGetErr = esp_core_dump_get_panic_reason(panicReason, PANIC_REASON_SIZE);
-        if (panicReasonGetErr == ESP_OK) {
-            LOGD("Panic reason: %s", panicReason);
-            json["panicReason"] = std::string(panicReason);
-        } else {
-            LOGI("Failed to get panic reason: %s", esp_err_to_name(panicReasonGetErr));
-            json["panicReasonErr"] = esp_err_to_name(panicReasonGetErr);
+        switch (panicReasonGetErr) {
+            case ESP_OK:
+                LOGD("Panic reason: %s", panicReason);
+                json["panicReason"] = std::string(panicReason);
+                break;
+            case ESP_ERR_NOT_FOUND:
+                LOGD("No panic reason found");
+                break;
+            default:
+                LOGI("Failed to get panic reason: %s", esp_err_to_name(panicReasonGetErr));
+                json["panicReasonErr"] = esp_err_to_name(panicReasonGetErr);
         }
 
 #ifdef __XTENSA__
