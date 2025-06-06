@@ -94,8 +94,8 @@ public:
         }
 
         // Install GPIO ISR
-        gpio_set_intr_type(pin->getGpio(), GPIO_INTR_ANYEDGE);
-        gpio_isr_handler_add(pin->getGpio(), handleSwitchInterrupt, switchState.get());
+        ESP_ERROR_THROW(gpio_isr_handler_add(pin->getGpio(), handleSwitchInterrupt, switchState.get()));
+        ESP_ERROR_THROW(gpio_set_intr_type(pin->getGpio(), GPIO_INTR_ANYEDGE));
 
         return switchState;
     }
