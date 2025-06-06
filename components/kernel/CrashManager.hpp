@@ -76,16 +76,19 @@ private:
         json["pc"] = "0x" + toHexString(summary.exc_pc);
 #if __XTENSA__
         // TODO Add more fields for Xtensa
-        json["exc-vaddr"] = "0x" + toHexString(summary.ex_info.exc_vaddr);
 #else
         // TODO Add more fields for RISC-V
 #endif
 
         static constexpr size_t PANIC_REASON_SIZE = 256;
         char panicReason[PANIC_REASON_SIZE];
-        if (esp_core_dump_get_panic_reason(panicReason, PANIC_REASON_SIZE) == ESP_OK) {
+        esp_err_t panicReasonGetErr = esp_core_dump_get_panic_reason(panicReason, PANIC_REASON_SIZE);
+        if (panicReasonGetErr == ESP_OK) {
             LOGD("Panic reason: %s", panicReason);
             json["panicReason"] = std::string(panicReason);
+        } else {
+            LOGI("Failed to get panic reason: %s", esp_err_to_name(panicReasonGetErr));
+            json["panicReasonErr"] = esp_err_to_name(panicReasonGetErr);
         }
 
 #ifdef __XTENSA__
