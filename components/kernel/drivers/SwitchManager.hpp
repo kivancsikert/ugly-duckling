@@ -108,6 +108,8 @@ private:
     private:
         std::string name;
         InternalPinPtr pin;
+        // ISR-safe GPIO number
+        gpio_num_t gpio = pin->getGpio();
         SwitchMode mode;
 
         SwitchEngagementHandler engagementHandler;
@@ -138,7 +140,7 @@ static void IRAM_ATTR handleSwitchInterrupt(void* arg) {
     auto* state = static_cast<SwitchManager::SwitchState*>(arg);
     // Must use gpio_get_level() to read the pin state instead of pin->digitalRead()
     // because we cannot call virtual methods from an ISR
-    bool engaged = gpio_get_level(state->pin->getGpio()) == (state->mode == SwitchMode::PullUp ? 0 : 1);
+    bool engaged = gpio_get_level(state->gpio) == (state->mode == SwitchMode::PullUp ? 0 : 1);
     state->manager->queueSwitchStateChange(state, engaged);
 }
 

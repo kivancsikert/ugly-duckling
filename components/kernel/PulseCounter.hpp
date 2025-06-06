@@ -61,9 +61,6 @@ public:
         // TODO Where should this be called?
         ESP_ERROR_THROW(esp_sleep_enable_gpio_wakeup());
 
-        // Attach the ISR handler to the GPIO pin
-        ESP_ERROR_THROW(gpio_isr_handler_add(gpio, pulseCounterInterruptHandler, this));
-
         LOGTD(Tag::PCNT, "Registered interrupt-based pulse counter unit on pin %s",
             pin->getName().c_str());
 
@@ -150,6 +147,8 @@ private:
     }
 
     const InternalPinPtr pin;
+    // ISR-safe GPIO number
+    gpio_num_t gpio = pin->getGpio();
     std::atomic<uint32_t> counter { 0 };
 
     CopyQueue<EdgeKind> eventQueue { pin->getName(), 16 };
@@ -161,7 +160,7 @@ private:
 static void IRAM_ATTR pulseCounterInterruptHandler(void* arg) {
     auto* self = static_cast<PulseCounter*>(arg);
     // Must duplicate handlePotentialStateChange() here because of ISR restrictions
-    self->eventQueue.offerFromISR(takePulseCounterSample(self->pin->getGpio()));
+    self->eventQueue.offerFromISR(takePulseCounterSample(self->gpio));
 }
 
 class PulseCounterManager {
@@ -192,6 +191,9 @@ public:
 
         auto counter = std::make_shared<PulseCounter>(pin);
         counters.push_back(counter);
+
+        // Attach the ISR handler to the GPIO pin
+        ESP_ERROR_THROW(gpio_isr_handler_add(pin->getGpio(), pulseCounterInterruptHandler, counter.get()));
         return counter;
     }
 
