@@ -72,6 +72,14 @@ private:
         json["elf-sha256"] = std::string(reinterpret_cast<const char*>(summary.app_elf_sha256));
         json["task"] = std::string(summary.exc_task);
         json["cause"] = excCause;
+        json["tcb"] = "0x" + toHexString(summary.exc_tcb);
+        json["pc"] = "0x" + toHexString(summary.exc_pc);
+#if __XTENSA__
+        // TODO Add more fields for Xtensa
+        json["exc-vaddr"] = "0x" + toHexString(summary.ex_info.exc_vaddr);
+#else
+        // TODO Add more fields for RISC-V
+#endif
 
         static constexpr size_t PANIC_REASON_SIZE = 256;
         char panicReason[PANIC_REASON_SIZE];
