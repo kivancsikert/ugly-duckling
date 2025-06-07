@@ -9,6 +9,12 @@
 
 namespace farmhub::kernel {
 
+/**
+ * @brief Counts pulses on a GPIO pin using the Pulse Counter (PCNT) peripheral.
+ *
+ * Note: This counter is NOT safe to use with the device entering and exiting light sleep.
+ * If that behavior is desired, use `PulseCounter` instead.
+ */
 // TODO Limit number of channels available
 struct PulseCounterUnit {
     PulseCounterUnit(pcnt_unit_handle_t unit, InternalPinPtr pin)
