@@ -83,7 +83,7 @@ private:
             summary.ex_info.mcause;
 #endif
 
-        LOGD("Core dump found: task: %s, cause: %" PRIu32,
+        LOGI("Core dump found: task: %s, cause: %" PRIu32,
             summary.exc_task, excCause);
 
         json["dump-version"] = summary.core_dump_version;
