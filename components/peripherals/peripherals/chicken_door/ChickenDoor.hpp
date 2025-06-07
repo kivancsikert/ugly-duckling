@@ -135,24 +135,22 @@ public:
               name + ":open",
               openPin,
               SwitchMode::PullUp,
-              [this](const Switch&) { updateState(); },
-              [this](const Switch&, milliseconds) { updateState(); }))
+              [this](const std::shared_ptr<Switch>&) { updateState(); },
+              [this](const std::shared_ptr<Switch>&, milliseconds) { updateState(); }))
         , closedSwitch(switches->registerHandler(
               name + ":closed",
               closedPin,
               SwitchMode::PullUp,
-              [this](const Switch&) { updateState(); },
-              [this](const Switch&, milliseconds) { updateState(); }))
+              [this](const std::shared_ptr<Switch>&) { updateState(); },
+              [this](const std::shared_ptr<Switch>&, milliseconds) { updateState(); }))
         , invertSwitches(invertSwitches)
         , watchdog(name + ":watchdog", movementTimeout, false, [this](WatchdogState state) {
             handleWatchdogEvent(state);
         })
-        , publishTelemetry(std::move(publishTelemetry))
-    // TODO Make this configurable
-    {
+        , publishTelemetry(std::move(publishTelemetry)) {
 
         LOGI("Initializing chicken door %s, open switch %s, close switch %s%s",
-            name.c_str(), openSwitch.getPin()->getName().c_str(), closedSwitch.getPin()->getName().c_str(),
+            name.c_str(), openSwitch->getPin()->getName().c_str(), closedSwitch->getPin()->getName().c_str(),
             invertSwitches ? " (switches are inverted)" : "");
 
         motor->stop();
@@ -309,8 +307,8 @@ private:
     }
 
     DoorState determineCurrentState() {
-        bool open = openSwitch.isEngaged() ^ invertSwitches;
-        bool close = closedSwitch.isEngaged() ^ invertSwitches;
+        bool open = openSwitch->isEngaged() ^ invertSwitches;
+        bool close = closedSwitch->isEngaged() ^ invertSwitches;
         if (open && close) {
             LOGD("Both open and close switches are engaged");
             return DoorState::NONE;
@@ -352,8 +350,8 @@ private:
     double openLevel = std::numeric_limits<double>::max();
     double closeLevel = std::numeric_limits<double>::min();
 
-    const Switch& openSwitch;
-    const Switch& closedSwitch;
+    const std::shared_ptr<Switch> openSwitch;
+    const std::shared_ptr<Switch> closedSwitch;
     const bool invertSwitches;
 
     Watchdog watchdog;

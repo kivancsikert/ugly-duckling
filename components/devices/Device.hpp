@@ -302,7 +302,7 @@ static void startDevice() {
     initNvsFlash();
 
     // Install GPIO ISR service
-    gpio_install_isr_service(0);
+    ESP_ERROR_CHECK(gpio_install_isr_service(0));
 
 #ifdef CONFIG_HEAP_TRACING
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
@@ -348,7 +348,7 @@ static void startDevice() {
 
     // Init switch and button handling
     auto switches = std::make_shared<SwitchManager>();
-    switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [statusLed](const Switch&, milliseconds duration) {
+    switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [statusLed](const std::shared_ptr<Switch>&, milliseconds duration) {
         if (duration >= 15s) {
             LOGI("Factory reset triggered after %lld ms", duration.count());
             performFactoryReset(statusLed, true);

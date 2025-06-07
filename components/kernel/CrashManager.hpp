@@ -72,12 +72,28 @@ private:
         json["elf-sha256"] = std::string(reinterpret_cast<const char*>(summary.app_elf_sha256));
         json["task"] = std::string(summary.exc_task);
         json["cause"] = excCause;
+        json["tcb"] = "0x" + toHexString(summary.exc_tcb);
+        json["pc"] = "0x" + toHexString(summary.exc_pc);
+#if __XTENSA__
+        // TODO Add more fields for Xtensa
+#else
+        // TODO Add more fields for RISC-V
+#endif
 
         static constexpr size_t PANIC_REASON_SIZE = 256;
         char panicReason[PANIC_REASON_SIZE];
-        if (esp_core_dump_get_panic_reason(panicReason, PANIC_REASON_SIZE) == ESP_OK) {
-            LOGD("Panic reason: %s", panicReason);
-            json["panicReason"] = std::string(panicReason);
+        esp_err_t panicReasonGetErr = esp_core_dump_get_panic_reason(panicReason, PANIC_REASON_SIZE);
+        switch (panicReasonGetErr) {
+            case ESP_OK:
+                LOGD("Panic reason: %s", panicReason);
+                json["panicReason"] = std::string(panicReason);
+                break;
+            case ESP_ERR_NOT_FOUND:
+                LOGD("No panic reason found");
+                break;
+            default:
+                LOGI("Failed to get panic reason: %s", esp_err_to_name(panicReasonGetErr));
+                json["panicReasonErr"] = esp_err_to_name(panicReasonGetErr);
         }
 
 #ifdef __XTENSA__

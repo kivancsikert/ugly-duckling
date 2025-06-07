@@ -17,32 +17,22 @@
 namespace farmhub::kernel {
 
 class PulseCounterManager;
-static void pulseCounterInterruptHandler(void* arg);
+static void handlePulseCounterInterrupt(void* arg);
 
 /**
- * Interrupt-based pulse-counter for low-frequency signals.
+ * @brief Counts pulses on a GPIO pin using interrupts.
  *
- * It uses the RTC GPIO matrix to detect rising and falling edges on a GPIO pin.
- * Keeps the device out of light sleep while a pulse is being detected.
+ * Note: This counter is safe to use with the device entering and exiting light sleep.
  *
+ * When the device is awake, it watches for edges, and counts falling edges.
+ * When the device enters light sleep, we set up an interrupt to wake on level change.
+ * This is necessary because in light sleep the device cannot detect edges, only levels.
  */
-enum class EdgeKind : uint8_t {
-    Rising,
-    Falling,
-};
-
-static IRAM_ATTR EdgeKind takePulseCounterSample(gpio_num_t gpio) {
-    // Must use gpio_get_level() to read the pin state instead of pin->digitalRead()
-    // because we cannot call virtual methods from an ISR
-    return (gpio_get_level(gpio) != 0)
-        ? EdgeKind::Rising
-        : EdgeKind::Falling;
-}
-
 class PulseCounter {
 public:
     explicit PulseCounter(const InternalPinPtr& pin)
-        : pin(pin) {
+        : pin(pin)
+        , lastEdge(pin->digitalRead()) {
         auto gpio = pin->getGpio();
 
         // Configure the GPIO pin as an input
@@ -61,27 +51,19 @@ public:
         // TODO Where should this be called?
         ESP_ERROR_THROW(esp_sleep_enable_gpio_wakeup());
 
-        // Attach the ISR handler to the GPIO pin
-        ESP_ERROR_THROW(gpio_isr_handler_add(gpio, pulseCounterInterruptHandler, this));
-
         LOGTD(Tag::PCNT, "Registered interrupt-based pulse counter unit on pin %s",
             pin->getName().c_str());
-
-        // TODO Turn this into a single task that handles all pulse counters
-        Task::run(pin->getName(), 4096, [this](Task& /*task*/) {
-            runLoop();
-        });
     }
 
     uint32_t getCount() const {
-        uint32_t count = counter.load();
+        uint32_t count = edgeCount.load();
         LOGTV(Tag::PCNT, "Counted %" PRIu32 " pulses on pin %s",
             count, pin->getName().c_str());
         return count;
     }
 
     uint32_t reset() {
-        uint32_t count = counter.exchange(0);
+        uint32_t count = edgeCount.exchange(0);
         LOGTV(Tag::PCNT, "Counted %" PRIu32 " pulses and cleared on pin %s",
             count, pin->getName().c_str());
         return count;
@@ -92,76 +74,41 @@ public:
     }
 
 private:
-    void handlePotentialStateChange() {
-        eventQueue.offer(takePulseCounterSample(pin->getGpio()));
+    void handleGoingToLightSleep() {
+        auto currentState = pin->digitalRead();
+        // Make sure we wake up again to check for the opposing edge
+        ESP_ERROR_CHECK(gpio_wakeup_enable(
+            pin->getGpio(),
+            currentState == 0
+                ? GPIO_INTR_HIGH_LEVEL
+                : GPIO_INTR_LOW_LEVEL));
     }
 
-    // The amount of time to keep the device awake after detecting an edge to make sure we detect the next edge, too
-    static constexpr microseconds maxKeepAwakeTime = 10ms;
+    void handleWakingUpFromLightSleep() {
+        // Switch back to edge detection when we are awake
+        ESP_ERROR_CHECK(gpio_wakeup_disable(pin->getGpio()));
+        ESP_ERROR_CHECK(gpio_set_intr_type(pin->getGpio(), GPIO_INTR_ANYEDGE));
 
-    void runLoop() {
-        std::optional<std::pair<PowerManagementLockGuard, time_point<boot_clock>>> sleepLock;
-        EdgeKind lastEdge = takePulseCounterSample(pin->getGpio());
-        bool seenNewEdge = true;
-
-        while (true) {
-            if (seenNewEdge) {
-                // Got a new edge, renew keep-alive to make sure we detect the next edge
-                sleepLock.emplace(PowerManager::noLightSleep, boot_clock::now());
-
-                // Make sure we wake up again to check for the opposing edge
-                ESP_ERROR_THROW(gpio_wakeup_enable(
-                    pin->getGpio(),
-                    lastEdge == EdgeKind::Rising
-                        ? GPIO_INTR_LOW_LEVEL
-                        : GPIO_INTR_HIGH_LEVEL));
-            }
-
-            ticks timeout;
-            if (sleepLock.has_value()) {
-                auto elapsedSinceSleepLock = boot_clock::now() - sleepLock.value().second;
-                if (elapsedSinceSleepLock > maxKeepAwakeTime) {
-                    LOGTV(Tag::PCNT, "Timeout while waiting for falling edge on pin %s",
-                        pin->getName().c_str());
-                    // We've timed out, let the device sleep again until the next edge
-                    sleepLock.reset();
-                    timeout = ticks::max();
-                } else {
-                    // Wait at most until the sleep lock would time out
-                    timeout = floor<ticks>(maxKeepAwakeTime - elapsedSinceSleepLock);
-                }
-            } else {
-                // No sleep lock, wait indefinitely for the next edge
-                timeout = ticks::max();
-            }
-
-            seenNewEdge = false;
-            for (auto event = eventQueue.pollIn(timeout); event.has_value(); event = eventQueue.poll()) {
-                auto edge = event.value();
-                if (edge != lastEdge) {
-                    lastEdge = edge;
-                    seenNewEdge = true;
-                    if (lastEdge == EdgeKind::Falling) {
-                        counter++;
-                    }
-                }
-            }
-        }
+        handlePulseCounterInterrupt(this);
     }
 
     const InternalPinPtr pin;
-    std::atomic<uint32_t> counter { 0 };
+    std::atomic<uint32_t> edgeCount { 0 };
+    int lastEdge;
 
-    CopyQueue<EdgeKind> eventQueue { pin->getName(), 16 };
-
-    friend void pulseCounterInterruptHandler(void* arg);
+    friend void handlePulseCounterInterrupt(void* arg);
     friend class PulseCounterManager;
 };
 
-static void IRAM_ATTR pulseCounterInterruptHandler(void* arg) {
-    auto* self = static_cast<PulseCounter*>(arg);
-    // Must duplicate handlePotentialStateChange() here because of ISR restrictions
-    self->eventQueue.offerFromISR(takePulseCounterSample(self->pin->getGpio()));
+static void IRAM_ATTR handlePulseCounterInterrupt(void* arg) {
+    auto* counter = static_cast<PulseCounter*>(arg);
+    auto currentState = counter->pin->digitalReadFromISR();
+    if (currentState != counter->lastEdge) {
+        counter->lastEdge = currentState;
+        if (currentState == 0) {
+            counter->edgeCount++;
+        }
+    }
 }
 
 class PulseCounterManager {
@@ -172,17 +119,19 @@ public:
 
             // Make sure we handle any state changes when the device wakes up due to a GPIO interrupt
             esp_pm_sleep_cbs_register_config_t sleepCallbackConfig = {
-                .enter_cb = nullptr,
-                .exit_cb = [](int64_t /*timeSleptInUs*/, void* arg) {
-                    if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
-                        auto* self = static_cast<PulseCounterManager*>(arg);
-                        for (auto& counter : self->counters) {
-                            counter->handlePotentialStateChange();
-                        }
+                .enter_cb = [](int64_t /*timeToSleepInUs*/, void* arg) {
+                    auto* self = static_cast<PulseCounterManager*>(arg);
+                    for (auto& counter : self->counters) {
+                        counter->handleGoingToLightSleep();
                     }
-                    return ESP_OK;
-                },
-                .enter_cb_user_arg = nullptr,
+                    return ESP_OK; },
+                .exit_cb = [](int64_t /*timeSleptInUs*/, void* arg) {
+                    auto* self = static_cast<PulseCounterManager*>(arg);
+                    for (auto& counter : self->counters) {
+                        counter->handleWakingUpFromLightSleep();
+                    }
+                    return ESP_OK; },
+                .enter_cb_user_arg = this,
                 .exit_cb_user_arg = this,
                 .enter_cb_prior = 0,
                 .exit_cb_prior = 0,
@@ -191,6 +140,11 @@ public:
         }
 
         auto counter = std::make_shared<PulseCounter>(pin);
+
+        // Attach the ISR handler to the GPIO pin
+        ESP_ERROR_THROW(gpio_isr_handler_add(pin->getGpio(), handlePulseCounterInterrupt, counter.get()));
+
+        // Keep the counter alive in the manager
         counters.push_back(counter);
         return counter;
     }

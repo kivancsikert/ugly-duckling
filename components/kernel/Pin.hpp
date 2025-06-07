@@ -128,6 +128,14 @@ public:
         return gpio_get_level(gpio);
     }
 
+    IRAM_ATTR void digitalWriteFromISR(uint8_t val) const {
+        gpio_set_level(gpio, val);
+    }
+
+    IRAM_ATTR int digitalReadFromISR() const {
+        return gpio_get_level(gpio);
+    }
+
     constexpr IRAM_ATTR gpio_num_t getGpio() const {
         return gpio;
     }
