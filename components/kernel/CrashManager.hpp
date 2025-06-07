@@ -104,14 +104,14 @@ private:
         switch (panicReasonGetErr) {
             case ESP_OK:
                 LOGD("Panic reason: %s", panicReason);
-                json["panicReason"] = std::string(panicReason);
+                json["panic-reason"] = std::string(panicReason);
                 break;
             case ESP_ERR_NOT_FOUND:
                 LOGD("No panic reason found");
                 break;
             default:
                 LOGI("Failed to get panic reason: %s", esp_err_to_name(panicReasonGetErr));
-                json["panicReasonErr"] = esp_err_to_name(panicReasonGetErr);
+                json["panic-reason-err"] = esp_err_to_name(panicReasonGetErr);
         }
 
 #ifdef __XTENSA__
