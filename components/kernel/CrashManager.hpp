@@ -90,6 +90,7 @@ private:
         json["elf-sha256"] = std::string(reinterpret_cast<const char*>(summary.app_elf_sha256));
         json["task"] = std::string(summary.exc_task);
         json["cause"] = excCause;
+        json["cause-description"] = resolveCauseDescription(excCause);
         json["tcb"] = "0x" + toHexString(summary.exc_tcb);
         json["pc"] = "0x" + toHexString(summary.exc_pc);
 #if __XTENSA__
@@ -147,6 +148,100 @@ private:
             LOGE("Failed to encode stackdump: %d", ret);
         }
 #endif
+    }
+
+    static const char* resolveCauseDescription(uint32_t cause) {
+#if __XTENSA__
+        constexpr std::array<const char*, 40> regularCauses = {
+            "IllegalInstruction",
+            "Syscall",
+            "InstructionFetchError",
+            "LoadStoreError",
+            "Level1Interrupt",
+            "Alloca",
+            "IntegerDivideByZero",
+            "PCValue",
+            "Privileged",
+            "LoadStoreAlignment",
+            "res",
+            "res",
+            "InstrPDAddrError",
+            "LoadStorePIFDataError",
+            "InstrPIFAddrError",
+            "LoadStorePIFAddrError",
+            "InstTLBMiss",
+            "InstTLBMultiHit",
+            "InstFetchPrivilege",
+            "res",
+            "InstrFetchProhibited",
+            "res",
+            "res",
+            "res",
+            "LoadStoreTLBMiss",
+            "LoadStoreTLBMultihit",
+            "LoadStorePrivilege",
+            "res",
+            "LoadProhibited",
+            "StoreProhibited",
+            "res",
+            "res",
+            "Cp0Dis",
+            "Cp1Dis",
+            "Cp2Dis",
+            "Cp3Dis",
+            "Cp4Dis",
+            "Cp5Dis",
+            "Cp6Dis",
+            "Cp7Dis",
+        };
+
+        constexpr std::array<const char*, 8> pseudoCauses = {
+            "Unknown reason",
+            "Unhandled debug exception",
+            "Double exception",
+            "Unhandled kernel exception",
+            "Coprocessor exception",
+            "Interrupt wdt timeout on CPU0",
+            "Interrupt wdt timeout on CPU1",
+            "Cache disabled but cached memory region accessed",
+        };
+
+#elif __riscv
+        constexpr std::array<const char*, 16> regularCauses = {
+            "Instruction address misaligned",
+            "Instruction access fault",
+            "Illegal instruction",
+            "Breakpoint",
+            "Load address misaligned",
+            "Load access fault",
+            "Store address misaligned",
+            "Store access fault",
+            "Environment call from U-mode",
+            "Environment call from S-mode",
+            NULL,
+            "Environment call from M-mode",
+            "Instruction page fault",
+            "Load page fault",
+            NULL,
+            "Store page fault",
+        };
+
+        constexpr std::array<const char*, 0> pseudoCauses = {
+            // TODO Handle RISC-V pseudo causes
+        };
+#endif
+
+        if (cause < regularCauses.size() && regularCauses[cause] != nullptr) {
+            return regularCauses[cause];
+        }
+
+        if (cause >= 64) {
+            auto pseudoCauseIndex = cause - 64;
+            if (pseudoCauseIndex < pseudoCauses.size() && pseudoCauses[pseudoCauseIndex] != nullptr) {
+                return pseudoCauses[pseudoCauseIndex];
+            }
+        }
+        return "Unknown reason";
     }
 };
 
