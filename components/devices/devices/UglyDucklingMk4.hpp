@@ -19,13 +19,12 @@ using namespace farmhub::peripherals::flow_control;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
 
-namespace farmhub::devices {
+namespace farmhub::devices::mk4 {
 
-class Mk4Config
+class Config
     : public DeviceConfiguration {
 public:
-    Mk4Config()
-        : DeviceConfiguration("mk4") {
+    Config() {
     }
 };
 
@@ -51,10 +50,10 @@ static const InternalPinPtr RXD0 = InternalPin::registerPin("RXD0", GPIO_NUM_44)
 static const InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43);
 }    // namespace pins
 
-class UglyDucklingMk4 : public DeviceDefinition<Mk4Config> {
+class Definition : public TypedDeviceDefinition<Config> {
 public:
-    explicit UglyDucklingMk4(const std::shared_ptr<Mk4Config>& /*config*/)
-        : DeviceDefinition(pins::STATUS, pins::BOOT) {
+    explicit Definition(Revision revision, const std::shared_ptr<Config>& config)
+        : TypedDeviceDefinition("mk4", revision, pins::STATUS, pins::BOOT, config) {
     }
 
     std::list<std::string> getBuiltInPeripherals() override {
@@ -73,7 +72,7 @@ public:
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk4Config>& /*deviceConfig*/) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services) override {
         auto motor = std::make_shared<Drv8801Driver>(
             services.pwmManager,
             pins::VALVE_EN,
@@ -90,6 +89,22 @@ protected:
         peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
         peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::NormallyClosed));
         peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
+    }
+};
+
+class Factory : public DeviceFactory {
+public:
+    explicit Factory(Revision revision)
+        : DeviceFactory(revision) {
+    }
+
+    std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& i2c) override {
+        return nullptr;    // No battery driver for Mk4
+    }
+
+    std::shared_ptr<DeviceDefinition> createDeviceDefinition(const std::shared_ptr<FileSystem>& fileSystem, const std::string& configPath) override {
+        auto config = loadConfiguration<Config>(fileSystem, configPath);
+        return std::make_shared<Definition>(revision, config);
     }
 };
 

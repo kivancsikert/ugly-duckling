@@ -25,6 +25,7 @@ static const char* const farmhubVersion = reinterpret_cast<const char*>(esp_app_
 #include <mqtt/MqttLog.hpp>
 #include <mqtt/MqttTelemetryPublisher.hpp>
 
+#include <devices/DeviceDefinition.hpp>
 #include <devices/DeviceTelemetry.hpp>
 
 #include <peripherals/Peripheral.hpp>
@@ -123,21 +124,16 @@ static void performFactoryReset(const std::shared_ptr<LedDriver>& statusLed, boo
     esp_restart();
 }
 
-template <class TDeviceDefinition>
-std::shared_ptr<BatteryDriver> initBattery(std::shared_ptr<I2CManager> i2c) {
-    auto battery = TDeviceDefinition::createBatteryDriver(i2c);
-    if (battery != nullptr) {
-        // If the battery voltage is below the device's threshold, we should not boot yet.
-        // This is to prevent the device from booting and immediately shutting down
-        // due to the high current draw of the boot process.
-        auto voltage = battery->getVoltage();
-        if (voltage != 0.0 && voltage < battery->parameters.bootThreshold) {
-            ESP_LOGW("battery", "Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
-                voltage, battery->parameters.bootThreshold);
-            enterLowPowerDeepSleep();
-        }
+void initBattery(std::shared_ptr<BatteryDriver> battery) {
+    // If the battery voltage is below the device's threshold, we should not boot yet.
+    // This is to prevent the device from booting and immediately shutting down
+    // due to the high current draw of the boot process.
+    auto voltage = battery->getVoltage();
+    if (voltage != 0.0 && voltage < battery->parameters.bootThreshold) {
+        ESP_LOGW("battery", "Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
+            voltage, battery->parameters.bootThreshold);
+        enterLowPowerDeepSleep();
     }
-    return battery;
 }
 
 void initNvsFlash() {
@@ -292,10 +288,12 @@ enum class InitState : std::uint8_t {
     PeripheralError = 1,
 };
 
-template <class TDeviceDefinition, class TDeviceConfiguration>
-static void startDevice() {
+static void startDevice(const std::shared_ptr<DeviceFactory>& factory) {
     auto i2c = std::make_shared<I2CManager>();
-    auto battery = initBattery<TDeviceDefinition>(i2c);
+    auto battery = factory->createBatteryDriver(i2c);
+    if (battery != nullptr) {
+        initBattery(battery);
+    }
 
     Log::init();
 
@@ -312,7 +310,8 @@ static void startDevice() {
 
     auto fs = std::make_shared<FileSystem>();
 
-    auto deviceConfig = loadConfig<TDeviceConfiguration>(fs, "/device-config.json");
+    auto deviceDefinition = factory->createDeviceDefinition(fs, "/device-config.json");
+    auto deviceConfig = deviceDefinition->getDeviceConfiguration();
 
     auto powerManager = std::make_shared<PowerManager>(deviceConfig->sleepWhenIdle.get());
 
@@ -328,12 +327,10 @@ static void startDevice() {
     LOGD("  ");
     LOGI("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
         farmhubVersion,
-        deviceConfig->model.get().c_str(),
+        deviceDefinition->getDescription().c_str(),
         deviceConfig->instance.get().c_str(),
         deviceConfig->getHostname().c_str(),
         getMacAddress().c_str());
-
-    auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
 
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
     auto states = std::make_shared<ModuleStates>();
@@ -399,7 +396,7 @@ static void startDevice() {
     shutdownManager->registerShutdownListener([peripheralManager]() {
         peripheralManager->shutdown();
     });
-    deviceDefinition->registerPeripheralFactories(peripheralManager, peripheralServices, deviceConfig);
+    deviceDefinition->registerPeripheralFactories(peripheralManager, peripheralServices);
 
     // Init telemetry
     auto telemetryPublishQueue = std::make_shared<CopyQueue<bool>>("telemetry-publish", 1);
@@ -450,19 +447,20 @@ static void startDevice() {
     // Enable power saving once we are done initializing
     WiFiDriver::setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
 
+    auto model = deviceDefinition->model;
+    auto revision = deviceDefinition->revision;
+    auto instance = deviceConfig->instance.get();
     mqttRoot->publish(
         "init",
-        [deviceConfig, initState, peripheralsInitJson, powerManager](JsonObject& json) {
+        [deviceConfig, model, revision, instance, initState, peripheralsInitJson, powerManager](JsonObject& json) {
             // TODO Remove redundant mentions of "ugly-duckling"
             json["type"] = "ugly-duckling";
-            json["model"] = deviceConfig->model.get();
-            json["id"] = deviceConfig->id.get();
-            json["instance"] = deviceConfig->instance.get();
+            json["model"] = model;
+            json["revision"] = revision;
+            json["instance"] = instance;
             json["mac"] = getMacAddress();
             auto device = json["deviceConfig"].to<JsonObject>();
             deviceConfig->store(device, false);
-            // TODO Remove redundant mentions of "ugly-duckling"
-            json["app"] = "ugly-duckling";
             json["version"] = farmhubVersion;
             json["reset"] = esp_reset_reason();
             json["wakeup"] = esp_sleep_get_wakeup_cause();
@@ -481,7 +479,7 @@ static void startDevice() {
     LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
         duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count() / 1000.0,
         farmhubVersion,
-        deviceConfig->model.get().c_str(),
+        deviceDefinition->getDescription().c_str(),
         deviceConfig->instance.get().c_str(),
         deviceConfig->getHostname().c_str(),
         wifi->getIp().value_or("<no-ip>").c_str(),
