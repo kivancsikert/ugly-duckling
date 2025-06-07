@@ -230,12 +230,15 @@ private:
             // TODO Handle RISC-V pseudo causes
         };
 #endif
+        // Lookup logic and strings copied from frame_to_panic_info()
 
+        // These come from core.h / panic_arch_fill_info()
         if (cause < regularCauses.size() && regularCauses[cause] != nullptr) {
             return regularCauses[cause];
         }
 
         if (cause >= 64) {
+            // These come from panic_reason.h / panic_soc_fill_info()
             auto pseudoCauseIndex = cause - 64;
             if (pseudoCauseIndex < pseudoCauses.size() && pseudoCauses[pseudoCauseIndex] != nullptr) {
                 return pseudoCauses[pseudoCauseIndex];
