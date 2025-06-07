@@ -89,10 +89,6 @@ public:
     }
 
 private:
-    void handlePotentialStateChange() {
-        eventQueue.offer(takePulseCounterSample(pin->getGpio()));
-    }
-
     // The amount of time to keep the device awake after detecting an edge to make sure we detect the next edge, too
     static constexpr microseconds maxKeepAwakeTime = 10ms;
 
@@ -105,13 +101,6 @@ private:
             if (seenNewEdge) {
                 // Got a new edge, renew keep-alive to make sure we detect the next edge
                 sleepLock.emplace(PowerManager::noLightSleep, boot_clock::now());
-
-                // Make sure we wake up again to check for the opposing edge
-                ESP_ERROR_THROW(gpio_wakeup_enable(
-                    pin->getGpio(),
-                    lastEdge == EdgeKind::Rising
-                        ? GPIO_INTR_LOW_LEVEL
-                        : GPIO_INTR_HIGH_LEVEL));
             }
 
             ticks timeout;
@@ -146,6 +135,25 @@ private:
         }
     }
 
+    void handleGoingToLightSleep() {
+        auto currentState = takePulseCounterSample(pin->getGpio());
+        // Make sure we wake up again to check for the opposing edge
+        ESP_ERROR_CHECK(gpio_wakeup_enable(
+            pin->getGpio(),
+            currentState == EdgeKind::Rising
+                ? GPIO_INTR_LOW_LEVEL
+                : GPIO_INTR_HIGH_LEVEL));
+    }
+
+    void handleWakingUpFromLightSleep() {
+        // Switch back to edge detection when we are awake
+        ESP_ERROR_CHECK(gpio_wakeup_disable(pin->getGpio()));
+        ESP_ERROR_CHECK(gpio_set_intr_type(pin->getGpio(), GPIO_INTR_ANYEDGE));
+
+        auto currentState = takePulseCounterSample(pin->getGpio());
+        eventQueue.offer(currentState);
+    }
+
     const InternalPinPtr pin;
     // ISR-safe GPIO number
     gpio_num_t gpio = pin->getGpio();
@@ -171,17 +179,19 @@ public:
 
             // Make sure we handle any state changes when the device wakes up due to a GPIO interrupt
             esp_pm_sleep_cbs_register_config_t sleepCallbackConfig = {
-                .enter_cb = nullptr,
-                .exit_cb = [](int64_t /*timeSleptInUs*/, void* arg) {
-                    if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_GPIO) {
-                        auto* self = static_cast<PulseCounterManager*>(arg);
-                        for (auto& counter : self->counters) {
-                            counter->handlePotentialStateChange();
-                        }
+                .enter_cb = [](int64_t /*timeToSleepInUs*/, void* arg) {
+                    auto* self = static_cast<PulseCounterManager*>(arg);
+                    for (auto& counter : self->counters) {
+                        counter->handleGoingToLightSleep();
                     }
-                    return ESP_OK;
-                },
-                .enter_cb_user_arg = nullptr,
+                    return ESP_OK; },
+                .exit_cb = [](int64_t /*timeSleptInUs*/, void* arg) {
+                    auto* self = static_cast<PulseCounterManager*>(arg);
+                    for (auto& counter : self->counters) {
+                        counter->handleWakingUpFromLightSleep();
+                    }
+                    return ESP_OK; },
+                .enter_cb_user_arg = this,
                 .exit_cb_user_arg = this,
                 .enter_cb_prior = 0,
                 .exit_cb_prior = 0,
