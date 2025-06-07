@@ -155,8 +155,6 @@ private:
     }
 
     const InternalPinPtr pin;
-    // ISR-safe GPIO number
-    gpio_num_t gpio = pin->getGpio();
     std::atomic<uint32_t> counter { 0 };
 
     CopyQueue<EdgeKind> eventQueue { pin->getName(), 16 };
@@ -166,9 +164,9 @@ private:
 };
 
 static void IRAM_ATTR pulseCounterInterruptHandler(void* arg) {
-    auto* self = static_cast<PulseCounter*>(arg);
-    // Must duplicate handlePotentialStateChange() here because of ISR restrictions
-    self->eventQueue.offerFromISR(takePulseCounterSample(self->gpio));
+    auto* counter = static_cast<PulseCounter*>(arg);
+    auto currentState = takePulseCounterSample(counter->pin->getGpio());
+    counter->eventQueue.offerFromISR(currentState);
 }
 
 class PulseCounterManager {
@@ -200,10 +198,12 @@ public:
         }
 
         auto counter = std::make_shared<PulseCounter>(pin);
-        counters.push_back(counter);
 
         // Attach the ISR handler to the GPIO pin
         ESP_ERROR_THROW(gpio_isr_handler_add(pin->getGpio(), pulseCounterInterruptHandler, counter.get()));
+
+        // Keep the counter alive in the manager
+        counters.push_back(counter);
         return counter;
     }
 

@@ -94,8 +94,8 @@ public:
         }
 
         // Install GPIO ISR
-        ESP_ERROR_THROW(gpio_isr_handler_add(pin->getGpio(), handleSwitchInterrupt, switchState.get()));
         ESP_ERROR_THROW(gpio_set_intr_type(pin->getGpio(), GPIO_INTR_ANYEDGE));
+        ESP_ERROR_THROW(gpio_isr_handler_add(pin->getGpio(), handleSwitchInterrupt, switchState.get()));
 
         return switchState;
     }
@@ -130,8 +130,6 @@ private:
     private:
         std::string name;
         InternalPinPtr pin;
-        // ISR-safe GPIO number
-        gpio_num_t gpio = pin->getGpio();
         SwitchMode mode;
         SwitchManager* manager;
 
@@ -156,8 +154,9 @@ static void IRAM_ATTR handleSwitchInterrupt(void* arg) {
     auto* state = static_cast<SwitchManager::SwitchState*>(arg);
     // Must use gpio_get_level() to read the pin state instead of pin->digitalRead()
     // because we cannot call virtual methods from an ISR
-    bool engaged = gpio_get_level(state->gpio) == (state->mode == SwitchMode::PullUp ? 0 : 1);
-    state->manager->switchStateInterrupts.offerFromISR(SwitchStateChange { state->gpio, engaged });
+    auto gpio = state->pin->getGpio();
+    bool engaged = gpio_get_level(gpio) == (state->mode == SwitchMode::PullUp ? 0 : 1);
+    state->manager->switchStateInterrupts.offerFromISR(SwitchStateChange { gpio, engaged });
 }
 
 }    // namespace farmhub::kernel::drivers
