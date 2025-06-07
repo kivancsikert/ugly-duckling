@@ -14,13 +14,23 @@ class CrashManager {
 public:
     static void handleCrashReport(JsonObject& json) {
         NvsStore nvs("crash-report");
-        if (hasCoreDump()) {
-            std::string crashedFirmwareVersion;
-            if (!nvs.get<std::string>("version", crashedFirmwareVersion)) {
-                crashedFirmwareVersion = "unknown";
+        switch (getCoreDumpStatus()) {
+            case CoreDumpStatus::NoDump: {
+                break;
             }
-
-            reportPreviousCrash(json, crashedFirmwareVersion);
+            case CoreDumpStatus::DumpFound: {
+                std::string crashedFirmwareVersion;
+                if (!nvs.get<std::string>("version", crashedFirmwareVersion)) {
+                    crashedFirmwareVersion = "unknown";
+                }
+                reportPreviousCrash(json, crashedFirmwareVersion);
+                ESP_ERROR_CHECK_WITHOUT_ABORT(esp_core_dump_image_erase());
+                break;
+            }
+            default: {
+                ESP_ERROR_CHECK_WITHOUT_ABORT(esp_core_dump_image_erase());
+                break;
+            }
         }
         nvs.set("version", farmhubVersion);
     }
@@ -36,24 +46,32 @@ private:
             crashJson["firmware-version"] = crashedFirmwareVersion;
             reportPreviousCrash(crashJson, summary);
         }
-
-        ESP_ERROR_CHECK_WITHOUT_ABORT(esp_core_dump_image_erase());
     }
 
-    static bool hasCoreDump() {
+    enum class CoreDumpStatus : uint8_t {
+        NoDump,
+        DumpFound,
+        DumpInvalid
+    };
+
+    static CoreDumpStatus getCoreDumpStatus() {
         esp_err_t err = esp_core_dump_image_check();
         switch (err) {
             case ESP_OK:
-                return true;
+                LOGV("Found core dump");
+                return CoreDumpStatus::DumpFound;
             case ESP_ERR_NOT_FOUND:
                 LOGV("No core dump found");
-                return false;
+                return CoreDumpStatus::NoDump;
             case ESP_ERR_INVALID_SIZE:
                 LOGD("Invalid core dump size, likely no core dump saved");
-                return false;
+                return CoreDumpStatus::NoDump;
+            case ESP_ERR_INVALID_CRC:
+                LOGE("Invalid core dump CRC, likely corrupted");
+                return CoreDumpStatus::DumpInvalid;
             default:
                 LOGE("Failed to check for core dump: %s", esp_err_to_name(err));
-                return false;
+                return CoreDumpStatus::DumpInvalid;
         }
     }
 
