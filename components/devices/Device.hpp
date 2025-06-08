@@ -346,15 +346,20 @@ static void startDevice() {
         states->configPortalRunning,
         deviceConfig->getHostname());
 
+    auto telemetryPublishQueue = std::make_shared<CopyQueue<bool>>("telemetry-publish", 1);
+
     // Init switch and button handling
     auto switches = std::make_shared<SwitchManager>();
-    switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [statusLed](const std::shared_ptr<Switch>&, milliseconds duration) {
+    switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [statusLed, telemetryPublishQueue](const std::shared_ptr<Switch>&, milliseconds duration) {
         if (duration >= 15s) {
             LOGI("Factory reset triggered after %lld ms", duration.count());
             performFactoryReset(statusLed, true);
         } else if (duration >= 5s) {
             LOGI("WiFi reset triggered after %lld ms", duration.count());
             performFactoryReset(statusLed, false);
+        } else if (duration >= 200ms) {
+            LOGD("Publishing telemetry after %lld ms", duration.count());
+            telemetryPublishQueue->overwrite(true);
         }
     });
 
@@ -402,9 +407,8 @@ static void startDevice() {
     deviceDefinition->registerPeripheralFactories(peripheralManager, peripheralServices, deviceConfig);
 
     // Init telemetry
-    auto telemetryPublishQueue = std::make_shared<CopyQueue<bool>>("telemetry-publish", 1);
     mqttRoot->registerCommand("ping", [telemetryPublishQueue](const JsonObject&, JsonObject& response) {
-        telemetryPublishQueue->offer(true);
+        telemetryPublishQueue->overwrite(true);
         response["pong"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
     });
 
