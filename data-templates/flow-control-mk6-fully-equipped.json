@@ -1,16 +1,16 @@
 {
-  "instance": "DEVICE_INSTANCE",
-  "id": "DEVICE_ID",
+  "instance": "test-mk6-xxx",
+  "location": "bumblebee",
   "peripherals": [
     {
-      "name": "flow-control-a",
+      "name": "flow-control",
       "type": "flow-control",
       "params": {
         "valve": {
-          "motor": "a"
+          "motor": "b"
         },
         "flow-meter": {
-          "pin": "A1"
+          "pin": "B1"
         }
       }
     },
@@ -18,7 +18,7 @@
       "name": "soil-temperature",
       "type": "environment:ds18b20",
       "params": {
-        "pin": "C3"
+        "pin": "A2"
       }
     },
     {
@@ -26,9 +26,10 @@
       "type": "environment:soil-moisture",
       "params": {
         "air": 3017,
-        "pin": "C4",
+        "pin": "A1",
         "water": 1105
       }
     }
-  ]
+  ],
+  "motorNSleepPin": "LOADEN"
 }
