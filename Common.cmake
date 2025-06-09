@@ -4,7 +4,7 @@ include(FetchContent)
 FetchContent_Declare(
     esp_idf_lib
     GIT_REPOSITORY https://github.com/UncleRus/esp-idf-lib.git
-    GIT_TAG "1abe2e5194b1a45c8878229ad893a058816cdd18"
+    GIT_TAG "a02cd6bb5190cab379125140780adcb8d88f9650"
 )
 FetchContent_MakeAvailable(esp_idf_lib)
 list(APPEND EXTRA_COMPONENT_DIRS ${esp_idf_lib_SOURCE_DIR}/components)
