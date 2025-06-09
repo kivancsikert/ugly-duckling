@@ -4,14 +4,14 @@
   "location": "bumblebee",
   "peripherals": [
     {
-      "name": "flow-control-a",
+      "name": "flow-control",
       "type": "flow-control",
       "params": {
         "valve": {
-          "motor": "a"
+          "motor": "b"
         },
         "flow-meter": {
-          "pin": "A1"
+          "pin": "B1"
         }
       }
     }
