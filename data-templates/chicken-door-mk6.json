@@ -1,19 +1,20 @@
 {
-  "instance": "DEVICE_INSTANCE",
-  "id": "DEVICE_ID",
+  "instance": "chicken-door",
+  "location": "hawthorn",
   "peripherals": [
     {
       "name": "chicken-door-a",
       "type": "chicken-door",
       "params": {
         "motor": "b",
-        "openPin": "B2",
-        "closedPin": "B1",
+        "openPin": "A2",
+        "closedPin": "A1",
         "lightSensor": {
-          "scl": "C2",
-          "sda": "C3"
+          "sda": "C2",
+          "scl": "C3"
         }
       }
     }
-  ]
+  ],
+  "motorNSleepPin": "C4"
 }
