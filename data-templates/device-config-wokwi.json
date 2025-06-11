@@ -1,6 +1,5 @@
 {
-  "id": "wokwi",
-  "instance": "wokwi",
+  "instance": "test-wokwi",
   "location": "bumblebee",
   "peripherals": [
     {
