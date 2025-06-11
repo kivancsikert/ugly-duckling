@@ -17,6 +17,7 @@
 #include <State.hpp>
 #include <Task.hpp>
 #include <drivers/MdnsDriver.hpp>
+#include <mqtt/PendingMessages.hpp>
 
 using namespace std::chrono_literals;
 using namespace farmhub::kernel;
@@ -38,14 +39,6 @@ enum class QoS : uint8_t {
 enum class LogPublish : uint8_t {
     Log,
     Silent
-};
-
-enum class PublishStatus : uint8_t {
-    TimeOut = 0,
-    Success = 1,
-    Failed = 2,
-    Pending = 3,
-    QueueFull = 4
 };
 
 using CommandHandler = std::function<void(const JsonObject&, JsonObject&)>;
@@ -153,7 +146,7 @@ public:
                 .keepalive = duration_cast<seconds>(MQTT_SESSION_KEEP_ALIVE).count(),
                 .disable_keepalive = false,
                 .protocol_ver = MQTT_PROTOCOL_UNDEFINED,    // Default MQTT version
-                .message_retransmit_timeout = 0,            // Default retransmit timeout
+                .message_retransmit_timeout = duration_cast<milliseconds>(MQTT_MESSAGE_RETRANSMIT_TIMEOUT).count(),
             },
             .network {
                 .reconnect_timeout_ms = duration_cast<milliseconds>(MQTT_CONNECTION_TIMEOUT).count(),
@@ -191,13 +184,14 @@ public:
         }
     }
 
+private:
     static constexpr milliseconds MQTT_NETWORK_TIMEOUT = 15s;
+    static constexpr milliseconds MQTT_MESSAGE_RETRANSMIT_TIMEOUT = 5s;
     static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = MQTT_NETWORK_TIMEOUT;
     static constexpr milliseconds MQTT_SESSION_KEEP_ALIVE = 120s;
     static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
     static constexpr milliseconds MQTT_QUEUE_TIMEOUT = 1s;
 
-private:
     struct PendingSubscription {
         const int messageId;
         const time_point<boot_clock> subscribedAt;
@@ -291,14 +285,13 @@ private:
         }
 
         // Wait for task notification
-        uint32_t status = ulTaskNotifyTake(pdTRUE, timeout.count());
+        auto status = static_cast<PublishStatus>(ulTaskNotifyTake(pdTRUE, timeout.count()));
         switch (status) {
-            case 0:
+            case PublishStatus::TimeOut:
                 pendingMessages.cancelWaitingOn(waitingTask);
                 return PublishStatus::TimeOut;
-            case PUBLISH_SUCCESS:
+            case PublishStatus::Success:
                 return PublishStatus::Success;
-            case PUBLISH_FAILED:
             default:
                 return PublishStatus::Failed;
         }
@@ -329,78 +322,6 @@ private:
         Disconnected,
         Connecting,
         Connected,
-    };
-    class PendingMessages {
-    public:
-        bool waitOn(int messageId, TaskHandle_t waitingTask) {
-            if (waitingTask == nullptr) {
-                // Nothing is waiting
-                return false;
-            }
-
-            if (messageId == 0) {
-                // Notify tasks waiting on QoS 0 messages immediately
-                notifyWaitingTask(waitingTask, true);
-                return false;
-            }
-
-            // Record pending task
-            Lock lock(mutex);
-            messages[messageId] = waitingTask;
-            return true;
-        }
-
-        bool handlePublished(int messageId, bool success) {
-            if (messageId == 0) {
-                return false;
-            }
-
-            Lock lock(mutex);
-            auto it = messages.find(messageId);
-            if (it != messages.end()) {
-                notifyWaitingTask(it->second, success);
-                messages.erase(it);
-                return true;
-            }
-            return false;
-        }
-
-        bool cancelWaitingOn(TaskHandle_t waitingTask) {
-            if (waitingTask == nullptr) {
-                return false;
-            }
-
-            Lock lock(mutex);
-            bool removed = false;
-            for (auto it = messages.begin(); it != messages.end();) {
-                if (it->second == waitingTask) {
-                    it = messages.erase(it);
-                    removed = true;
-                } else {
-                    ++it;
-                }
-            }
-            return removed;
-        }
-
-        void clear() {
-            Lock lock(mutex);
-            for (auto& [messageId, waitingTask] : messages) {
-                notifyWaitingTask(waitingTask, false);
-            }
-            messages.clear();
-        }
-
-        static void notifyWaitingTask(TaskHandle_t task, bool success) {
-            if (task != nullptr) {
-                uint32_t status = success ? PUBLISH_SUCCESS : PUBLISH_FAILED;
-                xTaskNotify(task, status, eSetValueWithOverwrite);
-            }
-        }
-
-    private:
-        Mutex mutex;
-        std::unordered_map<int, TaskHandle_t> messages;
     };
 
     void runEventLoop(Task& /*task*/) {
@@ -798,9 +719,6 @@ private:
     // TODO Use a map instead
     std::list<Subscription> subscriptions;
     PendingMessages pendingMessages;
-
-    static constexpr uint32_t PUBLISH_SUCCESS = 1;
-    static constexpr uint32_t PUBLISH_FAILED = 2;
 
     friend class MqttRoot;
 };
