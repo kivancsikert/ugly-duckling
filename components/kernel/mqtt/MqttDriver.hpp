@@ -146,7 +146,7 @@ public:
                 .keepalive = duration_cast<seconds>(MQTT_SESSION_KEEP_ALIVE).count(),
                 .disable_keepalive = false,
                 .protocol_ver = MQTT_PROTOCOL_UNDEFINED,    // Default MQTT version
-                .message_retransmit_timeout = 0,            // Default retransmit timeout
+                .message_retransmit_timeout = duration_cast<milliseconds>(MQTT_MESSAGE_RETRANSMIT_TIMEOUT).count(),
             },
             .network {
                 .reconnect_timeout_ms = duration_cast<milliseconds>(MQTT_CONNECTION_TIMEOUT).count(),
@@ -186,6 +186,7 @@ public:
 
 private:
     static constexpr milliseconds MQTT_NETWORK_TIMEOUT = 15s;
+    static constexpr milliseconds MQTT_MESSAGE_RETRANSMIT_TIMEOUT = 5s;
     static constexpr milliseconds MQTT_CONNECTION_TIMEOUT = MQTT_NETWORK_TIMEOUT;
     static constexpr milliseconds MQTT_SESSION_KEEP_ALIVE = 120s;
     static constexpr milliseconds MQTT_LOOP_INTERVAL = 1s;
