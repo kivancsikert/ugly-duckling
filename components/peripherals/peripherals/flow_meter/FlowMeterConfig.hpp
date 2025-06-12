@@ -14,7 +14,8 @@ class FlowMeterDeviceConfig
     : public ConfigurationSection {
 public:
     Property<InternalPinPtr> pin { this, "pin" };
-    Property<double> qFactor { this, "qFactor", 5.0 };
+    // Default Q factor for YF-S201 flow sensor
+    Property<double> qFactor { this, "qFactor", 7.5 };
     Property<milliseconds> measurementFrequency { this, "measurementFrequency", 1s };
 };
 
