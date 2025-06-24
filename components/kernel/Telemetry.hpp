@@ -2,21 +2,17 @@
 
 #include <list>
 #include <memory>
+#include <utility>
 
 #include <ArduinoJson.h>
 
-#include <BootClock.hpp>
-#include <Task.hpp>
-#include <utility>
+#include <Concurrent.hpp>
 
 namespace farmhub::kernel {
 
 class TelemetryCollector {
 public:
-    void collect(JsonObject& root) {
-        root["uptime"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
-        root["timestamp"] = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-        auto entries = root["entries"].to<JsonArray>();
+    void collect(JsonArray& entries) {
         for (auto& provider : providers) {
             auto entry = entries.add<JsonObject>();
             entry["type"] = provider.type;
@@ -44,6 +40,19 @@ private:
     };
 
     std::list<Provider> providers;
+};
+
+class TelemetryPublisher {
+public:
+    explicit TelemetryPublisher(std::shared_ptr<CopyQueue<bool>> telemetryPublishQueue)
+        : telemetryPublishQueue(std::move(telemetryPublishQueue)) {}
+
+    void requestTelemetryPublishing() {
+        telemetryPublishQueue->overwrite(true);
+    }
+
+private:
+    std::shared_ptr<CopyQueue<bool>> telemetryPublishQueue;
 };
 
 }    // namespace farmhub::kernel

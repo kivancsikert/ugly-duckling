@@ -30,26 +30,9 @@ public:
     PeripheralBase(const std::string& name, const std::shared_ptr<MqttRoot>& mqttRoot)
         : Named(name)
         , mqttRoot(mqttRoot) {
-        mqttRoot->registerCommand("ping", [this](const JsonObject& /*request*/, JsonObject& response) {
-            LOGV("Received ping request");
-            publishTelemetry();
-            response["pong"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
-        });
     }
 
-    ~PeripheralBase() override = default;
-
-    void publishTelemetry() {
-        JsonDocument telemetryDoc;
-        JsonObject telemetryJson = telemetryDoc.to<JsonObject>();
-        populateTelemetry(telemetryJson);
-        if (telemetryJson.begin() == telemetryJson.end()) {
-            // No telemetry added
-            LOGV("No telemetry to publish for peripheral: %s", name.c_str());
-            return;
-        }
-        mqttRoot->publish("telemetry", telemetryDoc, Retention::NoRetain, QoS::AtLeastOnce);
-    }
+    virtual ~PeripheralBase() = default;
 
     struct ShutdownParameters {
         // Placeholder for future parameters
@@ -92,6 +75,7 @@ struct PeripheralServices {
     const std::shared_ptr<PwmManager> pwmManager;
     const std::shared_ptr<SwitchManager> switches;
     const std::shared_ptr<TelemetryCollector> telemetryCollector;
+    const std::shared_ptr<TelemetryPublisher>& telemetryPublisher;
 };
 
 class PeripheralFactoryBase {

@@ -26,7 +26,6 @@ static const char* const farmhubVersion = reinterpret_cast<const char*>(esp_app_
 
 #include <peripherals/Peripheral.hpp>
 
-using namespace farmhub::devices;
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
 
@@ -262,13 +261,36 @@ void initTelemetryPublishTask(
     std::chrono::milliseconds publishInterval,
     const std::shared_ptr<Watchdog>& watchdog,
     const std::shared_ptr<MqttRoot>& mqttRoot,
+    const std::shared_ptr<BatteryManager>& batteryManager,
+    const std::shared_ptr<PowerManager>& powerManager,
+    const std::shared_ptr<WiFiDriver>& wifi,
     const std::shared_ptr<TelemetryCollector>& telemetryCollector,
     const std::shared_ptr<CopyQueue<bool>>& telemetryPublishQueue) {
-    Task::loop("telemetry", 8192, [publishInterval, watchdog, mqttRoot, telemetryCollector, telemetryPublishQueue](Task& task) {
+    Task::loop("telemetry", 8192, [publishInterval, watchdog, mqttRoot, batteryManager, powerManager, wifi, telemetryCollector, telemetryPublishQueue](Task& task) {
         task.markWakeTime();
 
-        mqttRoot->publish("telemetry", [telemetryCollector](JsonObject& json) {
-            telemetryCollector->collect(json);
+        mqttRoot->publish("telemetry", [batteryManager, powerManager, wifi, telemetryCollector](JsonObject& telemetry) {
+            telemetry["uptime"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
+            telemetry["timestamp"] = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+
+            if (batteryManager != nullptr) {
+                telemetry["battery"]["voltage"] = batteryManager->getVoltage();
+            }
+
+            auto wifiData = telemetry["wifi"].to<JsonObject>();
+            wifi->populateTelemetry(wifiData);
+
+#if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
+            auto memoryData = telemetry["memory"].to<JsonObject>();
+            memoryData["free-heap"] = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+            memoryData["min-heap"] = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
+#endif
+
+            auto powerManagementData = telemetry["pm"].to<JsonObject>();
+            powerManager->populateTelemetry(powerManagementData);
+
+            auto entries = telemetry["entries"].to<JsonArray>();
+            telemetryCollector->collect(entries);
         }, Retention::NoRetain, QoS::AtLeastOnce);
 
         // Signal that we are still alive
@@ -345,10 +367,11 @@ static void startDevice() {
         deviceConfig->getHostname());
 
     auto telemetryPublishQueue = std::make_shared<CopyQueue<bool>>("telemetry-publish", 1);
+    auto telemetryPublisher = std::make_shared<TelemetryPublisher>(telemetryPublishQueue);
 
     // Init switch and button handling
     auto switches = std::make_shared<SwitchManager>();
-    switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [statusLed, telemetryPublishQueue](const std::shared_ptr<Switch>&, milliseconds duration) {
+    switches->onReleased("factory-reset", deviceDefinition->bootPin, SwitchMode::PullUp, [statusLed, telemetryPublisher](const std::shared_ptr<Switch>&, milliseconds duration) {
         if (duration >= 15s) {
             LOGI("Factory reset triggered after %lld ms", duration.count());
             performFactoryReset(statusLed, true);
@@ -357,7 +380,7 @@ static void startDevice() {
             performFactoryReset(statusLed, false);
         } else if (duration >= 200ms) {
             LOGD("Publishing telemetry after %lld ms", duration.count());
-            telemetryPublishQueue->overwrite(true);
+            telemetryPublisher->requestTelemetryPublishing();
         }
     });
 
@@ -396,7 +419,7 @@ static void startDevice() {
     auto pulseCounterManager = std::make_shared<PulseCounterManager>();
     auto pwm = std::make_shared<PwmManager>();
     auto telemetryCollector = std::make_shared<TelemetryCollector>();
-    auto peripheralServices = PeripheralServices { i2c, pcnt, pulseCounterManager, pwm, switches, telemetryCollector };
+    auto peripheralServices = PeripheralServices { i2c, pcnt, pulseCounterManager, pwm, switches, telemetryCollector, telemetryPublisher };
 
     // Init peripherals
     auto peripheralManager = std::make_shared<PeripheralManager>(fs, peripheralServices, mqttRoot);
@@ -406,24 +429,9 @@ static void startDevice() {
     deviceDefinition->registerPeripheralFactories(peripheralManager, peripheralServices, deviceConfig);
 
     // Init telemetry
-    mqttRoot->registerCommand("ping", [telemetryPublishQueue](const JsonObject&, JsonObject& response) {
-        telemetryPublishQueue->overwrite(true);
+    mqttRoot->registerCommand("ping", [telemetryPublisher](const JsonObject&, JsonObject& response) {
+        telemetryPublisher->requestTelemetryPublishing();
         response["pong"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
-    });
-
-    telemetryCollector->registerProvider("device", "", [batteryManager, powerManager, wifi](JsonObject& telemetry) {
-        if (batteryManager != nullptr) {
-            telemetry["battery"]["voltage"] = batteryManager->getVoltage();
-        }
-        auto wifiData = telemetry["wifi"].to<JsonObject>();
-        wifi->populateTelemetry(wifiData);
-#if defined(FARMHUB_DEBUG) || defined(FARMHUB_REPORT_MEMORY)
-        auto memoryData = telemetry["memory"].to<JsonObject>();
-        memoryData["free-heap"] = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
-        memoryData["min-heap"] = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
-#endif
-        auto powerManagementData = telemetry["pm"].to<JsonObject>();
-        powerManager->populateTelemetry(powerManagementData);
     });
 
     // We want RTC to be in sync before we start setting up peripherals
@@ -452,7 +460,7 @@ static void startDevice() {
         }
     }
 
-    initTelemetryPublishTask(deviceConfig->publishInterval.get(), watchdog, mqttRoot, telemetryCollector, telemetryPublishQueue);
+    initTelemetryPublishTask(deviceConfig->publishInterval.get(), watchdog, mqttRoot, batteryManager, powerManager, wifi, telemetryCollector, telemetryPublishQueue);
 
     // Enable power saving once we are done initializing
     WiFiDriver::setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
