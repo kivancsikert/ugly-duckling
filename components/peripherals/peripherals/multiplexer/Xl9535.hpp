@@ -10,10 +10,10 @@ class Xl9535DeviceConfig
     : public I2CDeviceConfig {
 };
 
-class Xl9535Component final {
+class Xl9535 final {
 
 public:
-    Xl9535Component(
+    Xl9535(
         const std::string& name,
         const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config)
@@ -79,48 +79,27 @@ private:
 
 class Xl9535Pin final : public Pin {
 public:
-    Xl9535Pin(const std::string& name, Xl9535Component& mpx, uint8_t pin)
+    Xl9535Pin(const std::string& name, const std::shared_ptr<Xl9535>& mpx, uint8_t pin)
         : Pin(name)
         , mpx(mpx)
         , pin(pin) {
     }
 
     void pinMode(Mode mode) const override {
-        mpx.pinMode(pin, mode);
+        mpx->pinMode(pin, mode);
     }
 
     void digitalWrite(uint8_t val) const override {
-        mpx.digitalWrite(pin, val);
+        mpx->digitalWrite(pin, val);
     }
 
     int digitalRead() const override {
-        return mpx.digitalRead(pin);
+        return mpx->digitalRead(pin);
     }
 
 private:
-    Xl9535Component& mpx;
+    std::shared_ptr<Xl9535> mpx;
     const uint8_t pin;
-};
-
-class Xl9535
-    : public Peripheral<EmptyConfiguration> {
-public:
-    Xl9535(const std::string& name, const std::shared_ptr<I2CManager>& i2c, const I2CConfig& config)
-        : Peripheral<EmptyConfiguration>(name)
-        , component(name, i2c, config) {
-
-        // Create a pin for each bit in the pins mask
-        for (int i = 0; i < 16; i++) {
-            std::string pinName = name + ":" + std::to_string(i);
-            LOGV("Registering external pin %s",
-                pinName.c_str());
-            auto pin = std::make_shared<Xl9535Pin>(pinName, component, i);
-            Pin::registerPin(pinName, pin);
-        }
-    }
-
-private:
-    Xl9535Component component;
 };
 
 class Xl9535Factory
@@ -131,7 +110,18 @@ public:
     }
 
     std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Xl9535DeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
-        return std::make_shared<Xl9535>(name, services.i2c, deviceConfig->parse());
+        auto multiplexer = std::make_shared<Xl9535>(name, services.i2c, deviceConfig->parse());
+
+        // Create a pin for each bit in the pins mask
+        for (int i = 0; i < 16; i++) {
+            std::string pinName = name + ":" + std::to_string(i);
+            LOGV("Registering external pin %s",
+                pinName.c_str());
+            auto pin = std::make_shared<Xl9535Pin>(pinName, multiplexer, i);
+            Pin::registerPin(pinName, pin);
+        }
+
+        return std::make_shared<SimplePeripheral<Xl9535>>(name, multiplexer);
     }
 };
 

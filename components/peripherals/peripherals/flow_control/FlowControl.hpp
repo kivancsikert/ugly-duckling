@@ -6,8 +6,7 @@
 #include <mqtt/MqttDriver.hpp>
 #include <peripherals/Motorized.hpp>
 #include <peripherals/Peripheral.hpp>
-#include <peripherals/flow_meter/FlowMeterComponent.hpp>
-#include <peripherals/flow_meter/FlowMeterConfig.hpp>
+#include <peripherals/flow_meter/FlowMeter.hpp>
 #include <peripherals/valve/Valve.hpp>
 #include <peripherals/valve/ValveComponent.hpp>
 #include <peripherals/valve/ValveConfig.hpp>
@@ -52,7 +51,7 @@ public:
 
 private:
     ValveComponent valve;
-    FlowMeterComponent flowMeter;
+    FlowMeter flowMeter;
 
     friend class FlowControlFactory;
 };

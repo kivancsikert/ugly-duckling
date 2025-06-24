@@ -19,10 +19,9 @@ namespace farmhub::peripherals::environment {
  *
  * Note: Needs a 4.7k pull-up resistor between the data and power lines.
  */
-class Ds18B20SoilSensorComponent final {
+class Ds18B20SoilSensor final {
 public:
-    Ds18B20SoilSensorComponent(
-        const std::string&  /*name*/,
+    explicit Ds18B20SoilSensor(
         const InternalPinPtr& pin)
         : pin(pin) {
 
@@ -58,21 +57,6 @@ private:
     onewire_addr_t sensor {};
 };
 
-class Ds18B20SoilSensorFactory;
-
-class Ds18B20SoilSensor
-    : public Peripheral<EmptyConfiguration> {
-public:
-    Ds18B20SoilSensor(const std::string& name, const InternalPinPtr& pin)
-        : Peripheral<EmptyConfiguration>(name)
-        , sensor(name, pin) {
-    }
-
-private:
-    Ds18B20SoilSensorComponent sensor;
-    friend class Ds18B20SoilSensorFactory;
-};
-
 class Ds18B20SoilSensorFactory
     : public PeripheralFactory<SinglePinDeviceConfig, EmptyConfiguration> {
 public:
@@ -81,11 +65,11 @@ public:
     }
 
     std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SinglePinDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
-        auto peripheral = std::make_shared<Ds18B20SoilSensor>(name, deviceConfig->pin.get());
-        services.telemetryCollector->registerProvider("temperature", name, [peripheral](JsonObject& telemetryJson) {
-            telemetryJson["value"] = peripheral->sensor.getTemperature();
+        auto sensor = std::make_shared<Ds18B20SoilSensor>(deviceConfig->pin.get());
+        services.telemetryCollector->registerProvider("temperature", name, [sensor](JsonObject& telemetryJson) {
+            telemetryJson["value"] = sensor->getTemperature();
         });
-        return peripheral;
+        return std::make_shared<SimplePeripheral<Ds18B20SoilSensor>>(name, sensor);
     }
 };
 

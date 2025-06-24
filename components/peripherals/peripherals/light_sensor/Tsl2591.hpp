@@ -33,10 +33,10 @@ public:
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
 };
 
-class Tsl2591Component final
+class Tsl2591 final
     : public LightSensorComponent {
 public:
-    Tsl2591Component(
+    Tsl2591(
         const std::string& name,
         const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config,
@@ -76,25 +76,6 @@ private:
     tsl2591_t sensor {};
 };
 
-class Tsl2591
-    : public Peripheral<EmptyConfiguration> {
-
-public:
-    Tsl2591(
-        const std::string& name,
-        const std::shared_ptr<I2CManager>& i2c,
-        const I2CConfig& config,
-        seconds measurementFrequency,
-        seconds latencyInterval)
-        : Peripheral<EmptyConfiguration>(name)
-        , component(name, i2c, config, measurementFrequency, latencyInterval) {
-    }
-
-private:
-    Tsl2591Component component;
-    friend class Tsl2591Factory;
-};
-
 class Tsl2591Factory
     : public PeripheralFactory<Tsl2591DeviceConfig, EmptyConfiguration> {
 public:
@@ -104,11 +85,11 @@ public:
 
     std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Tsl2591DeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
         I2CConfig i2cConfig = deviceConfig->parse(TSL2591_ADDR);
-        auto peripheral = std::make_shared<Tsl2591>(name, services.i2c, i2cConfig, deviceConfig->measurementFrequency.get(), deviceConfig->latencyInterval.get());
-        services.telemetryCollector->registerProvider("light", name, [peripheral](JsonObject& telemetryJson) {
-            telemetryJson["value"] = peripheral->component.getCurrentLevel();
+        auto sensor = std::make_shared<Tsl2591>(name, services.i2c, i2cConfig, deviceConfig->measurementFrequency.get(), deviceConfig->latencyInterval.get());
+        services.telemetryCollector->registerProvider("light", name, [sensor](JsonObject& telemetryJson) {
+            telemetryJson["value"] = sensor->getCurrentLevel();
         });
-        return peripheral;
+        return std::make_shared<SimplePeripheral<Tsl2591>>(name, sensor);
     }
 };
 

@@ -20,10 +20,10 @@ namespace farmhub::peripherals::environment {
 /**
  * @brief Works with SHT2x or HTU2x.
  */
-class Sht2xComponent final
-    : public EnvironmentComponent {
+class Sht2xSensor final
+    : public EnvironmentSensor {
 public:
-    Sht2xComponent(
+    Sht2xSensor(
         const std::string& sensorType,
         const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config)

@@ -31,10 +31,10 @@ public:
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
 };
 
-class Bh1750Component final
+class Bh1750 final
     : public LightSensorComponent {
 public:
-    Bh1750Component(
+    Bh1750(
         const std::string& name,
         const std::shared_ptr<I2CManager>& /*i2c*/,
         const I2CConfig& config,
@@ -65,27 +65,6 @@ private:
     i2c_dev_t sensor {};
 };
 
-class Bh1750Factory;
-
-class Bh1750
-    : public Peripheral<EmptyConfiguration> {
-
-public:
-    Bh1750(
-        const std::string& name,
-        const std::shared_ptr<I2CManager>& i2c,
-        const I2CConfig& config,
-        seconds measurementFrequency,
-        seconds latencyInterval)
-        : Peripheral<EmptyConfiguration>(name)
-        , component(name, i2c, config, measurementFrequency, latencyInterval) {
-    }
-
-private:
-    Bh1750Component component;
-    friend class Bh1750Factory;
-};
-
 class Bh1750Factory
     : public PeripheralFactory<Bh1750DeviceConfig, EmptyConfiguration> {
 public:
@@ -95,11 +74,11 @@ public:
 
     std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Bh1750DeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
         I2CConfig i2cConfig = deviceConfig->parse(0x23);
-        auto peripheral = std::make_shared<Bh1750>(name, services.i2c, i2cConfig, deviceConfig->measurementFrequency.get(), deviceConfig->latencyInterval.get());
-        services.telemetryCollector->registerProvider("light", name, [peripheral](JsonObject& telemetryJson) {
-            telemetryJson["value"] = peripheral->component.getCurrentLevel();
+        auto sensor = std::make_shared<Bh1750>(name, services.i2c, i2cConfig, deviceConfig->measurementFrequency.get(), deviceConfig->latencyInterval.get());
+        services.telemetryCollector->registerProvider("light", name, [sensor](JsonObject& telemetryJson) {
+            telemetryJson["value"] = sensor->getCurrentLevel();
         });
-        return peripheral;
+        return std::make_shared<SimplePeripheral<Bh1750>>(name, sensor);
     }
 };
 

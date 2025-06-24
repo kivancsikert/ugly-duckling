@@ -19,10 +19,10 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::environment {
 
-class Sht3xComponent final
-    : public EnvironmentComponent {
+class Sht3xSensor final
+    : public EnvironmentSensor {
 public:
-    Sht3xComponent(
+    Sht3xSensor(
         const std::string& sensorType,
         const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config)
