@@ -30,11 +30,10 @@ public:
     Valve(
         const std::string& name,
         std::unique_ptr<ValveControlStrategy> strategy,
-        const std::shared_ptr<MqttRoot>& mqttRoot)
+        const std::shared_ptr<MqttRoot>& mqttRoot,
+        const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
         : Peripheral<ValveConfig>(name, mqttRoot)
-        , valve(name, std::move(strategy), mqttRoot, [this]() {
-            publishTelemetry();
-        }) {
+        , valve(name, std::move(strategy), mqttRoot, telemetryPublisher) {
     }
 
     void configure(const std::shared_ptr<ValveConfig> config) override {
@@ -63,7 +62,7 @@ public:
 
     std::shared_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ValveDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         auto strategy = deviceConfig->createValveControlStrategy(this);
-        auto peripheral = std::make_shared<Valve>(name, std::move(strategy), mqttRoot);
+        auto peripheral = std::make_shared<Valve>(name, std::move(strategy), mqttRoot, services.telemetryPublisher);
         services.telemetryCollector->registerProvider("valve", name, [peripheral](JsonObject& telemetry) {
             peripheral->valve.populateTelemetry(telemetry);
         });

@@ -126,7 +126,7 @@ public:
         InternalPinPtr closedPin,
         bool invertSwitches,
         ticks movementTimeout,
-        std::function<void()> publishTelemetry)
+        std::shared_ptr<TelemetryPublisher> telemetryPublisher)
         : Component(name, mqttRoot)
         , motor(motor)
         , lightSensor(lightSensor)
@@ -146,7 +146,7 @@ public:
         , watchdog(name + ":watchdog", movementTimeout, false, [this](WatchdogState state) {
             handleWatchdogEvent(state);
         })
-        , publishTelemetry(std::move(publishTelemetry)) {
+        , telemetryPublisher(std::move(telemetryPublisher)) {
 
         LOGI("Initializing chicken door %s, open switch %s, close switch %s%s",
             name.c_str(), openSwitch->getPin()->getName().c_str(), closedSwitch->getPin()->getName().c_str(),
@@ -245,7 +245,7 @@ private:
             }
         }
         if (shouldPublishTelemetry) {
-            publishTelemetry();
+            telemetryPublisher->requestTelemetryPublishing();
         }
 
         auto now = system_clock::now();
@@ -271,12 +271,12 @@ private:
                             overrideState = arg.state;
                             overrideUntil = arg.until;
                         }
-                        this->publishTelemetry();
+                        telemetryPublisher->requestTelemetryPublishing();
                     } else if constexpr (std::is_same_v<T, WatchdogTimeout>) {
                         LOGE("Watchdog timed out, stopping operation");
                         operationState = OperationState::WATCHDOG_TIMEOUT;
                         motor->stop();
-                        this->publishTelemetry();
+                        telemetryPublisher->requestTelemetryPublishing();
                     }
                 },
                 change);
@@ -355,7 +355,7 @@ private:
 
     Watchdog watchdog;
 
-    const std::function<void()> publishTelemetry;
+    const std::shared_ptr<TelemetryPublisher> telemetryPublisher;
 
     struct StateUpdated { };
 
@@ -391,6 +391,7 @@ public:
         std::shared_ptr<I2CManager> i2c,
         uint8_t lightSensorAddress,
         std::shared_ptr<SwitchManager> switches,
+        const std::shared_ptr<TelemetryPublisher>& telemetryPublisher,
         const std::shared_ptr<PwmMotorDriver> motor,
         const std::shared_ptr<ChickenDoorDeviceConfig> config)
         : Peripheral<ChickenDoorConfig>(name, mqttRoot)
@@ -411,9 +412,7 @@ public:
               config->closedPin.get(),
               config->invertSwitches.get(),
               config->movementTimeout.get(),
-              [this]() {
-                  publishTelemetry();
-              }) {
+              telemetryPublisher) {
     }
 
     void configure(const std::shared_ptr<ChickenDoorConfig> config) override {
@@ -458,7 +457,7 @@ public:
     template <std::derived_from<LightSensorComponent> TLightSensorComponent>
     std::shared_ptr<Peripheral<ChickenDoorConfig>> createDoor(const std::string& name, const std::shared_ptr<ChickenDoorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services, uint8_t lightSensorAddress) {
         std::shared_ptr<PwmMotorDriver> motor = findMotor(deviceConfig->motor.get());
-        auto peripheral = std::make_shared<ChickenDoor<TLightSensorComponent>>(name, mqttRoot, services.i2c, lightSensorAddress, services.switches, motor, deviceConfig);
+        auto peripheral = std::make_shared<ChickenDoor<TLightSensorComponent>>(name, mqttRoot, services.i2c, lightSensorAddress, services.switches, services.telemetryPublisher, motor, deviceConfig);
         services.telemetryCollector->registerProvider("light", name, [peripheral](JsonObject& telemetryJson) {
             telemetryJson["value"] = peripheral->lightSensor.getCurrentLevel();
         });

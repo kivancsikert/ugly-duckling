@@ -200,11 +200,11 @@ public:
         const std::string& name,
         std::unique_ptr<ValveControlStrategy> _strategy,
         const std::shared_ptr<MqttRoot>& mqttRoot,
-        std::function<void()> publishTelemetry)
+        const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
         : Component(name, mqttRoot)
         , nvs(name)
         , strategy(std::move(_strategy))
-        , publishTelemetry(std::move(publishTelemetry)) {
+        , telemetryPublisher(telemetryPublisher) {
 
         LOGI("Creating valve '%s' with strategy %s",
             name.c_str(), strategy->describe().c_str());
@@ -361,7 +361,7 @@ private:
         doTransitionTo(state);
 
         mqttRoot->publish("events/state", [=](JsonObject& json) { json["state"] = state; }, Retention::NoRetain, QoS::AtLeastOnce);
-        publishTelemetry();
+        telemetryPublisher->requestTelemetryPublishing();
     }
 
     void doTransitionTo(ValveState state) {
@@ -388,7 +388,7 @@ private:
 
     NvsStore nvs;
     const std::unique_ptr<ValveControlStrategy> strategy;
-    std::function<void()> publishTelemetry;
+    const std::shared_ptr<TelemetryPublisher>& telemetryPublisher;
 
     ValveState state = ValveState::NONE;
 
