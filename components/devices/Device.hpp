@@ -24,8 +24,6 @@ static const char* const farmhubVersion = reinterpret_cast<const char*>(esp_app_
 #include <Strings.hpp>
 #include <mqtt/MqttLog.hpp>
 
-#include <devices/DeviceTelemetry.hpp>
-
 #include <peripherals/Peripheral.hpp>
 
 using namespace farmhub::devices;

@@ -25,8 +25,7 @@ namespace farmhub::peripherals {
 // Peripherals
 
 class PeripheralBase
-    : public TelemetryProvider,
-      public Named {
+    : public Named {
 public:
     PeripheralBase(const std::string& name, const std::shared_ptr<MqttRoot>& mqttRoot)
         : Named(name)
@@ -50,9 +49,6 @@ public:
             return;
         }
         mqttRoot->publish("telemetry", telemetryDoc, Retention::NoRetain, QoS::AtLeastOnce);
-    }
-
-    void populateTelemetry(JsonObject& telemetryJson) override {
     }
 
     struct ShutdownParameters {

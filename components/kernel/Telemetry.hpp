@@ -11,13 +11,6 @@
 
 namespace farmhub::kernel {
 
-class TelemetryProvider {
-public:
-    virtual ~TelemetryProvider() = default;
-
-    virtual void populateTelemetry(JsonObject& json) = 0;
-};
-
 class TelemetryCollector {
 public:
     void collect(JsonObject& root) {

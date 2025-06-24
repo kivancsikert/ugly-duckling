@@ -42,8 +42,7 @@ void convertFromJson(JsonVariantConst src, FencePinConfig& dst) {
 }
 
 class ElectricFenceMonitorComponent final
-    : public Component,
-      public TelemetryProvider {
+    : public Component {
 public:
     ElectricFenceMonitorComponent(
         const std::string& name,
@@ -85,8 +84,8 @@ public:
         });
     }
 
-    void populateTelemetry(JsonObject& json) override {
-        json["voltage"] = lastVoltage.load();
+    double getVoltage() const {
+        return lastVoltage.load();
     }
 
 private:
@@ -127,7 +126,7 @@ public:
     std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<ElectricFenceMonitorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         auto peripheral = std::make_shared<ElectricFenceMonitor>(name, mqttRoot, services.pulseCounterManager, deviceConfig);
         services.telemetryCollector->registerProvider("fence", name, [peripheral](JsonObject& telemetryJson) {
-            peripheral->monitor.populateTelemetry(telemetryJson);
+            telemetryJson["voltage"] = peripheral->monitor.getVoltage();
         });
         return peripheral;
     }
