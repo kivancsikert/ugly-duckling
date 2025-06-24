@@ -1,16 +1,19 @@
 #pragma once
 
 #include <limits>
+#include <utility>
 
 #include <sht3x.h>
 
+#include <BootClock.hpp>
 #include <Component.hpp>
+#include <Concurrent.hpp>
 #include <I2CManager.hpp>
-#include <Telemetry.hpp>
 
 #include <peripherals/I2CConfig.hpp>
 #include <peripherals/Peripheral.hpp>
-#include <utility>
+
+#include "Environment.hpp"
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
@@ -18,8 +21,7 @@ using namespace farmhub::peripherals;
 namespace farmhub::peripherals::environment {
 
 class Sht3xComponent final
-    : public Component,
-      public TelemetryProvider {
+    : public EnvironmentComponent {
 public:
     Sht3xComponent(
         const std::string& name,
@@ -27,7 +29,7 @@ public:
         std::shared_ptr<MqttRoot> mqttRoot,
         const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config)
-        : Component(name, std::move(mqttRoot))
+        : EnvironmentComponent(name, std::move(mqttRoot))
         , bus(i2c->getBusFor(config)) {
 
         // TODO Add commands to soft/hard reset the sensor
@@ -41,23 +43,49 @@ public:
         ESP_ERROR_THROW(sht3x_init(&sensor));
     }
 
-    void populateTelemetry(JsonObject& json) override {
-        float temperature;
-        float humidity;
-        esp_err_t res = sht3x_measure(&sensor, &temperature, &humidity);
-        if (res != ESP_OK) {
-            LOGD("Could not measure temperature: %s", esp_err_to_name(res));
-            temperature = std::numeric_limits<float>::quiet_NaN();
-            humidity = std::numeric_limits<float>::quiet_NaN();
-        }
+    double getTemperature() override {
+        Lock lock(mutex);
+        updateMeasurement();
+        return temperature;
+    }
 
-        json["temperature"] = temperature;
-        json["humidity"] = humidity;
+    double getHumidity() override {
+        Lock lock(mutex);
+        updateMeasurement();
+        return humidity;
     }
 
 private:
+    void updateMeasurement() {
+        Lock lock(mutex);
+        auto now = boot_clock::now();
+        if (now - this->lastMeasurementTime < 1s) {
+            // Do not measure more often than once per second
+            return;
+        }
+        float fTemp;
+        float fHumidity;
+        esp_err_t res = sht3x_measure(&sensor, &fTemp, &fHumidity);
+        if (res == ESP_OK) {
+            LOGV("Measured temperature: %.2f °C, humidity: %.2f %%",
+                fTemp, fHumidity);
+            temperature = fTemp;
+            humidity = fHumidity;
+        } else {
+            LOGD("Could not measure temperature: %s", esp_err_to_name(res));
+            temperature = std::numeric_limits<double>::quiet_NaN();
+            humidity = std::numeric_limits<double>::quiet_NaN();
+        }
+        this->lastMeasurementTime = now;
+    }
+
     std::shared_ptr<I2CBus> bus;
     sht3x_t sensor {};
+
+    Mutex mutex;
+    std::chrono::time_point<boot_clock> lastMeasurementTime;
+    double temperature = std::numeric_limits<double>::quiet_NaN();
+    double humidity = std::numeric_limits<double>::quiet_NaN();
 };
 
 }    // namespace farmhub::peripherals::environment

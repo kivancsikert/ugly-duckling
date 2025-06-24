@@ -12,16 +12,16 @@ using farmhub::kernel::PinPtr;
 namespace farmhub::kernel::drivers {
 
 struct BatteryParameters {
-    const float maximumVoltage;
+    const double maximumVoltage;
     /**
      * @brief Do not boot if battery is below this threshold.
      */
-    const float bootThreshold;
+    const double bootThreshold;
 
     /**
      * @brief Shutdown if battery drops below this threshold.
      */
-    const float shutdownThreshold;
+    const double shutdownThreshold;
 };
 
 class BatteryDriver {
@@ -40,7 +40,7 @@ public:
 class AnalogBatteryDriver
     : public BatteryDriver {
 public:
-    AnalogBatteryDriver(const InternalPinPtr& pin, float voltageDividerRatio, const BatteryParameters& parameters)
+    AnalogBatteryDriver(const InternalPinPtr& pin, double voltageDividerRatio, const BatteryParameters& parameters)
         : BatteryDriver(parameters)
         , analogPin(pin)
         , voltageDividerRatio(voltageDividerRatio) {
@@ -57,12 +57,12 @@ public:
             }
             return batteryLevel.value() * 3.3 / 4096 * voltageDividerRatio;
         }
-        return std::numeric_limits<float>::quiet_NaN();
+        return std::numeric_limits<double>::quiet_NaN();
     }
 
 private:
     AnalogPin analogPin;
-    const float voltageDividerRatio;
+    const double voltageDividerRatio;
 };
 
 }    // namespace farmhub::kernel::drivers

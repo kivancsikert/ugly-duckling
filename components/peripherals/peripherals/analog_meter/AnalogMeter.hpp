@@ -12,6 +12,7 @@ using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::peripherals::analog_meter {
 
+class AnalogMeterFactory;
 class AnalogMeter
     : public Peripheral<EmptyConfiguration> {
 public:
@@ -27,17 +28,16 @@ public:
         , meter(name, mqttRoot, pin, offset, multiplier, measurementFrequency, windowSize) {
         };
 
-    void populateTelemetry(JsonObject& json) override {
-        meter.populateTelemetry(json);
-    }
 
 private:
     AnalogMeterComponent meter;
+    friend class AnalogMeterFactory;
 };
 
 class AnalogMeterDeviceConfig
     : public ConfigurationSection {
 public:
+    Property<std::string> type { this, "type", "analog-meter" };
     Property<InternalPinPtr> pin { this, "pin" };
     Property<double> offset { this, "offset", 0.0 };
     Property<double> multiplier { this, "multiplier", 1.0 };
@@ -52,8 +52,8 @@ public:
         : PeripheralFactory<AnalogMeterDeviceConfig, EmptyConfiguration>("analog-meter") {
     }
 
-    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<AnalogMeterDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& /*services*/) override {
-        return std::make_unique<AnalogMeter>(
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<AnalogMeterDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+        auto peripheral = std::make_shared<AnalogMeter>(
             name,
             mqttRoot,
             deviceConfig->pin.get(),
@@ -61,6 +61,10 @@ public:
             deviceConfig->multiplier.get(),
             deviceConfig->measurementFrequency.get(),
             deviceConfig->windowSize.get());
+        services.telemetryCollector->registerProvider(deviceConfig->type.get(), name, [peripheral](JsonObject& telemetryJson) {
+            telemetryJson["value"] = peripheral->meter.getValue();
+        });
+        return peripheral;
     }
 };
 

@@ -18,8 +18,7 @@ using namespace farmhub::kernel::mqtt;
 namespace farmhub::peripherals::analog_meter {
 
 class AnalogMeterComponent final
-    : public Component,
-      public TelemetryProvider {
+    : public Component {
 public:
     AnalogMeterComponent(
         const std::string& name,
@@ -48,9 +47,8 @@ public:
         });
     }
 
-    void populateTelemetry(JsonObject& telemetryJson) override {
-        double currentVale = value.getAverage();
-        telemetryJson["value"] = currentVale;
+    double getValue() {
+        return value.getAverage();
     }
 
 private:

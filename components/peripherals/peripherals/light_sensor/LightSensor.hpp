@@ -7,7 +7,6 @@
 #include <Configuration.hpp>
 #include <I2CManager.hpp>
 #include <MovingAverage.hpp>
-#include <Telemetry.hpp>
 
 #include <peripherals/I2CConfig.hpp>
 #include <peripherals/Peripheral.hpp>
@@ -22,8 +21,7 @@ using namespace farmhub::peripherals;
 namespace farmhub::peripherals::light_sensor {
 
 class LightSensorComponent
-    : public Component,
-      public TelemetryProvider {
+    : public Component {
 public:
     LightSensorComponent(
         const std::string& name,
@@ -35,7 +33,7 @@ public:
         , level(latencyInterval.count() / measurementFrequency.count()) {
     }
 
-    ~LightSensorComponent() override = default;
+    virtual ~LightSensorComponent() = default;
 
     double getCurrentLevel() {
         Lock lock(updateAverageMutex);
@@ -44,11 +42,6 @@ public:
 
     seconds getMeasurementFrequency() {
         return measurementFrequency;
-    }
-
-    void populateTelemetry(JsonObject& json) override {
-        Lock lock(updateAverageMutex);
-        json["light"] = level.getAverage();
     }
 
 protected:

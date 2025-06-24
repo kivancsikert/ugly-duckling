@@ -1,16 +1,17 @@
 #pragma once
 
 #include <limits>
+#include <utility>
 
 #include <si7021.h>
 
 #include <Component.hpp>
 #include <I2CManager.hpp>
-#include <Telemetry.hpp>
 
 #include <peripherals/I2CConfig.hpp>
 #include <peripherals/Peripheral.hpp>
-#include <utility>
+
+#include "Environment.hpp"
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
@@ -21,8 +22,7 @@ namespace farmhub::peripherals::environment {
  * @brief Works with SHT2x or HTU2x.
  */
 class Sht2xComponent final
-    : public Component,
-      public TelemetryProvider {
+    : public EnvironmentComponent {
 public:
     Sht2xComponent(
         const std::string& name,
@@ -30,7 +30,7 @@ public:
         std::shared_ptr<MqttRoot> mqttRoot,
         const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config)
-        : Component(name, std::move(mqttRoot))
+        : EnvironmentComponent(name, std::move(mqttRoot))
         , bus(i2c->getBusFor(config)) {
 
         // TODO Add commands to soft/hard reset the sensor
@@ -43,32 +43,27 @@ public:
         ESP_ERROR_THROW(si7021_init_desc(&sensor, bus->port, bus->sda->getGpio(), bus->scl->getGpio()));
     }
 
-    void populateTelemetry(JsonObject& json) override {
-        json["temperature"] = getTemperature();
-        json["humidity"] = getHumidity();
-    }
-
-private:
-    float getTemperature() {
+    double getTemperature() override {
         float value;
         esp_err_t res = si7021_measure_temperature(&sensor, &value);
         if (res != ESP_OK) {
             LOGD("Could not measure temperature: %s", esp_err_to_name(res));
-            return std::numeric_limits<float>::quiet_NaN();
+            return std::numeric_limits<double>::quiet_NaN();
         }
         return value;
     }
 
-    float getHumidity() {
+    double getHumidity() override {
         float value;
         esp_err_t res = si7021_measure_humidity(&sensor, &value);
         if (res != ESP_OK) {
             LOGD("Could not measure humidity: %s", esp_err_to_name(res));
-            return std::numeric_limits<float>::quiet_NaN();
+            return std::numeric_limits<double>::quiet_NaN();
         }
         return value;
     }
 
+private:
     std::shared_ptr<I2CBus> bus;
     i2c_dev_t sensor {};
 };
