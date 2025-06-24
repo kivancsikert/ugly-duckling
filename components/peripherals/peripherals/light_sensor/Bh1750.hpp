@@ -72,13 +72,13 @@ public:
         : PeripheralFactory<Bh1750DeviceConfig, EmptyConfiguration>("light-sensor:bh1750", "light-sensor") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Bh1750DeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Bh1750DeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
         I2CConfig i2cConfig = deviceConfig->parse(0x23);
         auto sensor = std::make_shared<Bh1750>(name, services.i2c, i2cConfig, deviceConfig->measurementFrequency.get(), deviceConfig->latencyInterval.get());
         services.telemetryCollector->registerProvider("light", name, [sensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = sensor->getCurrentLevel();
         });
-        return std::make_shared<SimplePeripheral<Bh1750>>(name, sensor);
+        return std::make_shared<SimplePeripheral>(name, sensor);
     }
 };
 

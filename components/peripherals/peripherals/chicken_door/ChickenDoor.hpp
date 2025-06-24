@@ -111,18 +111,17 @@ public:
     Property<double> closeLevel { this, "closeLevel", 10 };
 };
 
-template <std::derived_from<LightSensorComponent> TLightSensorComponent>
 class ChickenDoorComponent final
     : Named {
 public:
     ChickenDoorComponent(
         const std::string& name,
         const std::shared_ptr<MqttRoot>& mqttRoot,
-        std::shared_ptr<SwitchManager> switches,
+        const std::shared_ptr<SwitchManager>& switches,
         const std::shared_ptr<PwmMotorDriver>& motor,
-        TLightSensorComponent& lightSensor,
-        InternalPinPtr openPin,
-        InternalPinPtr closedPin,
+        const std::shared_ptr<LightSensorComponent>& lightSensor,
+        const InternalPinPtr& openPin,
+        const InternalPinPtr& closedPin,
         bool invertSwitches,
         ticks movementTimeout,
         std::shared_ptr<TelemetryPublisher> telemetryPublisher)
@@ -211,7 +210,7 @@ private:
         if (currentState != targetState) {
             if (currentState != lastState) {
                 LOGV("Going from state %d to %d (light level %.2f)",
-                    static_cast<int>(currentState), static_cast<int>(targetState), lightSensor.getCurrentLevel());
+                    static_cast<int>(currentState), static_cast<int>(targetState), lightSensor->getCurrentLevel());
                 watchdog.restart();
             }
             switch (targetState) {
@@ -228,7 +227,7 @@ private:
         } else {
             if (currentState != lastState) {
                 LOGV("Reached state %d (light level %.2f)",
-                    static_cast<int>(currentState), lightSensor.getCurrentLevel());
+                    static_cast<int>(currentState), lightSensor->getCurrentLevel());
                 watchdog.cancel();
                 motor->stop();
                 mqttRoot->publish("events/state", [=](JsonObject& json) { json["state"] = currentState; }, Retention::NoRetain, QoS::AtLeastOnce);
@@ -252,7 +251,7 @@ private:
         auto overrideWaitTime = overrideUntil < now
             ? ticks::max()
             : duration_cast<ticks>(overrideUntil - now);
-        auto waitTime = std::min(overrideWaitTime, duration_cast<ticks>(lightSensor.getMeasurementFrequency()));
+        auto waitTime = std::min(overrideWaitTime, duration_cast<ticks>(lightSensor->getMeasurementFrequency()));
         updateQueue.pollIn(waitTime, [this](auto& change) {
             std::visit(
                 [this](auto&& arg) {
@@ -331,7 +330,7 @@ private:
             overrideState = DoorState::NONE;
             overrideUntil = time_point<system_clock>::min();
         }
-        auto lightLevel = lightSensor.getCurrentLevel();
+        auto lightLevel = lightSensor->getCurrentLevel();
         if (lightLevel >= openLevel) {
             return DoorState::OPEN;
         }
@@ -345,7 +344,7 @@ private:
 
     const std::shared_ptr<MqttRoot> mqttRoot;
     const std::shared_ptr<PwmMotorDriver> motor;
-    TLightSensorComponent& lightSensor;
+    const std::shared_ptr<LightSensorComponent> lightSensor;
 
     double openLevel = std::numeric_limits<double>::max();
     double closeLevel = std::numeric_limits<double>::min();
@@ -382,46 +381,25 @@ private:
 
 class ChickenDoorFactory;
 
-template <std::derived_from<LightSensorComponent> TLightSensorComponent>
 class ChickenDoor
     : public Peripheral<ChickenDoorConfig> {
 public:
     ChickenDoor(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
-        std::shared_ptr<I2CManager> i2c,
-        uint8_t lightSensorAddress,
-        std::shared_ptr<SwitchManager> switches,
-        const std::shared_ptr<TelemetryPublisher>& telemetryPublisher,
-        const std::shared_ptr<PwmMotorDriver> motor,
-        const std::shared_ptr<ChickenDoorDeviceConfig> config)
+        const std::shared_ptr<LightSensorComponent>& lightSensor,
+        const std::shared_ptr<ChickenDoorComponent>& door)
         : Peripheral<ChickenDoorConfig>(name)
-        , lightSensor(
-              name + ":light",
-              i2c,
-              config->lightSensor.get()->parse(lightSensorAddress),
-              config->lightSensor.get()->measurementFrequency.get(),
-              config->lightSensor.get()->latencyInterval.get())
-        , doorComponent(
-              name,
-              mqttRoot,
-              switches,
-              motor,
-              lightSensor,
-              config->openPin.get(),
-              config->closedPin.get(),
-              config->invertSwitches.get(),
-              config->movementTimeout.get(),
-              telemetryPublisher) {
+        , lightSensor(lightSensor)
+        , door(door) {
     }
 
     void configure(const std::shared_ptr<ChickenDoorConfig> config) override {
-        doorComponent.configure(config);
+        door->configure(config);
     }
 
 private:
-    TLightSensorComponent lightSensor;
-    ChickenDoorComponent<TLightSensorComponent> doorComponent;
+    const std::shared_ptr<LightSensorComponent> lightSensor;
+    const std::shared_ptr<ChickenDoorComponent> door;
     friend class ChickenDoorFactory;
 };
 
@@ -454,19 +432,39 @@ public:
     }
 
     template <std::derived_from<LightSensorComponent> TLightSensorComponent>
-    std::shared_ptr<Peripheral<ChickenDoorConfig>> createDoor(const std::string& name, const std::shared_ptr<ChickenDoorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services, uint8_t lightSensorAddress) {
-        std::shared_ptr<PwmMotorDriver> motor = findMotor(deviceConfig->motor.get());
-        auto peripheral = std::make_shared<ChickenDoor<TLightSensorComponent>>(name, mqttRoot, services.i2c, lightSensorAddress, services.switches, services.telemetryPublisher, motor, deviceConfig);
-        services.telemetryCollector->registerProvider("light", name, [peripheral](JsonObject& telemetryJson) {
-            telemetryJson["value"] = peripheral->lightSensor.getCurrentLevel();
+    std::shared_ptr<Peripheral<ChickenDoorConfig>> createDoor(const std::string& name, const std::shared_ptr<ChickenDoorDeviceConfig>& config, const std::shared_ptr<MqttRoot>& mqttRoot, const PeripheralServices& services, uint8_t lightSensorAddress) {
+        auto lightSensor = std::make_shared<TLightSensorComponent>(
+            name + ":light",
+            services.i2c,
+            config->lightSensor.get()->parse(lightSensorAddress),
+            config->lightSensor.get()->measurementFrequency.get(),
+            config->lightSensor.get()->latencyInterval.get());
+
+        auto motor = findMotor(config->motor.get());
+
+        auto door = std::make_shared<ChickenDoorComponent>(
+            name,
+            mqttRoot,
+            services.switches,
+            motor,
+            lightSensor,
+            config->openPin.get(),
+            config->closedPin.get(),
+            config->invertSwitches.get(),
+            config->movementTimeout.get(),
+            services.telemetryPublisher);
+
+        services.telemetryCollector->registerProvider("light", name, [lightSensor](JsonObject& telemetryJson) {
+            telemetryJson["value"] = lightSensor->getCurrentLevel();
         });
-        services.telemetryCollector->registerProvider("door", name, [peripheral](JsonObject& telemetryJson) {
-            peripheral->doorComponent.populateTelemetry(telemetryJson);
+        services.telemetryCollector->registerProvider("door", name, [door](JsonObject& telemetryJson) {
+            door->populateTelemetry(telemetryJson);
         });
-        return peripheral;
+
+        return std::make_shared<ChickenDoor>(name, lightSensor, door);
     }
 
-    std::shared_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ChickenDoorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ChickenDoorDeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& mqttRoot, const PeripheralServices& services) override {
         auto lightSensorType = deviceConfig->lightSensor.get()->type.get();
         try {
             if (lightSensorType == "bh1750") {

@@ -102,12 +102,12 @@ public:
         : PeripheralFactory<ElectricFenceMonitorDeviceConfig, EmptyConfiguration>("electric-fence") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<ElectricFenceMonitorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<ElectricFenceMonitorDeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
         auto monitor = std::make_shared<ElectricFenceMonitor>(name, services.pulseCounterManager, deviceConfig);
         services.telemetryCollector->registerProvider("fence", name, [monitor](JsonObject& telemetryJson) {
             telemetryJson["voltage"] = monitor->getVoltage();
         });
-        return std::make_shared<SimplePeripheral<ElectricFenceMonitor>>(name, monitor);
+        return std::make_shared<SimplePeripheral>(name, monitor);
     }
 };
 

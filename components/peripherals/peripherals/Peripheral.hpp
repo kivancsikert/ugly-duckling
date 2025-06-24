@@ -50,11 +50,10 @@ public:
     virtual void configure(std::shared_ptr<TConfig> /*config*/) = 0;
 };
 
-template <class TEnvironmentSensor>
 class SimplePeripheral
     : public Peripheral<EmptyConfiguration> {
 public:
-    explicit SimplePeripheral(const std::string& name, const std::shared_ptr<TEnvironmentSensor>& component)
+    explicit SimplePeripheral(const std::string& name, const std::shared_ptr<void>& component)
         : Peripheral<EmptyConfiguration>(name)
         , component(component) {
     }
@@ -64,7 +63,7 @@ public:
     }
 
 protected:
-    std::shared_ptr<TEnvironmentSensor> component;
+    const std::shared_ptr<void> component;
 };
 
 // Peripheral factories
@@ -96,7 +95,7 @@ public:
 
     virtual ~PeripheralFactoryBase() = default;
 
-    virtual std::shared_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<FileSystem> fs, const PeripheralServices& services, JsonObject& initConfigJson) = 0;
+    virtual std::shared_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<FileSystem>& fs, const PeripheralServices& services, JsonObject& initConfigJson) = 0;
 
     const std::string factoryType;
     const std::string peripheralType;
@@ -115,7 +114,7 @@ public:
         , deviceConfigArgs(std::forward<TDeviceConfigArgs>(deviceConfigArgs)...) {
     }
 
-    std::shared_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, std::shared_ptr<MqttRoot> mqttRoot, std::shared_ptr<FileSystem> fs, const PeripheralServices& services, JsonObject& initConfigJson) override {
+    std::shared_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonConfig, const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<FileSystem>& fs, const PeripheralServices& services, JsonObject& initConfigJson) override {
         std::shared_ptr<TConfig> config = std::make_shared<TConfig>();
         // Use short prefix because SPIFFS has a 32 character limit
         std::shared_ptr<ConfigurationFile<TConfig>> configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + name, config);
@@ -142,7 +141,7 @@ public:
         return peripheral;
     }
 
-    virtual std::shared_ptr<Peripheral<TConfig>> createPeripheral(const std::string& name, std::shared_ptr<TDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) = 0;
+    virtual std::shared_ptr<Peripheral<TConfig>> createPeripheral(const std::string& name, const std::shared_ptr<TDeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& mqttRoot, const PeripheralServices& services) = 0;
 
 private:
     std::tuple<TDeviceConfigArgs...> deviceConfigArgs;
