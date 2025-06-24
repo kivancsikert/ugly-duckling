@@ -388,10 +388,10 @@ static void startDevice() {
     auto shutdownManager = std::make_shared<ShutdownManager>();
     std::shared_ptr<BatteryManager> batteryManager;
     if (battery != nullptr) {
-        LOGI("Battery configured");
+        LOGD("Battery configured");
         batteryManager = std::make_shared<BatteryManager>(battery, shutdownManager);
     } else {
-        LOGI("No battery configured");
+        LOGD("No battery configured");
     }
 
 #ifdef FARMHUB_DEBUG
