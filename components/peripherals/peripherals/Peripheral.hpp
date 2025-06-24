@@ -13,12 +13,10 @@
 #include <PwmManager.hpp>
 #include <Telemetry.hpp>
 #include <drivers/SwitchManager.hpp>
-#include <mqtt/MqttRoot.hpp>
 #include <utility>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
-using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::peripherals {
 
@@ -27,9 +25,8 @@ namespace farmhub::peripherals {
 class PeripheralBase
     : public Named {
 public:
-    PeripheralBase(const std::string& name, const std::shared_ptr<MqttRoot>& mqttRoot)
-        : Named(name)
-        , mqttRoot(mqttRoot) {
+    explicit PeripheralBase(const std::string& name)
+        : Named(name) {
     }
 
     virtual ~PeripheralBase() = default;
@@ -40,17 +37,14 @@ public:
 
     virtual void shutdown(const ShutdownParameters parameters) {
     }
-
-protected:
-    std::shared_ptr<MqttRoot> mqttRoot;
 };
 
 template <std::derived_from<ConfigurationSection> TConfig>
 class Peripheral
     : public PeripheralBase {
 public:
-    Peripheral(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot)
-        : PeripheralBase(name, mqttRoot) {
+    explicit Peripheral(const std::string& name)
+        : PeripheralBase(name) {
     }
 
     virtual void configure(const std::shared_ptr<TConfig> /*config*/) {

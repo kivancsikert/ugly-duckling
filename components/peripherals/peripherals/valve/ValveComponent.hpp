@@ -9,7 +9,6 @@
 
 #include <ArduinoJson.h>
 
-#include <Component.hpp>
 #include <Concurrent.hpp>
 #include <NvsStore.hpp>
 #include <Task.hpp>
@@ -194,16 +193,18 @@ private:
     PinPtr pin;
 };
 
-class ValveComponent : public Component {
+class ValveComponent
+    : Named {
 public:
     ValveComponent(
         const std::string& name,
         std::unique_ptr<ValveControlStrategy> _strategy,
         const std::shared_ptr<MqttRoot>& mqttRoot,
         const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
-        : Component(name, mqttRoot)
+        : Named(name)
         , nvs(name)
         , strategy(std::move(_strategy))
+        , mqttRoot(mqttRoot)
         , telemetryPublisher(telemetryPublisher) {
 
         LOGI("Creating valve '%s' with strategy %s",
@@ -388,6 +389,7 @@ private:
 
     NvsStore nvs;
     const std::unique_ptr<ValveControlStrategy> strategy;
+    const std::shared_ptr<MqttRoot> mqttRoot;
     const std::shared_ptr<TelemetryPublisher>& telemetryPublisher;
 
     ValveState state = ValveState::NONE;

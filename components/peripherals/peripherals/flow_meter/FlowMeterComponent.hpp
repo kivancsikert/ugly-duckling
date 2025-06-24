@@ -5,7 +5,6 @@
 #include <ArduinoJson.h>
 
 #include <BootClock.hpp>
-#include <Component.hpp>
 #include <Concurrent.hpp>
 #include <PulseCounter.hpp>
 #include <Task.hpp>
@@ -17,18 +16,15 @@ using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::peripherals::flow_meter {
 
-class FlowMeterComponent
-    : public Component {
+class FlowMeterComponent {
 public:
     FlowMeterComponent(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
         const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
         const InternalPinPtr& pin,
         double qFactor,
         milliseconds measurementFrequency)
-        : Component(name, std::move(mqttRoot))
-        , qFactor(qFactor) {
+        : qFactor(qFactor) {
 
         LOGI("Initializing flow meter on pin %s with Q = %.2f",
             pin->getName().c_str(), qFactor);

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Component.hpp>
 #include <Configuration.hpp>
 #include <Pin.hpp>
 #include <utility>
@@ -11,17 +10,14 @@ class Xl9535DeviceConfig
     : public I2CDeviceConfig {
 };
 
-class Xl9535Component
-    : public Component {
+class Xl9535Component final {
 
 public:
     Xl9535Component(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
         const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config)
-        : Component(name, std::move(mqttRoot))
-        , device(i2c->createDevice(name, config)) {
+        : device(i2c->createDevice(name, config)) {
         LOGI("Initializing XL9535 multiplexer with %s",
             config.toString().c_str());
     }
@@ -109,9 +105,9 @@ private:
 class Xl9535
     : public Peripheral<EmptyConfiguration> {
 public:
-    Xl9535(const std::string& name, const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<I2CManager>& i2c, const I2CConfig& config)
-        : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , component(name, mqttRoot, i2c, config) {
+    Xl9535(const std::string& name, const std::shared_ptr<I2CManager>& i2c, const I2CConfig& config)
+        : Peripheral<EmptyConfiguration>(name)
+        , component(name, i2c, config) {
 
         // Create a pin for each bit in the pins mask
         for (int i = 0; i < 16; i++) {
@@ -134,8 +130,8 @@ public:
         : PeripheralFactory<Xl9535DeviceConfig, EmptyConfiguration>("multiplexer:xl9535") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Xl9535DeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
-        return std::make_shared<Xl9535>(name, mqttRoot, services.i2c, deviceConfig->parse());
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Xl9535DeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
+        return std::make_shared<Xl9535>(name, services.i2c, deviceConfig->parse());
     }
 };
 

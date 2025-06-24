@@ -2,10 +2,8 @@
 
 #include <memory>
 
-#include <ds18x20.h>
-
-#include <Component.hpp>
 #include <Configuration.hpp>
+#include <ds18x20.h>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/SinglePinDeviceConfig.hpp>
 #include <utility>
@@ -21,15 +19,12 @@ namespace farmhub::peripherals::environment {
  *
  * Note: Needs a 4.7k pull-up resistor between the data and power lines.
  */
-class Ds18B20SoilSensorComponent final
-    : public Component {
+class Ds18B20SoilSensorComponent final {
 public:
     Ds18B20SoilSensorComponent(
-        const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
+        const std::string&  /*name*/,
         const InternalPinPtr& pin)
-        : Component(name, std::move(mqttRoot))
-        , pin(pin) {
+        : pin(pin) {
 
         LOGI("Initializing DS18B20 soil temperature sensor on pin %s",
             pin->getName().c_str());
@@ -68,9 +63,9 @@ class Ds18B20SoilSensorFactory;
 class Ds18B20SoilSensor
     : public Peripheral<EmptyConfiguration> {
 public:
-    Ds18B20SoilSensor(const std::string& name, const std::shared_ptr<MqttRoot>& mqttRoot, const InternalPinPtr& pin)
-        : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , sensor(name, mqttRoot, pin) {
+    Ds18B20SoilSensor(const std::string& name, const InternalPinPtr& pin)
+        : Peripheral<EmptyConfiguration>(name)
+        , sensor(name, pin) {
     }
 
 private:
@@ -85,8 +80,8 @@ public:
         : PeripheralFactory<SinglePinDeviceConfig, EmptyConfiguration>("environment:ds18b20", "environment") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SinglePinDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
-        auto peripheral = std::make_shared<Ds18B20SoilSensor>(name, mqttRoot, deviceConfig->pin.get());
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SinglePinDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
+        auto peripheral = std::make_shared<Ds18B20SoilSensor>(name, deviceConfig->pin.get());
         services.telemetryCollector->registerProvider("temperature", name, [peripheral](JsonObject& telemetryJson) {
             telemetryJson["value"] = peripheral->sensor.getTemperature();
         });

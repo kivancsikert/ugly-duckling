@@ -3,7 +3,6 @@
 #include <chrono>
 #include <memory>
 
-#include <Component.hpp>
 #include <Configuration.hpp>
 #include <I2CManager.hpp>
 #include <MovingAverage.hpp>
@@ -21,14 +20,13 @@ using namespace farmhub::peripherals;
 namespace farmhub::peripherals::light_sensor {
 
 class LightSensorComponent
-    : public Component {
+    : Named {
 public:
     LightSensorComponent(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : Component(name, std::move(mqttRoot))
+        : Named(name)
         , measurementFrequency(measurementFrequency)
         , level(latencyInterval.count() / measurementFrequency.count()) {
     }

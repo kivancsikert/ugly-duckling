@@ -16,12 +16,8 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::environment {
 
-class EnvironmentComponent : public Component {
+class EnvironmentComponent {
 public:
-    EnvironmentComponent(const std::string& name, std::shared_ptr<MqttRoot> mqttRoot)
-        : Component(name, std::move(mqttRoot)) {
-    }
-
     virtual ~EnvironmentComponent() = default;
 
     virtual double getTemperature() = 0;
@@ -31,18 +27,17 @@ public:
 template <std::derived_from<EnvironmentComponent> TComponent>
 class I2CEnvironmentFactory;
 
-template <std::derived_from<Component> TComponent>
+template <std::derived_from<EnvironmentComponent> TComponent>
 class Environment
     : public Peripheral<EmptyConfiguration> {
 public:
     Environment(
         const std::string& name,
         const std::string& sensorType,
-        std::shared_ptr<MqttRoot> mqttRoot,
         std::shared_ptr<I2CManager> i2c,
         I2CConfig config)
-        : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , component(name, sensorType, mqttRoot, i2c, config) {
+        : Peripheral<EmptyConfiguration>(name)
+        , component(sensorType, i2c, config) {
     }
 
 private:
@@ -60,11 +55,11 @@ public:
         , defaultAddress(defaultAddress) {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<I2CDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<I2CDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
         auto i2cConfig = deviceConfig->parse(defaultAddress);
         LOGI("Creating %s sensor %s with %s",
             sensorType.c_str(), name.c_str(), i2cConfig.toString().c_str());
-        auto peripheral = std::make_shared<Environment<TComponent>>(name, sensorType, mqttRoot, services.i2c, i2cConfig);
+        auto peripheral = std::make_shared<Environment<TComponent>>(name, sensorType, services.i2c, i2cConfig);
         services.telemetryCollector->registerProvider("temperature", name, [peripheral](JsonObject& telemetryJson) {
             telemetryJson["value"] = peripheral->component.getTemperature();
         });
