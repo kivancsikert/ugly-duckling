@@ -22,8 +22,7 @@ namespace farmhub::peripherals::environment {
  * Note: Needs a 4.7k pull-up resistor between the data and power lines.
  */
 class Ds18B20SoilSensorComponent final
-    : public Component,
-      public TelemetryProvider {
+    : public Component {
 public:
     Ds18B20SoilSensorComponent(
         const std::string& name,
@@ -53,17 +52,18 @@ public:
         }
     }
 
-    void populateTelemetry(JsonObject& json) override {
-        // TODO Get temperature in a task to avoid delaying reporting
+    double getTemperature() {
         float temperature;
         ESP_ERROR_THROW(ds18x20_measure_and_read_multi(pin->getGpio(), &sensor, 1, &temperature));
-        json["temperature"] = temperature;
+        return temperature;
     }
 
 private:
     const InternalPinPtr pin;
     onewire_addr_t sensor {};
 };
+
+class Ds18B20SoilSensorFactory;
 
 class Ds18B20SoilSensor
     : public Peripheral<EmptyConfiguration> {
@@ -73,12 +73,9 @@ public:
         , sensor(name, mqttRoot, pin) {
     }
 
-    void populateTelemetry(JsonObject& telemetryJson) override {
-        sensor.populateTelemetry(telemetryJson);
-    }
-
 private:
     Ds18B20SoilSensorComponent sensor;
+    friend class Ds18B20SoilSensorFactory;
 };
 
 class Ds18B20SoilSensorFactory
@@ -88,8 +85,12 @@ public:
         : PeripheralFactory<SinglePinDeviceConfig, EmptyConfiguration>("environment:ds18b20", "environment") {
     }
 
-    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SinglePinDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices&  /*services*/) override {
-        return std::make_unique<Ds18B20SoilSensor>(name, mqttRoot, deviceConfig->pin.get());
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SinglePinDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+        auto peripheral = std::make_shared<Ds18B20SoilSensor>(name, mqttRoot, deviceConfig->pin.get());
+        services.telemetryCollector->registerProvider("temperature", name, [peripheral](JsonObject& telemetryJson) {
+            telemetryJson["value"] = peripheral->sensor.getTemperature();
+        });
+        return peripheral;
     }
 };
 

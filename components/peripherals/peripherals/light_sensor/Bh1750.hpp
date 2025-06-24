@@ -67,6 +67,8 @@ private:
     i2c_dev_t sensor {};
 };
 
+class Bh1750Factory;
+
 class Bh1750
     : public Peripheral<EmptyConfiguration> {
 
@@ -82,12 +84,9 @@ public:
         , component(name, mqttRoot, i2c, config, measurementFrequency, latencyInterval) {
     }
 
-    void populateTelemetry(JsonObject& telemetryJson) override {
-        component.populateTelemetry(telemetryJson);
-    }
-
 private:
     Bh1750Component component;
+    friend class Bh1750Factory;
 };
 
 class Bh1750Factory
@@ -97,9 +96,13 @@ public:
         : PeripheralFactory<Bh1750DeviceConfig, EmptyConfiguration>("light-sensor:bh1750", "light-sensor") {
     }
 
-    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Bh1750DeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Bh1750DeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         I2CConfig i2cConfig = deviceConfig->parse(0x23);
-        return std::make_unique<Bh1750>(name, mqttRoot, services.i2c, i2cConfig, deviceConfig->measurementFrequency.get(), deviceConfig->latencyInterval.get());
+        auto peripheral = std::make_shared<Bh1750>(name, mqttRoot, services.i2c, i2cConfig, deviceConfig->measurementFrequency.get(), deviceConfig->latencyInterval.get());
+        services.telemetryCollector->registerProvider("light", name, [peripheral](JsonObject& telemetryJson) {
+            telemetryJson["value"] = peripheral->component.getCurrentLevel();
+        });
+        return peripheral;
     }
 };
 

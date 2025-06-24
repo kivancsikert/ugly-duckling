@@ -18,8 +18,7 @@ using namespace farmhub::kernel::mqtt;
 namespace farmhub::peripherals::flow_meter {
 
 class FlowMeterComponent
-    : public Component,
-      public TelemetryProvider {
+    : public Component {
 public:
     FlowMeterComponent(
         const std::string& name,
@@ -62,9 +61,7 @@ public:
         });
     }
 
-    ~FlowMeterComponent() override = default;
-
-    void populateTelemetry(JsonObject& json) override {
+    void populateTelemetry(JsonObject& json) {
         Lock lock(updateMutex);
         populateTelemetryUnderLock(json);
     }
@@ -78,7 +75,7 @@ private:
         auto duration = duration_cast<microseconds>(lastMeasurement - lastPublished);
         if (duration > microseconds::zero()) {
             // Flow rate is measured in in liters / min
-            json["flowRate"] = currentVolume / static_cast<double>(duration.count()) * 1000 * 1000 * 60;
+            json["rate"] = currentVolume / static_cast<double>(duration.count()) * 1000 * 1000 * 60;
         }
         lastPublished = lastMeasurement;
     }

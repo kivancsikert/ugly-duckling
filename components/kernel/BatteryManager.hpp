@@ -28,7 +28,7 @@ static constexpr microseconds LOW_POWER_SLEEP_CHECK_INTERVAL = 10s;
     abort();
 }
 
-class BatteryManager final : public TelemetryProvider {
+class BatteryManager final {
 public:
     BatteryManager(
         std::shared_ptr<BatteryDriver> battery,
@@ -42,13 +42,6 @@ public:
 
     double getVoltage() {
         return batteryVoltage.getAverage();
-    }
-
-    void populateTelemetry(JsonObject& json) override {
-        auto voltage = getVoltage();
-        if (voltage > 0) {
-            json["voltage"] = voltage;
-        }
     }
 
 private:

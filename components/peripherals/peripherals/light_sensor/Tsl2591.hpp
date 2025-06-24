@@ -25,6 +25,8 @@ namespace farmhub::peripherals::light_sensor {
 
 static constexpr uint8_t TSL2591_ADDR = 0x29;
 
+class Tsl2591Factory;
+
 class Tsl2591DeviceConfig
     : public I2CDeviceConfig {
 public:
@@ -91,12 +93,9 @@ public:
         , component(name, mqttRoot, i2c, config, measurementFrequency, latencyInterval) {
     }
 
-    void populateTelemetry(JsonObject& telemetryJson) override {
-        component.populateTelemetry(telemetryJson);
-    }
-
 private:
     Tsl2591Component component;
+    friend class Tsl2591Factory;
 };
 
 class Tsl2591Factory
@@ -106,9 +105,13 @@ public:
         : PeripheralFactory<Tsl2591DeviceConfig, EmptyConfiguration>("light-sensor:tsl2591", "light-sensor") {
     }
 
-    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Tsl2591DeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Tsl2591DeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         I2CConfig i2cConfig = deviceConfig->parse(TSL2591_ADDR);
-        return std::make_unique<Tsl2591>(name, mqttRoot, services.i2c, i2cConfig, deviceConfig->measurementFrequency.get(), deviceConfig->latencyInterval.get());
+        auto peripheral = std::make_shared<Tsl2591>(name, mqttRoot, services.i2c, i2cConfig, deviceConfig->measurementFrequency.get(), deviceConfig->latencyInterval.get());
+        services.telemetryCollector->registerProvider("light", name, [peripheral](JsonObject& telemetryJson) {
+            telemetryJson["value"] = peripheral->component.getCurrentLevel();
+        });
+        return peripheral;
     }
 };
 

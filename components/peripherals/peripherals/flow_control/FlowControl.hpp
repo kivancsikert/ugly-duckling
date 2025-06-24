@@ -24,6 +24,8 @@ class FlowControlConfig
     : public ValveConfig {
 };
 
+class FlowControlFactory;
+
 class FlowControl : public Peripheral<FlowControlConfig> {
 public:
     FlowControl(
@@ -45,11 +47,6 @@ public:
         valve.setSchedules(config->schedule.get());
     }
 
-    void populateTelemetry(JsonObject& telemetryJson) override {
-        valve.populateTelemetry(telemetryJson);
-        flowMeter.populateTelemetry(telemetryJson);
-    }
-
     void shutdown(const ShutdownParameters /*parameters*/) override {
         valve.closeBeforeShutdown();
     }
@@ -57,6 +54,8 @@ public:
 private:
     ValveComponent valve;
     FlowMeterComponent flowMeter;
+
+    friend class FlowControlFactory;
 };
 
 class FlowControlDeviceConfig
@@ -82,11 +81,11 @@ public:
         , Motorized(motors) {
     }
 
-    std::unique_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const std::shared_ptr<FlowControlDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const std::shared_ptr<FlowControlDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         auto strategy = deviceConfig->valve.get()->createValveControlStrategy(this);
 
         auto flowMeterConfig = deviceConfig->flowMeter.get();
-        return std::make_unique<FlowControl>(
+        auto peripheral = std::make_shared<FlowControl>(
             name,
             mqttRoot,
             services.pulseCounterManager,
@@ -96,6 +95,15 @@ public:
             flowMeterConfig->pin.get(),
             flowMeterConfig->qFactor.get(),
             flowMeterConfig->measurementFrequency.get());
+
+        services.telemetryCollector->registerProvider("flow", name, [peripheral](JsonObject& telemetry) {
+            peripheral->flowMeter.populateTelemetry(telemetry);
+        });
+        services.telemetryCollector->registerProvider("valve", name, [peripheral](JsonObject& telemetry) {
+            peripheral->valve.populateTelemetry(telemetry);
+        });
+
+        return peripheral;
     }
 };
 

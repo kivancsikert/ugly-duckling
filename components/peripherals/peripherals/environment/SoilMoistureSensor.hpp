@@ -3,7 +3,6 @@
 #include <memory>
 
 #include <Component.hpp>
-#include <Telemetry.hpp>
 
 #include <peripherals/Peripheral.hpp>
 #include <utility>
@@ -23,8 +22,7 @@ public:
 };
 
 class SoilMoistureSensorComponent final
-    : public Component,
-      public TelemetryProvider {
+    : public Component {
 public:
     SoilMoistureSensorComponent(
         const std::string& name,
@@ -39,11 +37,11 @@ public:
             pin.getName().c_str(), airValue, waterValue);
     }
 
-    void populateTelemetry(JsonObject& json) override {
+    double getMoisture() {
         std::optional<uint16_t> soilMoistureValue = pin.analogRead();
         if (!soilMoistureValue.has_value()) {
             LOGD("Failed to read soil moisture value");
-            return;
+            return std::numeric_limits<double>::quiet_NaN();
         }
         LOGV("Soil moisture value: %d",
             soilMoistureValue.value());
@@ -53,7 +51,7 @@ public:
         const double delta = soilMoistureValue.value() - airValue;
         double moisture = (delta * rise) / run;
 
-        json["moisture"] = moisture;
+        return moisture;
     }
 
 private:
@@ -61,6 +59,8 @@ private:
     const int waterValue;
     AnalogPin pin;
 };
+
+class SoilMoistureSensorFactory;
 
 class SoilMoistureSensor
     : public Peripheral<EmptyConfiguration> {
@@ -70,12 +70,9 @@ public:
         , sensor(name, mqttRoot, config) {
     }
 
-    void populateTelemetry(JsonObject& telemetryJson) override {
-        sensor.populateTelemetry(telemetryJson);
-    }
-
 private:
     SoilMoistureSensorComponent sensor;
+    friend class SoilMoistureSensorFactory;
 };
 
 class SoilMoistureSensorFactory
@@ -85,8 +82,12 @@ public:
         : PeripheralFactory<SoilMoistureSensorDeviceConfig, EmptyConfiguration>("environment:soil-moisture", "environment") {
     }
 
-    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SoilMoistureSensorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices&  /*services*/) override {
-        return std::make_unique<SoilMoistureSensor>(name, mqttRoot, deviceConfig);
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SoilMoistureSensorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices&  services) override {
+        auto peripheral = std::make_shared<SoilMoistureSensor>(name, mqttRoot, deviceConfig);
+        services.telemetryCollector->registerProvider("moisture", name, [peripheral](JsonObject& telemetryJson) {
+            telemetryJson["value"] = peripheral->sensor.getMoisture();
+        });
+        return peripheral;
     }
 };
 

@@ -22,6 +22,8 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::valve {
 
+class ValveFactory;
+
 class Valve
     : public Peripheral<ValveConfig> {
 public:
@@ -39,16 +41,13 @@ public:
         valve.setSchedules(config->schedule.get());
     }
 
-    void populateTelemetry(JsonObject& telemetry) override {
-        valve.populateTelemetry(telemetry);
-    }
-
     void shutdown(const ShutdownParameters /*parameters*/) override {
         valve.closeBeforeShutdown();
     }
 
 private:
     ValveComponent valve;
+    friend class ValveFactory;
 };
 
 class ValveFactory
@@ -62,9 +61,13 @@ public:
         , Motorized(motors) {
     }
 
-    std::unique_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ValveDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& /*services*/) override {
+    std::shared_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ValveDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         auto strategy = deviceConfig->createValveControlStrategy(this);
-        return std::make_unique<Valve>(name, std::move(strategy), mqttRoot);
+        auto peripheral = std::make_shared<Valve>(name, std::move(strategy), mqttRoot);
+        services.telemetryCollector->registerProvider("valve", name, [peripheral](JsonObject& telemetry) {
+            peripheral->valve.populateTelemetry(telemetry);
+        });
+        return peripheral;
     }
 };
 

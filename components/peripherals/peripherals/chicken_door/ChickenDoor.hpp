@@ -114,8 +114,7 @@ public:
 
 template <std::derived_from<LightSensorComponent> TLightSensorComponent>
 class ChickenDoorComponent final
-    : public Component,
-      public TelemetryProvider {
+    : public Component {
 public:
     ChickenDoorComponent(
         const std::string& name,
@@ -176,7 +175,7 @@ public:
         });
     }
 
-    void populateTelemetry(JsonObject& telemetry) override {
+    void populateTelemetry(JsonObject& telemetry) {
         Lock lock(stateMutex);
         telemetry["state"] = lastState;
         telemetry["targetState"] = lastTargetState;
@@ -380,6 +379,8 @@ private:
     std::optional<PowerManagementLockGuard> sleepLock;
 };
 
+class ChickenDoorFactory;
+
 template <std::derived_from<LightSensorComponent> TLightSensorComponent>
 class ChickenDoor
     : public Peripheral<ChickenDoorConfig> {
@@ -415,11 +416,6 @@ public:
               }) {
     }
 
-    void populateTelemetry(JsonObject& telemetryJson) override {
-        lightSensor.populateTelemetry(telemetryJson);
-        doorComponent.populateTelemetry(telemetryJson);
-    }
-
     void configure(const std::shared_ptr<ChickenDoorConfig> config) override {
         doorComponent.configure(config);
     }
@@ -427,6 +423,7 @@ public:
 private:
     TLightSensorComponent lightSensor;
     ChickenDoorComponent<TLightSensorComponent> doorComponent;
+    friend class ChickenDoorFactory;
 };
 
 class NoLightSensorComponent final
@@ -458,15 +455,27 @@ public:
         , Motorized(motors) {
     }
 
-    std::unique_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ChickenDoorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    template <std::derived_from<LightSensorComponent> TLightSensorComponent>
+    std::shared_ptr<Peripheral<ChickenDoorConfig>> createDoor(const std::string& name, const std::shared_ptr<ChickenDoorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services, uint8_t lightSensorAddress) {
         std::shared_ptr<PwmMotorDriver> motor = findMotor(deviceConfig->motor.get());
+        auto peripheral = std::make_shared<ChickenDoor<TLightSensorComponent>>(name, mqttRoot, services.i2c, lightSensorAddress, services.switches, motor, deviceConfig);
+        services.telemetryCollector->registerProvider("light", name, [peripheral](JsonObject& telemetryJson) {
+            telemetryJson["value"] = peripheral->lightSensor.getCurrentLevel();
+        });
+        services.telemetryCollector->registerProvider("door", name, [peripheral](JsonObject& telemetryJson) {
+            peripheral->doorComponent.populateTelemetry(telemetryJson);
+        });
+        return peripheral;
+    }
+
+    std::shared_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ChickenDoorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
         auto lightSensorType = deviceConfig->lightSensor.get()->type.get();
         try {
             if (lightSensorType == "bh1750") {
-                return std::make_unique<ChickenDoor<Bh1750Component>>(name, mqttRoot, services.i2c, 0x23, services.switches, motor, deviceConfig);
+                return createDoor<Bh1750Component>(name, deviceConfig, mqttRoot, services, 0x23);
             }
             if (lightSensorType == "tsl2591") {
-                return std::make_unique<ChickenDoor<Tsl2591Component>>(name, mqttRoot, services.i2c, TSL2591_ADDR, services.switches, motor, deviceConfig);
+                return createDoor<Tsl2591Component>(name, deviceConfig, mqttRoot, services, TSL2591_ADDR);
             }
             throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
 
@@ -474,7 +483,7 @@ public:
             LOGE("Could not initialize light sensor because %s", e.what());
             LOGW("Initializing without a light sensor");
             // TODO Do not pass I2C parameters to NoLightSensorComponent
-            return std::make_unique<ChickenDoor<NoLightSensorComponent>>(name, mqttRoot, services.i2c, 0x00, services.switches, motor, deviceConfig);
+            return createDoor<NoLightSensorComponent>(name, deviceConfig, mqttRoot, services, 0x00);
         }
     }
 };

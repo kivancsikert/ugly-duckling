@@ -1,12 +1,13 @@
 #pragma once
 
-#include <map>
+#include <list>
 #include <memory>
 
 #include <ArduinoJson.h>
 
 #include <BootClock.hpp>
 #include <Task.hpp>
+#include <utility>
 
 namespace farmhub::kernel {
 
@@ -21,29 +22,35 @@ class TelemetryCollector {
 public:
     void collect(JsonObject& root) {
         root["uptime"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
-        for (auto& entry : providers) {
-            const auto& name = entry.first;
-            auto& provider = entry.second;
-            JsonObject telemetryRoot = root[name].to<JsonObject>();
-            provider->populateTelemetry(telemetryRoot);
+        root["timestamp"] = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+        auto entries = root["entries"].to<JsonArray>();
+        for (auto& provider : providers) {
+            auto entry = entries.add<JsonObject>();
+            entry["type"] = provider.type;
+            if (!provider.name.empty()) {
+                entry["name"] = provider.name;
+            }
+            auto data = entry["data"].to<JsonObject>();
+            provider.populate(data);
         }
     }
 
-    void registerProvider(const std::string& name, std::shared_ptr<TelemetryProvider> provider) {
-        LOGV("Registering telemetry provider %s", name.c_str());
-        // TODO Check for duplicates
-        providers.emplace(name, provider);
+    void registerProvider(
+        const std::string& type,
+        const std::string& name,
+        std::function<void(JsonObject&)> populate) {
+        LOGV("Registering telemetry provider %s of type %s", name.c_str(), type.c_str());
+        providers.push_back({ name, type, std::move(populate) });
     }
 
 private:
-    std::map<std::string, std::shared_ptr<TelemetryProvider>> providers;
-};
+    struct Provider {
+        std::string name;
+        std::string type;
+        std::function<void(JsonObject&)> populate;
+    };
 
-class TelemetryPublisher {
-public:
-    virtual ~TelemetryPublisher() = default;
-
-    virtual void publishTelemetry() = 0;
+    std::list<Provider> providers;
 };
 
 }    // namespace farmhub::kernel

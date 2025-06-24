@@ -17,6 +17,8 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::fence {
 
+class ElectricFenceMonitorFactory;
+
 struct FencePinConfig {
     InternalPinPtr pin;
     uint16_t voltage {};
@@ -110,12 +112,9 @@ public:
         , monitor(name, mqttRoot, pulseCounterManager, config) {
     }
 
-    void populateTelemetry(JsonObject& telemetryJson) override {
-        monitor.populateTelemetry(telemetryJson);
-    }
-
 private:
     ElectricFenceMonitorComponent monitor;
+    friend class ElectricFenceMonitorFactory;
 };
 
 class ElectricFenceMonitorFactory
@@ -125,8 +124,12 @@ public:
         : PeripheralFactory<ElectricFenceMonitorDeviceConfig, EmptyConfiguration>("electric-fence") {
     }
 
-    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<ElectricFenceMonitorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
-        return std::make_unique<ElectricFenceMonitor>(name, mqttRoot, services.pulseCounterManager, deviceConfig);
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<ElectricFenceMonitorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+        auto peripheral = std::make_shared<ElectricFenceMonitor>(name, mqttRoot, services.pulseCounterManager, deviceConfig);
+        services.telemetryCollector->registerProvider("fence", name, [peripheral](JsonObject& telemetryJson) {
+            peripheral->monitor.populateTelemetry(telemetryJson);
+        });
+        return peripheral;
     }
 };
 
