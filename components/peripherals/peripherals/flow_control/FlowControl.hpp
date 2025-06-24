@@ -37,9 +37,9 @@ public:
         const InternalPinPtr& pin,
         double qFactor,
         milliseconds measurementFrequency)
-        : Peripheral<FlowControlConfig>(name, mqttRoot)
+        : Peripheral<FlowControlConfig>(name)
         , valve(name, std::move(strategy), mqttRoot, telemetryPublisher)
-        , flowMeter(name, mqttRoot, pulseCounterManager, pin, qFactor, measurementFrequency) {
+        , flowMeter(name, pulseCounterManager, pin, qFactor, measurementFrequency) {
     }
 
     void configure(const std::shared_ptr<FlowControlConfig> config) override {

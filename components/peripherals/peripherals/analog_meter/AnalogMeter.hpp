@@ -18,14 +18,13 @@ class AnalogMeter
 public:
     AnalogMeter(
         const std::string& name,
-        const std::shared_ptr<MqttRoot>& mqttRoot,
         const InternalPinPtr& pin,
         double offset,
         double multiplier,
         milliseconds measurementFrequency,
         std::size_t windowSize)
-        : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , meter(name, mqttRoot, pin, offset, multiplier, measurementFrequency, windowSize) {
+        : Peripheral<EmptyConfiguration>(name)
+        , meter(name, pin, offset, multiplier, measurementFrequency, windowSize) {
         };
 
 
@@ -52,10 +51,9 @@ public:
         : PeripheralFactory<AnalogMeterDeviceConfig, EmptyConfiguration>("analog-meter") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<AnalogMeterDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<AnalogMeterDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
         auto peripheral = std::make_shared<AnalogMeter>(
             name,
-            mqttRoot,
             deviceConfig->pin.get(),
             deviceConfig->offset.get(),
             deviceConfig->multiplier.get(),

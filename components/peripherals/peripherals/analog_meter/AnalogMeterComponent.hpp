@@ -3,7 +3,6 @@
 #include <chrono>
 
 #include <BootClock.hpp>
-#include <Component.hpp>
 #include <Concurrent.hpp>
 #include <MovingAverage.hpp>
 #include <Pin.hpp>
@@ -18,17 +17,16 @@ using namespace farmhub::kernel::mqtt;
 namespace farmhub::peripherals::analog_meter {
 
 class AnalogMeterComponent final
-    : public Component {
+    : Named {
 public:
     AnalogMeterComponent(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
         const InternalPinPtr& pin,
         double offset,
         double multiplier,
         milliseconds measurementFrequency,
         std::size_t windowSize)
-        : Component(name, std::move(mqttRoot))
+        : Named(name)
         , pin(pin)
         , value(windowSize) {
 

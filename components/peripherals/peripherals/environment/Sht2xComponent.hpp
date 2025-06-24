@@ -5,7 +5,6 @@
 
 #include <si7021.h>
 
-#include <Component.hpp>
 #include <I2CManager.hpp>
 
 #include <peripherals/I2CConfig.hpp>
@@ -25,13 +24,10 @@ class Sht2xComponent final
     : public EnvironmentComponent {
 public:
     Sht2xComponent(
-        const std::string& name,
         const std::string& sensorType,
-        std::shared_ptr<MqttRoot> mqttRoot,
         const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config)
-        : EnvironmentComponent(name, std::move(mqttRoot))
-        , bus(i2c->getBusFor(config)) {
+        : bus(i2c->getBusFor(config)) {
 
         // TODO Add commands to soft/hard reset the sensor
         // TODO Add configuration for fast / slow measurement

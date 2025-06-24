@@ -32,7 +32,7 @@ public:
         std::unique_ptr<ValveControlStrategy> strategy,
         const std::shared_ptr<MqttRoot>& mqttRoot,
         const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
-        : Peripheral<ValveConfig>(name, mqttRoot)
+        : Peripheral<ValveConfig>(name)
         , valve(name, std::move(strategy), mqttRoot, telemetryPublisher) {
     }
 

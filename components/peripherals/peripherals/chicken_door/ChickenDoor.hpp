@@ -7,7 +7,6 @@
 #include <utility>
 #include <variant>
 
-#include <Component.hpp>
 #include <Concurrent.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>
@@ -114,11 +113,11 @@ public:
 
 template <std::derived_from<LightSensorComponent> TLightSensorComponent>
 class ChickenDoorComponent final
-    : public Component {
+    : Named {
 public:
     ChickenDoorComponent(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
+        const std::shared_ptr<MqttRoot>& mqttRoot,
         std::shared_ptr<SwitchManager> switches,
         const std::shared_ptr<PwmMotorDriver>& motor,
         TLightSensorComponent& lightSensor,
@@ -127,7 +126,8 @@ public:
         bool invertSwitches,
         ticks movementTimeout,
         std::shared_ptr<TelemetryPublisher> telemetryPublisher)
-        : Component(name, mqttRoot)
+        : Named(name)
+        , mqttRoot(mqttRoot)
         , motor(motor)
         , lightSensor(lightSensor)
         , openSwitch(switches->registerHandler(
@@ -343,6 +343,7 @@ private:
             : currentState;
     }
 
+    const std::shared_ptr<MqttRoot> mqttRoot;
     const std::shared_ptr<PwmMotorDriver> motor;
     TLightSensorComponent& lightSensor;
 
@@ -394,10 +395,9 @@ public:
         const std::shared_ptr<TelemetryPublisher>& telemetryPublisher,
         const std::shared_ptr<PwmMotorDriver> motor,
         const std::shared_ptr<ChickenDoorDeviceConfig> config)
-        : Peripheral<ChickenDoorConfig>(name, mqttRoot)
+        : Peripheral<ChickenDoorConfig>(name)
         , lightSensor(
               name + ":light",
-              mqttRoot,
               i2c,
               config->lightSensor.get()->parse(lightSensorAddress),
               config->lightSensor.get()->measurementFrequency.get(),
@@ -430,12 +430,11 @@ class NoLightSensorComponent final
 public:
     NoLightSensorComponent(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
         const std::shared_ptr<I2CManager>& /*i2c*/,
         const I2CConfig& /*config*/,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : LightSensorComponent(name, std::move(mqttRoot), measurementFrequency, latencyInterval) {
+        : LightSensorComponent(name, measurementFrequency, latencyInterval) {
         runLoop();
     }
 

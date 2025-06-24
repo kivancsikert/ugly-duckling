@@ -3,7 +3,6 @@
 #include <chrono>
 #include <list>
 
-#include <Component.hpp>
 #include <Concurrent.hpp>
 #include <PulseCounter.hpp>
 #include <Telemetry.hpp>
@@ -41,15 +40,12 @@ void convertFromJson(JsonVariantConst src, FencePinConfig& dst) {
     dst.voltage = src["voltage"];
 }
 
-class ElectricFenceMonitorComponent final
-    : public Component {
+class ElectricFenceMonitorComponent final {
 public:
     ElectricFenceMonitorComponent(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
         const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
-        const std::shared_ptr<ElectricFenceMonitorDeviceConfig>& config)
-        : Component(name, std::move(mqttRoot)) {
+        const std::shared_ptr<ElectricFenceMonitorDeviceConfig>& config) {
 
         std::string pinsDescription;
         for (const auto& pinConfig : config->pins.get()) {
@@ -104,11 +100,10 @@ class ElectricFenceMonitor
 public:
     ElectricFenceMonitor(
         const std::string& name,
-        const std::shared_ptr<MqttRoot>& mqttRoot,
         const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
         const std::shared_ptr<ElectricFenceMonitorDeviceConfig>& config)
-        : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , monitor(name, mqttRoot, pulseCounterManager, config) {
+        : Peripheral<EmptyConfiguration>(name)
+        , monitor(name, pulseCounterManager, config) {
     }
 
 private:
@@ -123,8 +118,8 @@ public:
         : PeripheralFactory<ElectricFenceMonitorDeviceConfig, EmptyConfiguration>("electric-fence") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<ElectricFenceMonitorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
-        auto peripheral = std::make_shared<ElectricFenceMonitor>(name, mqttRoot, services.pulseCounterManager, deviceConfig);
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<ElectricFenceMonitorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
+        auto peripheral = std::make_shared<ElectricFenceMonitor>(name, services.pulseCounterManager, deviceConfig);
         services.telemetryCollector->registerProvider("fence", name, [peripheral](JsonObject& telemetryJson) {
             telemetryJson["voltage"] = peripheral->monitor.getVoltage();
         });

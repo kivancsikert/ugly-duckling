@@ -22,13 +22,12 @@ class FlowMeter
 public:
     FlowMeter(
         const std::string& name,
-        const std::shared_ptr<MqttRoot>& mqttRoot,
         const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
         const InternalPinPtr& pin,
         double qFactor,
         milliseconds measurementFrequency)
-        : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , flowMeter(name, mqttRoot, pulseCounterManager, pin, qFactor, measurementFrequency) {
+        : Peripheral<EmptyConfiguration>(name)
+        , flowMeter(name, pulseCounterManager, pin, qFactor, measurementFrequency) {
     }
 
 private:
@@ -43,8 +42,8 @@ public:
         : PeripheralFactory<FlowMeterDeviceConfig, EmptyConfiguration>("flow-meter") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<FlowMeterDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
-        auto peripheral = std::make_shared<FlowMeter>(name, mqttRoot, services.pulseCounterManager, deviceConfig->pin.get(), deviceConfig->qFactor.get(), deviceConfig->measurementFrequency.get());
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<FlowMeterDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
+        auto peripheral = std::make_shared<FlowMeter>(name, services.pulseCounterManager, deviceConfig->pin.get(), deviceConfig->qFactor.get(), deviceConfig->measurementFrequency.get());
         services.telemetryCollector->registerProvider("flow", name, [peripheral](JsonObject& telemetry) {
             peripheral->flowMeter.populateTelemetry(telemetry);
         });

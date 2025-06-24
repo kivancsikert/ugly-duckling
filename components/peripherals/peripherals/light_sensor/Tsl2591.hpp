@@ -5,7 +5,6 @@
 
 #include <tsl2591.h>
 
-#include <Component.hpp>
 #include <Configuration.hpp>
 #include <I2CManager.hpp>
 #include <Telemetry.hpp>
@@ -39,12 +38,11 @@ class Tsl2591Component final
 public:
     Tsl2591Component(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
         const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : LightSensorComponent(name, std::move(mqttRoot), measurementFrequency, latencyInterval)
+        : LightSensorComponent(name, measurementFrequency, latencyInterval)
         , bus(i2c->getBusFor(config)) {
 
         LOGI("Initializing TSL2591 light sensor with %s",
@@ -84,13 +82,12 @@ class Tsl2591
 public:
     Tsl2591(
         const std::string& name,
-        const std::shared_ptr<MqttRoot>& mqttRoot,
         const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , component(name, mqttRoot, i2c, config, measurementFrequency, latencyInterval) {
+        : Peripheral<EmptyConfiguration>(name)
+        , component(name, i2c, config, measurementFrequency, latencyInterval) {
     }
 
 private:
@@ -105,9 +102,9 @@ public:
         : PeripheralFactory<Tsl2591DeviceConfig, EmptyConfiguration>("light-sensor:tsl2591", "light-sensor") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Tsl2591DeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Tsl2591DeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
         I2CConfig i2cConfig = deviceConfig->parse(TSL2591_ADDR);
-        auto peripheral = std::make_shared<Tsl2591>(name, mqttRoot, services.i2c, i2cConfig, deviceConfig->measurementFrequency.get(), deviceConfig->latencyInterval.get());
+        auto peripheral = std::make_shared<Tsl2591>(name, services.i2c, i2cConfig, deviceConfig->measurementFrequency.get(), deviceConfig->latencyInterval.get());
         services.telemetryCollector->registerProvider("light", name, [peripheral](JsonObject& telemetryJson) {
             telemetryJson["value"] = peripheral->component.getCurrentLevel();
         });
