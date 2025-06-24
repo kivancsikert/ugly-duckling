@@ -57,7 +57,7 @@ private:
     MovingAverage<double> value;
 };
 
-class AnalogMeterDeviceConfig
+class AnalogMeterSettings
     : public ConfigurationSection {
 public:
     Property<std::string> type { this, "type", "analog-meter" };
@@ -69,21 +69,21 @@ public:
 };
 
 class AnalogMeterFactory
-    : public PeripheralFactory<AnalogMeterDeviceConfig, EmptyConfiguration> {
+    : public PeripheralFactory<AnalogMeterSettings> {
 public:
     AnalogMeterFactory()
-        : PeripheralFactory<AnalogMeterDeviceConfig, EmptyConfiguration>("analog-meter") {
+        : PeripheralFactory<AnalogMeterSettings>("analog-meter") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<AnalogMeterDeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<AnalogMeterSettings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
         auto meter = std::make_shared<AnalogMeter>(
             name,
-            deviceConfig->pin.get(),
-            deviceConfig->offset.get(),
-            deviceConfig->multiplier.get(),
-            deviceConfig->measurementFrequency.get(),
-            deviceConfig->windowSize.get());
-        services.telemetryCollector->registerProvider(deviceConfig->type.get(), name, [meter](JsonObject& telemetryJson) {
+            settings->pin.get(),
+            settings->offset.get(),
+            settings->multiplier.get(),
+            settings->measurementFrequency.get(),
+            settings->windowSize.get());
+        services.telemetryCollector->registerProvider(settings->type.get(), name, [meter](JsonObject& telemetryJson) {
             telemetryJson["value"] = meter->getValue();
         });
         return std::make_shared<SimplePeripheral>(name, meter);

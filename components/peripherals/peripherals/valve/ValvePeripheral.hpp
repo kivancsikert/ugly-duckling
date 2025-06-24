@@ -45,18 +45,18 @@ private:
 };
 
 class ValveFactory
-    : public PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType>,
+    : public PeripheralFactory<ValveSettings, ValveConfig, ValveControlStrategyType>,
       protected Motorized {
 public:
     ValveFactory(
         const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
         ValveControlStrategyType defaultStrategy)
-        : PeripheralFactory<ValveDeviceConfig, ValveConfig, ValveControlStrategyType>("valve", defaultStrategy)
+        : PeripheralFactory<ValveSettings, ValveConfig, ValveControlStrategyType>("valve", defaultStrategy)
         , Motorized(motors) {
     }
 
-    std::shared_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ValveDeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& mqttRoot, const PeripheralServices& services) override {
-        auto strategy = deviceConfig->createValveControlStrategy(this);
+    std::shared_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ValveSettings>& settings, const std::shared_ptr<MqttRoot>& mqttRoot, const PeripheralServices& services) override {
+        auto strategy = settings->createValveControlStrategy(this);
         auto valve = std::make_shared<Valve>(
             name,
             std::move(strategy),

@@ -23,7 +23,7 @@ struct FencePinConfig {
     uint16_t voltage {};
 };
 
-class ElectricFenceMonitorDeviceConfig
+class ElectricFenceMonitorSettings
     : public ConfigurationSection {
 public:
     ArrayProperty<FencePinConfig> pins { this, "pins" };
@@ -45,10 +45,10 @@ public:
     ElectricFenceMonitor(
         const std::string& name,
         const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
-        const std::shared_ptr<ElectricFenceMonitorDeviceConfig>& config) {
+        const std::shared_ptr<ElectricFenceMonitorSettings>& settings) {
 
         std::string pinsDescription;
-        for (const auto& pinConfig : config->pins.get()) {
+        for (const auto& pinConfig : settings->pins.get()) {
             if (!pinsDescription.empty()) {
                 pinsDescription += ", ";
             }
@@ -56,12 +56,12 @@ public:
         }
         LOGI("Initializing electric fence with pins %s", pinsDescription.c_str());
 
-        for (const auto& pinConfig : config->pins.get()) {
+        for (const auto& pinConfig : settings->pins.get()) {
             auto unit = pulseCounterManager->create(pinConfig.pin);
             pins.emplace_back(pinConfig.voltage, unit);
         }
 
-        auto measurementFrequency = config->measurementFrequency.get();
+        auto measurementFrequency = settings->measurementFrequency.get();
         Task::loop(name, 3172, [this, measurementFrequency](Task& task) {
             uint16_t lastVoltage = 0;
             for (auto& pin : pins) {
@@ -96,14 +96,14 @@ private:
 };
 
 class ElectricFenceMonitorFactory
-    : public PeripheralFactory<ElectricFenceMonitorDeviceConfig, EmptyConfiguration> {
+    : public PeripheralFactory<ElectricFenceMonitorSettings> {
 public:
     ElectricFenceMonitorFactory()
-        : PeripheralFactory<ElectricFenceMonitorDeviceConfig, EmptyConfiguration>("electric-fence") {
+        : PeripheralFactory<ElectricFenceMonitorSettings>("electric-fence") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<ElectricFenceMonitorDeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
-        auto monitor = std::make_shared<ElectricFenceMonitor>(name, services.pulseCounterManager, deviceConfig);
+std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<ElectricFenceMonitorSettings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
+        auto monitor = std::make_shared<ElectricFenceMonitor>(name, services.pulseCounterManager, settings);
         services.telemetryCollector->registerProvider("fence", name, [monitor](JsonObject& telemetryJson) {
             telemetryJson["voltage"] = monitor->getVoltage();
         });

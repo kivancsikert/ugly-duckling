@@ -9,7 +9,7 @@
 #include <Concurrent.hpp>
 #include <I2CManager.hpp>
 
-#include <peripherals/I2CConfig.hpp>
+#include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>
 
 #include "Environment.hpp"

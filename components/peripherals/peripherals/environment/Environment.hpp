@@ -6,7 +6,7 @@
 #include <Configuration.hpp>
 #include <I2CManager.hpp>
 
-#include <peripherals/I2CConfig.hpp>
+#include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <utility>
 
@@ -26,16 +26,16 @@ public:
 
 template <std::derived_from<EnvironmentSensor> TSensor>
 class I2CEnvironmentFactory
-    : public PeripheralFactory<I2CDeviceConfig, EmptyConfiguration> {
+    : public PeripheralFactory<I2CSettings> {
 public:
     I2CEnvironmentFactory(const std::string& sensorType, uint8_t defaultAddress)
-        : PeripheralFactory<I2CDeviceConfig, EmptyConfiguration>("environment:" + sensorType, "environment")
+        : PeripheralFactory<I2CSettings>("environment:" + sensorType, "environment")
         , sensorType(sensorType)
         , defaultAddress(defaultAddress) {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<I2CDeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
-        auto i2cConfig = deviceConfig->parse(defaultAddress);
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<I2CSettings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
+        auto i2cConfig = settings->parse(defaultAddress);
         LOGI("Creating %s sensor %s with %s",
             sensorType.c_str(), name.c_str(), i2cConfig.toString().c_str());
         auto sensor = std::make_shared<TSensor>(sensorType, services.i2c, i2cConfig);
