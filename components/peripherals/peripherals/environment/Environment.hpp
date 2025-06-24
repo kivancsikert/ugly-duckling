@@ -24,10 +24,7 @@ public:
     virtual double getHumidity() = 0;
 };
 
-template <std::derived_from<EnvironmentSensor> TEnvironmentSensor>
-class I2CEnvironmentFactory;
-
-template <std::derived_from<EnvironmentSensor> TEnvironmentSensor>
+template <std::derived_from<EnvironmentSensor> TComponent>
 class I2CEnvironmentFactory
     : public PeripheralFactory<I2CDeviceConfig, EmptyConfiguration> {
 public:
@@ -37,18 +34,18 @@ public:
         , defaultAddress(defaultAddress) {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<I2CDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<I2CDeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
         auto i2cConfig = deviceConfig->parse(defaultAddress);
         LOGI("Creating %s sensor %s with %s",
             sensorType.c_str(), name.c_str(), i2cConfig.toString().c_str());
-        auto sensor = std::make_shared<TEnvironmentSensor>(sensorType, services.i2c, i2cConfig);
+        auto sensor = std::make_shared<TComponent>(sensorType, services.i2c, i2cConfig);
         services.telemetryCollector->registerProvider("temperature", name, [sensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = sensor->getTemperature();
         });
         services.telemetryCollector->registerProvider("humidity", name, [sensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = sensor->getHumidity();
         });
-        return std::make_shared<SimplePeripheral<TEnvironmentSensor>>(name, sensor);
+        return std::make_shared<SimplePeripheral>(name, sensor);
     }
 
 private:

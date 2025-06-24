@@ -65,12 +65,12 @@ public:
         : PeripheralFactory<SoilMoistureSensorDeviceConfig, EmptyConfiguration>("environment:soil-moisture", "environment") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SoilMoistureSensorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> /*mqttRoot*/, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SoilMoistureSensorDeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
         auto sensor = std::make_shared<SoilMoistureSensor>(deviceConfig->air.get(), deviceConfig->water.get(), deviceConfig->pin.get());
         services.telemetryCollector->registerProvider("moisture", name, [sensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = sensor->getMoisture();
         });
-        return std::make_shared<SimplePeripheral<SoilMoistureSensor>>(name, sensor);
+        return std::make_shared<SimplePeripheral>(name, sensor);
     }
 };
 

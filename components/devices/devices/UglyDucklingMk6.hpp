@@ -13,7 +13,7 @@
 #include <peripherals/chicken_door/ChickenDoor.hpp>
 #include <peripherals/flow_control/FlowControl.hpp>
 #include <peripherals/flow_meter/FlowMeter.hpp>
-#include <peripherals/valve/Valve.hpp>
+#include <peripherals/valve/ValvePeripheral.hpp>
 
 #include <devices/DeviceDefinition.hpp>
 

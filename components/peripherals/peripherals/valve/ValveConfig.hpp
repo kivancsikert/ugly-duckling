@@ -6,7 +6,6 @@
 
 #include <Configuration.hpp>
 
-#include <peripherals/valve/ValveComponent.hpp>
 #include <peripherals/valve/ValveSchedule.hpp>
 #include <peripherals/valve/ValveScheduler.hpp>
 

@@ -75,7 +75,7 @@ public:
         : PeripheralFactory<AnalogMeterDeviceConfig, EmptyConfiguration>("analog-meter") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<AnalogMeterDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> /*mqttRoot*/, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<AnalogMeterDeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
         auto meter = std::make_shared<AnalogMeter>(
             name,
             deviceConfig->pin.get(),
@@ -86,7 +86,7 @@ public:
         services.telemetryCollector->registerProvider(deviceConfig->type.get(), name, [meter](JsonObject& telemetryJson) {
             telemetryJson["value"] = meter->getValue();
         });
-        return std::make_shared<SimplePeripheral<AnalogMeter>>(name, meter);
+        return std::make_shared<SimplePeripheral>(name, meter);
     }
 };
 
