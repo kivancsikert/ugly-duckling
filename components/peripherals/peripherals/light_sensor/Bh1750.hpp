@@ -32,7 +32,7 @@ public:
 };
 
 class Bh1750 final
-    : public LightSensorComponent {
+    : public LightSensor {
 public:
     Bh1750(
         const std::string& name,
@@ -40,7 +40,7 @@ public:
         const I2CConfig& config,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : LightSensorComponent(name, measurementFrequency, latencyInterval) {
+        : LightSensor(name, measurementFrequency, latencyInterval) {
 
         LOGI("Initializing BH1750 light sensor with %s",
             config.toString().c_str());

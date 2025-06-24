@@ -34,7 +34,7 @@ public:
 };
 
 class Tsl2591 final
-    : public LightSensorComponent {
+    : public LightSensor {
 public:
     Tsl2591(
         const std::string& name,
@@ -42,7 +42,7 @@ public:
         const I2CConfig& config,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : LightSensorComponent(name, measurementFrequency, latencyInterval)
+        : LightSensor(name, measurementFrequency, latencyInterval)
         , bus(i2c->getBusFor(config)) {
 
         LOGI("Initializing TSL2591 light sensor with %s",

@@ -119,7 +119,7 @@ public:
         const std::shared_ptr<MqttRoot>& mqttRoot,
         const std::shared_ptr<SwitchManager>& switches,
         const std::shared_ptr<PwmMotorDriver>& motor,
-        const std::shared_ptr<LightSensorComponent>& lightSensor,
+        const std::shared_ptr<LightSensor>& lightSensor,
         const InternalPinPtr& openPin,
         const InternalPinPtr& closedPin,
         bool invertSwitches,
@@ -344,7 +344,7 @@ private:
 
     const std::shared_ptr<MqttRoot> mqttRoot;
     const std::shared_ptr<PwmMotorDriver> motor;
-    const std::shared_ptr<LightSensorComponent> lightSensor;
+    const std::shared_ptr<LightSensor> lightSensor;
 
     double openLevel = std::numeric_limits<double>::max();
     double closeLevel = std::numeric_limits<double>::min();
@@ -386,7 +386,7 @@ class ChickenDoor
 public:
     ChickenDoor(
         const std::string& name,
-        const std::shared_ptr<LightSensorComponent>& lightSensor,
+        const std::shared_ptr<LightSensor>& lightSensor,
         const std::shared_ptr<ChickenDoorComponent>& door)
         : Peripheral<ChickenDoorConfig>(name)
         , lightSensor(lightSensor)
@@ -398,21 +398,21 @@ public:
     }
 
 private:
-    const std::shared_ptr<LightSensorComponent> lightSensor;
+    const std::shared_ptr<LightSensor> lightSensor;
     const std::shared_ptr<ChickenDoorComponent> door;
     friend class ChickenDoorFactory;
 };
 
-class NoLightSensorComponent final
-    : public LightSensorComponent {
+class NoLightSensor final
+    : public LightSensor {
 public:
-    NoLightSensorComponent(
+    NoLightSensor(
         const std::string& name,
         const std::shared_ptr<I2CManager>& /*i2c*/,
         const I2CConfig& /*config*/,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : LightSensorComponent(name, measurementFrequency, latencyInterval) {
+        : LightSensor(name, measurementFrequency, latencyInterval) {
         runLoop();
     }
 
@@ -431,9 +431,9 @@ public:
         , Motorized(motors) {
     }
 
-    template <std::derived_from<LightSensorComponent> TLightSensorComponent>
+    template <std::derived_from<LightSensor> TLightSensor>
     std::shared_ptr<Peripheral<ChickenDoorConfig>> createDoor(const std::string& name, const std::shared_ptr<ChickenDoorDeviceConfig>& config, const std::shared_ptr<MqttRoot>& mqttRoot, const PeripheralServices& services, uint8_t lightSensorAddress) {
-        auto lightSensor = std::make_shared<TLightSensorComponent>(
+        auto lightSensor = std::make_shared<TLightSensor>(
             name + ":light",
             services.i2c,
             config->lightSensor.get()->parse(lightSensorAddress),
@@ -478,8 +478,8 @@ public:
         } catch (const std::exception& e) {
             LOGE("Could not initialize light sensor because %s", e.what());
             LOGW("Initializing without a light sensor");
-            // TODO Do not pass I2C parameters to NoLightSensorComponent
-            return createDoor<NoLightSensorComponent>(name, deviceConfig, mqttRoot, services, 0x00);
+            // TODO Do not pass I2C parameters to NoLightSensor
+            return createDoor<NoLightSensor>(name, deviceConfig, mqttRoot, services, 0x00);
         }
     }
 };

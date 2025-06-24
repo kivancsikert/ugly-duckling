@@ -24,7 +24,7 @@ public:
     virtual double getHumidity() = 0;
 };
 
-template <std::derived_from<EnvironmentSensor> TComponent>
+template <std::derived_from<EnvironmentSensor> TSensor>
 class I2CEnvironmentFactory
     : public PeripheralFactory<I2CDeviceConfig, EmptyConfiguration> {
 public:
@@ -38,7 +38,7 @@ public:
         auto i2cConfig = deviceConfig->parse(defaultAddress);
         LOGI("Creating %s sensor %s with %s",
             sensorType.c_str(), name.c_str(), i2cConfig.toString().c_str());
-        auto sensor = std::make_shared<TComponent>(sensorType, services.i2c, i2cConfig);
+        auto sensor = std::make_shared<TSensor>(sensorType, services.i2c, i2cConfig);
         services.telemetryCollector->registerProvider("temperature", name, [sensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = sensor->getTemperature();
         });
