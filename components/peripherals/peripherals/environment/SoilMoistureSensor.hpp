@@ -10,7 +10,7 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::environment {
 
-class SoilMoistureSensorDeviceConfig
+class SoilMoistureSensorSettings
     : public ConfigurationSection {
 public:
     Property<InternalPinPtr> pin { this, "pin" };
@@ -59,14 +59,14 @@ private:
 class SoilMoistureSensorFactory;
 
 class SoilMoistureSensorFactory
-    : public PeripheralFactory<SoilMoistureSensorDeviceConfig, EmptyConfiguration> {
+    : public PeripheralFactory<SoilMoistureSensorSettings> {
 public:
     SoilMoistureSensorFactory()
-        : PeripheralFactory<SoilMoistureSensorDeviceConfig, EmptyConfiguration>("environment:soil-moisture", "environment") {
+        : PeripheralFactory<SoilMoistureSensorSettings>("environment:soil-moisture", "environment") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SoilMoistureSensorDeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
-        auto sensor = std::make_shared<SoilMoistureSensor>(deviceConfig->air.get(), deviceConfig->water.get(), deviceConfig->pin.get());
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SoilMoistureSensorSettings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
+        auto sensor = std::make_shared<SoilMoistureSensor>(settings->air.get(), settings->water.get(), settings->pin.get());
         services.telemetryCollector->registerProvider("moisture", name, [sensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = sensor->getMoisture();
         });

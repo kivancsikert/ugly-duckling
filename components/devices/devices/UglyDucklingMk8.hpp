@@ -17,22 +17,22 @@ static const InternalPinPtr BOOT = InternalPin::registerPin("BOOT", GPIO_NUM_9);
 static const InternalPinPtr STATUS = InternalPin::registerPin("STATUS", GPIO_NUM_1);
 }    // namespace pins
 
-class Mk8Config
-    : public DeviceConfiguration {
+class Mk8Settings
+    : public DeviceSettings {
 public:
-    Mk8Config()
-        : DeviceConfiguration("mk8") {
+    Mk8Settings()
+        : DeviceSettings("mk8") {
     }
 };
 
-class UglyDucklingMk8 : public DeviceDefinition<Mk8Config> {
+class UglyDucklingMk8 : public DeviceDefinition<Mk8Settings> {
 public:
-    explicit UglyDucklingMk8(const std::shared_ptr<Mk8Config>& /*config*/)
+    explicit UglyDucklingMk8()
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk8Config>& deviceConfig) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk8Settings>& /*settings*/) override {
     }
 };
 

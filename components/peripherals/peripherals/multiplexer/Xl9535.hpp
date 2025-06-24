@@ -6,8 +6,8 @@
 
 namespace farmhub::peripherals::multiplexer {
 
-class Xl9535DeviceConfig
-    : public I2CDeviceConfig {
+class Xl9535Settings
+    : public I2CSettings {
 };
 
 class Xl9535 final {
@@ -103,14 +103,14 @@ private:
 };
 
 class Xl9535Factory
-    : public PeripheralFactory<Xl9535DeviceConfig, EmptyConfiguration> {
+    : public PeripheralFactory<Xl9535Settings> {
 public:
     Xl9535Factory()
-        : PeripheralFactory<Xl9535DeviceConfig, EmptyConfiguration>("multiplexer:xl9535") {
+        : PeripheralFactory<Xl9535Settings>("multiplexer:xl9535") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Xl9535DeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
-        auto multiplexer = std::make_shared<Xl9535>(name, services.i2c, deviceConfig->parse());
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Xl9535Settings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
+        auto multiplexer = std::make_shared<Xl9535>(name, services.i2c, settings->parse());
 
         // Create a pin for each bit in the pins mask
         for (int i = 0; i < 16; i++) {

@@ -50,31 +50,31 @@ private:
     friend class FlowControlFactory;
 };
 
-class FlowControlDeviceConfig
+class FlowControlSettings
     : public ConfigurationSection {
 public:
-    explicit FlowControlDeviceConfig(ValveControlStrategyType defaultStrategy)
+    explicit FlowControlSettings(ValveControlStrategyType defaultStrategy)
         : valve(this, "valve", defaultStrategy)
         , flowMeter(this, "flow-meter") {
     }
 
-    NamedConfigurationEntry<ValveDeviceConfig> valve;
-    NamedConfigurationEntry<FlowMeterDeviceConfig> flowMeter;
+    NamedConfigurationEntry<ValveSettings> valve;
+    NamedConfigurationEntry<FlowMeterSettings> flowMeter;
 };
 
 class FlowControlFactory
-    : public PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig, ValveControlStrategyType>,
+    : public PeripheralFactory<FlowControlSettings, FlowControlConfig, ValveControlStrategyType>,
       protected Motorized {
 public:
     FlowControlFactory(
         const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
         ValveControlStrategyType defaultStrategy)
-        : PeripheralFactory<FlowControlDeviceConfig, FlowControlConfig, ValveControlStrategyType>("flow-control", defaultStrategy)
+        : PeripheralFactory<FlowControlSettings, FlowControlConfig, ValveControlStrategyType>("flow-control", defaultStrategy)
         , Motorized(motors) {
     }
 
-    std::shared_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const std::shared_ptr<FlowControlDeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& mqttRoot, const PeripheralServices& services) override {
-        auto strategy = deviceConfig->valve.get()->createValveControlStrategy(this);
+    std::shared_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const std::shared_ptr<FlowControlSettings>& settings, const std::shared_ptr<MqttRoot>& mqttRoot, const PeripheralServices& services) override {
+        auto strategy = settings->valve.get()->createValveControlStrategy(this);
 
         auto valve = std::make_shared<Valve>(
             name,
@@ -82,7 +82,7 @@ public:
             mqttRoot,
             services.telemetryPublisher);
 
-        auto flowMeterConfig = deviceConfig->flowMeter.get();
+        auto flowMeterConfig = settings->flowMeter.get();
         auto flowMeter = std::make_shared<FlowMeter>(
             name,
             services.pulseCounterManager,

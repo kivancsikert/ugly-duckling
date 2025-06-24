@@ -9,7 +9,7 @@
 #include <I2CManager.hpp>
 #include <Telemetry.hpp>
 
-#include <peripherals/I2CConfig.hpp>
+#include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/light_sensor/LightSensor.hpp>
 #include <utility>
@@ -26,8 +26,8 @@ static constexpr uint8_t TSL2591_ADDR = 0x29;
 
 class Tsl2591Factory;
 
-class Tsl2591DeviceConfig
-    : public I2CDeviceConfig {
+class Tsl2591Settings
+    : public I2CSettings {
 public:
     Property<seconds> measurementFrequency { this, "measurementFrequency", 1s };
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
@@ -77,15 +77,15 @@ private:
 };
 
 class Tsl2591Factory
-    : public PeripheralFactory<Tsl2591DeviceConfig, EmptyConfiguration> {
+    : public PeripheralFactory<Tsl2591Settings> {
 public:
     Tsl2591Factory()
-        : PeripheralFactory<Tsl2591DeviceConfig, EmptyConfiguration>("light-sensor:tsl2591", "light-sensor") {
+        : PeripheralFactory<Tsl2591Settings>("light-sensor:tsl2591", "light-sensor") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Tsl2591DeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
-        I2CConfig i2cConfig = deviceConfig->parse(TSL2591_ADDR);
-        auto sensor = std::make_shared<Tsl2591>(name, services.i2c, i2cConfig, deviceConfig->measurementFrequency.get(), deviceConfig->latencyInterval.get());
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Tsl2591Settings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
+        I2CConfig i2cConfig = settings->parse(TSL2591_ADDR);
+        auto sensor = std::make_shared<Tsl2591>(name, services.i2c, i2cConfig, settings->measurementFrequency.get(), settings->latencyInterval.get());
         services.telemetryCollector->registerProvider("light", name, [sensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = sensor->getCurrentLevel();
         });

@@ -6,7 +6,7 @@
 
 #include <ArduinoJson.h>
 
-#include <devices/DeviceConfiguration.hpp>
+#include <devices/DeviceSettings.hpp>
 
 #include <Log.hpp>
 #include <PcntManager.hpp>
@@ -34,7 +34,7 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::devices {
 
-template <std::derived_from<DeviceConfiguration> TDeviceConfiguration>
+template <std::derived_from<DeviceSettings> TDeviceSettings>
 class DeviceDefinition {
 public:
     DeviceDefinition(PinPtr statusPin, InternalPinPtr bootPin)
@@ -44,7 +44,7 @@ public:
 
     virtual ~DeviceDefinition() = default;
 
-    virtual void registerPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<TDeviceConfiguration> deviceConfig) {
+    virtual void registerPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, const std::shared_ptr<TDeviceSettings>& settings) {
         peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht3xSensor>>("sht3x", 0x44 /* Also supports 0x45 */));
         // TODO Unify these two factories
         peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht2xSensor>>("sht2x", 0x40 /* Not configurable */));
@@ -62,7 +62,7 @@ public:
 
         peripheralManager->registerFactory(std::make_unique<analog_meter::AnalogMeterFactory>());
 
-        registerDeviceSpecificPeripheralFactories(peripheralManager, services, deviceConfig);
+        registerDeviceSpecificPeripheralFactories(peripheralManager, services, settings);
     }
 
     /**
@@ -80,7 +80,7 @@ public:
     const InternalPinPtr bootPin;
 
 protected:
-    virtual void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<TDeviceConfiguration>& deviceConfig) {
+    virtual void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<TDeviceSettings>& settings) {
     }
 };
 

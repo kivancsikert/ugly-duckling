@@ -16,7 +16,7 @@ using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::peripherals::flow_meter {
 
-class FlowMeterDeviceConfig
+class FlowMeterSettings
     : public ConfigurationSection {
 public:
     Property<InternalPinPtr> pin { this, "pin" };
@@ -97,14 +97,14 @@ private:
 };
 
 class FlowMeterFactory
-    : public PeripheralFactory<FlowMeterDeviceConfig, EmptyConfiguration> {
+    : public PeripheralFactory<FlowMeterSettings> {
 public:
     FlowMeterFactory()
-        : PeripheralFactory<FlowMeterDeviceConfig, EmptyConfiguration>("flow-meter") {
+        : PeripheralFactory<FlowMeterSettings>("flow-meter") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<FlowMeterDeviceConfig>& deviceConfig, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
-        auto meter = std::make_shared<FlowMeter>(name, services.pulseCounterManager, deviceConfig->pin.get(), deviceConfig->qFactor.get(), deviceConfig->measurementFrequency.get());
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<FlowMeterSettings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
+        auto meter = std::make_shared<FlowMeter>(name, services.pulseCounterManager, settings->pin.get(), settings->qFactor.get(), settings->measurementFrequency.get());
         services.telemetryCollector->registerProvider("flow", name, [meter](JsonObject& telemetry) {
             meter->populateTelemetry(telemetry);
         });

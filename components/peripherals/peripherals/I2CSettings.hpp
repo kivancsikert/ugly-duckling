@@ -10,7 +10,7 @@ using namespace farmhub::kernel;
 
 namespace farmhub::peripherals {
 
-class I2CDeviceConfig
+class I2CSettings
     : public ConfigurationSection {
 public:
     // I2C address is typically a hexadecimal number,

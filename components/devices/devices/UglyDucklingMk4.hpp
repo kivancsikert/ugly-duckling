@@ -9,7 +9,7 @@
 #include <peripherals/chicken_door/ChickenDoor.hpp>
 #include <peripherals/flow_control/FlowControl.hpp>
 #include <peripherals/flow_meter/FlowMeter.hpp>
-#include <peripherals/valve/Valve.hpp>
+#include <peripherals/valve/ValvePeripheral.hpp>
 
 #include <devices/DeviceDefinition.hpp>
 
@@ -21,11 +21,11 @@ using namespace farmhub::peripherals::valve;
 
 namespace farmhub::devices {
 
-class Mk4Config
-    : public DeviceConfiguration {
+class Mk4Settings
+    : public DeviceSettings {
 public:
-    Mk4Config()
-        : DeviceConfiguration("mk4") {
+    Mk4Settings()
+        : DeviceSettings("mk4") {
     }
 };
 
@@ -51,9 +51,9 @@ static const InternalPinPtr RXD0 = InternalPin::registerPin("RXD0", GPIO_NUM_44)
 static const InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43);
 }    // namespace pins
 
-class UglyDucklingMk4 : public DeviceDefinition<Mk4Config> {
+class UglyDucklingMk4 : public DeviceDefinition<Mk4Settings> {
 public:
-    explicit UglyDucklingMk4(const std::shared_ptr<Mk4Config>& /*config*/)
+    explicit UglyDucklingMk4()
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 
@@ -73,7 +73,7 @@ public:
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk4Config>& /*deviceConfig*/) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk4Settings>& /*settings*/) override {
         auto motor = std::make_shared<Drv8801Driver>(
             services.pwmManager,
             pins::VALVE_EN,

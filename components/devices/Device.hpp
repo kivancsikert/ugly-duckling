@@ -312,7 +312,7 @@ enum class InitState : std::uint8_t {
     PeripheralError = 1,
 };
 
-template <class TDeviceDefinition, class TDeviceConfiguration>
+template <class TDeviceDefinition, class TDeviceSettings>
 static void startDevice() {
     auto i2c = std::make_shared<I2CManager>();
     auto battery = initBattery<TDeviceDefinition>(i2c);
@@ -330,14 +330,16 @@ static void startDevice() {
 
     auto watchdog = initWatchdog();
 
+    auto deviceDefinition = std::make_shared<TDeviceDefinition>();
+
     auto fs = std::make_shared<FileSystem>();
 
-    auto deviceConfig = loadConfig<TDeviceConfiguration>(fs, "/device-config.json");
+    auto settings = loadConfig<TDeviceSettings>(fs, "/device-config.json");
 
-    auto powerManager = std::make_shared<PowerManager>(deviceConfig->sleepWhenIdle.get());
+    auto powerManager = std::make_shared<PowerManager>(settings->sleepWhenIdle.get());
 
     auto logRecords = std::make_shared<Queue<LogRecord>>("logs", 32);
-    ConsoleProvider::init(logRecords, deviceConfig->publishLogs.get());
+    ConsoleProvider::init(logRecords, settings->publishLogs.get());
 
     LOGD("   ______                   _    _       _");
     LOGD("  |  ____|                 | |  | |     | |");
@@ -348,12 +350,10 @@ static void startDevice() {
     LOGD("  ");
     LOGI("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
         farmhubVersion,
-        deviceConfig->model.get().c_str(),
-        deviceConfig->instance.get().c_str(),
-        deviceConfig->getHostname().c_str(),
+        settings->model.get().c_str(),
+        settings->instance.get().c_str(),
+        settings->getHostname().c_str(),
         getMacAddress().c_str());
-
-    auto deviceDefinition = std::make_shared<TDeviceDefinition>(deviceConfig);
 
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
     auto states = std::make_shared<ModuleStates>();
@@ -364,7 +364,7 @@ static void startDevice() {
         states->networkConnecting,
         states->networkReady,
         states->configPortalRunning,
-        deviceConfig->getHostname());
+        settings->getHostname());
 
     auto telemetryPublishQueue = std::make_shared<CopyQueue<bool>>("telemetry-publish", 1);
     auto telemetryPublisher = std::make_shared<TelemetryPublisher>(telemetryPublishQueue);
@@ -399,15 +399,15 @@ static void startDevice() {
 #endif
 
     // Init mDNS
-    auto mdns = std::make_shared<MdnsDriver>(wifi->getNetworkReady(), deviceConfig->getHostname(), "ugly-duckling", farmhubVersion, states->mdnsReady);
+    auto mdns = std::make_shared<MdnsDriver>(wifi->getNetworkReady(), settings->getHostname(), "ugly-duckling", farmhubVersion, states->mdnsReady);
 
     // Init real time clock
-    auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, deviceConfig->ntp.get(), states->rtcInSync);
+    auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), mdns, settings->ntp.get(), states->rtcInSync);
 
     // Init MQTT connection
     auto mqttConfig = loadConfig<MqttDriver::Config>(fs, "/mqtt-config.json");
-    auto mqttRoot = initMqtt(states, mdns, mqttConfig, deviceConfig->instance.get(), deviceConfig->location.get());
-    MqttLog::init(deviceConfig->publishLogs.get(), logRecords, mqttRoot);
+    auto mqttRoot = initMqtt(states, mdns, mqttConfig, settings->instance.get(), settings->location.get());
+    MqttLog::init(settings->publishLogs.get(), logRecords, mqttRoot);
     registerBasicCommands(mqttRoot);
     registerFileCommands(mqttRoot, fs);
 
@@ -426,7 +426,7 @@ static void startDevice() {
     shutdownManager->registerShutdownListener([peripheralManager]() {
         peripheralManager->shutdown();
     });
-    deviceDefinition->registerPeripheralFactories(peripheralManager, peripheralServices, deviceConfig);
+    deviceDefinition->registerPeripheralFactories(peripheralManager, peripheralServices, settings);
 
     // Init telemetry
     mqttRoot->registerCommand("ping", [telemetryPublisher](const JsonObject&, JsonObject& response) {
@@ -442,40 +442,40 @@ static void startDevice() {
     auto peripheralsInitJson = peripheralsInitDoc.to<JsonArray>();
     InitState initState = InitState::Success;
 
-    auto builtInPeripheralsConfig = deviceDefinition->getBuiltInPeripherals();
+    auto builtInPeripheralsSettings = deviceDefinition->getBuiltInPeripherals();
     LOGD("Loading configuration for %d built-in peripherals",
-        builtInPeripheralsConfig.size());
-    for (auto& peripheralConfig : builtInPeripheralsConfig) {
-        if (!peripheralManager->createPeripheral(peripheralConfig, peripheralsInitJson)) {
+        builtInPeripheralsSettings.size());
+    for (auto& builtInPeripheralSettings : builtInPeripheralsSettings) {
+        if (!peripheralManager->createPeripheral(builtInPeripheralSettings, peripheralsInitJson)) {
             initState = InitState::PeripheralError;
         }
     }
 
-    auto& peripheralsConfig = deviceConfig->peripherals.get();
+    auto& peripheralsSettings = settings->peripherals.get();
     LOGI("Loading configuration for %d user-configured peripherals",
-        peripheralsConfig.size());
-    for (auto& peripheralConfig : peripheralsConfig) {
-        if (!peripheralManager->createPeripheral(peripheralConfig.get(), peripheralsInitJson)) {
+        peripheralsSettings.size());
+    for (auto& peripheralSettings : peripheralsSettings) {
+        if (!peripheralManager->createPeripheral(peripheralSettings.get(), peripheralsInitJson)) {
             initState = InitState::PeripheralError;
         }
     }
 
-    initTelemetryPublishTask(deviceConfig->publishInterval.get(), watchdog, mqttRoot, batteryManager, powerManager, wifi, telemetryCollector, telemetryPublishQueue);
+    initTelemetryPublishTask(settings->publishInterval.get(), watchdog, mqttRoot, batteryManager, powerManager, wifi, telemetryCollector, telemetryPublishQueue);
 
     // Enable power saving once we are done initializing
-    WiFiDriver::setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
+    WiFiDriver::setPowerSaveMode(settings->sleepWhenIdle.get());
 
     mqttRoot->publish(
         "init",
-        [deviceConfig, initState, peripheralsInitJson, powerManager](JsonObject& json) {
+        [settings, initState, peripheralsInitJson, powerManager](JsonObject& json) {
             // TODO Remove redundant mentions of "ugly-duckling"
             json["type"] = "ugly-duckling";
-            json["model"] = deviceConfig->model.get();
-            json["id"] = deviceConfig->id.get();
-            json["instance"] = deviceConfig->instance.get();
+            json["model"] = settings->model.get();
+            json["id"] = settings->id.get();
+            json["instance"] = settings->instance.get();
             json["mac"] = getMacAddress();
-            auto device = json["deviceConfig"].to<JsonObject>();
-            deviceConfig->store(device, false);
+            auto device = json["settings"].to<JsonObject>();
+            settings->store(device, false);
             // TODO Remove redundant mentions of "ugly-duckling"
             json["app"] = "ugly-duckling";
             json["version"] = farmhubVersion;
@@ -496,9 +496,9 @@ static void startDevice() {
     LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
         duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count() / 1000.0,
         farmhubVersion,
-        deviceConfig->model.get().c_str(),
-        deviceConfig->instance.get().c_str(),
-        deviceConfig->getHostname().c_str(),
+        settings->model.get().c_str(),
+        settings->instance.get().c_str(),
+        settings->getHostname().c_str(),
         wifi->getIp().value_or("<no-ip>").c_str(),
         wifi->getSsid().value_or("<no-ssid>").c_str(),
         duration_cast<seconds>(system_clock::now().time_since_epoch()).count());
