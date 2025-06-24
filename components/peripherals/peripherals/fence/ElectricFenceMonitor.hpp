@@ -40,9 +40,9 @@ void convertFromJson(JsonVariantConst src, FencePinConfig& dst) {
     dst.voltage = src["voltage"];
 }
 
-class ElectricFenceMonitorComponent final {
+class ElectricFenceMonitor final {
 public:
-    ElectricFenceMonitorComponent(
+    ElectricFenceMonitor(
         const std::string& name,
         const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
         const std::shared_ptr<ElectricFenceMonitorDeviceConfig>& config) {
@@ -95,22 +95,6 @@ private:
     std::list<FencePin> pins;
 };
 
-class ElectricFenceMonitor
-    : public Peripheral<EmptyConfiguration> {
-public:
-    ElectricFenceMonitor(
-        const std::string& name,
-        const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
-        const std::shared_ptr<ElectricFenceMonitorDeviceConfig>& config)
-        : Peripheral<EmptyConfiguration>(name)
-        , monitor(name, pulseCounterManager, config) {
-    }
-
-private:
-    ElectricFenceMonitorComponent monitor;
-    friend class ElectricFenceMonitorFactory;
-};
-
 class ElectricFenceMonitorFactory
     : public PeripheralFactory<ElectricFenceMonitorDeviceConfig, EmptyConfiguration> {
 public:
@@ -119,11 +103,11 @@ public:
     }
 
     std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<ElectricFenceMonitorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot>  /*mqttRoot*/, const PeripheralServices& services) override {
-        auto peripheral = std::make_shared<ElectricFenceMonitor>(name, services.pulseCounterManager, deviceConfig);
-        services.telemetryCollector->registerProvider("fence", name, [peripheral](JsonObject& telemetryJson) {
-            telemetryJson["voltage"] = peripheral->monitor.getVoltage();
+        auto monitor = std::make_shared<ElectricFenceMonitor>(name, services.pulseCounterManager, deviceConfig);
+        services.telemetryCollector->registerProvider("fence", name, [monitor](JsonObject& telemetryJson) {
+            telemetryJson["voltage"] = monitor->getVoltage();
         });
-        return peripheral;
+        return std::make_shared<SimplePeripheral<ElectricFenceMonitor>>(name, monitor);
     }
 };
 

@@ -47,9 +47,24 @@ public:
         : PeripheralBase(name) {
     }
 
-    virtual void configure(const std::shared_ptr<TConfig> /*config*/) {
-        LOGV("No configuration to apply for peripheral: %s", name.c_str());
+    virtual void configure(std::shared_ptr<TConfig> /*config*/) = 0;
+};
+
+template <class TEnvironmentSensor>
+class SimplePeripheral
+    : public Peripheral<EmptyConfiguration> {
+public:
+    explicit SimplePeripheral(const std::string& name, const std::shared_ptr<TEnvironmentSensor>& component)
+        : Peripheral<EmptyConfiguration>(name)
+        , component(component) {
     }
+
+    void configure(const std::shared_ptr<EmptyConfiguration> /*config*/) override {
+        LOGV("No configuration to apply for simple peripheral: %s", name.c_str());
+    }
+
+protected:
+    std::shared_ptr<TEnvironmentSensor> component;
 };
 
 // Peripheral factories

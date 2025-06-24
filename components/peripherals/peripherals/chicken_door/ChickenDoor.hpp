@@ -470,10 +470,10 @@ public:
         auto lightSensorType = deviceConfig->lightSensor.get()->type.get();
         try {
             if (lightSensorType == "bh1750") {
-                return createDoor<Bh1750Component>(name, deviceConfig, mqttRoot, services, 0x23);
+                return createDoor<Bh1750>(name, deviceConfig, mqttRoot, services, 0x23);
             }
             if (lightSensorType == "tsl2591") {
-                return createDoor<Tsl2591Component>(name, deviceConfig, mqttRoot, services, TSL2591_ADDR);
+                return createDoor<Tsl2591>(name, deviceConfig, mqttRoot, services, TSL2591_ADDR);
             }
             throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
 
