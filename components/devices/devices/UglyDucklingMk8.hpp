@@ -10,30 +10,45 @@
 
 using namespace farmhub::kernel;
 
-namespace farmhub::devices {
+namespace farmhub::devices::mk8 {
 
 namespace pins {
 static const InternalPinPtr BOOT = InternalPin::registerPin("BOOT", GPIO_NUM_9);
 static const InternalPinPtr STATUS = InternalPin::registerPin("STATUS", GPIO_NUM_1);
 }    // namespace pins
 
-class Mk8Config
+class Config
     : public DeviceConfiguration {
 public:
-    Mk8Config()
-        : DeviceConfiguration("mk8") {
+    Config() {
     }
 };
 
-class UglyDucklingMk8 : public DeviceDefinition<Mk8Config> {
+class Definition : public TypedDeviceDefinition<Config> {
 public:
-    explicit UglyDucklingMk8(const std::shared_ptr<Mk8Config>& /*config*/)
-        : DeviceDefinition(pins::STATUS, pins::BOOT) {
+    explicit Definition(Revision revision, const std::shared_ptr<Config>& config)
+        : TypedDeviceDefinition("mk8", revision, pins::STATUS, pins::BOOT, config) {
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk8Config>& deviceConfig) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services) override {
     }
 };
 
-}    // namespace farmhub::devices
+class Factory : public DeviceFactory {
+public:
+    explicit Factory(Revision revision)
+        : DeviceFactory(revision) {    // MK8 has no revisions
+    }
+
+    std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& /*i2c*/) override {
+        return nullptr;    // No battery driver for MK8
+    }
+
+    std::shared_ptr<DeviceDefinition> createDeviceDefinition(const std::shared_ptr<FileSystem>& fileSystem, const std::string& configPath) override {
+        auto config = loadConfiguration<Config>(fileSystem, configPath);
+        return std::make_shared<Definition>(revision, config);
+    }
+};
+
+}    // namespace farmhub::devices::mk8

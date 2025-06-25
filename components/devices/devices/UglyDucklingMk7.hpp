@@ -20,7 +20,7 @@ using namespace farmhub::peripherals::flow_control;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
 
-namespace farmhub::devices {
+namespace farmhub::devices::mk7 {
 
 namespace pins {
 static const InternalPinPtr BOOT = InternalPin::registerPin("BOOT", GPIO_NUM_0);
@@ -72,38 +72,25 @@ static const InternalPinPtr IOB4 = InternalPin::registerPin("B4", GPIO_NUM_47);
 static const InternalPinPtr IOA4 = InternalPin::registerPin("A4", GPIO_NUM_48);
 }    // namespace pins
 
-class Mk7Config
+class Config
     : public DeviceConfiguration {
 public:
-    Mk7Config()
-        : DeviceConfiguration("mk7") {
+    Config() {
     }
 };
 
-class UglyDucklingMk7 : public DeviceDefinition<Mk7Config> {
+class Definition : public TypedDeviceDefinition<Config> {
 public:
-    explicit UglyDucklingMk7(const std::shared_ptr<Mk7Config>& /*config*/)
-        : DeviceDefinition(pins::STATUS, pins::BOOT) {
+    explicit Definition(Revision revision, const std::shared_ptr<Config>& config)
+        : TypedDeviceDefinition("mk7", revision, pins::STATUS, pins::BOOT, config) {
         // Switch off strapping pin
         // TODO: Add a LED driver instead
         pins::STATUS2->pinMode(Pin::Mode::Output);
         pins::STATUS2->digitalWrite(1);
     }
 
-    static std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& i2c) {
-        return std::make_shared<Bq27220Driver>(
-            i2c,
-            pins::SDA,
-            pins::SCL,
-            BatteryParameters {
-                .maximumVoltage = 4.1,
-                .bootThreshold = 3.7,
-                .shutdownThreshold = 3.0,
-            });
-    }
-
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk7Config>& /*deviceConfig*/) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services) override {
         auto motorDriver = Drv8833Driver::create(
             services.pwmManager,
             pins::DAIN1,
@@ -119,6 +106,30 @@ protected:
         peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
         peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
+    }
+};
+
+class Factory : public DeviceFactory {
+public:
+    explicit Factory(Revision revision)
+        : DeviceFactory(revision) {
+    }
+
+    std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& i2c) override {
+        return std::make_shared<Bq27220Driver>(
+            i2c,
+            pins::SDA,
+            pins::SCL,
+            BatteryParameters {
+                .maximumVoltage = 4.1,
+                .bootThreshold = 3.7,
+                .shutdownThreshold = 3.0,
+            });
+    }
+
+    std::shared_ptr<DeviceDefinition> createDeviceDefinition(const std::shared_ptr<FileSystem>& fileSystem, const std::string& configPath) override {
+        auto config = loadConfiguration<Config>(fileSystem, configPath);
+        return std::make_shared<Definition>(revision, config);
     }
 };
 

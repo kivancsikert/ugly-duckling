@@ -19,13 +19,13 @@ using namespace farmhub::peripherals::flow_control;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
 
-namespace farmhub::devices {
+namespace farmhub::devices::mk5 {
 
-class Mk5Config
+class Config
     : public DeviceConfiguration {
 public:
-    Mk5Config()
-        : DeviceConfiguration("mk5") {
+    Config()
+        : DeviceConfiguration() {
     }
 };
 
@@ -72,14 +72,14 @@ static const InternalPinPtr RXD0 = InternalPin::registerPin("RXD0", GPIO_NUM_44)
 static const InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43);
 }    // namespace pins
 
-class UglyDucklingMk5 : public DeviceDefinition<Mk5Config> {
+class Definition : public TypedDeviceDefinition<Config> {
 public:
-    explicit UglyDucklingMk5(const std::shared_ptr<Mk5Config>& /*config*/)
-        : DeviceDefinition(pins::STATUS, pins::BOOT) {
+    explicit Definition(Revision revision, const std::shared_ptr<Config>& config)
+        : TypedDeviceDefinition("mk5", revision, pins::STATUS, pins::BOOT, config) {
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk5Config>& /*deviceConfig*/) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services) override {
         auto motorA = std::make_shared<Drv8874Driver>(
             services.pwmManager,
             pins::AIN1,
@@ -102,6 +102,22 @@ protected:
         peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
         peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
+    }
+};
+
+class Factory : public DeviceFactory {
+public:
+    explicit Factory(Revision revision)
+        : DeviceFactory(revision) {
+    }
+
+    std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& /*i2c*/) override {
+        return nullptr; // No battery driver for MK5
+    }
+
+    std::shared_ptr<DeviceDefinition> createDeviceDefinition(const std::shared_ptr<FileSystem>& fileSystem, const std::string& configPath) override {
+        auto config = loadConfiguration<Config>(fileSystem, configPath);
+        return std::make_shared<Definition>(revision, config);
     }
 };
 
