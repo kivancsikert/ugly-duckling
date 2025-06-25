@@ -13,7 +13,7 @@
 #include <peripherals/chicken_door/ChickenDoor.hpp>
 #include <peripherals/flow_control/FlowControl.hpp>
 #include <peripherals/flow_meter/FlowMeter.hpp>
-#include <peripherals/valve/Valve.hpp>
+#include <peripherals/valve/ValvePeripheral.hpp>
 
 #include <devices/DeviceDefinition.hpp>
 
@@ -72,11 +72,11 @@ static const InternalPinPtr TXD0 = InternalPin::registerPin("TXD0", GPIO_NUM_43)
 static const InternalPinPtr LOADEN = InternalPin::registerPin("LOADEN", GPIO_NUM_10);
 }    // namespace pins
 
-class Mk6Config
-    : public DeviceConfiguration {
+class Mk6Settings
+    : public DeviceSettings {
 public:
-    Mk6Config()
-        : DeviceConfiguration("mk6") {
+    Mk6Settings()
+        : DeviceSettings("mk6") {
     }
 
     /**
@@ -86,9 +86,9 @@ public:
     Property<PinPtr> motorNSleepPin { this, "motorNSleepPin", pins::IOC2 };
 };
 
-class UglyDucklingMk6 : public DeviceDefinition<Mk6Config> {
+class UglyDucklingMk6 : public DeviceDefinition<Mk6Settings> {
 public:
-    explicit UglyDucklingMk6(const std::shared_ptr<Mk6Config>& /*config*/)
+    explicit UglyDucklingMk6()
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
         // Switch off strapping pin
         // TODO(lptr): Add a LED driver instead
@@ -108,7 +108,7 @@ public:
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk6Config>& deviceConfig) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk6Settings>& settings) override {
         auto motorDriver = Drv8833Driver::create(
             services.pwmManager,
             pins::AIN1,
@@ -116,7 +116,7 @@ protected:
             pins::BIN1,
             pins::BIN2,
             pins::NFault,
-            deviceConfig->motorNSleepPin.get());
+            settings->motorNSleepPin.get());
 
         std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorDriver->getMotorA() }, { "b", motorDriver->getMotorB() } };
 

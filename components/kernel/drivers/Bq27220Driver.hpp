@@ -53,7 +53,7 @@ public:
     }
 
     // protected:
-    //     void populateTelemetry(JsonObject& json) override {
+    //     void populateTelemetry(JsonObject& json) {
     //         BatteryDriver::populateTelemetry(json);
     //         json["current"] = getCurrent();
     //         auto status = device->readRegWord(0x0A);

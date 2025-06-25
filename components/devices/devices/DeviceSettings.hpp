@@ -11,9 +11,9 @@ using namespace farmhub::kernel::drivers;
 
 namespace farmhub::devices {
 
-class DeviceConfiguration : public ConfigurationSection {
+class DeviceSettings : public ConfigurationSection {
 public:
-    explicit DeviceConfiguration(const std::string& defaultModel)
+    explicit DeviceSettings(const std::string& defaultModel)
         : model(this, "model", defaultModel)
         , instance(this, "instance", getMacAddress()) {
     }

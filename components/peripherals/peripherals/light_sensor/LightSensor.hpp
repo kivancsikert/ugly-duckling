@@ -3,13 +3,11 @@
 #include <chrono>
 #include <memory>
 
-#include <Component.hpp>
 #include <Configuration.hpp>
 #include <I2CManager.hpp>
 #include <MovingAverage.hpp>
-#include <Telemetry.hpp>
 
-#include <peripherals/I2CConfig.hpp>
+#include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <utility>
 
@@ -21,21 +19,19 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::light_sensor {
 
-class LightSensorComponent
-    : public Component,
-      public TelemetryProvider {
+class LightSensor
+    : Named {
 public:
-    LightSensorComponent(
+    LightSensor(
         const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : Component(name, std::move(mqttRoot))
+        : Named(name)
         , measurementFrequency(measurementFrequency)
         , level(latencyInterval.count() / measurementFrequency.count()) {
     }
 
-    ~LightSensorComponent() override = default;
+    virtual ~LightSensor() = default;
 
     double getCurrentLevel() {
         Lock lock(updateAverageMutex);
@@ -44,11 +40,6 @@ public:
 
     seconds getMeasurementFrequency() {
         return measurementFrequency;
-    }
-
-    void populateTelemetry(JsonObject& json) override {
-        Lock lock(updateAverageMutex);
-        json["light"] = level.getAverage();
     }
 
 protected:

@@ -6,7 +6,7 @@
 
 #include <ArduinoJson.h>
 
-#include <devices/DeviceConfiguration.hpp>
+#include <devices/DeviceSettings.hpp>
 
 #include <Log.hpp>
 #include <PcntManager.hpp>
@@ -19,8 +19,8 @@
 #include <peripherals/analog_meter/AnalogMeter.hpp>
 #include <peripherals/environment/Ds18B20SoilSensor.hpp>
 #include <peripherals/environment/Environment.hpp>
-#include <peripherals/environment/Sht2xComponent.hpp>
-#include <peripherals/environment/Sht3xComponent.hpp>
+#include <peripherals/environment/Sht2xSensor.hpp>
+#include <peripherals/environment/Sht3xSensor.hpp>
 #include <peripherals/environment/SoilMoistureSensor.hpp>
 #include <peripherals/fence/ElectricFenceMonitor.hpp>
 #include <peripherals/light_sensor/Bh1750.hpp>
@@ -34,7 +34,7 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::devices {
 
-template <std::derived_from<DeviceConfiguration> TDeviceConfiguration>
+template <std::derived_from<DeviceSettings> TDeviceSettings>
 class DeviceDefinition {
 public:
     DeviceDefinition(PinPtr statusPin, InternalPinPtr bootPin)
@@ -44,11 +44,11 @@ public:
 
     virtual ~DeviceDefinition() = default;
 
-    virtual void registerPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, std::shared_ptr<TDeviceConfiguration> deviceConfig) {
-        peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht3xComponent>>("sht3x", 0x44 /* Also supports 0x45 */));
+    virtual void registerPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, const std::shared_ptr<TDeviceSettings>& settings) {
+        peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht3xSensor>>("sht3x", 0x44 /* Also supports 0x45 */));
         // TODO Unify these two factories
-        peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht2xComponent>>("sht2x", 0x40 /* Not configurable */));
-        peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht2xComponent>>("htu2x", 0x40 /* Not configurable */));
+        peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht2xSensor>>("sht2x", 0x40 /* Not configurable */));
+        peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht2xSensor>>("htu2x", 0x40 /* Not configurable */));
 
         peripheralManager->registerFactory(std::make_unique<environment::SoilMoistureSensorFactory>());
         peripheralManager->registerFactory(std::make_unique<environment::Ds18B20SoilSensorFactory>());
@@ -62,7 +62,7 @@ public:
 
         peripheralManager->registerFactory(std::make_unique<analog_meter::AnalogMeterFactory>());
 
-        registerDeviceSpecificPeripheralFactories(peripheralManager, services, deviceConfig);
+        registerDeviceSpecificPeripheralFactories(peripheralManager, services, settings);
     }
 
     /**
@@ -80,7 +80,7 @@ public:
     const InternalPinPtr bootPin;
 
 protected:
-    virtual void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<TDeviceConfiguration>& deviceConfig) {
+    virtual void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<TDeviceSettings>& settings) {
     }
 };
 

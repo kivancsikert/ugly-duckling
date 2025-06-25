@@ -10,7 +10,7 @@
 #include <peripherals/chicken_door/ChickenDoor.hpp>
 #include <peripherals/flow_control/FlowControl.hpp>
 #include <peripherals/flow_meter/FlowMeter.hpp>
-#include <peripherals/valve/Valve.hpp>
+#include <peripherals/valve/ValvePeripheral.hpp>
 
 #include <devices/DeviceDefinition.hpp>
 
@@ -72,17 +72,17 @@ static const InternalPinPtr IOB4 = InternalPin::registerPin("B4", GPIO_NUM_47);
 static const InternalPinPtr IOA4 = InternalPin::registerPin("A4", GPIO_NUM_48);
 }    // namespace pins
 
-class Mk7Config
-    : public DeviceConfiguration {
+class Mk7Settings
+    : public DeviceSettings {
 public:
-    Mk7Config()
-        : DeviceConfiguration("mk7") {
+    Mk7Settings()
+        : DeviceSettings("mk7") {
     }
 };
 
-class UglyDucklingMk7 : public DeviceDefinition<Mk7Config> {
+class UglyDucklingMk7 : public DeviceDefinition<Mk7Settings> {
 public:
-    explicit UglyDucklingMk7(const std::shared_ptr<Mk7Config>& /*config*/)
+    explicit UglyDucklingMk7()
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
         // Switch off strapping pin
         // TODO: Add a LED driver instead
@@ -103,7 +103,7 @@ public:
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk7Config>& /*deviceConfig*/) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk7Settings>& /*settings*/) override {
         auto motorDriver = Drv8833Driver::create(
             services.pwmManager,
             pins::DAIN1,

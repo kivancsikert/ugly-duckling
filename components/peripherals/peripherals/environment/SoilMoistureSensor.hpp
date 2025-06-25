@@ -2,9 +2,6 @@
 
 #include <memory>
 
-#include <Component.hpp>
-#include <Telemetry.hpp>
-
 #include <peripherals/Peripheral.hpp>
 #include <utility>
 
@@ -13,7 +10,7 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::environment {
 
-class SoilMoistureSensorDeviceConfig
+class SoilMoistureSensorSettings
     : public ConfigurationSection {
 public:
     Property<InternalPinPtr> pin { this, "pin" };
@@ -22,28 +19,25 @@ public:
     Property<uint16_t> water { this, "water", 1000 };
 };
 
-class SoilMoistureSensorComponent final
-    : public Component,
-      public TelemetryProvider {
+class SoilMoistureSensor final {
 public:
-    SoilMoistureSensorComponent(
-        const std::string& name,
-        std::shared_ptr<MqttRoot> mqttRoot,
-        const std::shared_ptr<SoilMoistureSensorDeviceConfig>& config)
-        : Component(name, std::move(mqttRoot))
-        , airValue(config->air.get())
-        , waterValue(config->water.get())
-        , pin(config->pin.get()) {
+    SoilMoistureSensor(
+        int airValue,
+        int waterValue,
+        const InternalPinPtr& pin)
+        : airValue(airValue)
+        , waterValue(waterValue)
+        , pin(pin) {
 
         LOGI("Initializing soil moisture sensor on pin %s; air value: %d; water value: %d",
-            pin.getName().c_str(), airValue, waterValue);
+            pin->getName().c_str(), airValue, waterValue);
     }
 
-    void populateTelemetry(JsonObject& json) override {
+    double getMoisture() {
         std::optional<uint16_t> soilMoistureValue = pin.analogRead();
         if (!soilMoistureValue.has_value()) {
             LOGD("Failed to read soil moisture value");
-            return;
+            return std::numeric_limits<double>::quiet_NaN();
         }
         LOGV("Soil moisture value: %d",
             soilMoistureValue.value());
@@ -53,7 +47,7 @@ public:
         const double delta = soilMoistureValue.value() - airValue;
         double moisture = (delta * rise) / run;
 
-        json["moisture"] = moisture;
+        return moisture;
     }
 
 private:
@@ -62,31 +56,21 @@ private:
     AnalogPin pin;
 };
 
-class SoilMoistureSensor
-    : public Peripheral<EmptyConfiguration> {
-public:
-    SoilMoistureSensor(const std::string& name, const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<SoilMoistureSensorDeviceConfig>& config)
-        : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , sensor(name, mqttRoot, config) {
-    }
-
-    void populateTelemetry(JsonObject& telemetryJson) override {
-        sensor.populateTelemetry(telemetryJson);
-    }
-
-private:
-    SoilMoistureSensorComponent sensor;
-};
+class SoilMoistureSensorFactory;
 
 class SoilMoistureSensorFactory
-    : public PeripheralFactory<SoilMoistureSensorDeviceConfig, EmptyConfiguration> {
+    : public PeripheralFactory<SoilMoistureSensorSettings> {
 public:
     SoilMoistureSensorFactory()
-        : PeripheralFactory<SoilMoistureSensorDeviceConfig, EmptyConfiguration>("environment:soil-moisture", "environment") {
+        : PeripheralFactory<SoilMoistureSensorSettings>("environment:soil-moisture", "environment") {
     }
 
-    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SoilMoistureSensorDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices&  /*services*/) override {
-        return std::make_unique<SoilMoistureSensor>(name, mqttRoot, deviceConfig);
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<SoilMoistureSensorSettings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
+        auto sensor = std::make_shared<SoilMoistureSensor>(settings->air.get(), settings->water.get(), settings->pin.get());
+        services.telemetryCollector->registerFeature("moisture", name, [sensor](JsonObject& telemetryJson) {
+            telemetryJson["value"] = sensor->getMoisture();
+        });
+        return std::make_shared<SimplePeripheral>(name, sensor);
     }
 };
 
