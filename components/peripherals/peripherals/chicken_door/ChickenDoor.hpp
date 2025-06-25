@@ -454,10 +454,10 @@ public:
             settings->movementTimeout.get(),
             services.telemetryPublisher);
 
-        services.telemetryCollector->registerProvider("light", name, [lightSensor](JsonObject& telemetryJson) {
+        services.telemetryCollector->registerFeature("light", name, [lightSensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = lightSensor->getCurrentLevel();
         });
-        services.telemetryCollector->registerProvider("door", name, [door](JsonObject& telemetryJson) {
+        services.telemetryCollector->registerFeature("door", name, [door](JsonObject& telemetryJson) {
             door->populateTelemetry(telemetryJson);
         });
 

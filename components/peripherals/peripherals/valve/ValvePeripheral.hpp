@@ -62,7 +62,7 @@ public:
             std::move(strategy),
             mqttRoot,
             services.telemetryPublisher);
-        services.telemetryCollector->registerProvider("valve", name, [valve](JsonObject& telemetry) {
+        services.telemetryCollector->registerFeature("valve", name, [valve](JsonObject& telemetry) {
             valve->populateTelemetry(telemetry);
         });
         return std::make_shared<ValvePeripheral>(name, valve);

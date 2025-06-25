@@ -12,34 +12,35 @@ namespace farmhub::kernel {
 
 class TelemetryCollector {
 public:
-    void collect(JsonArray& entries) {
-        for (auto& provider : providers) {
-            auto entry = entries.add<JsonObject>();
-            entry["type"] = provider.type;
-            if (!provider.name.empty()) {
-                entry["name"] = provider.name;
+    void collect(JsonArray& featuresJson) {
+        for (auto& feature : features) {
+            auto featureJson = featuresJson.add<JsonObject>();
+            featureJson["type"] = feature.type;
+            if (!feature.name.empty()) {
+                featureJson["name"] = feature.name;
             }
-            auto data = entry["data"].to<JsonObject>();
-            provider.populate(data);
+            auto data = featureJson["data"].to<JsonObject>();
+            feature.populate(data);
         }
     }
 
-    void registerProvider(
+    void registerFeature(
         const std::string& type,
         const std::string& name,
         std::function<void(JsonObject&)> populate) {
-        LOGV("Registering telemetry provider %s of type %s", name.c_str(), type.c_str());
-        providers.push_back({ name, type, std::move(populate) });
+        LOGV("Registering '%s' feature '%s'",
+            type.c_str(), name.c_str());
+        features.push_back({ type, name, std::move(populate) });
     }
 
 private:
-    struct Provider {
-        std::string name;
+    struct Feature {
         std::string type;
+        std::string name;
         std::function<void(JsonObject&)> populate;
     };
 
-    std::list<Provider> providers;
+    std::list<Feature> features;
 };
 
 class TelemetryPublisher {

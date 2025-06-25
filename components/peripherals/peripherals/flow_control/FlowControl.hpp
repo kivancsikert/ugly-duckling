@@ -90,10 +90,10 @@ public:
             flowMeterConfig->qFactor.get(),
             flowMeterConfig->measurementFrequency.get());
 
-        services.telemetryCollector->registerProvider("valve", name, [valve](JsonObject& telemetry) {
+        services.telemetryCollector->registerFeature("valve", name, [valve](JsonObject& telemetry) {
             valve->populateTelemetry(telemetry);
         });
-        services.telemetryCollector->registerProvider("flow", name, [flowMeter](JsonObject& telemetry) {
+        services.telemetryCollector->registerFeature("flow", name, [flowMeter](JsonObject& telemetry) {
             flowMeter->populateTelemetry(telemetry);
         });
 

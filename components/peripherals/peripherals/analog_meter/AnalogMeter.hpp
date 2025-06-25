@@ -83,7 +83,7 @@ public:
             settings->multiplier.get(),
             settings->measurementFrequency.get(),
             settings->windowSize.get());
-        services.telemetryCollector->registerProvider(settings->type.get(), name, [meter](JsonObject& telemetryJson) {
+        services.telemetryCollector->registerFeature(settings->type.get(), name, [meter](JsonObject& telemetryJson) {
             telemetryJson["value"] = meter->getValue();
         });
         return std::make_shared<SimplePeripheral>(name, meter);

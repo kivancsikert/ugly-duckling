@@ -289,8 +289,8 @@ void initTelemetryPublishTask(
             auto powerManagementData = telemetry["pm"].to<JsonObject>();
             powerManager->populateTelemetry(powerManagementData);
 
-            auto entries = telemetry["entries"].to<JsonArray>();
-            telemetryCollector->collect(entries);
+            auto features = telemetry["features"].to<JsonArray>();
+            telemetryCollector->collect(features);
         }, Retention::NoRetain, QoS::AtLeastOnce);
 
         // Signal that we are still alive

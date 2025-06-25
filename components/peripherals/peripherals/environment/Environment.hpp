@@ -39,10 +39,10 @@ public:
         LOGI("Creating %s sensor %s with %s",
             sensorType.c_str(), name.c_str(), i2cConfig.toString().c_str());
         auto sensor = std::make_shared<TSensor>(sensorType, services.i2c, i2cConfig);
-        services.telemetryCollector->registerProvider("temperature", name, [sensor](JsonObject& telemetryJson) {
+        services.telemetryCollector->registerFeature("temperature", name, [sensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = sensor->getTemperature();
         });
-        services.telemetryCollector->registerProvider("humidity", name, [sensor](JsonObject& telemetryJson) {
+        services.telemetryCollector->registerFeature("humidity", name, [sensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = sensor->getHumidity();
         });
         return std::make_shared<SimplePeripheral>(name, sensor);
