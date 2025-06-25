@@ -105,7 +105,7 @@ public:
 
     std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<FlowMeterSettings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
         auto meter = std::make_shared<FlowMeter>(name, services.pulseCounterManager, settings->pin.get(), settings->qFactor.get(), settings->measurementFrequency.get());
-        services.telemetryCollector->registerProvider("flow", name, [meter](JsonObject& telemetry) {
+        services.telemetryCollector->registerFeature("flow", name, [meter](JsonObject& telemetry) {
             meter->populateTelemetry(telemetry);
         });
         return std::make_shared<SimplePeripheral>(name, meter);

@@ -86,7 +86,7 @@ public:
     std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Tsl2591Settings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
         I2CConfig i2cConfig = settings->parse(TSL2591_ADDR);
         auto sensor = std::make_shared<Tsl2591>(name, services.i2c, i2cConfig, settings->measurementFrequency.get(), settings->latencyInterval.get());
-        services.telemetryCollector->registerProvider("light", name, [sensor](JsonObject& telemetryJson) {
+        services.telemetryCollector->registerFeature("light", name, [sensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = sensor->getCurrentLevel();
         });
         return std::make_shared<SimplePeripheral>(name, sensor);
