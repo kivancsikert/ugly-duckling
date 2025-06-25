@@ -1,9 +1,8 @@
 {
-  "instance": "DEVICE_INSTANCE",
-  "id": "DEVICE_ID",
+  "instance": "test-mk6-xxx",
+  "location": "bumblebee",
   "peripherals": [
     {
-      "name": "flow-control",
       "type": "flow-control",
       "params": {
         "valve": {
@@ -14,5 +13,6 @@
         }
       }
     }
-  ]
+  ],
+  "motorNSleepPin": "C4"
 }
