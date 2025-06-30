@@ -11,6 +11,9 @@ categories:
   - title: 🐛 Bug Fixes
     labels:
       - bug
+  - title: 🎛️ Adjustments
+    labels:
+      - adjustments
   - title: 🚦 Internal changes
     labels:
       - internal
