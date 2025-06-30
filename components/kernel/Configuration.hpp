@@ -343,6 +343,10 @@ public:
         config->store(json, inlineDefaults);
     }
 
+    std::shared_ptr<TConfiguration> getConfig() const {
+        return config;
+    }
+
     std::string toString(bool includeDefaults = true) {
         JsonDocument json;
         auto root = json.to<JsonObject>();
