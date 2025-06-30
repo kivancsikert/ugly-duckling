@@ -1,7 +1,7 @@
 ## IDF Component Manager Manifest File
 dependencies:
   idf:
-    version: 5.4.1
+    version: 5.4.2
   espressif/catch2: 3.7.0
   espressif/mdns: 1.8.2
   bblanchon/arduinojson: 7.4.1
