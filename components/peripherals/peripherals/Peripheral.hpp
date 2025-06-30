@@ -129,15 +129,6 @@ public:
         std::shared_ptr<TConfig> config = std::make_shared<TConfig>();
         // Use short prefix because SPIFFS has a 32 character limit
         std::shared_ptr<ConfigurationFile<TConfig>> configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + name, config);
-        mqttRoot->subscribe("config", [name, configFile](const std::string&, const JsonObject& configJson) {
-            LOGD("Received configuration update for peripheral: %s", name.c_str());
-            try {
-                configFile->update(configJson);
-            } catch (const std::exception& e) {
-                LOGE("Failed to update configuration for peripheral '%s' because %s",
-                    name.c_str(), e.what());
-            }
-        });
 
         std::shared_ptr<TDeviceConfig> deviceConfig = std::apply([](TDeviceConfigArgs... args) {
             return std::make_shared<TDeviceConfig>(std::forward<TDeviceConfigArgs>(args)...);
@@ -146,7 +137,16 @@ public:
         deviceConfig->loadFromString(jsonConfig);
         std::unique_ptr<Peripheral<TConfig>> peripheral = createPeripheral(name, deviceConfig, mqttRoot, services);
         peripheral->configure(config);
-
+        mqttRoot->subscribe("config", [name, configFile, peripheral = peripheral.get()](const std::string&, const JsonObject& configJson) {
+            LOGD("Received configuration update for peripheral: %s", name.c_str());
+            try {
+                configFile->update(configJson);
+                peripheral->configure(configFile->getConfig());
+            } catch (const std::exception& e) {
+                LOGE("Failed to update configuration for peripheral '%s' because %s",
+                    name.c_str(), e.what());
+            }
+        });
         // Store configuration in init message
         config->store(initConfigJson, false);
         return peripheral;
