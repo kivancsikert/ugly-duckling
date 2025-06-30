@@ -13,7 +13,7 @@ categories:
       - bug
   - title: 🎛️ Adjustments
     labels:
-      - adjustments
+      - adjustment
   - title: 🚦 Internal changes
     labels:
       - internal
