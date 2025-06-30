@@ -147,7 +147,9 @@ See `FileCommands` for more information.
 
 ### Prerequisites
 
-- ESP-IDF v5.4.0 (see [installation instructions](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/index.html))
+- ESP-IDF v5.4.2 (see [installation instructions](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/get-started/index.html))
+
+Actually needs [ESP-IDF-Clang Docker image](https://github.com/lptr/esp-idf-clang-docker).
 
 ### Building
 
