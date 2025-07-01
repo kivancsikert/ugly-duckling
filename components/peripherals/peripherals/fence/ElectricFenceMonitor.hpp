@@ -62,7 +62,7 @@ public:
         }
 
         auto measurementFrequency = settings->measurementFrequency.get();
-        Task::loop(name, 3172, [this, measurementFrequency](Task& task) {
+        Task::loop(name, 3072, [this, measurementFrequency](Task& task) {
             uint16_t lastVoltage = 0;
             for (auto& pin : pins) {
                 uint32_t count = pin.counter->reset();

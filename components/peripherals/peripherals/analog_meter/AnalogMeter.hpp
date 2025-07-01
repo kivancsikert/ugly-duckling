@@ -36,7 +36,7 @@ public:
         LOGI("Initializing analog meter on pin %s",
             pin->getName().c_str());
 
-        Task::loop(name, 3172, [this, measurementFrequency, offset, multiplier](Task& task) {
+        Task::loop(name, 3072, [this, measurementFrequency, offset, multiplier](Task& task) {
             auto measurement = this->pin.analogRead();
             if (measurement.has_value()) {
                 double value = offset + measurement.value() * multiplier;
