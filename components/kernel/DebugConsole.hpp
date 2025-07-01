@@ -41,7 +41,7 @@ private:
         status += ", CPU: \033[33m" + std::to_string(esp_clk_cpu_freq() / 1000000) + "\033[0m MHz";
 
         if (battery != nullptr) {
-            status += ", battery: \033[33m" + toStringWithPrecision(battery->getVoltage(), 2) + "\033[0m V";
+            status += ", battery: \033[33m" + toStringWithPrecision(battery->getVoltage() / 1000.0, 2) + "\033[0m V";
         }
 
         printf("\033[1G\033[0K%s", status.c_str());
