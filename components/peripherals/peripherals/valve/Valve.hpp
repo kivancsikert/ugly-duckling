@@ -282,15 +282,17 @@ public:
                 ? duration_cast<ticks>(update.validFor)
                 : ticks::max();
             // TODO Account for time spent in transitionTo()
-            updateQueue.pollIn(validFor, [this](const std::variant<OverrideSpec, ScheduleSpec>& change) {
+            updateQueue.pollIn(validFor, [this](const std::variant<OverrideSpec, ConfigureSpec>& change) {
                 std::visit(
                     [this](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
                         if constexpr (std::is_same_v<T, OverrideSpec>) {
                             overrideState = arg.state;
                             overrideUntil = arg.until;
-                        } else if constexpr (std::is_same_v<T, ScheduleSpec>) {
+                        } else if constexpr (std::is_same_v<T, ConfigureSpec>) {
                             schedules = std::list(arg.schedules);
+                            overrideState = arg.overrideState;
+                            overrideUntil = arg.overrideUntil;
                         }
                     },
                     change);
@@ -298,10 +300,13 @@ public:
         });
     }
 
-    void setSchedules(const std::list<ValveSchedule>& schedules) {
-        LOGD("Setting %d schedules for valve %s",
-            schedules.size(), name.c_str());
-        updateQueue.put(ScheduleSpec { schedules });
+    void configure(const std::list<ValveSchedule>& schedules, ValveState overrideState, time_point<system_clock> overrideUntil) {
+        LOGD("Configuring valve %s with %d schedules; override state %d until %lld",
+            name.c_str(),
+            schedules.size(),
+            static_cast<int>(overrideState),
+            duration_cast<seconds>(overrideUntil.time_since_epoch()).count());
+        updateQueue.put(ConfigureSpec { schedules, overrideState, overrideUntil });
     }
 
     void populateTelemetry(JsonObject& telemetry) {
@@ -400,15 +405,17 @@ private:
         time_point<system_clock> until;
     };
 
-    struct ScheduleSpec {
+    struct ConfigureSpec {
     public:
         std::list<ValveSchedule> schedules;
+        ValveState overrideState;
+        time_point<system_clock> overrideUntil;
     };
 
     std::list<ValveSchedule> schedules;
     std::atomic<ValveState> overrideState = ValveState::NONE;
     std::atomic<time_point<system_clock>> overrideUntil;
-    Queue<std::variant<OverrideSpec, ScheduleSpec>> updateQueue { "eventQueue", 1 };
+    Queue<std::variant<OverrideSpec, ConfigureSpec>> updateQueue { "eventQueue", 1 };
 };
 
 }    // namespace farmhub::peripherals::valve
