@@ -104,8 +104,8 @@ public:
 
 std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<ElectricFenceMonitorSettings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
         auto monitor = std::make_shared<ElectricFenceMonitor>(name, services.pulseCounterManager, settings);
-        services.telemetryCollector->registerFeature("fence", name, [monitor](JsonObject& telemetryJson) {
-            telemetryJson["voltage"] = monitor->getVoltage();
+        services.telemetryCollector->registerFeature("voltage", name, [monitor](JsonObject& telemetryJson) {
+            telemetryJson["value"] = monitor->getVoltage();
         });
         return std::make_shared<SimplePeripheral>(name, monitor);
     }
