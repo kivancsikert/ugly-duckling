@@ -20,8 +20,7 @@ using namespace farmhub::kernel;
 
 namespace farmhub::kernel::drivers {
 
-class WiFiDriver final
-    : public TelemetryProvider {
+class WiFiDriver final {
 public:
     WiFiDriver(
         StateSource& networkConnecting,
@@ -76,7 +75,7 @@ public:
         });
     }
 
-    void populateTelemetry(JsonObject& json) override {
+    void populateTelemetry(JsonObject& json) {
         if (networkReady.isSet()) {
             wifi_ap_record_t apInfo = {};
             esp_err_t err = esp_wifi_sta_get_ap_info(&apInfo);

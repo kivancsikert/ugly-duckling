@@ -9,7 +9,7 @@ using namespace farmhub::kernel;
 
 namespace farmhub::peripherals {
 
-class SinglePinDeviceConfig
+class SinglePinSettings
     : public ConfigurationSection {
 public:
     Property<InternalPinPtr> pin { this, "pin" };

@@ -61,7 +61,7 @@ private:
     PowerManagementLock& lock;
 };
 
-class PowerManager final : public TelemetryProvider {
+class PowerManager final {
 public:
     explicit PowerManager(bool requestedSleepWhenIdle)
         : sleepWhenIdle(shouldSleepWhenIdle(requestedSleepWhenIdle)) {
@@ -105,7 +105,7 @@ public:
     }
     const bool sleepWhenIdle;
 
-    void populateTelemetry(JsonObject& json) override {
+    void populateTelemetry(JsonObject& json) {
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
         auto now = boot_clock::now();
         microseconds duration = now - sleepTimeLastReported;

@@ -1,43 +1,66 @@
 #pragma once
 
 #include <chrono>
-
-#include <Configuration.hpp>
-#include <mqtt/MqttDriver.hpp>
-#include <peripherals/Peripheral.hpp>
-#include <peripherals/analog_meter/AnalogMeterComponent.hpp>
 #include <utility>
 
+#include <BootClock.hpp>
+#include <Concurrent.hpp>
+#include <Configuration.hpp>
+#include <MovingAverage.hpp>
+#include <Pin.hpp>
+#include <Task.hpp>
+#include <mqtt/MqttDriver.hpp>
+#include <peripherals/Peripheral.hpp>
+
+using namespace std::chrono;
+using namespace std::chrono_literals;
+using namespace farmhub::kernel;
 using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::peripherals::analog_meter {
 
-class AnalogMeter
-    : public Peripheral<EmptyConfiguration> {
+class AnalogMeter final
+    : Named {
 public:
     AnalogMeter(
         const std::string& name,
-        const std::shared_ptr<MqttRoot>& mqttRoot,
         const InternalPinPtr& pin,
         double offset,
         double multiplier,
         milliseconds measurementFrequency,
         std::size_t windowSize)
-        : Peripheral<EmptyConfiguration>(name, mqttRoot)
-        , meter(name, mqttRoot, pin, offset, multiplier, measurementFrequency, windowSize) {
-        };
+        : Named(name)
+        , pin(pin)
+        , value(windowSize) {
 
-    void populateTelemetry(JsonObject& json) override {
-        meter.populateTelemetry(json);
+        LOGI("Initializing analog meter on pin %s",
+            pin->getName().c_str());
+
+        Task::loop(name, 3172, [this, measurementFrequency, offset, multiplier](Task& task) {
+            auto measurement = this->pin.analogRead();
+            if (measurement.has_value()) {
+                double value = offset + measurement.value() * multiplier;
+                LOGV("Analog value on '%s' measured at %.2f",
+                    this->name.c_str(), value);
+                this->value.record(value);
+            }
+            task.delayUntil(measurementFrequency);
+        });
+    }
+
+    double getValue() {
+        return value.getAverage();
     }
 
 private:
-    AnalogMeterComponent meter;
+    AnalogPin pin;
+    MovingAverage<double> value;
 };
 
-class AnalogMeterDeviceConfig
+class AnalogMeterSettings
     : public ConfigurationSection {
 public:
+    Property<std::string> type { this, "type", "analog-meter" };
     Property<InternalPinPtr> pin { this, "pin" };
     Property<double> offset { this, "offset", 0.0 };
     Property<double> multiplier { this, "multiplier", 1.0 };
@@ -46,21 +69,24 @@ public:
 };
 
 class AnalogMeterFactory
-    : public PeripheralFactory<AnalogMeterDeviceConfig, EmptyConfiguration> {
+    : public PeripheralFactory<AnalogMeterSettings> {
 public:
     AnalogMeterFactory()
-        : PeripheralFactory<AnalogMeterDeviceConfig, EmptyConfiguration>("analog-meter") {
+        : PeripheralFactory<AnalogMeterSettings>("analog-meter") {
     }
 
-    std::unique_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<AnalogMeterDeviceConfig> deviceConfig, std::shared_ptr<MqttRoot> mqttRoot, const PeripheralServices& /*services*/) override {
-        return std::make_unique<AnalogMeter>(
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<AnalogMeterSettings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
+        auto meter = std::make_shared<AnalogMeter>(
             name,
-            mqttRoot,
-            deviceConfig->pin.get(),
-            deviceConfig->offset.get(),
-            deviceConfig->multiplier.get(),
-            deviceConfig->measurementFrequency.get(),
-            deviceConfig->windowSize.get());
+            settings->pin.get(),
+            settings->offset.get(),
+            settings->multiplier.get(),
+            settings->measurementFrequency.get(),
+            settings->windowSize.get());
+        services.telemetryCollector->registerFeature(settings->type.get(), name, [meter](JsonObject& telemetryJson) {
+            telemetryJson["value"] = meter->getValue();
+        });
+        return std::make_shared<SimplePeripheral>(name, meter);
     }
 };
 

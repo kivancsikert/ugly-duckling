@@ -6,7 +6,6 @@
 
 #include <Configuration.hpp>
 
-#include <peripherals/valve/ValveComponent.hpp>
 #include <peripherals/valve/ValveSchedule.hpp>
 #include <peripherals/valve/ValveScheduler.hpp>
 
@@ -29,10 +28,10 @@ public:
     ArrayProperty<ValveSchedule> schedule { this, "schedule" };
 };
 
-class ValveDeviceConfig
+class ValveSettings
     : public ConfigurationSection {
 public:
-    explicit ValveDeviceConfig(ValveControlStrategyType defaultStrategy)
+    explicit ValveSettings(ValveControlStrategyType defaultStrategy)
         : strategy(this, "strategy", defaultStrategy) {
     }
 
