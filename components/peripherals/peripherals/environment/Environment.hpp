@@ -21,7 +21,7 @@ public:
     virtual ~EnvironmentSensor() = default;
 
     virtual double getTemperature() = 0;
-    virtual double getHumidity() = 0;
+    virtual double getMoisture() = 0;
 };
 
 template <std::derived_from<EnvironmentSensor> TSensor>
@@ -42,8 +42,8 @@ public:
         services.telemetryCollector->registerFeature("temperature", name, [sensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = sensor->getTemperature();
         });
-        services.telemetryCollector->registerFeature("humidity", name, [sensor](JsonObject& telemetryJson) {
-            telemetryJson["value"] = sensor->getHumidity();
+        services.telemetryCollector->registerFeature("moisture", name, [sensor](JsonObject& telemetryJson) {
+            telemetryJson["value"] = sensor->getMoisture();
         });
         return std::make_shared<SimplePeripheral>(name, sensor);
     }

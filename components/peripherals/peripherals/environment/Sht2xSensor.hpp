@@ -49,7 +49,7 @@ public:
         return value;
     }
 
-    double getHumidity() override {
+    double getMoisture() override {
         float value;
         esp_err_t res = si7021_measure_humidity(&sensor, &value);
         if (res != ESP_OK) {

@@ -45,7 +45,7 @@ public:
         return temperature;
     }
 
-    double getHumidity() override {
+    double getMoisture() override {
         Lock lock(mutex);
         updateMeasurement();
         return humidity;
