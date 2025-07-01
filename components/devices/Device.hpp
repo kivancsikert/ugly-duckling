@@ -127,8 +127,8 @@ std::shared_ptr<BatteryDriver> initBattery(std::shared_ptr<I2CManager> i2c) {
         // This is to prevent the device from booting and immediately shutting down
         // due to the high current draw of the boot process.
         auto voltage = battery->getVoltage();
-        if (voltage != 0.0 && voltage < battery->parameters.bootThreshold) {
-            ESP_LOGW("battery", "Battery voltage too low (%.2f V < %.2f), entering deep sleep\n",
+        if (voltage != 0 && voltage < battery->parameters.bootThreshold) {
+            ESP_LOGW("battery", "Battery voltage too low (%d mV < %d mV), entering deep sleep\n",
                 voltage, battery->parameters.bootThreshold);
             enterLowPowerDeepSleep();
         }
@@ -274,7 +274,7 @@ void initTelemetryPublishTask(
             telemetry["timestamp"] = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 
             if (batteryManager != nullptr) {
-                telemetry["battery"]["voltage"] = batteryManager->getVoltage();
+                telemetry["battery"]["voltage"] = static_cast<double>(batteryManager->getVoltage()) / 1000.0; // Convert to volts
             }
 
             auto wifiData = telemetry["wifi"].to<JsonObject>();

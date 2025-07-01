@@ -35,12 +35,18 @@ public:
         std::shared_ptr<ShutdownManager> shutdownManager)
         : battery(std::move(battery))
         , shutdownManager(std::move(shutdownManager)) {
-        Task::loop("battery", 2560, [this](Task& task) {
+        Task::loop("battery", 3072, [this](Task& task) {
             checkBatteryVoltage(task);
         });
     }
 
-    double getVoltage() {
+    /**
+     * @brief Get the Voltage object
+     *
+     * @return int Battery voltage in millivolts, -1 if voltage cannot be determined,
+     * or 0 if device has no battery.
+     */
+    int getVoltage() {
         return batteryVoltage.getAverage();
     }
 
@@ -51,8 +57,8 @@ private:
         batteryVoltage.record(currentVoltage);
         auto voltage = batteryVoltage.getAverage();
 
-        if (voltage != 0.0 && voltage < battery->parameters.shutdownThreshold) {
-            LOGI("Battery voltage low (%.2f V < %.2f), starting shutdown process, will go to deep sleep in %lld seconds",
+        if (voltage != 0 && voltage < battery->parameters.shutdownThreshold) {
+            LOGI("Battery voltage low (%d mV < %d mV), starting shutdown process, will go to deep sleep in %lld seconds",
                 voltage, battery->parameters.shutdownThreshold, duration_cast<seconds>(LOW_BATTERY_SHUTDOWN_TIMEOUT).count());
 
             // TODO Publish all MQTT messages, then shut down WiFi, and _then_ start shutting down peripherals
@@ -67,7 +73,7 @@ private:
     const std::shared_ptr<BatteryDriver> battery;
     const std::shared_ptr<ShutdownManager> shutdownManager;
 
-    MovingAverage<double> batteryVoltage { 5 };
+    MovingAverage<int> batteryVoltage { 5 };
 
     /**
      * @brief How often we check the battery voltage while in operation.

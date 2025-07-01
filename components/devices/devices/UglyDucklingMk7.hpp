@@ -96,9 +96,9 @@ public:
             pins::SDA,
             pins::SCL,
             BatteryParameters {
-                .maximumVoltage = 4.1,
-                .bootThreshold = 3.6,
-                .shutdownThreshold = 3.0,
+                .maximumVoltage = 4100,
+                .bootThreshold = 3600,
+                .shutdownThreshold = 3000,
             });
     }
 

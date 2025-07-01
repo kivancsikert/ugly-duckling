@@ -101,9 +101,9 @@ public:
             pins::BATTERY,
             1.2424,
             BatteryParameters {
-                .maximumVoltage = 4.1,
-                .bootThreshold = 3.6,
-                .shutdownThreshold = 3.4,
+                .maximumVoltage = 4100,
+                .bootThreshold = 3600,
+                .shutdownThreshold = 3400,
             });
     }
 

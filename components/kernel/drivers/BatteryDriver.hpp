@@ -12,16 +12,20 @@ using farmhub::kernel::PinPtr;
 namespace farmhub::kernel::drivers {
 
 struct BatteryParameters {
-    const double maximumVoltage;
     /**
-     * @brief Do not boot if battery is below this threshold.
+     * @brief Maximum voltage of the battery in millivolts.
+     *
      */
-    const double bootThreshold;
+    const int maximumVoltage;
+    /**
+     * @brief Do not boot if battery is below this threshold in millivolts.
+     */
+    const int bootThreshold;
 
     /**
-     * @brief Shutdown if battery drops below this threshold.
+     * @brief Shutdown if battery drops below this threshold in millivolts.
      */
-    const double shutdownThreshold;
+    const int shutdownThreshold;
 };
 
 class BatteryDriver {
@@ -32,7 +36,12 @@ public:
 
     virtual ~BatteryDriver() = default;
 
-    virtual double getVoltage() = 0;
+    /**
+     * @brief Get the battery voltage.
+     *
+     * @return Battery voltage in millivolts, or -1 if the read failed.
+     */
+    virtual int getVoltage() = 0;
 
     const BatteryParameters parameters;
 };
@@ -48,16 +57,16 @@ public:
             analogPin.getName().c_str());
     }
 
-    double getVoltage() override {
+    int getVoltage() override {
         for (int trial = 0; trial < 5; trial++) {
             auto batteryLevel = analogPin.analogRead();
             if (!batteryLevel.has_value()) {
                 LOGE("Failed to read battery level");
                 continue;
             }
-            return batteryLevel.value() * 3.3 / 4096 * voltageDividerRatio;
+            return static_cast<int>(batteryLevel.value() * 3.3 / 4096 * voltageDividerRatio * 1000);
         }
-        return std::numeric_limits<double>::quiet_NaN();
+        return -1;
     }
 
 private:

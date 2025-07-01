@@ -4,17 +4,18 @@
 
 namespace farmhub::kernel {
 
-template <std::floating_point T>
+template <typename M, typename T = M>
+requires std::is_arithmetic_v<M> && std::is_arithmetic_v<T>
 class MovingAverage {
 public:
     explicit MovingAverage(std::size_t maxMeasurements)
         : maxMeasurements(maxMeasurements)
-        , measurements(maxMeasurements, T(0))
+        , measurements(maxMeasurements, M(0))
         , sum(0)
         , average(0) {
     }
 
-    void record(T measurement) {
+    void record(M measurement) {
         if (count == maxMeasurements) {
             sum -= measurements[currentIndex];
         } else {
@@ -34,7 +35,7 @@ public:
 
 private:
     const std::size_t maxMeasurements;
-    std::vector<T> measurements;
+    std::vector<M> measurements;
     std::size_t currentIndex{0};
     std::size_t count{0};
     T sum;

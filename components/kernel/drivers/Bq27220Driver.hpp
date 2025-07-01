@@ -39,9 +39,9 @@ public:
             address, readControlWord(0x0002), readControlWord(0x0003));
     }
 
-    double getVoltage() override {
+    int getVoltage() override {
         // LOGV("Capacityt: %d/%d", readRegWord(0x10), readRegWord(0x12));
-        return device->readRegWord(0x08) / 1000.0;
+        return device->readRegWord(0x08);
     }
 
     double getCurrent() {
