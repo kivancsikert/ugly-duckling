@@ -19,16 +19,20 @@
 
 * A **feature** is an addressable, functional aspect of a peripheral. Features provide telemetry and/or can be controlled via commands.
 
-    For example, a flow-control peripheral may have a `valve` feature and a `flow` feature.
-    The `valve` feature reports the valve's state, can be configured (a schedule can be set), and can be controlled via commands (i.e. the state can be overridden).
-    The `flow` feature reports its flow rate.
+    For example, a `flow-control` peripheral may have a `valve` feature and a `flow` feature.
+    Likewise, an `environment` peripheral may have a `temperature` feature and a `moisture` feature.
 
-    Features are addressed by their types and names.
+    The `valve` feature reports the valve's state.
+    The `flow` feature reports the volume of water having passed through and the flow rate.
+
+    Features are addressed by their type and the name of the peripheral they belong to.
 
 Telemetry for each features is published as part of the device's telemetry message under `.../telemetry`.
 The features are listed under `features` in the telemetry message with `type` and `name` specified.
 We publish telemetry as a single message per device to reduce the number of topics published.
 Doing so also ensures atomic updates to telemetry.
+
+[NOTE] The following are not yet implemented, but are planned for the future:
 
 Configuration for features is stored as retained messages under `.../config`.
 Similar to telemetry, the configuration is stored as a single message per device with a `features` array.
