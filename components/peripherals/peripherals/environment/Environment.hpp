@@ -34,18 +34,18 @@ public:
         , defaultAddress(defaultAddress) {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<I2CSettings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<I2CSettings>& settings) override {
         auto i2cConfig = settings->parse(defaultAddress);
         LOGI("Creating %s sensor %s with %s",
-            sensorType.c_str(), name.c_str(), i2cConfig.toString().c_str());
-        auto sensor = std::make_shared<TSensor>(sensorType, services.i2c, i2cConfig);
-        services.telemetryCollector->registerFeature("temperature", name, [sensor](JsonObject& telemetryJson) {
+            sensorType.c_str(), params.name.c_str(), i2cConfig.toString().c_str());
+        auto sensor = std::make_shared<TSensor>(sensorType, params.services.i2c, i2cConfig);
+        params.registerFeature("temperature", [sensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = sensor->getTemperature();
         });
-        services.telemetryCollector->registerFeature("moisture", name, [sensor](JsonObject& telemetryJson) {
+        params.registerFeature("moisture", [sensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = sensor->getMoisture();
         });
-        return std::make_shared<SimplePeripheral>(name, sensor);
+        return std::make_shared<SimplePeripheral>(params.name, sensor);
     }
 
 private:

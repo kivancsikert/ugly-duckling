@@ -73,31 +73,31 @@ public:
         , Motorized(motors) {
     }
 
-    std::shared_ptr<Peripheral<FlowControlConfig>> createPeripheral(const std::string& name, const std::shared_ptr<FlowControlSettings>& settings, const std::shared_ptr<MqttRoot>& mqttRoot, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<FlowControlConfig>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<FlowControlSettings>& settings) override {
         auto strategy = settings->valve.get()->createValveControlStrategy(this);
 
         auto valve = std::make_shared<Valve>(
-            name,
+            params.name,
             std::move(strategy),
-            mqttRoot,
-            services.telemetryPublisher);
+            params.mqttRoot,
+            params.services.telemetryPublisher);
 
         auto flowMeterConfig = settings->flowMeter.get();
         auto flowMeter = std::make_shared<FlowMeter>(
-            name,
-            services.pulseCounterManager,
+            params.name,
+            params.services.pulseCounterManager,
             flowMeterConfig->pin.get(),
             flowMeterConfig->qFactor.get(),
             flowMeterConfig->measurementFrequency.get());
 
-        services.telemetryCollector->registerFeature("valve", name, [valve](JsonObject& telemetry) {
+        params.registerFeature("valve", [valve](JsonObject& telemetry) {
             valve->populateTelemetry(telemetry);
         });
-        services.telemetryCollector->registerFeature("flow", name, [flowMeter](JsonObject& telemetry) {
+        params.registerFeature("flow", [flowMeter](JsonObject& telemetry) {
             flowMeter->populateTelemetry(telemetry);
         });
 
-        return std::make_shared<FlowControl>(name, valve, flowMeter);
+        return std::make_shared<FlowControl>(params.name, valve, flowMeter);
     }
 };
 

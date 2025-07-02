@@ -109,19 +109,19 @@ public:
         : PeripheralFactory<Xl9535Settings>("multiplexer:xl9535") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<Xl9535Settings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
-        auto multiplexer = std::make_shared<Xl9535>(name, services.i2c, settings->parse());
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<Xl9535Settings>& settings) override {
+        auto multiplexer = std::make_shared<Xl9535>(params.name, params.services.i2c, settings->parse());
 
         // Create a pin for each bit in the pins mask
         for (int i = 0; i < 16; i++) {
-            std::string pinName = name + ":" + std::to_string(i);
+            std::string pinName = params.name + ":" + std::to_string(i);
             LOGV("Registering external pin %s",
                 pinName.c_str());
             auto pin = std::make_shared<Xl9535Pin>(pinName, multiplexer, i);
             Pin::registerPin(pinName, pin);
         }
 
-        return std::make_shared<SimplePeripheral>(name, multiplexer);
+        return std::make_shared<SimplePeripheral>(params.name, multiplexer);
     }
 };
 
