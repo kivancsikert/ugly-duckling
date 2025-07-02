@@ -432,10 +432,10 @@ public:
     }
 
     template <std::derived_from<LightSensor> TLightSensor>
-    std::shared_ptr<Peripheral<ChickenDoorConfig>> createDoor(const std::string& name, const std::shared_ptr<ChickenDoorSettings>& settings, const std::shared_ptr<MqttRoot>& mqttRoot, const PeripheralServices& services, uint8_t lightSensorAddress) {
+    std::shared_ptr<Peripheral<ChickenDoorConfig>> createDoor(PeripheralInitParameters& params, const std::shared_ptr<ChickenDoorSettings>& settings, uint8_t lightSensorAddress) {
         auto lightSensor = std::make_shared<TLightSensor>(
-            name + ":light",
-            services.i2c,
+            params.name + ":light",
+            params.services.i2c,
             settings->lightSensor.get()->parse(lightSensorAddress),
             settings->lightSensor.get()->measurementFrequency.get(),
             settings->lightSensor.get()->latencyInterval.get());
@@ -443,35 +443,35 @@ public:
         auto motor = findMotor(settings->motor.get());
 
         auto door = std::make_shared<ChickenDoorComponent>(
-            name,
-            mqttRoot,
-            services.switches,
+            params.name,
+            params.mqttRoot,
+            params.services.switches,
             motor,
             lightSensor,
             settings->openPin.get(),
             settings->closedPin.get(),
             settings->invertSwitches.get(),
             settings->movementTimeout.get(),
-            services.telemetryPublisher);
+            params.services.telemetryPublisher);
 
-        services.telemetryCollector->registerFeature("light", name, [lightSensor](JsonObject& telemetryJson) {
+        params.registerFeature("light", [lightSensor](JsonObject& telemetryJson) {
             telemetryJson["value"] = lightSensor->getCurrentLevel();
         });
-        services.telemetryCollector->registerFeature("door", name, [door](JsonObject& telemetryJson) {
+        params.registerFeature("door", [door](JsonObject& telemetryJson) {
             door->populateTelemetry(telemetryJson);
         });
 
-        return std::make_shared<ChickenDoor>(name, lightSensor, door);
+        return std::make_shared<ChickenDoor>(params.name, lightSensor, door);
     }
 
-    std::shared_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ChickenDoorSettings>& settings, const std::shared_ptr<MqttRoot>& mqttRoot, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<ChickenDoorSettings>& settings) override {
         auto lightSensorType = settings->lightSensor.get()->type.get();
         try {
             if (lightSensorType == "bh1750") {
-                return createDoor<Bh1750>(name, settings, mqttRoot, services, 0x23);
+                return createDoor<Bh1750>(params, settings, 0x23);
             }
             if (lightSensorType == "tsl2591") {
-                return createDoor<Tsl2591>(name, settings, mqttRoot, services, TSL2591_ADDR);
+                return createDoor<Tsl2591>(params, settings, TSL2591_ADDR);
             }
             throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
 
@@ -479,7 +479,7 @@ public:
             LOGE("Could not initialize light sensor because %s", e.what());
             LOGW("Initializing without a light sensor");
             // TODO Do not pass I2C parameters to NoLightSensor
-            return createDoor<NoLightSensor>(name, settings, mqttRoot, services, 0x00);
+            return createDoor<NoLightSensor>(params, settings, 0x00);
         }
     }
 };

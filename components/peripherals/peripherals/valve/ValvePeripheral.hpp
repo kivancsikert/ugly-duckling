@@ -55,17 +55,17 @@ public:
         , Motorized(motors) {
     }
 
-    std::shared_ptr<Peripheral<ValveConfig>> createPeripheral(const std::string& name, const std::shared_ptr<ValveSettings>& settings, const std::shared_ptr<MqttRoot>& mqttRoot, const PeripheralServices& services) override {
+    std::shared_ptr<Peripheral<ValveConfig>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<ValveSettings>& settings) override {
         auto strategy = settings->createValveControlStrategy(this);
         auto valve = std::make_shared<Valve>(
-            name,
+            params.name,
             std::move(strategy),
-            mqttRoot,
-            services.telemetryPublisher);
-        services.telemetryCollector->registerFeature("valve", name, [valve](JsonObject& telemetry) {
+            params.mqttRoot,
+            params.services.telemetryPublisher);
+        params.registerFeature("valve", [valve](JsonObject& telemetry) {
             valve->populateTelemetry(telemetry);
         });
-        return std::make_shared<ValvePeripheral>(name, valve);
+        return std::make_shared<ValvePeripheral>(params.name, valve);
     }
 };
 

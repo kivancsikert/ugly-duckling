@@ -103,12 +103,12 @@ public:
         : PeripheralFactory<FlowMeterSettings>("flow-meter") {
     }
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(const std::string& name, const std::shared_ptr<FlowMeterSettings>& settings, const std::shared_ptr<MqttRoot>& /*mqttRoot*/, const PeripheralServices& services) override {
-        auto meter = std::make_shared<FlowMeter>(name, services.pulseCounterManager, settings->pin.get(), settings->qFactor.get(), settings->measurementFrequency.get());
-        services.telemetryCollector->registerFeature("flow", name, [meter](JsonObject& telemetry) {
+    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<FlowMeterSettings>& settings) override {
+        auto meter = std::make_shared<FlowMeter>(params.name, params.services.pulseCounterManager, settings->pin.get(), settings->qFactor.get(), settings->measurementFrequency.get());
+        params.registerFeature("flow", [meter](JsonObject& telemetry) {
             meter->populateTelemetry(telemetry);
         });
-        return std::make_shared<SimplePeripheral>(name, meter);
+        return std::make_shared<SimplePeripheral>(params.name, meter);
     }
 };
 

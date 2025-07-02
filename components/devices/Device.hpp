@@ -419,10 +419,10 @@ static void startDevice() {
     auto pulseCounterManager = std::make_shared<PulseCounterManager>();
     auto pwm = std::make_shared<PwmManager>();
     auto telemetryCollector = std::make_shared<TelemetryCollector>();
-    auto peripheralServices = PeripheralServices { i2c, pcnt, pulseCounterManager, pwm, switches, telemetryCollector, telemetryPublisher };
+    auto peripheralServices = PeripheralServices { i2c, pcnt, pulseCounterManager, pwm, switches, telemetryPublisher };
 
     // Init peripherals
-    auto peripheralManager = std::make_shared<PeripheralManager>(fs, peripheralServices, mqttRoot);
+    auto peripheralManager = std::make_shared<PeripheralManager>(fs, telemetryCollector, peripheralServices, mqttRoot);
     shutdownManager->registerShutdownListener([peripheralManager]() {
         peripheralManager->shutdown();
     });
