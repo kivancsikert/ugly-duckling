@@ -405,7 +405,7 @@ private:
     NvsStore nvs;
     const std::unique_ptr<ValveControlStrategy> strategy;
     const std::shared_ptr<MqttRoot> mqttRoot;
-    const std::shared_ptr<TelemetryPublisher>& telemetryPublisher;
+    const std::shared_ptr<TelemetryPublisher> telemetryPublisher;
 
     ValveState state = ValveState::NONE;
 

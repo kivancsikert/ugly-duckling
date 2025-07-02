@@ -82,7 +82,7 @@ struct PeripheralServices {
     const std::shared_ptr<PulseCounterManager> pulseCounterManager;
     const std::shared_ptr<PwmManager> pwmManager;
     const std::shared_ptr<SwitchManager> switches;
-    const std::shared_ptr<TelemetryPublisher>& telemetryPublisher;
+    const std::shared_ptr<TelemetryPublisher> telemetryPublisher;
 };
 
 struct PeripheralInitParameters {
