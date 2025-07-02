@@ -124,7 +124,7 @@ public:
         const InternalPinPtr& closedPin,
         bool invertSwitches,
         ticks movementTimeout,
-        std::shared_ptr<TelemetryPublisher> telemetryPublisher)
+        const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
         : Named(name)
         , mqttRoot(mqttRoot)
         , motor(motor)
@@ -145,7 +145,7 @@ public:
         , watchdog(name + ":watchdog", movementTimeout, false, [this](WatchdogState state) {
             handleWatchdogEvent(state);
         })
-        , telemetryPublisher(std::move(telemetryPublisher)) {
+        , telemetryPublisher(telemetryPublisher) {
 
         LOGI("Initializing chicken door %s, open switch %s, close switch %s%s",
             name.c_str(), openSwitch->getPin()->getName().c_str(), closedSwitch->getPin()->getName().c_str(),

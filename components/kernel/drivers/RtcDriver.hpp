@@ -36,8 +36,8 @@ public:
         Property<std::string> host { this, "host", "" };
     };
 
-    RtcDriver(State& networkReady, std::shared_ptr<MdnsDriver> mdns, const std::shared_ptr<Config>& ntpConfig, StateSource& rtcInSync)
-        : mdns(std::move(mdns))
+    RtcDriver(State& networkReady, const std::shared_ptr<MdnsDriver>& mdns, const std::shared_ptr<Config>& ntpConfig, StateSource& rtcInSync)
+        : mdns(mdns)
         , ntpConfig(ntpConfig)
         , rtcInSync(rtcInSync) {
 

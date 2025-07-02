@@ -62,12 +62,12 @@ public:
 
     MqttDriver(
         State& networkReady,
-        std::shared_ptr<MdnsDriver> mdns,
+        const std::shared_ptr<MdnsDriver>& mdns,
         const std::shared_ptr<Config>& config,
         const std::string& instanceName,
         StateSource& ready)
         : networkReady(networkReady)
-        , mdns(std::move(mdns))
+        , mdns(mdns)
         , configHostname(config->host.get())
         , configPort(config->port.get())
         , configServerCert(joinStrings(config->serverCert.get()))
