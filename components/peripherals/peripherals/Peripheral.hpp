@@ -194,34 +194,38 @@ public:
             return false;
         }
 
-        std::string name = settings->name.get();
-        std::string type = settings->type.get();
+        std::string nameFromSettings = settings->name.get();
+        std::string factoryType = settings->type.get();
+        const auto& nameBeforeCreation = nameFromSettings.empty() ? factoryType : nameFromSettings;
 
         Lock lock(stateMutex);
         if (state == State::Stopped) {
             LOGE("Not creating peripheral '%s' because the peripheral manager is stopped",
-                name.c_str());
+                nameBeforeCreation.c_str());
             return false;
         }
 
         auto initJson = peripheralsInitJson.add<JsonObject>();
-        initJson["name"] = name;
-        initJson["factory"] = type;
+        initJson["factory"] = factoryType;
 
         LOGD("Creating peripheral '%s' with factory '%s'",
-            name.c_str(), type.c_str());
+            nameBeforeCreation.c_str(), factoryType.c_str());
+
+        auto it = factories.find(factoryType);
+        if (it == factories.end()) {
+            LOGE("Failed to create '%s' peripheral '%s' because factory not found",
+                factoryType.c_str(), nameBeforeCreation.c_str());
+            initJson["error"] = "Factory not found: '" + factoryType + "'";
+            return false;
+        }
+
+        const std::string& peripheralType = it->second->peripheralType;
+        initJson["type"] = peripheralType;
+        const auto& name = nameFromSettings.empty() ? peripheralType : nameFromSettings;
+        initJson["name"] = name;
+        settings->params.store(initJson, true);
 
         try {
-            auto it = factories.find(type);
-            if (it == factories.end()) {
-                throw PeripheralCreationException("Factory not found: '" + type + "'");
-            }
-
-            const std::string& peripheralType = it->second->peripheralType;
-            initJson["type"] = peripheralType;
-
-            settings->params.store(initJson, true);
-
             PeripheralInitParameters params = {
                 name,
                 mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name),
@@ -237,12 +241,12 @@ public:
             return true;
         } catch (const std::exception& e) {
             LOGE("Failed to create '%s' peripheral '%s' because %s",
-                type.c_str(), name.c_str(), e.what());
+                factoryType.c_str(), name.c_str(), e.what());
             initJson["error"] = std::string(e.what());
             return false;
         } catch (...) {
             LOGE("Failed to create '%s' peripheral '%s' because of an unknown exception",
-                type.c_str(), name.c_str());
+                factoryType.c_str(), name.c_str());
             initJson["error"] = "unknown exception";
             return false;
         }
@@ -267,7 +271,7 @@ public:
 private:
     class PeripheralSettings : public ConfigurationSection {
     public:
-        Property<std::string> name { this, "name", "default" };
+        Property<std::string> name { this, "name" };
         Property<std::string> type { this, "type" };
         Property<JsonAsString> params { this, "params" };
     };
