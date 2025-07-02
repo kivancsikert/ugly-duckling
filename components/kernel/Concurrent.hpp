@@ -28,7 +28,7 @@ public:
 
     virtual void clear() = 0;
 
-    UBaseType_t size() {
+    UBaseType_t size() const {
         return uxQueueMessagesWaiting(queue);
     }
 

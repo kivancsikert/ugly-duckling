@@ -39,8 +39,8 @@ public:
 class MotorValveControlStrategy
     : public ValveControlStrategy {
 public:
-    explicit MotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller)
-        : controller(std::move(controller)) {
+    explicit MotorValveControlStrategy(const std::shared_ptr<PwmMotorDriver>& controller)
+        : controller(controller) {
     }
 
 protected:
@@ -51,8 +51,8 @@ class HoldingMotorValveControlStrategy
     : public MotorValveControlStrategy {
 
 public:
-    HoldingMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double holdDuty)
-        : MotorValveControlStrategy(std::move(controller))
+    HoldingMotorValveControlStrategy(const std::shared_ptr<PwmMotorDriver>& controller, milliseconds switchDuration, double holdDuty)
+        : MotorValveControlStrategy(controller)
         , switchDuration(switchDuration)
         , holdDuty(holdDuty) {
     }
@@ -86,8 +86,8 @@ private:
 class NormallyClosedMotorValveControlStrategy
     : public HoldingMotorValveControlStrategy {
 public:
-    NormallyClosedMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double holdDuty)
-        : HoldingMotorValveControlStrategy(std::move(controller), switchDuration, holdDuty) {
+    NormallyClosedMotorValveControlStrategy(const std::shared_ptr<PwmMotorDriver>& controller, milliseconds switchDuration, double holdDuty)
+        : HoldingMotorValveControlStrategy(controller, switchDuration, holdDuty) {
     }
 
     void open() override {
@@ -110,8 +110,8 @@ public:
 class NormallyOpenMotorValveControlStrategy
     : public HoldingMotorValveControlStrategy {
 public:
-    NormallyOpenMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double holdDuty)
-        : HoldingMotorValveControlStrategy(std::move(controller), switchDuration, holdDuty) {
+    NormallyOpenMotorValveControlStrategy(const std::shared_ptr<PwmMotorDriver>& controller, milliseconds switchDuration, double holdDuty)
+        : HoldingMotorValveControlStrategy(controller, switchDuration, holdDuty) {
     }
 
     void open() override {
@@ -134,8 +134,8 @@ public:
 class LatchingMotorValveControlStrategy
     : public MotorValveControlStrategy {
 public:
-    LatchingMotorValveControlStrategy(std::shared_ptr<PwmMotorDriver> controller, milliseconds switchDuration, double switchDuty = 1.0)
-        : MotorValveControlStrategy(std::move(controller))
+    LatchingMotorValveControlStrategy(const std::shared_ptr<PwmMotorDriver>& controller, milliseconds switchDuration, double switchDuty = 1.0)
+        : MotorValveControlStrategy(controller)
         , switchDuration(switchDuration)
         , switchDuty(switchDuty) {
     }

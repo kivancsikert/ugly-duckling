@@ -166,12 +166,12 @@ private:
 class PeripheralManager final {
 public:
     PeripheralManager(
-        std::shared_ptr<FileSystem> fs,
-        std::shared_ptr<TelemetryCollector> telemetryCollector,
+        const std::shared_ptr<FileSystem>& fs,
+        const std::shared_ptr<TelemetryCollector>& telemetryCollector,
         PeripheralServices services,
         const std::shared_ptr<MqttRoot>& mqttDeviceRoot)
-        : fs(std::move(fs))
-        , telemetryCollector(std::move(telemetryCollector))
+        : fs(fs)
+        , telemetryCollector(telemetryCollector)
         , services(std::move(services))
         , mqttDeviceRoot(mqttDeviceRoot) {
     }

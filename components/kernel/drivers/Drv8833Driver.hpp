@@ -85,12 +85,12 @@ private:
 
     public:
         Drv8833MotorDriver(
-            std::shared_ptr<Drv8833Driver> driver,
+            const std::shared_ptr<Drv8833Driver>& driver,
             const std::shared_ptr<PwmManager>& pwm,
             const InternalPinPtr& in1Pin,
             const InternalPinPtr& in2Pin,
             bool canSleep)
-            : driver(std::move(driver))
+            : driver(driver)
             , in1Channel(pwm->registerPin(in1Pin, PWM_FREQ, PWM_RESOLUTION))
             , in2Channel(pwm->registerPin(in2Pin, PWM_FREQ, PWM_RESOLUTION))
             , sleeping(canSleep) {

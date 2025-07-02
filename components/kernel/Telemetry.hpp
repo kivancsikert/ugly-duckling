@@ -45,8 +45,8 @@ private:
 
 class TelemetryPublisher {
 public:
-    explicit TelemetryPublisher(std::shared_ptr<CopyQueue<bool>> telemetryPublishQueue)
-        : telemetryPublishQueue(std::move(telemetryPublishQueue)) {}
+    explicit TelemetryPublisher(const std::shared_ptr<CopyQueue<bool>>& telemetryPublishQueue)
+        : telemetryPublishQueue(telemetryPublishQueue) {}
 
     void requestTelemetryPublishing() {
         telemetryPublishQueue->overwrite(true);
