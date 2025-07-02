@@ -95,7 +95,7 @@ public:
 
     virtual ~PeripheralFactoryBase() = default;
 
-    virtual std::shared_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonSettings, const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<FileSystem>& fs, const PeripheralServices& services, JsonObject& initSettingsJson) = 0;
+    virtual std::shared_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonSettings, const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<FileSystem>& fs, const PeripheralServices& services, JsonObject& initConfigJson) = 0;
 
     const std::string factoryType;
     const std::string peripheralType;
@@ -114,19 +114,22 @@ public:
         , settingsArgs(std::forward<TSettingsArgs>(settingsArgs)...) {
     }
 
-    std::shared_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonSettings, const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<FileSystem>& fs, const PeripheralServices& services, JsonObject& initSettingsJson) override {
-        std::shared_ptr<TConfig> config = std::make_shared<TConfig>();
-        // Use short prefix because SPIFFS has a 32 character limit
-        std::shared_ptr<ConfigurationFile<TConfig>> configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + name, config);
-
+    std::shared_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& jsonSettings, const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<FileSystem>& fs, const PeripheralServices& services, JsonObject& initConfigJson) override {
         std::shared_ptr<TSettings> settings = std::apply([](TSettingsArgs... args) {
             return std::make_shared<TSettings>(std::forward<TSettingsArgs>(args)...);
         },
             settingsArgs);
         settings->loadFromString(jsonSettings);
         std::shared_ptr<Peripheral<TConfig>> peripheral = createPeripheral(name, settings, mqttRoot, services);
+
+        std::shared_ptr<TConfig> config = std::make_shared<TConfig>();
+        // Use short prefix because SPIFFS has a 32 character limit
+        std::shared_ptr<ConfigurationFile<TConfig>> configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + name, config);
         peripheral->configure(config);
-        mqttRoot->subscribe("config", [name, configFile, peripheral = peripheral.get()](const std::string&, const JsonObject& configJson) {
+        // Store configuration in init message
+        config->store(initConfigJson, false);
+
+        mqttRoot->subscribe("config", [name, configFile, peripheral](const std::string&, const JsonObject& configJson) {
             LOGD("Received configuration update for peripheral: %s", name.c_str());
             try {
                 configFile->update(configJson);
@@ -136,8 +139,6 @@ public:
                     name.c_str(), e.what());
             }
         });
-        // Store configuration in init message
-        config->store(initSettingsJson, false);
         return peripheral;
     }
 
@@ -181,7 +182,8 @@ public:
         std::string name = settings->name.get();
         std::string type = settings->type.get();
         auto initJson = peripheralsInitJson.add<JsonObject>();
-        settings->store(initJson, true);
+        initJson["name"] = name;
+        initJson["factory"] = type;
         try {
             Lock lock(stateMutex);
             if (state == State::Stopped) {
@@ -189,10 +191,24 @@ public:
                     name.c_str());
                 return false;
             }
-            JsonDocument initSettingsDoc;
-            JsonObject initSettingsJson = initSettingsDoc.to<JsonObject>();
-            std::shared_ptr<PeripheralBase> peripheral = createPeripheral(name, type, settings->params.get().get(), initSettingsJson);
-            initJson["settings"].to<JsonObject>().set(initSettingsJson);
+            JsonDocument initConfigDoc;
+            JsonObject initConfigJson = initConfigDoc.to<JsonObject>();
+
+            LOGD("Creating peripheral '%s' with factory '%s'",
+                name.c_str(), type.c_str());
+            auto it = factories.find(type);
+            if (it == factories.end()) {
+                throw PeripheralCreationException("Factory not found: '" + type + "'");
+            }
+            const std::string& peripheralType = it->second->peripheralType;
+
+            initJson["type"] = peripheralType;
+            settings->params.store(initJson, true);
+
+            std::shared_ptr<MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
+            std::shared_ptr<PeripheralBase> peripheral = it->second->createPeripheral(name, settings->params.get().get(), mqttRoot, fs, services, initConfigJson);
+
+            initJson["config"].to<JsonObject>().set(initConfigJson);
             peripherals.push_back(std::move(peripheral));
 
             return true;
@@ -233,7 +249,7 @@ private:
         Property<JsonAsString> params { this, "params" };
     };
 
-    std::shared_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& factoryType, const std::string& configJson, JsonObject& initSettingsJson) {
+    std::shared_ptr<PeripheralBase> createPeripheral(const std::string& name, const std::string& factoryType, const std::string& configJson, JsonObject& initConfigJson) {
         LOGD("Creating peripheral '%s' with factory '%s'",
             name.c_str(), factoryType.c_str());
         auto it = factories.find(factoryType);
@@ -242,7 +258,7 @@ private:
         }
         const std::string& peripheralType = it->second->peripheralType;
         std::shared_ptr<MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
-        return it->second->createPeripheral(name, configJson, mqttRoot, fs, services, initSettingsJson);
+        return it->second->createPeripheral(name, configJson, mqttRoot, fs, services, initConfigJson);
     }
 
     enum class State : uint8_t {
