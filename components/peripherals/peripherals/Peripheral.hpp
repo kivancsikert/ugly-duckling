@@ -196,41 +196,42 @@ public:
 
         std::string name = settings->name.get();
         std::string type = settings->type.get();
+
+        Lock lock(stateMutex);
+        if (state == State::Stopped) {
+            LOGE("Not creating peripheral '%s' because the peripheral manager is stopped",
+                name.c_str());
+            return false;
+        }
+
         auto initJson = peripheralsInitJson.add<JsonObject>();
         initJson["name"] = name;
         initJson["factory"] = type;
-        try {
-            Lock lock(stateMutex);
-            if (state == State::Stopped) {
-                LOGE("Not creating peripheral '%s' because the peripheral manager is stopped",
-                    name.c_str());
-                return false;
-            }
-            JsonDocument initConfigDoc;
-            JsonObject initConfigJson = initConfigDoc.to<JsonObject>();
 
-            LOGD("Creating peripheral '%s' with factory '%s'",
-                name.c_str(), type.c_str());
+        LOGD("Creating peripheral '%s' with factory '%s'",
+            name.c_str(), type.c_str());
+
+        try {
             auto it = factories.find(type);
             if (it == factories.end()) {
                 throw PeripheralCreationException("Factory not found: '" + type + "'");
             }
-            const std::string& peripheralType = it->second->peripheralType;
 
+            const std::string& peripheralType = it->second->peripheralType;
             initJson["type"] = peripheralType;
+
             settings->params.store(initJson, true);
 
-            std::shared_ptr<MqttRoot> mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name);
             PeripheralInitParameters params = {
                 name,
-                mqttRoot,
+                mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name),
                 services,
                 telemetryCollector,
                 initJson["features"].to<JsonArray>(),
             };
+            JsonObject initConfigJson = initJson["config"].to<JsonObject>();
             std::shared_ptr<PeripheralBase> peripheral = it->second->createPeripheral(params, fs, settings->params.get().get(), initConfigJson);
 
-            initJson["config"].to<JsonObject>().set(initConfigJson);
             peripherals.push_back(std::move(peripheral));
 
             return true;
