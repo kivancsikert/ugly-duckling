@@ -53,7 +53,6 @@ public:
 
 private:
     void updateMeasurement() {
-        Lock lock(mutex);
         auto now = boot_clock::now();
         if (now - this->lastMeasurementTime < 1s) {
             // Do not measure more often than once per second
