@@ -33,7 +33,7 @@ public:
     }
 
     void configure(const std::shared_ptr<ValveConfig> config) override {
-        valve->configure(config->schedule.get(), config->overrideState.get(), config->overrideUntil.get());
+        valve->configure(config->override.getAsOptional(), config->schedule.get());
     }
 
     void shutdown(const ShutdownParameters /*parameters*/) override {

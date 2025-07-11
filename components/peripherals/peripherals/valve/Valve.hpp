@@ -4,6 +4,7 @@
 #include <chrono>
 #include <list>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <variant>
 
@@ -252,85 +253,86 @@ public:
             response["state"] = state;
         });
 
-        Task::run(name, 4096, [this, name](Task& /*task*/) {
-            auto shouldPublishTelemetry = true;
-            while (true) {
-                auto now = system_clock::now();
-                if (overrideState != ValveState::NONE && now >= overrideUntil.load()) {
-                    LOGI("Valve '%s' override expired", name.c_str());
-                    overrideUntil = time_point<system_clock>();
-                    overrideState = ValveState::NONE;
-                    shouldPublishTelemetry = true;
-                }
-
-                ValveStateUpdate update {};
-                if (overrideState != ValveState::NONE) {
-                    update = { overrideState, overrideUntil.load() - now };
+        Task::loop(name, 4096, [this, name](Task& /*task*/) {
+            auto now = system_clock::now();
+            std::optional<ValveStateDecision> decision;
+            bool overrideActive = false;
+            if (overrideSchedule.has_value()) {
+                decision = ValveScheduler::updateValveStateDecision(
+                    std::nullopt,
+                    overrideSchedule->start,
+                    overrideSchedule->duration,
+                    seconds::zero(),
+                    overrideSchedule->state,
+                    now);
+                overrideActive = decision.has_value() && decision->state != ValveState::NONE;
+                if (overrideActive) {
+                    LOGD("Override active for valve '%s', state %d, expires after %lld s",
+                        name.c_str(),
+                        static_cast<int>(decision->state),
+                        duration_cast<seconds>(decision->expiresAfter).count());
                 } else {
-                    update = ValveScheduler::getStateUpdate(schedules, now, this->strategy->getDefaultState());
-                    // If there are no schedules nor default state for the valve, close it
-                    if (update.state == ValveState::NONE) {
-                        update.state = ValveState::CLOSED;
-                    }
+                    LOGD("Override for valve '%s' is not active",
+                        name.c_str());
                 }
-                LOGI("Valve '%s' state is %d, will change after %lld ms at %lld",
-                    name.c_str(),
-                    static_cast<int>(update.state),
-                    duration_cast<milliseconds>(update.validFor).count(),
-                    duration_cast<seconds>((now + update.validFor).time_since_epoch()).count());
-                shouldPublishTelemetry |= transitionTo(update.state);
-
-                if (shouldPublishTelemetry) {
-                    this->telemetryPublisher->requestTelemetryPublishing();
-                    shouldPublishTelemetry = false;
-                }
-
-                // Avoid overflow
-                auto validFor = update.validFor < ticks::max()
-                    ? duration_cast<ticks>(update.validFor)
-                    : ticks::max();
-                // TODO Account for time spent in transitionTo()
-                updateQueue.pollIn(validFor, [this, &shouldPublishTelemetry](const std::variant<OverrideSpec, ConfigureSpec>& change) {
-                    std::visit(
-                        [this](auto&& arg) {
-                            using T = std::decay_t<decltype(arg)>;
-                            if constexpr (std::is_same_v<T, OverrideSpec>) {
-                                overrideState = arg.state;
-                                overrideUntil = arg.until;
-                            } else if constexpr (std::is_same_v<T, ConfigureSpec>) {
-                                schedules = std::list(arg.schedules);
-                                overrideState = arg.overrideState;
-                                overrideUntil = arg.overrideUntil;
-                            }
-                        },
-                        change);
-                    shouldPublishTelemetry = true;
-                });
             }
+
+            if (!overrideActive) {
+                for (const auto& schedule : schedules) {
+                    decision = ValveScheduler::updateValveStateDecision(
+                        decision,
+                        schedule.getStart(),
+                        schedule.getDuration(),
+                        schedule.getPeriod(),
+                        ValveState::OPEN,
+                        now);
+                }
+            }
+
+            ValveStateDecision finalDecision = decision.value_or(
+                ValveStateDecision { strategy->getDefaultState(), nanoseconds::max() });
+
+            // Keep closed if we didn't decide to open explicitly
+            if (finalDecision.state == ValveState::NONE) {
+                finalDecision.state = ValveState::CLOSED;
+            }
+
+            bool shouldPublishTelemetry = finalDecision.state != this->state || overrideActive != this->overrideActive;
+            this->overrideActive = overrideActive;
+
+            LOGI("Valve '%s' state is %s, will change after %lld s at %lld",
+                name.c_str(),
+                finalDecision.state == ValveState::NONE ? "NONE" : (finalDecision.state == ValveState::OPEN ? "OPEN" : "CLOSED"),
+                duration_cast<seconds>(finalDecision.expiresAfter).count(),
+                duration_cast<seconds>((now + finalDecision.expiresAfter).time_since_epoch()).count());
+            transitionTo(finalDecision.state);
+
+            if (shouldPublishTelemetry) {
+                this->telemetryPublisher->requestTelemetryPublishing();
+            }
+
+            // Avoid overflow
+            auto decisionExpiresAfterTicks = std::min(duration_cast<ticks>(finalDecision.expiresAfter), ticks::max());
+
+            // TODO Account for time spent in transitionTo()
+            updateQueue.pollIn(decisionExpiresAfterTicks, [this](const ConfigureSpec& change) {
+                this->overrideSchedule = change.overrideSchedule;
+                this->schedules = std::list(change.schedules);
+            });
         });
     }
 
-    void configure(const std::list<ValveSchedule>& schedules, ValveState overrideState, time_point<system_clock> overrideUntil) {
-        LOGD("Configuring valve %s with %d schedules; override state %d until %lld",
+    void configure(const std::optional<OverrideSchedule> overrideSchedule, const std::list<ValveSchedule>& schedules) {
+        LOGD("Configuring valve %s with %d schedules; override active: %s",
             name.c_str(),
             schedules.size(),
-            static_cast<int>(overrideState),
-            duration_cast<seconds>(overrideUntil.time_since_epoch()).count());
-        updateQueue.put(ConfigureSpec { schedules, overrideState, overrideUntil });
+            overrideSchedule.has_value() ? "yes" : "no");
+        updateQueue.put(ConfigureSpec { overrideSchedule, schedules });
     }
 
     void populateTelemetry(JsonObject& telemetry) {
         telemetry["state"] = this->state;
-        auto overrideUntil = this->overrideUntil.load();
-        if (overrideUntil != time_point<system_clock>()) {
-            time_t rawtime = system_clock::to_time_t(overrideUntil);
-            std::tm timeinfo {};
-            gmtime_r(&rawtime, &timeinfo);
-            char buffer[80];
-            (void) strftime(buffer, 80, "%FT%TZ", &timeinfo);
-            telemetry["overrideEnd"] = std::string(buffer);
-            telemetry["overrideState"] = this->overrideState.load();
-        }
+        telemetry["override"] = this->overrideActive;
     }
 
     void closeBeforeShutdown() {
@@ -344,11 +346,16 @@ private:
     void override(ValveState state, time_point<system_clock> until) {
         if (state == ValveState::NONE) {
             LOGI("Clearing override for valve '%s'", name.c_str());
+            updateQueue.put(ConfigureSpec { {}, schedules });
         } else {
             LOGI("Overriding valve '%s' to state %d until %lld",
                 name.c_str(), static_cast<int>(state), duration_cast<seconds>(until.time_since_epoch()).count());
+            auto now = system_clock::now();
+            updateQueue.put(ConfigureSpec {
+                std::make_optional<OverrideSchedule>(state, now, duration_cast<seconds>(until - now)),
+                schedules,
+            });
         }
-        updateQueue.put(OverrideSpec { state, until });
     }
 
     void open() {
@@ -369,15 +376,14 @@ private:
         setState(ValveState::CLOSED);
     }
 
-    bool transitionTo(ValveState state) {
+    void transitionTo(ValveState state) {
         // Ignore if the state is already set
         if (this->state == state) {
-            return false;
+            return;
         }
         doTransitionTo(state);
 
         mqttRoot->publish("events/state", [=](JsonObject& json) { json["state"] = state; }, Retention::NoRetain, QoS::AtLeastOnce);
-        return true;
     }
 
     void doTransitionTo(ValveState state) {
@@ -408,24 +414,17 @@ private:
     const std::shared_ptr<TelemetryPublisher> telemetryPublisher;
 
     ValveState state = ValveState::NONE;
-
-    struct OverrideSpec {
-    public:
-        ValveState state;
-        time_point<system_clock> until;
-    };
+    bool overrideActive = false;
 
     struct ConfigureSpec {
     public:
+        std::optional<OverrideSchedule> overrideSchedule;
         std::list<ValveSchedule> schedules;
-        ValveState overrideState;
-        time_point<system_clock> overrideUntil;
     };
 
+    std::optional<OverrideSchedule> overrideSchedule;
     std::list<ValveSchedule> schedules;
-    std::atomic<ValveState> overrideState = ValveState::NONE;
-    std::atomic<time_point<system_clock>> overrideUntil;
-    Queue<std::variant<OverrideSpec, ConfigureSpec>> updateQueue { "eventQueue", 1 };
+    Queue<ConfigureSpec> updateQueue { "eventQueue", 1 };
 };
 
 }    // namespace farmhub::peripherals::valve

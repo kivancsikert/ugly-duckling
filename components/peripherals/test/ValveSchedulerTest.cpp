@@ -18,13 +18,6 @@ using namespace std::chrono_literals;
 
 using namespace farmhub::peripherals::valve;
 
-static time_point<system_clock> parseTime(const char* str) {
-    tm time;
-    std::istringstream ss(str);
-    ss >> std::get_time(&time, "%Y-%m-%d %H:%M:%S");
-    return system_clock::from_time_t(mktime(&time));
-}
-
 namespace farmhub::peripherals::valve {
 
 std::ostream& operator<<(std::ostream& os, ValveState const& val) {
@@ -48,8 +41,8 @@ std::ostream& operator<<(std::ostream& os, std::chrono::duration<_Rep, _Period> 
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, ValveStateUpdate const& val) {
-    os << "{ state: " << val.state << ", transitionAfter: " << val.validFor << " }";
+std::ostream& operator<<(std::ostream& os, ValveStateDecision const& val) {
+    os << "{ state: " << val.state << ", expiresAfter: " << val.expiresAfter << " }";
     return os;
 }
 
@@ -74,7 +67,32 @@ std::string toJson(const ValveSchedule& schedule) {
     return oss.str();
 }
 
-const time_point<system_clock> base = parseTime("2024-01-01 00:00:00");
+const time_point<system_clock> base = system_clock::from_time_t(1750000000);    // Sun Jun 15 2025 15:06:40 GMT+0000
+
+static ValveStateDecision getStateUpdate(const std::list<ValveSchedule>& schedules, time_point<system_clock> now) {
+    std::optional<ValveStateDecision> decision = std::nullopt;
+    for (const auto& schedule : schedules) {
+        decision = ValveScheduler::updateValveStateDecision(
+            decision,
+            schedule.getStart(),
+            schedule.getDuration(),
+            schedule.getPeriod(),
+            ValveState::OPEN,
+            now);
+        if (decision.has_value()) {
+            LOGI("-- Interim decision: %s for %lld s",
+                decision->state == ValveState::NONE ? "NONE" : (decision->state == ValveState::OPEN ? "OPEN" : "CLOSED"),
+                duration_cast<seconds>(decision->expiresAfter).count());
+        } else {
+            LOGI("-- No interim decision");
+        }
+    }
+    ValveStateDecision finalDecision = decision.value_or(ValveStateDecision { ValveState::NONE, nanoseconds::max() });
+    LOGI("-- Final decision: %s for %lld s\n",
+        finalDecision.state == ValveState::NONE ? "NONE" : (finalDecision.state == ValveState::OPEN ? "OPEN" : "CLOSED"),
+        duration_cast<seconds>(finalDecision.expiresAfter).count());
+    return finalDecision;
+}
 
 TEST_CASE("can parse schedule") {
     const char json[] = R"({
@@ -106,78 +124,58 @@ TEST_CASE("can create schedule") {
 }
 
 TEST_CASE("not scheduled when empty") {
-    ValveScheduler scheduler;
-    for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        ValveStateUpdate update = scheduler.getStateUpdate({}, base, defaultState);
-        REQUIRE(update == ValveStateUpdate { defaultState, nanoseconds::max() });
-    }
+    REQUIRE(getStateUpdate({}, base) == ValveStateDecision { ValveState::NONE, nanoseconds::max() });
 }
 
-TEST_CASE("keeps closed until schedule starts") {
-    ValveScheduler scheduler;
-    std::list<ValveSchedule> schedules {
+TEST_CASE("requires no state until schedule starts") {
+    auto schedules = {
         ValveSchedule(base, 1h, 15s),
     };
-    for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        REQUIRE(scheduler.getStateUpdate(schedules, base - 1s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 1s });
-    }
+    REQUIRE(getStateUpdate(schedules, base - 1s) == ValveStateDecision { ValveState::NONE, 1s });
 }
 
 TEST_CASE("keeps open when schedule is started and in period") {
-    ValveScheduler scheduler;
-    std::list<ValveSchedule> schedules {
+    auto schedules = {
         ValveSchedule(base, 1h, 15s),
     };
-    for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        REQUIRE(scheduler.getStateUpdate(schedules, base, defaultState) == ValveStateUpdate { ValveState::OPEN, 15s });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 1s, defaultState) == ValveStateUpdate { ValveState::OPEN, 14s });
-    }
+    REQUIRE(getStateUpdate(schedules, base) == ValveStateDecision { ValveState::OPEN, 15s });
+    REQUIRE(getStateUpdate(schedules, base + 1s) == ValveStateDecision { ValveState::OPEN, 14s });
 }
 
-TEST_CASE("keeps closed when schedule is started and outside period") {
-    ValveScheduler scheduler;
-    std::list<ValveSchedule> schedules {
+TEST_CASE("requires no state when schedule is started and outside period") {
+    auto schedules = {
         ValveSchedule(base, 1h, 15s),
     };
-    for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 15s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 1h - 15s });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 16s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 1h - 16s });
-    }
+    REQUIRE(getStateUpdate(schedules, base + 15s) == ValveStateDecision { ValveState::NONE, 1h - 15s });
+    REQUIRE(getStateUpdate(schedules, base + 16s) == ValveStateDecision { ValveState::NONE, 1h - 16s });
 }
 
-TEST_CASE("when there are overlapping schedules keep closed until earliest opens") {
-    ValveScheduler scheduler;
+TEST_CASE("when there are overlapping schedules require no state until earliest opens") {
     // --OOOOOO--------------
     // ----OOOOOO------------
-    std::list<ValveSchedule> schedules {
+    auto schedules = {
         ValveSchedule(base + 5min, 1h, 15min),
         ValveSchedule(base + 10min, 1h, 15min),
     };
-    for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        // Keep closed until first schedule starts
-        REQUIRE(scheduler.getStateUpdate(schedules, base, defaultState) == ValveStateUpdate { ValveState::CLOSED, 5min });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 1s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 5min - 1s });
-    }
+    REQUIRE(getStateUpdate(schedules, base) == ValveStateDecision { ValveState::NONE, 5min });
+    REQUIRE(getStateUpdate(schedules, base + 1s) == ValveStateDecision { ValveState::NONE, 5min - 1s });
 }
 
 TEST_CASE("when there are overlapping schedules keep open until latest closes") {
-    ValveScheduler scheduler;
     // --OOOOOO--------------
     // ----OOOOOO------------
-    std::list<ValveSchedule> schedules {
+    auto schedules = {
         ValveSchedule(base + 5min, 1h, 15min),
         ValveSchedule(base + 10min, 1h, 15min),
     };
-    for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        // Open when first schedule starts, and keep open
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 5min, defaultState) == ValveStateUpdate { ValveState::OPEN, 15min });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 5min + 1s, defaultState) == ValveStateUpdate { ValveState::OPEN, 15min - 1s });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 10min, defaultState) == ValveStateUpdate { ValveState::OPEN, 15min });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 15min, defaultState) == ValveStateUpdate { ValveState::OPEN, 10min });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 25min - 1s, defaultState) == ValveStateUpdate { ValveState::OPEN, 1s });
+    // Open when first schedule starts, and keep open
+    REQUIRE(getStateUpdate(schedules, base + 5min) == ValveStateDecision { ValveState::OPEN, 20min });
+    REQUIRE(getStateUpdate(schedules, base + 5min + 1s) == ValveStateDecision { ValveState::OPEN, 20min - 1s });
+    REQUIRE(getStateUpdate(schedules, base + 10min) == ValveStateDecision { ValveState::OPEN, 15min });
+    REQUIRE(getStateUpdate(schedules, base + 15min) == ValveStateDecision { ValveState::OPEN, 10min });
+    REQUIRE(getStateUpdate(schedules, base + 25min - 1s) == ValveStateDecision { ValveState::OPEN, 1s });
 
-        // Close again after later schedule ends, and reopen when first schedule starts again
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 25min, defaultState) == ValveStateUpdate { ValveState::CLOSED, 40min });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 25min + 1s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 40min - 1s });
-    }
+    // Require no state after later schedule ends, and reopen when first schedule starts again
+    REQUIRE(getStateUpdate(schedules, base + 25min) == ValveStateDecision { ValveState::NONE, 40min });
+    REQUIRE(getStateUpdate(schedules, base + 25min + 1s) == ValveStateDecision { ValveState::NONE, 40min - 1s });
 }

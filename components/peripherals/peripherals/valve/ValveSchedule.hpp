@@ -9,6 +9,12 @@ using namespace std::chrono_literals;
 
 namespace farmhub::peripherals::valve {
 
+enum class ValveState : int8_t {
+    CLOSED = -1,
+    NONE = 0,
+    OPEN = 1
+};
+
 class ValveSchedule {
 public:
     ValveSchedule(
@@ -38,11 +44,23 @@ private:
     seconds duration;
 };
 
+struct OverrideSchedule {
+    ValveState state;
+    time_point<system_clock> start;
+    seconds duration;
+
+    bool operator==(const OverrideSchedule& other) const {
+        return state == other.state && start == other.start && duration == other.duration;
+    }
+};
+
 }    // namespace farmhub::peripherals::valve
 
 namespace ArduinoJson {
 
+using farmhub::peripherals::valve::OverrideSchedule;
 using farmhub::peripherals::valve::ValveSchedule;
+using farmhub::peripherals::valve::ValveState;
 
 template <>
 struct Converter<system_clock::time_point> {
@@ -68,6 +86,21 @@ struct Converter<system_clock::time_point> {
 };
 
 template <>
+struct Converter<ValveState> {
+    static void toJson(const ValveState& src, JsonVariant dst) {
+        dst.set(static_cast<int>(src));
+    }
+
+    static ValveState fromJson(JsonVariantConst src) {
+        return static_cast<ValveState>(src.as<int>());
+    }
+
+    static bool checkJson(JsonVariantConst src) {
+        return src.is<int>();
+    }
+};
+
+template <>
 struct Converter<ValveSchedule> {
     static void toJson(const ValveSchedule& src, JsonVariant dst) {
         JsonObject obj = dst.to<JsonObject>();
@@ -86,6 +119,29 @@ struct Converter<ValveSchedule> {
     static bool checkJson(JsonVariantConst src) {
         return src["start"].is<time_point<system_clock>>()
             && src["period"].is<int64_t>()
+            && src["duration"].is<int64_t>();
+    }
+};
+
+template <>
+struct Converter<OverrideSchedule> {
+    static void toJson(const OverrideSchedule& src, JsonVariant dst) {
+        JsonObject obj = dst.to<JsonObject>();
+        obj["state"] = src.state;
+        obj["start"] = src.start;
+        obj["duration"] = src.duration.count();
+    }
+
+    static OverrideSchedule fromJson(JsonVariantConst src) {
+        auto state = src["state"].as<ValveState>();
+        auto start = src["start"].as<time_point<system_clock>>();
+        auto duration = seconds(src["duration"].as<int64_t>());
+        return { state, start, duration };
+    }
+
+    static bool checkJson(JsonVariantConst src) {
+        return src["state"].is<ValveState>()
+            && src["start"].is<time_point<system_clock>>()
             && src["duration"].is<int64_t>();
     }
 };
