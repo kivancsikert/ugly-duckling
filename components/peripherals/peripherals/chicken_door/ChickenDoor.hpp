@@ -109,6 +109,16 @@ public:
      * @brief Light level below which the door should be closed.
      */
     Property<double> closeLevel { this, "closeLevel", 10 };
+
+    /**
+     * @brief The state to override the schedule with.
+     */
+    Property<DoorState> overrideState { this, "overrideState", DoorState::NONE };
+
+    /**
+     * @brief Until when the override state is valid.
+     */
+    Property<time_point<system_clock>> overrideUntil { this, "overrideUntil" };
 };
 
 class ChickenDoorComponent final
@@ -155,22 +165,21 @@ public:
 
         mqttRoot->registerCommand("override", [this](const JsonObject& request, JsonObject& response) {
             auto overrideState = request["state"].as<DoorState>();
-            if (overrideState == DoorState::NONE) {
-                updateQueue.put(StateOverride { DoorState::NONE, time_point<system_clock>::min() });
-            } else {
-                seconds duration = request["duration"].is<JsonVariant>()
-                    ? request["duration"].as<seconds>()
-                    : hours { 1 };
-                updateQueue.put(StateOverride { overrideState, system_clock::now() + duration });
-                response["duration"] = duration;
-            }
+            auto overrideUntil = overrideState == DoorState::NONE
+                ? time_point<system_clock>::min()
+                : system_clock::now() + (request["duration"].is<JsonVariant>() ? request["duration"].as<seconds>() : 1h);
+            updateQueue.put(ConfigureSpec {
+                .openLevel = openLevel,
+                .closeLevel = closeLevel,
+                .overrideState = overrideState,
+                .overrideUntil = overrideUntil,
+            });
             response["overrideState"] = overrideState;
+            response["overrideUntil"] = overrideUntil;
         });
 
         Task::run(name, 4096, 2, [this](Task& /*task*/) {
-            while (operationState == OperationState::RUNNING) {
-                runLoop();
-            }
+            runLoop();
         });
     }
 
@@ -190,96 +199,107 @@ public:
         }
     }
 
-    void configure(const std::shared_ptr<ChickenDoorConfig>& config) {
-        openLevel = config->openLevel.get();
-        closeLevel = config->closeLevel.get();
-        LOGI("Configured chicken door %s to close at %.2f lux, and open at %.2f lux",
-            name.c_str(), closeLevel, openLevel);
+    void configure(double openLevel, double closeLevel, DoorState overrideState, time_point<system_clock> overrideUntil) {
+        updateQueue.put(ConfigureSpec {
+            .openLevel = openLevel,
+            .closeLevel = closeLevel,
+            .overrideState = overrideState,
+            .overrideUntil = overrideUntil,
+        });
     }
 
 private:
     void runLoop() {
-        DoorState currentState = determineCurrentState();
-        DoorState targetState = determineTargetState(currentState);
-        if (currentState == DoorState::NONE && targetState == lastState) {
-            // We have previously reached the target state, but we have lost the signal from the switches.
-            // We assume the door is still in the target state to prevent it from moving when it shouldn't.
-            currentState = lastState;
-        }
+        bool shouldPublishTelemetry = true;
+        while (operationState == OperationState::RUNNING) {
+            DoorState currentState = determineCurrentState();
+            DoorState targetState = determineTargetState(currentState);
+            if (currentState == DoorState::NONE && targetState == lastState) {
+                // We have previously reached the target state, but we have lost the signal from the switches.
+                // We assume the door is still in the target state to prevent it from moving when it shouldn't.
+                currentState = lastState;
+            }
 
-        if (currentState != targetState) {
-            if (currentState != lastState) {
-                LOGV("Going from state %d to %d (light level %.2f)",
-                    static_cast<int>(currentState), static_cast<int>(targetState), lightSensor->getCurrentLevel());
-                watchdog.restart();
-            }
-            switch (targetState) {
-                case DoorState::OPEN:
-                    motor->drive(MotorPhase::FORWARD, 1);
-                    break;
-                case DoorState::CLOSED:
-                    motor->drive(MotorPhase::REVERSE, 1);
-                    break;
-                default:
-                    motor->stop();
-                    break;
-            }
-        } else {
-            if (currentState != lastState) {
-                LOGV("Reached state %d (light level %.2f)",
-                    static_cast<int>(currentState), lightSensor->getCurrentLevel());
-                watchdog.cancel();
-                motor->stop();
-                mqttRoot->publish("events/state", [=](JsonObject& json) { json["state"] = currentState; }, Retention::NoRetain, QoS::AtLeastOnce);
-            }
-        }
-
-        bool shouldPublishTelemetry = false;
-        {
-            Lock lock(stateMutex);
-            if (lastState != currentState || lastTargetState != targetState) {
-                lastState = currentState;
-                lastTargetState = targetState;
-                shouldPublishTelemetry = true;
-            }
-        }
-        if (shouldPublishTelemetry) {
-            telemetryPublisher->requestTelemetryPublishing();
-        }
-
-        auto now = system_clock::now();
-        auto overrideWaitTime = overrideUntil < now
-            ? ticks::max()
-            : duration_cast<ticks>(overrideUntil - now);
-        auto waitTime = std::min(overrideWaitTime, duration_cast<ticks>(lightSensor->getMeasurementFrequency()));
-        updateQueue.pollIn(waitTime, [this](auto& change) {
-            std::visit(
-                [this](auto&& arg) {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, StateUpdated>) {
-                        // State update received
-                    } else if constexpr (std::is_same_v<T, StateOverride>) {
-                        if (arg.state == DoorState::NONE) {
-                            LOGI("Override cancelled");
-                        } else {
-                            LOGI("Override received: %d duration: %lld sec",
-                                static_cast<int>(arg.state), duration_cast<seconds>(arg.until - system_clock::now()).count());
-                        }
-                        {
-                            Lock lock(stateMutex);
-                            overrideState = arg.state;
-                            overrideUntil = arg.until;
-                        }
-                        telemetryPublisher->requestTelemetryPublishing();
-                    } else if constexpr (std::is_same_v<T, WatchdogTimeout>) {
-                        LOGE("Watchdog timed out, stopping operation");
-                        operationState = OperationState::WATCHDOG_TIMEOUT;
+            if (currentState != targetState) {
+                if (currentState != lastState) {
+                    LOGV("Going from state %d to %d (light level %.2f)",
+                        static_cast<int>(currentState), static_cast<int>(targetState), lightSensor->getCurrentLevel());
+                    watchdog.restart();
+                }
+                switch (targetState) {
+                    case DoorState::OPEN:
+                        motor->drive(MotorPhase::FORWARD, 1);
+                        break;
+                    case DoorState::CLOSED:
+                        motor->drive(MotorPhase::REVERSE, 1);
+                        break;
+                    default:
                         motor->stop();
-                        telemetryPublisher->requestTelemetryPublishing();
-                    }
-                },
-                change);
-        });
+                        break;
+                }
+            } else {
+                if (currentState != lastState) {
+                    LOGV("Reached state %d (light level %.2f)",
+                        static_cast<int>(currentState), lightSensor->getCurrentLevel());
+                    watchdog.cancel();
+                    motor->stop();
+                    mqttRoot->publish("events/state", [=](JsonObject& json) { json["state"] = currentState; }, Retention::NoRetain, QoS::AtLeastOnce);
+                }
+            }
+
+            {
+                Lock lock(stateMutex);
+                if (lastState != currentState || lastTargetState != targetState) {
+                    lastState = currentState;
+                    lastTargetState = targetState;
+                    shouldPublishTelemetry = true;
+                }
+            }
+            if (shouldPublishTelemetry) {
+                telemetryPublisher->requestTelemetryPublishing();
+                shouldPublishTelemetry = false;
+            }
+
+            auto now = system_clock::now();
+            auto overrideWaitTime = overrideUntil < now
+                ? ticks::max()
+                : duration_cast<ticks>(overrideUntil - now);
+            auto waitTime = std::min(overrideWaitTime, duration_cast<ticks>(lightSensor->getMeasurementFrequency()));
+            updateQueue.pollIn(waitTime, [this, &shouldPublishTelemetry](auto& change) {
+                std::visit(
+                    [this, &shouldPublishTelemetry](auto&& arg) {
+                        using T = std::decay_t<decltype(arg)>;
+                        if constexpr (std::is_same_v<T, StateUpdated>) {
+                            // State update received
+                        } else if constexpr (std::is_same_v<T, ConfigureSpec>) {
+                            Lock lock(stateMutex);
+
+                            LOGI("Chicken door %s configured: open at %.2f lux, close at %.2f lux",
+                                name.c_str(), arg.openLevel, arg.closeLevel);
+                            this->openLevel = arg.openLevel;
+                            this->closeLevel = arg.closeLevel;
+
+                            if (arg.overrideState == DoorState::NONE) {
+                                LOGI("Override cancelled");
+                            } else {
+                                LOGI("Override to %s, remaining duration: %lld sec",
+                                    arg.overrideState == DoorState::OPEN ? "OPEN" : "CLOSED",
+                                    duration_cast<seconds>(arg.overrideUntil - system_clock::now()).count());
+                            }
+                            overrideState = arg.overrideState;
+                            overrideUntil = arg.overrideUntil;
+
+                            shouldPublishTelemetry = true;
+                        } else if constexpr (std::is_same_v<T, WatchdogTimeout>) {
+                            LOGE("Watchdog timed out, stopping operation");
+                            operationState = OperationState::WATCHDOG_TIMEOUT;
+                            motor->stop();
+                            shouldPublishTelemetry = true;
+                        }
+                    },
+                    change);
+            });
+        }
     }
 
     void handleWatchdogEvent(WatchdogState state) {
@@ -321,15 +341,16 @@ private:
     }
 
     DoorState determineTargetState(DoorState currentState) {
-        if (overrideUntil >= system_clock::now()) {
-            return overrideState;
-        }
         if (overrideState != DoorState::NONE) {
+            if (overrideUntil >= system_clock::now()) {
+                return overrideState;
+            }
             LOGI("Override expired, returning to scheduled state");
             Lock lock(stateMutex);
             overrideState = DoorState::NONE;
             overrideUntil = time_point<system_clock>::min();
         }
+
         auto lightLevel = lightSensor->getCurrentLevel();
         if (lightLevel >= openLevel) {
             return DoorState::OPEN;
@@ -359,14 +380,16 @@ private:
 
     struct StateUpdated { };
 
-    struct StateOverride {
-        DoorState state;
-        time_point<system_clock> until;
+    struct ConfigureSpec {
+        double openLevel;
+        double closeLevel;
+        DoorState overrideState;
+        time_point<system_clock> overrideUntil;
     };
 
     struct WatchdogTimeout { };
 
-    Queue<std::variant<StateUpdated, StateOverride, WatchdogTimeout>> updateQueue { "chicken-door-status", 2 };
+    Queue<std::variant<StateUpdated, ConfigureSpec, WatchdogTimeout>> updateQueue { "chicken-door-status", 2 };
 
     OperationState operationState = OperationState::RUNNING;
 
@@ -394,7 +417,11 @@ public:
     }
 
     void configure(const std::shared_ptr<ChickenDoorConfig> config) override {
-        door->configure(config);
+        door->configure(
+            config->openLevel.get(),
+            config->closeLevel.get(),
+            config->overrideState.get(),
+            config->overrideUntil.get());
     }
 
 private:
