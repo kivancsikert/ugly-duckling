@@ -189,12 +189,6 @@ public:
         telemetry["targetState"] = lastTargetState;
         telemetry["operationState"] = operationState;
         if (overrideState != DoorState::NONE) {
-            time_t rawtime = system_clock::to_time_t(overrideUntil);
-            std::tm timeinfo {};
-            gmtime_r(&rawtime, &timeinfo);
-            char buffer[80];
-            (void) strftime(buffer, 80, "%FT%TZ", &timeinfo);
-            telemetry["overrideEnd"] = std::string(buffer);
             telemetry["overrideState"] = overrideState;
         }
     }

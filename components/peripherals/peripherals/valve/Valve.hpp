@@ -321,15 +321,9 @@ public:
 
     void populateTelemetry(JsonObject& telemetry) {
         telemetry["state"] = this->state;
-        auto overrideUntil = this->overrideUntil.load();
-        if (overrideUntil != time_point<system_clock>()) {
-            time_t rawtime = system_clock::to_time_t(overrideUntil);
-            std::tm timeinfo {};
-            gmtime_r(&rawtime, &timeinfo);
-            char buffer[80];
-            (void) strftime(buffer, 80, "%FT%TZ", &timeinfo);
-            telemetry["overrideEnd"] = std::string(buffer);
-            telemetry["overrideState"] = this->overrideState.load();
+        auto overrideState = this->overrideState.load();
+        if (overrideState != ValveState::NONE) {
+            telemetry["overrideState"] = overrideState;
         }
     }
 
