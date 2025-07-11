@@ -5,6 +5,7 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include <optional>
 
 #include <ArduinoJson.h>
 
@@ -200,6 +201,10 @@ public:
 
     const T& get() const {
         return configured ? value : defaultValue;
+    }
+
+    const std::optional<T> getAsOptional() const {
+        return configured ? std::make_optional(value) : std::nullopt;
     }
 
     void load(const JsonObject& json) override {

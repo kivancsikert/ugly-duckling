@@ -26,8 +26,7 @@ class ValveConfig
     : public ConfigurationSection {
 public:
     ArrayProperty<ValveSchedule> schedule { this, "schedule" };
-    Property<ValveState> overrideState { this, "overrideState", ValveState::NONE };
-    Property<time_point<system_clock>> overrideUntil { this, "overrideUntil" };
+    Property<OverrideSchedule> override { this, "override" };
 };
 
 class ValveSettings
