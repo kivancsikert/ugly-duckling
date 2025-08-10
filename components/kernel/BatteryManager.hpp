@@ -50,6 +50,10 @@ public:
         return batteryVoltage.getAverage();
     }
 
+    double getPercentage() {
+        return battery->getPercentage();
+    }
+
 private:
     void checkBatteryVoltage(Task& task) {
         task.delayUntil(LOW_POWER_CHECK_INTERVAL);
