@@ -30,9 +30,10 @@ public:
         const InternalPinPtr& bin1Pin,
         const InternalPinPtr& bin2Pin,
         const PinPtr& faultPin,
-        const PinPtr& sleepPin) {
+        const PinPtr& sleepPin,
+        bool reverse = false) {
         auto driver = std::make_shared<Drv8833Driver>(faultPin, sleepPin);
-        driver->initMotors(pwm, ain1Pin, ain2Pin, bin1Pin, bin2Pin);
+        driver->initMotors(pwm, ain1Pin, ain2Pin, bin1Pin, bin2Pin, reverse);
         return driver;
     }
 
@@ -67,15 +68,16 @@ private:
         const InternalPinPtr& ain1Pin,
         const InternalPinPtr& ain2Pin,
         const InternalPinPtr& bin1Pin,
-        const InternalPinPtr& bin2Pin) {
+        const InternalPinPtr& bin2Pin,
+        bool reverse) {
 
         LOGI("Initializing DRV8833 motors on pins ain1 = %s, ain2 = %s, bin1 = %s, bin2 = %s",
             ain1Pin->getName().c_str(),
             ain2Pin->getName().c_str(),
             bin1Pin->getName().c_str(),
             bin2Pin->getName().c_str());
-        motorA = std::make_shared<Drv8833MotorDriver>(shared_from_this(), pwm, ain1Pin, ain2Pin, sleepPin != nullptr);
-        motorB = std::make_shared<Drv8833MotorDriver>(shared_from_this(), pwm, bin1Pin, bin2Pin, sleepPin != nullptr);
+        motorA = std::make_shared<Drv8833MotorDriver>(shared_from_this(), pwm, ain1Pin, ain2Pin, sleepPin != nullptr, reverse);
+        motorB = std::make_shared<Drv8833MotorDriver>(shared_from_this(), pwm, bin1Pin, bin2Pin, sleepPin != nullptr, reverse);
     }
 
     class Drv8833MotorDriver : public PwmMotorDriver {
@@ -89,30 +91,31 @@ private:
             const std::shared_ptr<PwmManager>& pwm,
             const InternalPinPtr& in1Pin,
             const InternalPinPtr& in2Pin,
-            bool canSleep)
+            bool canSleep,
+            bool reverse)
             : driver(driver)
-            , in1Channel(pwm->registerPin(in1Pin, PWM_FREQ, PWM_RESOLUTION))
-            , in2Channel(pwm->registerPin(in2Pin, PWM_FREQ, PWM_RESOLUTION))
+            , forwardChannel(pwm->registerPin(reverse ? in1Pin : in2Pin, PWM_FREQ, PWM_RESOLUTION))
+            , reverseChannel(pwm->registerPin(reverse ? in2Pin : in1Pin, PWM_FREQ, PWM_RESOLUTION))
             , sleeping(canSleep) {
         }
 
         void drive(MotorPhase phase, double duty) override {
-            int dutyValue = static_cast<int>((in1Channel.maxValue() + in1Channel.maxValue() * duty) / 2);
+            int dutyValue = static_cast<int>((forwardChannel.maxValue() + forwardChannel.maxValue() * duty) / 2);
             LOGD("Driving motor %s on pins %s/%s at %d%% (duty = %d)",
                 phase == MotorPhase::FORWARD ? "forward" : "reverse",
-                in1Channel.getName().c_str(),
-                in2Channel.getName().c_str(),
+                forwardChannel.getName().c_str(),
+                reverseChannel.getName().c_str(),
                 (int) (duty * 100),
                 dutyValue);
 
             switch (phase) {
                 case MotorPhase::FORWARD:
-                    in1Channel.write(dutyValue);
-                    in2Channel.write(0);
+                    forwardChannel.write(dutyValue);
+                    reverseChannel.write(0);
                     break;
                 case MotorPhase::REVERSE:
-                    in1Channel.write(0);
-                    in2Channel.write(dutyValue);
+                    forwardChannel.write(0);
+                    reverseChannel.write(dutyValue);
                     break;
             }
 
@@ -139,8 +142,8 @@ private:
 
     private:
         const std::shared_ptr<Drv8833Driver> driver;
-        const PwmPin& in1Channel;
-        const PwmPin& in2Channel;
+        const PwmPin& forwardChannel;
+        const PwmPin& reverseChannel;
 
         bool sleeping;
     };
