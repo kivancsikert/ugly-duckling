@@ -179,7 +179,7 @@ void registerBasicCommands(const std::shared_ptr<MqttRoot>& mqttRoot) {
     mqttRoot->registerCommand("sleep", [](const JsonObject& request, JsonObject& /*response*/) {
         seconds duration = seconds(request["duration"].as<int64_t>());
         esp_sleep_enable_timer_wakeup((microseconds(duration)).count());
-        LOGI("Sleeping for %lld seconds in light sleep mode",
+        LOGI("Sleeping deep for %lld seconds",
             duration.count());
         esp_deep_sleep_start();
     });
@@ -236,7 +236,7 @@ void registerFileCommands(const std::shared_ptr<MqttRoot>& mqttRoot, const std::
         if (err == 0) {
             response["removed"] = true;
         } else {
-            response["error"] = "File not found: " + std::to_string(err);
+            response["error"] = std::to_string(err);
         }
     });
 }
