@@ -116,7 +116,8 @@ protected:
             pins::BIN1,
             pins::BIN2,
             pins::NFault,
-            settings->motorNSleepPin.get());
+            settings->motorNSleepPin.get(),
+            true);
 
         std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorDriver->getMotorA() }, { "b", motorDriver->getMotorB() } };
 
