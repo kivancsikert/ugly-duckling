@@ -274,7 +274,9 @@ void initTelemetryPublishTask(
             telemetry["timestamp"] = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 
             if (batteryManager != nullptr) {
-                telemetry["battery"]["voltage"] = static_cast<double>(batteryManager->getVoltage()) / 1000.0; // Convert to volts
+                auto battery = telemetry["battery"].to<JsonObject>();
+                battery["voltage"] = static_cast<double>(batteryManager->getVoltage()) / 1000.0; // Convert to volts
+                battery["percentage"] = batteryManager->getPercentage();
             }
 
             auto wifiData = telemetry["wifi"].to<JsonObject>();
