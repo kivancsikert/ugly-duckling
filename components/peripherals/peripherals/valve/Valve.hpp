@@ -267,10 +267,14 @@ public:
                 if (overrideState != ValveState::NONE) {
                     update = { overrideState, overrideUntil.load() - now };
                 } else {
-                    update = ValveScheduler::getStateUpdate(schedules, now, this->strategy->getDefaultState());
-                    // If there are no schedules nor default state for the valve, close it
+                    update = ValveScheduler::getStateUpdate(schedules, now);
+                    // If there are no schedules, set it to default
                     if (update.state == ValveState::NONE) {
-                        update.state = ValveState::CLOSED;
+                        update.state = this->strategy->getDefaultState();
+                        // If the default state is not set for the valve, close it
+                        if (update.state == ValveState::NONE) {
+                            update.state = ValveState::CLOSED;
+                        }
                     }
                 }
                 LOGI("Valve '%s' state is %d, will change after %lld ms at %lld",

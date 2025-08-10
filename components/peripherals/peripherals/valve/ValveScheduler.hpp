@@ -49,10 +49,9 @@ public:
      *
      * @param schedules The list of ValveSchedule objects representing the valve's operating schedule.
      * @param now The current time_point.
-     * @param defaultState The default state of the valve when no schedules apply.
      * @return ValveStateUpdate A structure indicating the current state of the valve, and the time after which the next transition should occur.
      */
-    static ValveStateUpdate getStateUpdate(const std::list<ValveSchedule>& schedules, time_point<system_clock> now, ValveState defaultState) {
+    static ValveStateUpdate getStateUpdate(const std::list<ValveSchedule>& schedules, time_point<system_clock> now) {
         auto targetState = ValveState::NONE;
         auto validFor = nanoseconds::max();
 
@@ -113,11 +112,6 @@ public:
                     }
                 }
             }
-        }
-
-        // If there are no schedules, return the default state with no transition
-        if (targetState == ValveState::NONE) {
-            targetState = defaultState;
         }
 
         return { targetState, validFor };
