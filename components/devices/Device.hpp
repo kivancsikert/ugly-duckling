@@ -236,7 +236,7 @@ void registerFileCommands(const std::shared_ptr<MqttRoot>& mqttRoot, const std::
         if (err == 0) {
             response["removed"] = true;
         } else {
-            response["error"] = "File not found: " + std::to_string(err);
+            response["error"] = std::to_string(err);
         }
     });
 }
