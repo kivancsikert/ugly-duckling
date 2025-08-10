@@ -74,7 +74,7 @@ std::string toJson(const ValveSchedule& schedule) {
     return oss.str();
 }
 
-const time_point<system_clock> base = parseTime("2024-01-01 00:00:00");
+const time_point<system_clock> T0 = parseTime("2024-01-01 00:00:00");
 
 TEST_CASE("can parse schedule") {
     const char json[] = R"({
@@ -99,8 +99,8 @@ TEST_CASE("can serialize schedule") {
 }
 
 TEST_CASE("can create schedule") {
-    ValveSchedule schedule(base, 1h, 1min);
-    REQUIRE(schedule.getStart() == base);
+    ValveSchedule schedule(T0, 1h, 1min);
+    REQUIRE(schedule.getStart() == T0);
     REQUIRE(schedule.getPeriod() == 1h);
     REQUIRE(schedule.getDuration() == 1min);
 }
@@ -108,7 +108,7 @@ TEST_CASE("can create schedule") {
 TEST_CASE("not scheduled when empty") {
     ValveScheduler scheduler;
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        ValveStateUpdate update = scheduler.getStateUpdate({}, base, defaultState);
+    ValveStateUpdate update = scheduler.getStateUpdate({}, T0, defaultState);
         REQUIRE(update == ValveStateUpdate { defaultState, nanoseconds::max() });
     }
 }
@@ -116,32 +116,32 @@ TEST_CASE("not scheduled when empty") {
 TEST_CASE("keeps closed until schedule starts") {
     ValveScheduler scheduler;
     std::list<ValveSchedule> schedules {
-        ValveSchedule(base, 1h, 15s),
+        ValveSchedule(T0, 1h, 15s),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        REQUIRE(scheduler.getStateUpdate(schedules, base - 1s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 1s });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0 - 1s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 1s });
     }
 }
 
 TEST_CASE("keeps open when schedule is started and in period") {
     ValveScheduler scheduler;
     std::list<ValveSchedule> schedules {
-        ValveSchedule(base, 1h, 15s),
+        ValveSchedule(T0, 1h, 15s),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        REQUIRE(scheduler.getStateUpdate(schedules, base, defaultState) == ValveStateUpdate { ValveState::OPEN, 15s });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 1s, defaultState) == ValveStateUpdate { ValveState::OPEN, 14s });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0, defaultState) == ValveStateUpdate { ValveState::OPEN, 15s });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0 + 1s, defaultState) == ValveStateUpdate { ValveState::OPEN, 14s });
     }
 }
 
 TEST_CASE("keeps closed when schedule is started and outside period") {
     ValveScheduler scheduler;
     std::list<ValveSchedule> schedules {
-        ValveSchedule(base, 1h, 15s),
+        ValveSchedule(T0, 1h, 15s),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 15s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 1h - 15s });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 16s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 1h - 16s });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0 + 15s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 1h - 15s });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0 + 16s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 1h - 16s });
     }
 }
 
@@ -150,13 +150,13 @@ TEST_CASE("when there are overlapping schedules keep closed until earliest opens
     // --OOOOOO--------------
     // ----OOOOOO------------
     std::list<ValveSchedule> schedules {
-        ValveSchedule(base + 5min, 1h, 15min),
-        ValveSchedule(base + 10min, 1h, 15min),
+        ValveSchedule(T0 + 5min, 1h, 15min),
+        ValveSchedule(T0 + 10min, 1h, 15min),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
         // Keep closed until first schedule starts
-        REQUIRE(scheduler.getStateUpdate(schedules, base, defaultState) == ValveStateUpdate { ValveState::CLOSED, 5min });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 1s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 5min - 1s });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0, defaultState) == ValveStateUpdate { ValveState::CLOSED, 5min });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0 + 1s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 5min - 1s });
     }
 }
 
@@ -165,19 +165,65 @@ TEST_CASE("when there are overlapping schedules keep open until latest closes") 
     // --OOOOOO--------------
     // ----OOOOOO------------
     std::list<ValveSchedule> schedules {
-        ValveSchedule(base + 5min, 1h, 15min),
-        ValveSchedule(base + 10min, 1h, 15min),
+        ValveSchedule(T0 + 5min, 1h, 15min),
+        ValveSchedule(T0 + 10min, 1h, 15min),
     };
     for (ValveState defaultState : { ValveState::CLOSED, ValveState::NONE, ValveState::OPEN }) {
         // Open when first schedule starts, and keep open
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 5min, defaultState) == ValveStateUpdate { ValveState::OPEN, 15min });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 5min + 1s, defaultState) == ValveStateUpdate { ValveState::OPEN, 15min - 1s });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 10min, defaultState) == ValveStateUpdate { ValveState::OPEN, 15min });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 15min, defaultState) == ValveStateUpdate { ValveState::OPEN, 10min });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 25min - 1s, defaultState) == ValveStateUpdate { ValveState::OPEN, 1s });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0 + 5min, defaultState) == ValveStateUpdate { ValveState::OPEN, 15min });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0 + 5min + 1s, defaultState) == ValveStateUpdate { ValveState::OPEN, 15min - 1s });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0 + 10min, defaultState) == ValveStateUpdate { ValveState::OPEN, 15min });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0 + 15min, defaultState) == ValveStateUpdate { ValveState::OPEN, 10min });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0 + 25min - 1s, defaultState) == ValveStateUpdate { ValveState::OPEN, 1s });
 
         // Close again after later schedule ends, and reopen when first schedule starts again
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 25min, defaultState) == ValveStateUpdate { ValveState::CLOSED, 40min });
-        REQUIRE(scheduler.getStateUpdate(schedules, base + 25min + 1s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 40min - 1s });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0 + 25min, defaultState) == ValveStateUpdate { ValveState::CLOSED, 40min });
+        REQUIRE(scheduler.getStateUpdate(schedules, T0 + 25min + 1s, defaultState) == ValveStateUpdate { ValveState::CLOSED, 40min - 1s });
     }
+}
+
+TEST_CASE("handles back-to-back schedules without gap") {
+    ValveScheduler scheduler;
+    // Two schedules that touch end-to-start: [0..10s) and [10s..20s)
+    std::list<ValveSchedule> schedules{
+        ValveSchedule(T0, 30s, 10s),
+        ValveSchedule(T0 + 10s, 30s, 10s),
+    };
+
+    // At start => OPEN for 10s
+    REQUIRE(scheduler.getStateUpdate(schedules, T0, ValveState::CLOSED) == ValveStateUpdate{ValveState::OPEN, 10s});
+    // Just before switch => still OPEN
+    REQUIRE(scheduler.getStateUpdate(schedules, T0 + 10s - 1ms, ValveState::CLOSED) == ValveStateUpdate{ValveState::OPEN, 1ms});
+    // Exactly at boundary => next schedule keeps it OPEN for another 10s
+    REQUIRE(scheduler.getStateUpdate(schedules, T0 + 10s, ValveState::CLOSED) == ValveStateUpdate{ValveState::OPEN, 10s});
+    // After second ends => CLOSED until next period
+    REQUIRE(scheduler.getStateUpdate(schedules, T0 + 20s, ValveState::CLOSED) == ValveStateUpdate{ValveState::CLOSED, 10s});
+}
+
+TEST_CASE("stays at default NONE until first open, then reverts correctly") {
+    ValveScheduler scheduler;
+    std::list<ValveSchedule> schedules{
+        ValveSchedule(T0 + 5s, 60s, 2s),
+    };
+
+    // Before first start => NONE
+    REQUIRE(scheduler.getStateUpdate(schedules, T0, ValveState::NONE) == ValveStateUpdate{ValveState::NONE, 5s});
+    // During open => OPEN
+    REQUIRE(scheduler.getStateUpdate(schedules, T0 + 5s + 500ms, ValveState::NONE) == ValveStateUpdate{ValveState::OPEN, 1500ms});
+    // After close => NONE until next period
+    REQUIRE(scheduler.getStateUpdate(schedules, T0 + 7s, ValveState::NONE) == ValveStateUpdate{ValveState::NONE, 58s});
+}
+
+TEST_CASE("non-overlapping sequences alternate open and closed as expected") {
+    ValveScheduler scheduler;
+    std::list<ValveSchedule> schedules{
+        ValveSchedule(T0 + 0s,  20s, 5s),
+        ValveSchedule(T0 + 10s, 20s, 5s),
+    };
+
+    // 0..5s OPEN, 5..10s CLOSED, 10..15s OPEN, 15..20s CLOSED
+    REQUIRE(scheduler.getStateUpdate(schedules, T0 + 0s, ValveState::CLOSED) == ValveStateUpdate{ValveState::OPEN, 5s});
+    REQUIRE(scheduler.getStateUpdate(schedules, T0 + 5s, ValveState::CLOSED) == ValveStateUpdate{ValveState::CLOSED, 5s});
+    REQUIRE(scheduler.getStateUpdate(schedules, T0 + 10s, ValveState::CLOSED) == ValveStateUpdate{ValveState::OPEN, 5s});
+    REQUIRE(scheduler.getStateUpdate(schedules, T0 + 15s, ValveState::CLOSED) == ValveStateUpdate{ValveState::CLOSED, 5s});
 }
