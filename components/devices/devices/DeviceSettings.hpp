@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <string>
 
 #include <Configuration.hpp>
@@ -34,7 +35,7 @@ public:
 
     std::string getHostname() const {
         std::string hostname = instance.get();
-        std::replace(hostname.begin(), hostname.end(), ':', '-');
+        std::ranges::replace(hostname, ':', '-');
         std::erase(hostname, '?');
         return hostname;
     }

@@ -270,12 +270,13 @@ private:
         bool offered = eventQueue.offerIn(
             MQTT_QUEUE_TIMEOUT,
             OutgoingMessage {
-                topic,
-                payload,
-                retain,
-                qos,
-                waitingTask,
-                LogPublish::Log });
+                .topic = topic,
+                .payload = payload,
+                .retain = retain,
+                .qos = qos,
+                .waitingTask = waitingTask,
+                .log = LogPublish::Log,
+            });
 
         if (!offered) {
             return PublishStatus::QueueFull;
@@ -302,9 +303,10 @@ private:
             MQTT_QUEUE_TIMEOUT,
             // TODO Add an actual timeout
             Subscription {
-                topic,
-                qos,
-                std::move(handler) });
+                .topic = topic,
+                .qos = qos,
+                .handle = std::move(handler),
+            });
     }
 
     static std::string joinStrings(const std::list<std::string>& strings) {
@@ -497,12 +499,12 @@ private:
             }
             case MQTT_EVENT_PUBLISHED: {
                 LOGTV(Tag::MQTT, "Published, message ID %d", event->msg_id);
-                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, MessagePublished { event->msg_id, true });
+                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, MessagePublished { .messageId = event->msg_id, .success = true });
                 break;
             }
             case MQTT_EVENT_DELETED: {
                 LOGTV(Tag::MQTT, "Deleted, message ID %d", event->msg_id);
-                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, MessagePublished { event->msg_id, false });
+                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, MessagePublished { .messageId = event->msg_id, .success = false });
                 break;
             }
             case MQTT_EVENT_DATA: {
@@ -510,7 +512,7 @@ private:
                 std::string payload(event->data, event->data_len);
                 LOGTV(Tag::MQTT, "Received message on topic '%s'",
                     topic.c_str());
-                incomingQueue.offerIn(MQTT_QUEUE_TIMEOUT, IncomingMessage { topic, payload });
+                incomingQueue.offerIn(MQTT_QUEUE_TIMEOUT, IncomingMessage { .topic = topic, .payload = payload });
                 break;
             }
             case MQTT_EVENT_ERROR: {
@@ -542,7 +544,7 @@ private:
                         break;
                 }
                 if (event->msg_id != 0) {
-                    eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, MessagePublished { event->msg_id, false });
+                    eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, MessagePublished { .messageId = event->msg_id, .success = false });
                 }
                 break;
             }

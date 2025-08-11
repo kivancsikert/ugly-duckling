@@ -49,7 +49,7 @@ public:
     }
 
     double getTemperature() {
-        return device->readRegWord(0x06) * 0.1 - 273.2;
+        return (device->readRegWord(0x06) * 0.1) - 273.2;
     }
 
     // protected:

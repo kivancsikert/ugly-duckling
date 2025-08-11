@@ -49,7 +49,7 @@ struct Converter<system_clock::time_point> {
     static void toJson(system_clock::time_point src, JsonVariant dst) {
         time_t t = system_clock::to_time_t(src);
         tm tm {};
-        localtime_r(&t, &tm);
+        (void) localtime_r(&t, &tm);
         char buf[64];
         (void) strftime(buf, sizeof(buf), "%FT%TZ", &tm);
         dst.set(buf);
