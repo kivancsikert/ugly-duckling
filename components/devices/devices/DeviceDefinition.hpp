@@ -44,7 +44,7 @@ public:
 
     virtual ~DeviceDefinition() = default;
 
-    virtual void registerPeripheralFactories(std::shared_ptr<PeripheralManager> peripheralManager, PeripheralServices services, const std::shared_ptr<TDeviceSettings>& settings) {
+    virtual void registerPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<TDeviceSettings>& settings) {
         peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht3xSensor>>("sht3x", 0x44 /* Also supports 0x45 */));
         // TODO Unify these two factories
         peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht2xSensor>>("sht2x", 0x40 /* Not configurable */));

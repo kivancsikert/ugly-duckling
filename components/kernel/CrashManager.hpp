@@ -129,7 +129,7 @@ private:
             framesJson.add("0x" + toHexString(frame));
         }
 #else
-        size_t encodedLen = (summary.exc_bt_info.dump_size + 2) / 3 * 4 + 1;
+        size_t encodedLen = ((summary.exc_bt_info.dump_size + 2) / 3 * 4) + 1;
         std::string encoded(encodedLen, '\0');
 
         size_t writtenLen = 0;

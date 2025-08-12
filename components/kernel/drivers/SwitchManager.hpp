@@ -156,7 +156,10 @@ static void IRAM_ATTR handleSwitchInterrupt(void* arg) {
     // because we cannot call virtual methods from an ISR
     auto gpio = state->pin->getGpio();
     bool engaged = gpio_get_level(gpio) == (state->mode == SwitchMode::PullUp ? 0 : 1);
-    state->manager->switchStateInterrupts.offerFromISR(SwitchStateChange { gpio, engaged });
+    state->manager->switchStateInterrupts.offerFromISR(SwitchStateChange {
+        .gpio = gpio,
+        .engaged = engaged,
+    });
 }
 
 }    // namespace farmhub::kernel::drivers

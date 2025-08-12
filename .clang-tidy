@@ -18,6 +18,7 @@ Checks: >
   -cppcoreguidelines-pro-bounds-constant-array-index,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
   -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-union-access,
   -cppcoreguidelines-pro-type-vararg,
   -cppcoreguidelines-special-member-functions,
   google-*,
@@ -53,7 +54,7 @@ Checks: >
   -readability-use-anyofallof,
 
 CheckOptions:
-  readability-function-cognitive-complexity.Threshold: 250
+  readability-function-cognitive-complexity.Threshold: 300
   cppcoreguidelines-avoid-do-while.IgnoreMacros: true
   hicpp-signed-bitwise.IgnorePositiveIntegerLiterals: true
 

@@ -265,7 +265,10 @@ public:
 
                 ValveStateUpdate update {};
                 if (overrideState != ValveState::NONE) {
-                    update = { overrideState, overrideUntil.load() - now };
+                    update = {
+                        .state = overrideState,
+                        .validFor = overrideUntil.load() - now,
+                    };
                 } else {
                     update = ValveScheduler::getStateUpdate(schedules, now);
                     // If there are no schedules, set it to default
@@ -320,7 +323,11 @@ public:
             schedules.size(),
             static_cast<int>(overrideState),
             duration_cast<seconds>(overrideUntil.time_since_epoch()).count());
-        updateQueue.put(ConfigureSpec { schedules, overrideState, overrideUntil });
+        updateQueue.put(ConfigureSpec {
+            .schedules = schedules,
+            .overrideState = overrideState,
+            .overrideUntil = overrideUntil,
+        });
     }
 
     void populateTelemetry(JsonObject& telemetry) {
@@ -346,7 +353,10 @@ private:
             LOGI("Overriding valve '%s' to state %d until %lld",
                 name.c_str(), static_cast<int>(state), duration_cast<seconds>(until.time_since_epoch()).count());
         }
-        updateQueue.put(OverrideSpec { state, until });
+        updateQueue.put(OverrideSpec {
+            .state = state,
+            .until = until,
+        });
     }
 
     void open() {

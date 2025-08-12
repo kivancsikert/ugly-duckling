@@ -227,11 +227,11 @@ public:
 
         try {
             PeripheralInitParameters params = {
-                name,
-                mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name),
-                services,
-                telemetryCollector,
-                initJson["features"].to<JsonArray>(),
+                .name = name,
+                .mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name),
+                .services = services,
+                .telemetryCollector = telemetryCollector,
+                .features = initJson["features"].to<JsonArray>(),
             };
             JsonObject initConfigJson = initJson["config"].to<JsonObject>();
             std::shared_ptr<PeripheralBase> peripheral = it->second->createPeripheral(params, fs, settings->params.get().get(), initConfigJson);

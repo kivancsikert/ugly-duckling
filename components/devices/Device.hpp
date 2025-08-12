@@ -120,7 +120,7 @@ static void performFactoryReset(const std::shared_ptr<LedDriver>& statusLed, boo
 }
 
 template <class TDeviceDefinition>
-std::shared_ptr<BatteryDriver> initBattery(std::shared_ptr<I2CManager> i2c) {
+std::shared_ptr<BatteryDriver> initBattery(const std::shared_ptr<I2CManager>& i2c) {
     auto battery = TDeviceDefinition::createBatteryDriver(i2c);
     if (battery != nullptr) {
         // If the battery voltage is below the device's threshold, we should not boot yet.
@@ -157,7 +157,7 @@ std::shared_ptr<Watchdog> initWatchdog() {
 }
 
 template <std::derived_from<ConfigurationSection> TConfiguration>
-std::shared_ptr<TConfiguration> loadConfig(std::shared_ptr<FileSystem> fs, const std::string& path) {
+std::shared_ptr<TConfiguration> loadConfig(const std::shared_ptr<FileSystem>& fs, const std::string& path) {
     auto config = std::make_shared<TConfiguration>();
     // TODO This should just be a "load()" call
     ConfigurationFile<TConfiguration> configFile(fs, path, config);
@@ -421,7 +421,14 @@ static void startDevice() {
     auto pulseCounterManager = std::make_shared<PulseCounterManager>();
     auto pwm = std::make_shared<PwmManager>();
     auto telemetryCollector = std::make_shared<TelemetryCollector>();
-    auto peripheralServices = PeripheralServices { i2c, pcnt, pulseCounterManager, pwm, switches, telemetryPublisher };
+    auto peripheralServices = PeripheralServices {
+        .i2c = i2c,
+        .pcntManager = pcnt,
+        .pulseCounterManager = pulseCounterManager,
+        .pwmManager = pwm,
+        .switches = switches,
+        .telemetryPublisher = telemetryPublisher,
+    };
 
     // Init peripherals
     auto peripheralManager = std::make_shared<PeripheralManager>(fs, telemetryCollector, peripheralServices, mqttRoot);

@@ -9,6 +9,7 @@
 #include <ArduinoJson.h>
 
 #include <FileSystem.hpp>
+#include <utility>
 
 using std::list;
 using std::ref;
@@ -142,7 +143,7 @@ class NamedConfigurationEntry : public ConfigurationEntry {
 public:
     NamedConfigurationEntry(ConfigurationSection* parent, const std::string& name, std::shared_ptr<TDelegateEntry> delegate)
         : name(name)
-        , delegate(delegate) {
+        , delegate(std::move(delegate)) {
         parent->add(*this);
     }
 
@@ -287,7 +288,7 @@ class ConfigurationFile {
 public:
     ConfigurationFile(const std::shared_ptr<FileSystem>& fs, const std::string& path, std::shared_ptr<TConfiguration> config)
         : path(path)
-        , config(config) {
+        , config(std::move(config)) {
         if (!fs->exists(path)) {
             LOGD("The configuration file '%s' was not found, falling back to defaults",
                 path.c_str());

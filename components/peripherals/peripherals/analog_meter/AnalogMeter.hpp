@@ -39,7 +39,7 @@ public:
         Task::loop(name, 3072, [this, measurementFrequency, offset, multiplier](Task& task) {
             auto measurement = this->pin.analogRead();
             if (measurement.has_value()) {
-                double value = offset + measurement.value() * multiplier;
+                double value = offset + (measurement.value() * multiplier);
                 LOGV("Analog value on '%s' measured at %.2f",
                     this->name.c_str(), value);
                 this->value.record(value);

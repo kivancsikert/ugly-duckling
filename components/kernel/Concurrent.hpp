@@ -9,6 +9,7 @@
 
 #include <BootClock.hpp>
 #include <Time.hpp>
+#include <utility>
 
 using namespace std::chrono;
 
@@ -53,7 +54,11 @@ public:
     template <typename... Args>
         requires std::constructible_from<TMessage, Args...>
     void put(Args&&... args) {
-        while (!offerIn(ticks::max(), std::forward<Args>(args)...)) { }
+        auto innerArgs = std::make_tuple(std::forward<Args>(args)...);
+        while (!std::apply([this](auto&&... unpackedArgs) {
+            // Note: without 'this->' Clang Tidy complains about unnecessarily captured 'this'
+            return this->offerIn(ticks::max(), std::forward<decltype(unpackedArgs)>(unpackedArgs)...);
+        }, innerArgs)) { }
     }
 
     template <typename... Args>
@@ -77,11 +82,11 @@ public:
 
     using MessageHandler = std::function<void(TMessage&)>;
 
-    size_t drain(MessageHandler handler) {
-        return drain(SIZE_MAX, handler);
+    size_t drain(const MessageHandler& handler) {
+        return drain(SIZE_MAX, std::move(handler));
     }
 
-    size_t drain(size_t maxItems, MessageHandler handler) {
+    size_t drain(size_t maxItems, const MessageHandler& handler) {
         size_t count = 0;
         while (count < maxItems) {
             if (!poll(handler)) {
@@ -96,15 +101,15 @@ public:
      * @brief Wait for the first item to appear within the given timeout,
      * then drain any items remaining in the queue.
      */
-    size_t drainIn(ticks timeout, MessageHandler handler) {
-        return drainIn(SIZE_MAX, timeout, handler);
+    size_t drainIn(ticks timeout, const MessageHandler& handler) {
+        return drainIn(SIZE_MAX, timeout, std::move(handler));
     }
 
     /**
      * @brief Wait for the first item to appear within the given timeout,
      * then drain no more than `maxItems` items remaining in the queue.
      */
-    size_t drainIn(size_t maxItems, ticks timeout, MessageHandler handler) {
+    size_t drainIn(size_t maxItems, ticks timeout, const MessageHandler& handler) {
         size_t count = 0;
         ticks nextTimeout = timeout;
         while (true) {
@@ -124,7 +129,7 @@ public:
         take([](const TMessage& message) { });
     }
 
-    void take(MessageHandler handler) {
+    void take(const MessageHandler& handler) {
         while (!pollIn(ticks::max(), handler)) { }
     }
 
@@ -132,15 +137,15 @@ public:
         return poll([](const TMessage& message) { });
     }
 
-    bool poll(MessageHandler handler) {
-        return pollIn(ticks::zero(), handler);
+    bool poll(const MessageHandler& handler) {
+        return pollIn(ticks::zero(), std::move(handler));
     }
 
     bool pollIn(ticks timeout) {
         return pollIn(timeout, [](const TMessage& message) { });
     }
 
-    bool pollIn(ticks timeout, MessageHandler handler) {
+    bool pollIn(ticks timeout, const MessageHandler& handler) {
         TMessage* message;
         if (!xQueueReceive(getQueueHandle(), reinterpret_cast<void*>(&message), timeout.count())) {
             return false;

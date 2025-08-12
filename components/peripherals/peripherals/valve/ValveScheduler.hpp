@@ -114,7 +114,10 @@ public:
             }
         }
 
-        return { targetState, validFor };
+        return {
+            .state = targetState,
+            .validFor = validFor,
+        };
     }
 };
 
