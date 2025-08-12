@@ -43,14 +43,18 @@ public:
         , device({
               .port = bus->port,
               .addr = address,
-              .mutex = nullptr,      // Will be created in the constructor
-              .timeout_ticks = 0,    // Use default timeout
+              .addr_bit_len = I2C_ADDR_BIT_LEN_7,
+              .mutex = nullptr,         // Will be created in the constructor
+              .dev_handle = nullptr,    // Populated after init
+              .sda_pin = 0,             // Populated after init
+              .scl_pin = 0,             // Populated after init
+              .timeout_ticks = 0,       // Use default timeout
               .cfg = {
                   .sda_io_num = bus->sda->getGpio(),
                   .scl_io_num = bus->scl->getGpio(),
                   // TODO Allow this to be configred
-                  .sda_pullup_en = false,
-                  .scl_pullup_en = false,
+                  .sda_pullup_en = 0,
+                  .scl_pullup_en = 0,
                   .clk_flags = 0,    // Use default clock flags
                   .master {
                       // TODO Allow clock speed to be configured
