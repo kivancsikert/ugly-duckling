@@ -430,20 +430,11 @@ protected:
 
 // New type-erased factory for chicken door
 inline TypeErasedPeripheralFactory makeFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors) {
-    auto findMotor = [motors](const std::string& motorName) -> std::shared_ptr<PwmMotorDriver> {
-        if (motorName.empty() && motors.size() == 1) {
-            return motors.begin()->second;
-        }
-        for (const auto& m : motors) {
-            if (m.first == motorName) return m.second;
-        }
-        throw PeripheralCreationException("failed to find motor: " + motorName);
-    };
 
     return makePeripheralFactory<ChickenDoorSettings, ChickenDoorConfig>(
         "chicken-door",
         "chicken-door",
-        [findMotor](PeripheralInitParameters& params, const std::shared_ptr<ChickenDoorSettings>& settings) {
+    [motors](PeripheralInitParameters& params, const std::shared_ptr<ChickenDoorSettings>& settings) {
             // Instantiate light sensor based on settings
             std::shared_ptr<LightSensor> lightSensor;
             const auto lightSensorType = settings->lightSensor.get()->type.get();
@@ -477,7 +468,7 @@ inline TypeErasedPeripheralFactory makeFactory(const std::map<std::string, std::
                     settings->lightSensor.get()->latencyInterval.get());
             }
 
-            auto motor = findMotor(settings->motor.get());
+            auto motor = farmhub::peripherals::findMotor(motors, settings->motor.get());
 
             auto door = std::make_shared<ChickenDoorComponent>(
                 params.name,

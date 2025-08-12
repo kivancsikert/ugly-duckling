@@ -10,6 +10,19 @@ using namespace farmhub::kernel::drivers;
 
 namespace farmhub::peripherals {
 
+std::shared_ptr<PwmMotorDriver> findMotor(
+    const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
+    const std::string& motorName) {
+    // If there's only one motor and no name is specified, use it
+    if (motorName.empty() && motors.size() == 1) {
+        return motors.begin()->second;
+    }
+    for (const auto& m : motors) {
+        if (m.first == motorName) return m.second;
+    }
+    throw PeripheralCreationException("failed to find motor: " + motorName);
+}
+
 class Motorized {
 public:
     explicit Motorized(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors)
@@ -17,16 +30,7 @@ public:
     }
 
     std::shared_ptr<PwmMotorDriver> findMotor(const std::string& motorName) const {
-        // If there's only one motor and no name is specified, use it
-        if (motorName.empty() && motors.size() == 1) {
-            return motors.begin()->second;
-        }
-        for (const auto& motor : motors) {
-            if (motor.first == motorName) {
-                return motor.second;
-            }
-        }
-        throw PeripheralCreationException("failed to find motor: " + motorName);
+        return farmhub::peripherals::findMotor(motors, motorName);
     }
 
 private:
