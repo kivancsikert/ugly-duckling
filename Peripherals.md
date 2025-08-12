@@ -1,5 +1,26 @@
 # Peripherals
 
+```mermaid
+graph TD
+  Device["Device"]
+  PValve["Valve<br/>(Peripheral)"]
+  PFlowSensor["Flow Sensor<br/>(Peripheral)"]
+  PSoilMoistureSensor["Soil Moisture Sensor<br/>(Peripheral)"]
+  PLightSensor["Light sensor<br/>(Peripheral)"]
+
+  FPlotController["Plot Controller<br/>(Function)"]
+  FChickenDoor["Chicken Door<br/>(Function)"]
+
+  Device --> FPlotController
+  Device --> FChickenDoor
+
+  FPlotController --> PValve
+  FPlotController --> PFlowSensor
+  FPlotController --> PSoilMoistureSensor
+
+  FChickenDoor --> PLightSensor
+```
+
 * A **device** is a physical object that you can move around that has an MCU and can connect to the hub.
 
   An example of a _device_ is an actual Ugly Duckling PCB, placed in the field, connected to whatever externals.
