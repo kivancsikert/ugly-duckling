@@ -24,7 +24,8 @@ class FlowControlConfig
 
 class FlowControlFactory;
 
-class FlowControl : public Peripheral<FlowControlConfig> {
+class FlowControl
+    : public Peripheral<FlowControlConfig> {
 public:
     FlowControl(
         const std::string& name,
@@ -39,7 +40,7 @@ public:
         valve->configure(config->schedule.get(), config->overrideState.get(), config->overrideUntil.get());
     }
 
-    void shutdown(const ShutdownParameters /*parameters*/) override {
+    void shutdown(const ShutdownParameters& /*parameters*/) override {
         valve->closeBeforeShutdown();
     }
 

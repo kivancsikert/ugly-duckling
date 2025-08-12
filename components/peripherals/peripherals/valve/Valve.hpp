@@ -29,7 +29,8 @@ namespace farmhub::peripherals::valve {
 
 class Valve
     : Named
-    , public HasConfig<ValveConfig> {
+    , public HasConfig<ValveConfig>
+    , public HasShutdown {
 public:
     Valve(
         const std::string& name,
@@ -185,7 +186,7 @@ public:
     }
 
     // Allow graceful shutdown via type-erased wrapper
-    void shutdown(const PeripheralBase::ShutdownParameters& /*params*/) {
+    void shutdown(const ShutdownParameters& /*params*/) override {
         closeBeforeShutdown();
     }
 

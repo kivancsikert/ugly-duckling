@@ -124,8 +124,9 @@ public:
 };
 
 class ChickenDoorComponent final
-    : Named,
-      public HasConfig<ChickenDoorConfig> {
+    : Named
+    , public HasConfig<ChickenDoorConfig>
+    , public HasShutdown {
 public:
     ChickenDoorComponent(
         const std::string& name,
@@ -211,6 +212,13 @@ public:
             .overrideState = overrideState,
             .overrideUntil = overrideUntil,
         });
+    }
+
+    void shutdown(const ShutdownParameters& /*params*/) override {
+        // Stop movement and cancel watchdog; exit run loop
+        motor->stop();
+        watchdog.cancel();
+        operationState = OperationState::WATCHDOG_TIMEOUT; // causes runLoop to exit
     }
 
 private:

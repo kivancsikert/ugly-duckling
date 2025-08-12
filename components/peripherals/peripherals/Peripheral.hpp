@@ -27,28 +27,36 @@ namespace farmhub::peripherals {
 
 // Peripherals
 
+// Forward declarations and common types
+struct ShutdownParameters {
+    // Placeholder for future parameters
+};
+
+// Explicit shutdown capability for implementations that support graceful shutdown
+class HasShutdown {
+public:
+    virtual ~HasShutdown() = default;
+    virtual void shutdown(const ShutdownParameters& params) = 0;
+};
+
 class PeripheralBase
-    : public Named {
+    : public Named
+    , public HasShutdown {
 public:
     explicit PeripheralBase(const std::string& name)
         : Named(name) {
     }
 
-    virtual ~PeripheralBase() = default;
+    ~PeripheralBase() override = default;
 
-    struct ShutdownParameters {
-        // Placeholder for future parameters
-    };
-
-    virtual void shutdown(const ShutdownParameters parameters) {
+    // Default no-op shutdown
+    void shutdown(const ShutdownParameters& /*parameters*/) override {
     }
 };
 
 // Unified, type-erased peripheral wrapper to allow heterogeneous storage without inheritance
 class TypeErasedPeripheral final {
 public:
-    using ShutdownParameters = PeripheralBase::ShutdownParameters;
-
     TypeErasedPeripheral() = default;
 
     template <typename ImplPtr>
@@ -57,11 +65,11 @@ public:
         p.name = std::move(name);
         // Keep the implementation alive via shared_ptr<void>
         p._holder = std::static_pointer_cast<void>(impl);
-        // Bind shutdown if available; otherwise, no-op
+        // Bind shutdown if available via HasShutdown; otherwise, no-op
         p._shutdown = [impl](const ShutdownParameters& params) {
             using Impl = std::remove_reference_t<decltype(*impl)>;
-            if constexpr (requires(Impl& i, const ShutdownParameters& sp) { i.shutdown(sp); }) {
-                impl->shutdown(params);
+            if constexpr (std::is_base_of_v<HasShutdown, Impl>) {
+                std::static_pointer_cast<HasShutdown>(impl)->shutdown(params);
             }
         };
         return p;
@@ -413,7 +421,7 @@ public:
         }
         LOGI("Shutting down peripheral manager");
         state = State::Stopped;
-        PeripheralBase::ShutdownParameters parameters;
+        ShutdownParameters parameters = {};
         for (auto& peripheral : peripherals) {
             LOGI("Shutting down peripheral '%s'",
                 peripheral->name.c_str());
