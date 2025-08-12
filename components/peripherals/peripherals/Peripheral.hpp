@@ -10,7 +10,6 @@
 #include <Configuration.hpp>
 #include <EspException.hpp>
 #include <I2CManager.hpp>
-#include <Named.hpp>
 #include <PcntManager.hpp>
 #include <PulseCounter.hpp>
 #include <PwmManager.hpp>
@@ -37,21 +36,6 @@ class HasShutdown {
 public:
     virtual ~HasShutdown() = default;
     virtual void shutdown(const ShutdownParameters& params) = 0;
-};
-
-class PeripheralBase
-    : public Named,
-      public HasShutdown {
-public:
-    explicit PeripheralBase(const std::string& name)
-        : Named(name) {
-    }
-
-    ~PeripheralBase() override = default;
-
-    // Default no-op shutdown
-    void shutdown(const ShutdownParameters& /*parameters*/) override {
-    }
 };
 
 // Peripheral instance wrapper to allow heterogeneous storage without inheritance

@@ -81,7 +81,6 @@ inline PeripheralFactory makeFactory() {
                 settings->measurementFrequency.get(),
                 settings->windowSize.get());
 
-            // Register telemetry feature
             params.registerFeature(settings->type.get(), [meter](JsonObject& telemetryJson) {
                 telemetryJson["value"] = meter->getValue();
             });
