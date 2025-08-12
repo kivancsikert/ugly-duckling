@@ -7,6 +7,7 @@
 #include <Concurrent.hpp>
 #include <Configuration.hpp>
 #include <MovingAverage.hpp>
+#include <Named.hpp>
 #include <Pin.hpp>
 #include <Task.hpp>
 #include <mqtt/MqttDriver.hpp>

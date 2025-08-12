@@ -10,6 +10,7 @@
 #include <ArduinoJson.h>
 
 #include <Concurrent.hpp>
+#include <Named.hpp>
 #include <NvsStore.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>

@@ -4,6 +4,7 @@
 #include <utility>
 
 #include <Configuration.hpp>
+#include <Named.hpp>
 #include <mqtt/MqttDriver.hpp>
 #include <peripherals/Motors.hpp>
 #include <peripherals/Peripheral.hpp>

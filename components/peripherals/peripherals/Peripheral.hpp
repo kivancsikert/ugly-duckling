@@ -129,8 +129,8 @@ template <
     std::derived_from<ConfigurationSection> TConfig = EmptyConfiguration,
     typename MakeImpl,
     typename... TSettingsArgs>
-PeripheralFactory makePeripheralFactory(std::string factoryType,
-    std::string peripheralType,
+PeripheralFactory makePeripheralFactory(const std::string& factoryType,
+    const std::string& peripheralType,
     MakeImpl makeImpl,
     TSettingsArgs... settingsArgs) {
     static_assert(MakeImplProducesSharedPtr<MakeImpl, TSettings>,

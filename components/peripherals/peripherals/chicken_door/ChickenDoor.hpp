@@ -9,6 +9,7 @@
 #include <variant>
 
 #include <Concurrent.hpp>
+#include <Named.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>
 #include <Watchdog.hpp>

@@ -6,6 +6,7 @@
 #include <Configuration.hpp>
 #include <I2CManager.hpp>
 #include <MovingAverage.hpp>
+#include <Named.hpp>
 
 #include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>
