@@ -102,8 +102,7 @@ private:
     const uint8_t pin;
 };
 
-// Type-erased factory
-inline TypeErasedPeripheralFactory makeFactoryForXl9535() {
+inline PeripheralFactory makeFactoryForXl9535() {
     return makePeripheralFactory<Xl9535Settings>(
         "multiplexer:xl9535",
         "multiplexer",

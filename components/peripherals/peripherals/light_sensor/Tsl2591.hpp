@@ -74,8 +74,7 @@ private:
     tsl2591_t sensor {};
 };
 
-// Type-erased factory
-inline TypeErasedPeripheralFactory makeFactoryForTsl2591() {
+inline PeripheralFactory makeFactoryForTsl2591() {
     return makePeripheralFactory<Tsl2591Settings>(
         "light-sensor:tsl2591",
         "light-sensor",

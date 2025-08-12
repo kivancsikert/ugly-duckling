@@ -59,7 +59,7 @@ public:
     NamedConfigurationEntry<FlowMeterSettings> flowMeter;
 };
 
-inline TypeErasedPeripheralFactory makeFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors, ValveControlStrategyType defaultStrategy) {
+inline PeripheralFactory makeFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors, ValveControlStrategyType defaultStrategy) {
     return makePeripheralFactory<FlowControlSettings, FlowControlConfig>(
         "flow-control",
         "flow-control",

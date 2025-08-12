@@ -98,8 +98,7 @@ private:
     Mutex updateMutex;
 };
 
-// New type-erased factory API
-inline TypeErasedPeripheralFactory makeFactory() {
+inline PeripheralFactory makeFactory() {
     return makePeripheralFactory<FlowMeterSettings>(
         "flow-meter",
         "flow-meter",

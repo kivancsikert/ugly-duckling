@@ -65,8 +65,7 @@ private:
     i2c_dev_t sensor {};
 };
 
-// Type-erased factory
-inline TypeErasedPeripheralFactory makeFactoryForBh1750() {
+inline PeripheralFactory makeFactoryForBh1750() {
     return makePeripheralFactory<Bh1750Settings>(
         "light-sensor:bh1750",
         "light-sensor",

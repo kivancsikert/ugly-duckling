@@ -436,8 +436,7 @@ protected:
     }
 };
 
-// New type-erased factory for chicken door
-inline TypeErasedPeripheralFactory makeFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors) {
+inline PeripheralFactory makeFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors) {
 
     return makePeripheralFactory<ChickenDoorSettings, ChickenDoorConfig>(
         "chicken-door",

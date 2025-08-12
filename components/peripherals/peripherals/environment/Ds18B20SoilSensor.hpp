@@ -57,8 +57,7 @@ private:
     onewire_addr_t sensor {};
 };
 
-// Erased factory
-inline TypeErasedPeripheralFactory makeFactoryForDs18b20() {
+inline PeripheralFactory makeFactoryForDs18b20() {
     return makePeripheralFactory<SinglePinSettings>(
         "environment:ds18b20",
         "environment",

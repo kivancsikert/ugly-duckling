@@ -64,8 +64,7 @@ private:
     i2c_dev_t sensor {};
 };
 
-// Type-erased factories for SHT2x and HTU2x environment sensors
-inline TypeErasedPeripheralFactory makeFactoryForSht2x(const std::string& sensorKey) {
+inline PeripheralFactory makeFactoryForSht2x(const std::string& sensorKey) {
     // sensorKey: "sht2x" or "htu2x"
     return makePeripheralFactory<I2CSettings>(
         "environment:" + sensorKey,

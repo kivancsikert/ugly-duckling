@@ -83,8 +83,7 @@ private:
     double humidity = std::numeric_limits<double>::quiet_NaN();
 };
 
-// Type-erased factory for SHT3x environment sensor
-inline TypeErasedPeripheralFactory makeFactoryForSht3x() {
+inline PeripheralFactory makeFactoryForSht3x() {
     return makePeripheralFactory<I2CSettings>(
         "environment:sht3x",
         "environment",

@@ -40,8 +40,8 @@ public:
 };
 
 class PeripheralBase
-    : public Named
-    , public HasShutdown {
+    : public Named,
+      public HasShutdown {
 public:
     explicit PeripheralBase(const std::string& name)
         : Named(name) {
@@ -54,14 +54,14 @@ public:
     }
 };
 
-// Unified, type-erased peripheral wrapper to allow heterogeneous storage without inheritance
-class TypeErasedPeripheral final {
+// Peripheral instance wrapper to allow heterogeneous storage without inheritance
+class Peripheral final {
 public:
-    TypeErasedPeripheral() = default;
+    Peripheral() = default;
 
     template <typename ImplPtr>
-    static TypeErasedPeripheral wrap(std::string name, const ImplPtr& impl) {
-        TypeErasedPeripheral p;
+    static Peripheral wrap(std::string name, const ImplPtr& impl) {
+        Peripheral p;
         p.name = std::move(name);
         // Keep the implementation alive via shared_ptr<void>
         p._holder = std::static_pointer_cast<void>(impl);
@@ -88,33 +88,6 @@ private:
     std::function<void(const ShutdownParameters&)> _shutdown;
 };
 
-template <std::derived_from<ConfigurationSection> TConfig>
-class Peripheral
-    : public PeripheralBase {
-public:
-    explicit Peripheral(const std::string& name)
-        : PeripheralBase(name) {
-    }
-
-    virtual void configure(std::shared_ptr<TConfig> /*config*/) = 0;
-};
-
-class SimplePeripheral
-    : public Peripheral<EmptyConfiguration> {
-public:
-    explicit SimplePeripheral(const std::string& name, const std::shared_ptr<void>& component)
-        : Peripheral<EmptyConfiguration>(name)
-        , component(component) {
-    }
-
-    void configure(const std::shared_ptr<EmptyConfiguration> /*config*/) override {
-        LOGV("No configuration to apply for simple peripheral: %s", name.c_str());
-    }
-
-protected:
-    const std::shared_ptr<void> component;
-};
-
 // Peripheral factories
 
 struct PeripheralServices {
@@ -139,29 +112,14 @@ struct PeripheralInitParameters {
     const JsonArray features;
 };
 
-class PeripheralFactoryBase {
-public:
-    PeripheralFactoryBase(const std::string& factoryType, const std::string& peripheralType)
-        : factoryType(factoryType)
-        , peripheralType(peripheralType) {
-    }
-
-    virtual ~PeripheralFactoryBase() = default;
-
-    virtual std::shared_ptr<PeripheralBase> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<FileSystem>& fs, const std::string& jsonSettings, JsonObject& initConfigJson) = 0;
-
-    const std::string factoryType;
-    const std::string peripheralType;
-};
-
-// A non-templated factory representation producing type-erased peripherals
-struct TypeErasedPeripheralFactory {
+// A non-templated factory representation producing peripheral instances
+struct PeripheralFactory {
     // Identifiers
     std::string factoryType;
     std::string peripheralType;    // Usually same as factoryType, but can differ
 
-    // Creator function: mirrors PeripheralFactoryBase::createPeripheral, but returns TypeErasedPeripheral
-    std::function<TypeErasedPeripheral(
+    // Creator function: returns a Peripheral
+    std::function<Peripheral(
         PeripheralInitParameters& params,
         const std::shared_ptr<FileSystem>& fs,
         const std::string& jsonSettings,
@@ -181,13 +139,13 @@ concept MakeImplProducesSharedPtr = requires(F f, PeripheralInitParameters& p, s
     requires is_shared_ptr<std::invoke_result_t<F, PeripheralInitParameters&, std::shared_ptr<TSettings>>>::value;
 };
 
-// Helper to build a TypeErasedPeripheralFactory while keeping strong types for settings/config
+// Helper to build a PeripheralFactory while keeping strong types for settings/config
 template <
     std::derived_from<ConfigurationSection> TSettings,
     std::derived_from<ConfigurationSection> TConfig = EmptyConfiguration,
     typename MakeImpl,
     typename... TSettingsArgs>
-TypeErasedPeripheralFactory makePeripheralFactory(std::string factoryType,
+PeripheralFactory makePeripheralFactory(std::string factoryType,
     std::string peripheralType,
     MakeImpl makeImpl,
     TSettingsArgs... settingsArgs) {
@@ -195,13 +153,13 @@ TypeErasedPeripheralFactory makePeripheralFactory(std::string factoryType,
         "makeImpl must be callable with (PeripheralInitParameters&, std::shared_ptr<TSettings>) and return std::shared_ptr<Impl>");
     auto settingsTuple = std::make_tuple(std::forward<TSettingsArgs>(settingsArgs)...);
 
-    TypeErasedPeripheralFactory f;
+    PeripheralFactory f;
     f.factoryType = std::move(factoryType);
     f.peripheralType = peripheralType.empty() ? f.factoryType : std::move(peripheralType);
     f.create = [settingsTuple, makeImpl = std::move(makeImpl)](auto& params,
                    const std::shared_ptr<FileSystem>& fs,
                    const std::string& jsonSettings,
-                   JsonObject& initConfigJson) -> TypeErasedPeripheral {
+                   JsonObject& initConfigJson) -> Peripheral {
         // Construct and load settings
         auto settings = std::apply([](auto&&... a) {
             return std::make_shared<TSettings>(std::forward<decltype(a)>(a)...);
@@ -235,59 +193,10 @@ TypeErasedPeripheralFactory makePeripheralFactory(std::string factoryType,
             }
         });
 
-        // Return type-erased wrapper
-        return TypeErasedPeripheral::wrap(params.name, std::move(impl));
+        return Peripheral::wrap(params.name, std::move(impl));
     };
     return f;
 }
-
-template <std::derived_from<ConfigurationSection> TSettings, std::derived_from<ConfigurationSection> TConfig = EmptyConfiguration, typename... TSettingsArgs>
-class PeripheralFactory : public PeripheralFactoryBase {
-public:
-    // By default use the factory type as the peripheral type
-    explicit PeripheralFactory(const std::string& type, TSettingsArgs... settingsArgs)
-        : PeripheralFactory(type, type, std::forward<TSettingsArgs>(settingsArgs)...) {
-    }
-
-    PeripheralFactory(const std::string& factoryType, const std::string& peripheralType, TSettingsArgs... settingsArgs)
-        : PeripheralFactoryBase(factoryType, peripheralType)
-        , settingsArgs(std::forward<TSettingsArgs>(settingsArgs)...) {
-    }
-
-    std::shared_ptr<PeripheralBase> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<FileSystem>& fs, const std::string& jsonSettings, JsonObject& initConfigJson) override {
-        std::shared_ptr<TSettings> settings = std::apply([](TSettingsArgs... args) {
-            return std::make_shared<TSettings>(std::forward<TSettingsArgs>(args)...);
-        },
-            settingsArgs);
-        settings->loadFromString(jsonSettings);
-        const auto& name = params.name;
-        std::shared_ptr<Peripheral<TConfig>> peripheral = createPeripheral(params, settings);
-
-        std::shared_ptr<TConfig> config = std::make_shared<TConfig>();
-        // Use short prefix because SPIFFS has a 32 character limit
-        std::shared_ptr<ConfigurationFile<TConfig>> configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + name, config);
-        peripheral->configure(config);
-        // Store configuration in init message
-        config->store(initConfigJson, false);
-
-        params.mqttRoot->subscribe("config", [name, configFile, peripheral](const std::string&, const JsonObject& configJson) {
-            LOGD("Received configuration update for peripheral: %s", name.c_str());
-            try {
-                configFile->update(configJson);
-                peripheral->configure(configFile->getConfig());
-            } catch (const std::exception& e) {
-                LOGE("Failed to update configuration for peripheral '%s' because %s",
-                    name.c_str(), e.what());
-            }
-        });
-        return peripheral;
-    }
-
-    virtual std::shared_ptr<Peripheral<TConfig>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<TSettings>& settings) = 0;
-
-private:
-    std::tuple<TSettingsArgs...> settingsArgs;
-};
 
 // Peripheral manager
 
@@ -304,34 +213,10 @@ public:
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 
-    void registerFactory(std::unique_ptr<PeripheralFactoryBase> factory) {
+    void registerFactory(PeripheralFactory factory) {
         LOGD("Registering peripheral factory: %s",
-            factory->factoryType.c_str());
-        const std::string key = factory->factoryType;
-        const std::string periphType = factory->peripheralType;
-        auto* raw = factory.get();
-        factories.insert(std::make_pair(key, std::move(factory)));
-        // Also register a bridged type-erased factory that forwards to the legacy one
-        TypeErasedPeripheralFactory bridged {
-            .factoryType = key,
-            .peripheralType = periphType,
-            .create = [raw](auto& params,
-                          const std::shared_ptr<FileSystem>& fs,
-                          const std::string& jsonSettings,
-                          JsonObject& initConfigJson) -> TypeErasedPeripheral {
-                // Delegate to legacy factory which also handles configuration & MQTT wiring
-                std::shared_ptr<PeripheralBase> base = raw->createPeripheral(params, fs, jsonSettings, initConfigJson);
-                return TypeErasedPeripheral::wrap(params.name, std::move(base));
-            }
-        };
-        erasedFactories.emplace(key, std::move(bridged));
-    }
-
-    // Overload for registering a type-erased factory (new API)
-    void registerFactory(TypeErasedPeripheralFactory factory) {
-        LOGD("Registering peripheral factory (erased): %s",
             factory.factoryType.c_str());
-        erasedFactories.emplace(factory.factoryType, std::move(factory));
+        factories.emplace(factory.factoryType, std::move(factory));
     }
 
     bool createPeripheral(const std::string& peripheralSettings, JsonArray peripheralsInitJson) {
@@ -363,20 +248,15 @@ public:
         LOGD("Creating peripheral '%s' with factory '%s'",
             nameBeforeCreation.c_str(), factoryType.c_str());
 
-        // Prefer new type-erased factory if available; otherwise fall back to legacy
-        const auto erasedIt = erasedFactories.find(factoryType);
-        const bool useErased = erasedIt != erasedFactories.end();
-
-        // For legacy path, locate the factory early for error reporting
-        const auto legacyIt = useErased ? factories.end() : factories.find(factoryType);
-        if (!useErased && legacyIt == factories.end()) {
+        const auto it = factories.find(factoryType);
+        if (it == factories.end()) {
             LOGE("Failed to create '%s' peripheral '%s' because factory not found",
                 factoryType.c_str(), nameBeforeCreation.c_str());
             initJson["error"] = "Factory not found: '" + factoryType + "'";
             return false;
         }
 
-        const std::string& peripheralType = useErased ? erasedIt->second.peripheralType : legacyIt->second->peripheralType;
+        const std::string& peripheralType = it->second.peripheralType;
         initJson["type"] = peripheralType;
         const auto& name = nameFromSettings.empty() ? peripheralType : nameFromSettings;
         initJson["name"] = name;
@@ -391,13 +271,8 @@ public:
                 .features = initJson["features"].to<JsonArray>(),
             };
             JsonObject initConfigJson = initJson["config"].to<JsonObject>();
-            if (useErased) {
-                TypeErasedPeripheral peripheral = erasedIt->second.create(params, fs, settings->params.get().get(), initConfigJson);
-                erasedPeripherals.push_back(std::move(peripheral));
-            } else {
-                std::shared_ptr<PeripheralBase> peripheral = legacyIt->second->createPeripheral(params, fs, settings->params.get().get(), initConfigJson);
-                peripherals.push_back(std::move(peripheral));
-            }
+            Peripheral peripheral = it->second.create(params, fs, settings->params.get().get(), initConfigJson);
+            peripherals.push_back(std::move(peripheral));
 
             return true;
         } catch (const std::exception& e) {
@@ -424,11 +299,6 @@ public:
         ShutdownParameters parameters = {};
         for (auto& peripheral : peripherals) {
             LOGI("Shutting down peripheral '%s'",
-                peripheral->name.c_str());
-            peripheral->shutdown(parameters);
-        }
-        for (auto& peripheral : erasedPeripherals) {
-            LOGI("Shutting down peripheral '%s'",
                 peripheral.name.c_str());
             peripheral.shutdown(parameters);
         }
@@ -453,12 +323,10 @@ private:
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
 
     // TODO Use an unordered_map?
-    std::map<std::string, std::unique_ptr<PeripheralFactoryBase>> factories;    // Legacy factories
-    std::map<std::string, TypeErasedPeripheralFactory> erasedFactories;         // New factories
+    std::map<std::string, PeripheralFactory> factories;
     Mutex stateMutex;
     State state = State::Running;
-    std::list<std::shared_ptr<PeripheralBase>> peripherals;    // Legacy peripherals
-    std::list<TypeErasedPeripheral> erasedPeripherals;         // New peripherals
+    std::list<Peripheral> peripherals;
 };
 
 }    // namespace farmhub::peripherals

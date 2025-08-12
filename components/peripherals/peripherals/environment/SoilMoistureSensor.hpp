@@ -56,8 +56,7 @@ private:
     AnalogPin pin;
 };
 
-// Erased factory
-inline TypeErasedPeripheralFactory makeFactoryForSoilMoisture() {
+inline PeripheralFactory makeFactoryForSoilMoisture() {
     return makePeripheralFactory<SoilMoistureSensorSettings>(
         "environment:soil-moisture",
         "environment",

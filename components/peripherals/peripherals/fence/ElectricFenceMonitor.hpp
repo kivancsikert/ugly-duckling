@@ -93,8 +93,7 @@ private:
     std::list<FencePin> pins;
 };
 
-// Type-erased factory
-inline TypeErasedPeripheralFactory makeFactory() {
+inline PeripheralFactory makeFactory() {
     return makePeripheralFactory<ElectricFenceMonitorSettings>(
         "electric-fence",
         "electric-fence",

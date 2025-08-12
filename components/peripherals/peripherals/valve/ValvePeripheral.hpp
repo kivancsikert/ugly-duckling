@@ -22,7 +22,7 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::valve {
 
-inline TypeErasedPeripheralFactory makeFactory(
+inline PeripheralFactory makeFactory(
 	const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
 	ValveControlStrategyType defaultStrategy) {
 

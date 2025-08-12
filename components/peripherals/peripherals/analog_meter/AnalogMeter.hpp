@@ -68,7 +68,7 @@ public:
     Property<std::size_t> windowSize { this, "windowSize", 1 };
 };
 
-inline TypeErasedPeripheralFactory makeFactory() {
+inline PeripheralFactory makeFactory() {
     return makePeripheralFactory<AnalogMeterSettings, EmptyConfiguration>(
         "analog-meter",
         "analog-meter",

@@ -185,7 +185,7 @@ public:
         close();
     }
 
-    // Allow graceful shutdown via type-erased wrapper
+    // Allow graceful shutdown
     void shutdown(const ShutdownParameters& /*params*/) override {
         closeBeforeShutdown();
     }
