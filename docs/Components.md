@@ -1,24 +1,35 @@
-# Peripherals
+# Components
 
 ```mermaid
 graph TD
   Device["Device"]
-  PValve["Valve<br/>(Peripheral)"]
-  PFlowSensor["Flow Sensor<br/>(Peripheral)"]
-  PSoilMoistureSensor["Soil Moisture Sensor<br/>(Peripheral)"]
-  PLightSensor["Light sensor<br/>(Peripheral)"]
 
-  FPlotController["Plot Controller<br/>(Function)"]
-  FChickenDoor["Chicken Door<br/>(Function)"]
+  PerfValve["Valve<br/>(peripheral)"]
+  PerfFlowSensor["Flow Sensor<br/>(peripheral)"]
+  PerfSoilMoistureSensor["Soil Moisture Sensor<br/>(peripheral)"]
+  PerfLightSensor["Light sensor<br/>(peripheral)"]
 
-  Device --> FPlotController
-  Device --> FChickenDoor
+  FuncPlotController["Plot Controller<br/>(function)"]
+  FuncChickenDoor["Chicken Door<br/>(function)"]
 
-  FPlotController --> PValve
-  FPlotController --> PFlowSensor
-  FPlotController --> PSoilMoistureSensor
+  FeatValve["Valve<br/>(feature)"]
+  FeatFlow["Flow<br/>(feature)"]
+  FeatSoilMoisture["Soil moisture<br/>(feature)"]
+  FeatLight["Light level<br/>(feature)"]
 
-  FChickenDoor --> PLightSensor
+  Device --> FuncPlotController
+  Device --> FuncChickenDoor
+
+  FuncPlotController --> PerfValve
+  FuncPlotController --> PerfFlowSensor
+  FuncPlotController --> PerfSoilMoistureSensor
+
+  PerfValve --> FeatValve
+  PerfFlowSensor --> FeatFlow
+  PerfSoilMoistureSensor --> FeatSoilMoisture
+
+  FuncChickenDoor --> PerfLightSensor
+  PerfLightSensor --> FeatLight
 ```
 
 * A **device** is an ugly duckling controller, equipped with the PCB, that you can move around the garden independently.
