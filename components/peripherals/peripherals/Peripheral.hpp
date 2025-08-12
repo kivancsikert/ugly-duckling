@@ -137,49 +137,51 @@ PeripheralFactory makePeripheralFactory(std::string factoryType,
         "makeImpl must be callable with (PeripheralInitParameters&, std::shared_ptr<TSettings>) and return std::shared_ptr<Impl>");
     auto settingsTuple = std::make_tuple(std::forward<TSettingsArgs>(settingsArgs)...);
 
-    PeripheralFactory f;
-    f.factoryType = std::move(factoryType);
-    f.peripheralType = peripheralType.empty() ? f.factoryType : std::move(peripheralType);
-    f.create = [settingsTuple, makeImpl = std::move(makeImpl)](auto& params,
-                   const std::shared_ptr<FileSystem>& fs,
-                   const std::string& jsonSettings,
-                   JsonObject& initConfigJson) -> Peripheral {
-        // Construct and load settings
-        auto settings = std::apply([](auto&&... a) {
-            return std::make_shared<TSettings>(std::forward<decltype(a)>(a)...);
-        },
-            settingsTuple);
-        settings->loadFromString(jsonSettings);
+    // Build the factory using designated initializers (C++20+)
+    auto effectiveType = peripheralType.empty() ? factoryType : peripheralType;
+    return PeripheralFactory {
+        .factoryType = std::move(factoryType),
+        .peripheralType = std::move(effectiveType),
+        .create = [settingsTuple, makeImpl = std::move(makeImpl)](auto& params,
+                      const std::shared_ptr<FileSystem>& fs,
+                      const std::string& jsonSettings,
+                      JsonObject& initConfigJson) -> Peripheral {
+            // Construct and load settings
+            auto settings = std::apply([](auto&&... a) {
+                return std::make_shared<TSettings>(std::forward<decltype(a)>(a)...);
+            },
+                settingsTuple);
+            settings->loadFromString(jsonSettings);
 
-        // Create concrete implementation via user-provided callable
-        auto impl = makeImpl(params, settings);
+            // Create concrete implementation via user-provided callable
+            auto impl = makeImpl(params, settings);
 
-        // Configuration lifecycle, mirroring the templated factory behavior
-        auto config = std::make_shared<TConfig>();
-        auto configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + params.name, config);
-        using Impl = std::remove_reference_t<decltype(*impl)>;
-        if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
-            std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(config);
-        }
-        // Store configuration in init message
-        config->store(initConfigJson, false);
-
-        // Subscribe for config updates
-        params.mqttRoot->subscribe("config", [name = params.name, configFile, impl](const std::string&, const JsonObject& cfgJson) {
-            LOGD("Received configuration update for peripheral: %s", name.c_str());
-            try {
-                configFile->update(cfgJson);
-                if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
-                    std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(configFile->getConfig());
-                }
-            } catch (const std::exception& e) {
-                LOGE("Failed to update configuration for peripheral '%s' because %s", name.c_str(), e.what());
+            // Configuration lifecycle, mirroring the templated factory behavior
+            auto config = std::make_shared<TConfig>();
+            auto configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + params.name, config);
+            using Impl = std::remove_reference_t<decltype(*impl)>;
+            if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
+                std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(config);
             }
-        });
+            // Store configuration in init message
+            config->store(initConfigJson, false);
 
-        return Peripheral::wrap(params.name, std::move(impl));
+            // Subscribe for config updates
+            params.mqttRoot->subscribe("config", [name = params.name, configFile, impl](const std::string&, const JsonObject& cfgJson) {
+                LOGD("Received configuration update for peripheral: %s", name.c_str());
+                try {
+                    configFile->update(cfgJson);
+                    if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
+                        std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(configFile->getConfig());
+                    }
+                } catch (const std::exception& e) {
+                    LOGE("Failed to update configuration for peripheral '%s' because %s", name.c_str(), e.what());
+                }
+            });
+
+            return Peripheral::wrap(params.name, std::move(impl));
+        },
     };
-    return f;
 }
 
 // Peripheral manager
