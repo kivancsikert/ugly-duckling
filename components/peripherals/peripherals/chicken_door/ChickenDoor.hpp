@@ -4,6 +4,7 @@
 #include <concepts>
 #include <limits>
 #include <list>
+#include <map>
 #include <utility>
 #include <variant>
 
@@ -15,7 +16,6 @@
 #include <drivers/MotorDriver.hpp>
 #include <drivers/SwitchManager.hpp>
 
-#include <peripherals/Motorized.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/light_sensor/Bh1750.hpp>
 #include <peripherals/light_sensor/LightSensor.hpp>
@@ -27,6 +27,7 @@ using namespace farmhub::peripherals;
 using namespace farmhub::peripherals::light_sensor;
 using namespace std::chrono;
 using namespace std::chrono_literals;
+
 namespace farmhub::peripherals::chicken_door {
 
 enum class DoorState : int8_t {
@@ -122,7 +123,8 @@ public:
 };
 
 class ChickenDoorComponent final
-    : Named {
+    : Named
+    , public HasConfig<ChickenDoorConfig> {
 public:
     ChickenDoorComponent(
         const std::string& name,
@@ -191,6 +193,15 @@ public:
         if (overrideState != DoorState::NONE) {
             telemetry["overrideState"] = overrideState;
         }
+    }
+
+    // Overload to integrate with the generic factory's configuration wiring
+    void configure(const std::shared_ptr<ChickenDoorConfig>& config) {
+        configure(
+            config->openLevel.get(),
+            config->closeLevel.get(),
+            config->overrideState.get(),
+            config->overrideUntil.get());
     }
 
     void configure(double openLevel, double closeLevel, DoorState overrideState, time_point<system_clock> overrideUntil) {
@@ -396,33 +407,7 @@ private:
     std::optional<PowerManagementLockGuard> sleepLock;
 };
 
-class ChickenDoorFactory;
-
-class ChickenDoor
-    : public Peripheral<ChickenDoorConfig> {
-public:
-    ChickenDoor(
-        const std::string& name,
-        const std::shared_ptr<LightSensor>& lightSensor,
-        const std::shared_ptr<ChickenDoorComponent>& door)
-        : Peripheral<ChickenDoorConfig>(name)
-        , lightSensor(lightSensor)
-        , door(door) {
-    }
-
-    void configure(const std::shared_ptr<ChickenDoorConfig> config) override {
-        door->configure(
-            config->openLevel.get(),
-            config->closeLevel.get(),
-            config->overrideState.get(),
-            config->overrideUntil.get());
-    }
-
-private:
-    const std::shared_ptr<LightSensor> lightSensor;
-    const std::shared_ptr<ChickenDoorComponent> door;
-    friend class ChickenDoorFactory;
-};
+// (Adapter removed; ChickenDoorComponent now exposes configure(shared_ptr<ChickenDoorConfig>))
 
 class NoLightSensor final
     : public LightSensor {
@@ -443,66 +428,79 @@ protected:
     }
 };
 
-class ChickenDoorFactory
-    : public PeripheralFactory<ChickenDoorSettings, ChickenDoorConfig>,
-      protected Motorized {
-public:
-    explicit ChickenDoorFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors)
-        : PeripheralFactory<ChickenDoorSettings, ChickenDoorConfig>("chicken-door")
-        , Motorized(motors) {
-    }
-
-    template <std::derived_from<LightSensor> TLightSensor>
-    std::shared_ptr<Peripheral<ChickenDoorConfig>> createDoor(PeripheralInitParameters& params, const std::shared_ptr<ChickenDoorSettings>& settings, uint8_t lightSensorAddress) {
-        auto lightSensor = std::make_shared<TLightSensor>(
-            params.name + ":light",
-            params.services.i2c,
-            settings->lightSensor.get()->parse(lightSensorAddress),
-            settings->lightSensor.get()->measurementFrequency.get(),
-            settings->lightSensor.get()->latencyInterval.get());
-
-        auto motor = findMotor(settings->motor.get());
-
-        auto door = std::make_shared<ChickenDoorComponent>(
-            params.name,
-            params.mqttRoot,
-            params.services.switches,
-            motor,
-            lightSensor,
-            settings->openPin.get(),
-            settings->closedPin.get(),
-            settings->invertSwitches.get(),
-            settings->movementTimeout.get(),
-            params.services.telemetryPublisher);
-
-        params.registerFeature("light", [lightSensor](JsonObject& telemetryJson) {
-            telemetryJson["value"] = lightSensor->getCurrentLevel();
-        });
-        params.registerFeature("door", [door](JsonObject& telemetryJson) {
-            door->populateTelemetry(telemetryJson);
-        });
-
-        return std::make_shared<ChickenDoor>(params.name, lightSensor, door);
-    }
-
-    std::shared_ptr<Peripheral<ChickenDoorConfig>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<ChickenDoorSettings>& settings) override {
-        auto lightSensorType = settings->lightSensor.get()->type.get();
-        try {
-            if (lightSensorType == "bh1750") {
-                return createDoor<Bh1750>(params, settings, 0x23);
-            }
-            if (lightSensorType == "tsl2591") {
-                return createDoor<Tsl2591>(params, settings, TSL2591_ADDR);
-            }
-            throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
-
-        } catch (const std::exception& e) {
-            LOGE("Could not initialize light sensor because %s", e.what());
-            LOGW("Initializing without a light sensor");
-            // TODO Do not pass I2C parameters to NoLightSensor
-            return createDoor<NoLightSensor>(params, settings, 0x00);
+// New type-erased factory for chicken door
+inline TypeErasedPeripheralFactory makeFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors) {
+    auto findMotor = [motors](const std::string& motorName) -> std::shared_ptr<PwmMotorDriver> {
+        if (motorName.empty() && motors.size() == 1) {
+            return motors.begin()->second;
         }
-    }
-};
+        for (const auto& m : motors) {
+            if (m.first == motorName) return m.second;
+        }
+        throw PeripheralCreationException("failed to find motor: " + motorName);
+    };
+
+    return makePeripheralFactory<ChickenDoorSettings, ChickenDoorConfig>(
+        "chicken-door",
+        "chicken-door",
+        [findMotor](PeripheralInitParameters& params, const std::shared_ptr<ChickenDoorSettings>& settings) {
+            // Instantiate light sensor based on settings
+            std::shared_ptr<LightSensor> lightSensor;
+            const auto lightSensorType = settings->lightSensor.get()->type.get();
+            try {
+                if (lightSensorType == "bh1750") {
+                    lightSensor = std::make_shared<Bh1750>(
+                        params.name + ":light",
+                        params.services.i2c,
+                        settings->lightSensor.get()->parse(0x23),
+                        settings->lightSensor.get()->measurementFrequency.get(),
+                        settings->lightSensor.get()->latencyInterval.get());
+                } else if (lightSensorType == "tsl2591") {
+                    lightSensor = std::make_shared<Tsl2591>(
+                        params.name + ":light",
+                        params.services.i2c,
+                        settings->lightSensor.get()->parse(TSL2591_ADDR),
+                        settings->lightSensor.get()->measurementFrequency.get(),
+                        settings->lightSensor.get()->latencyInterval.get());
+                } else {
+                    throw PeripheralCreationException("Unknown light sensor type: " + lightSensorType);
+                }
+            } catch (const std::exception& e) {
+                LOGE("Could not initialize light sensor because %s", e.what());
+                LOGW("Initializing without a light sensor");
+                // Note: No I2C needed for NoLightSensor
+                lightSensor = std::make_shared<NoLightSensor>(
+                    params.name + ":light",
+                    params.services.i2c,
+                    settings->lightSensor.get()->parse(0x00),
+                    settings->lightSensor.get()->measurementFrequency.get(),
+                    settings->lightSensor.get()->latencyInterval.get());
+            }
+
+            auto motor = findMotor(settings->motor.get());
+
+            auto door = std::make_shared<ChickenDoorComponent>(
+                params.name,
+                params.mqttRoot,
+                params.services.switches,
+                motor,
+                lightSensor,
+                settings->openPin.get(),
+                settings->closedPin.get(),
+                settings->invertSwitches.get(),
+                settings->movementTimeout.get(),
+                params.services.telemetryPublisher);
+
+            // Telemetry features
+            params.registerFeature("light", [lightSensor](JsonObject& telemetryJson) {
+                telemetryJson["value"] = lightSensor->getCurrentLevel();
+            });
+            params.registerFeature("door", [door](JsonObject& telemetryJson) {
+                door->populateTelemetry(telemetryJson);
+            });
+
+            return door;
+        });
+}
 
 }    // namespace farmhub::peripherals::chicken_door

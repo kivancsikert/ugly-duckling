@@ -5,6 +5,7 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include <type_traits>
 
 #include <ArduinoJson.h>
 
@@ -137,6 +138,14 @@ private:
 };
 
 class EmptyConfiguration : public ConfigurationSection { };
+
+// Interface indicating the implementation supports configuration via TConfig
+template <std::derived_from<ConfigurationSection> TConfig>
+class HasConfig {
+public:
+    virtual ~HasConfig() = default;
+    virtual void configure(const std::shared_ptr<TConfig>&) = 0;
+};
 
 template <std::derived_from<ConfigurationEntry> TDelegateEntry>
 class NamedConfigurationEntry : public ConfigurationEntry {
