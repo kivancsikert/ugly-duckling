@@ -21,9 +21,11 @@ graph TD
   FChickenDoor --> PLightSensor
 ```
 
-* A **device** is a physical object that you can move around that has an MCU and can connect to the hub.
+* A **device** is an ugly duckling controller, equipped with the PCB, that you can move around the garden independently.
 
-  An example of a _device_ is an actual Ugly Duckling PCB, placed in the field, connected to whatever externals.
+  A device can connect to the servers via MQTT over the wireless network.
+
+  An example of a _device_ is an Ugly Duckling PCB, placed in the field, connected to whatever externals.
 
   The device publishes telemetry, and receives configuration and commands under `/devices/ugly-duckling/$INSTANCE`.
   This is called the **device topic**, and we'll refer to it as `...` further down.
