@@ -12,6 +12,8 @@
 #include <mqtt/MqttDriver.hpp>
 #include <utility>
 
+#include <peripherals/Peripheral.hpp>
+
 using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::peripherals::flow_meter {
@@ -96,20 +98,23 @@ private:
     Mutex updateMutex;
 };
 
-class FlowMeterFactory
-    : public PeripheralFactory<FlowMeterSettings> {
-public:
-    FlowMeterFactory()
-        : PeripheralFactory<FlowMeterSettings>("flow-meter") {
-    }
-
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<FlowMeterSettings>& settings) override {
-        auto meter = std::make_shared<FlowMeter>(params.name, params.services.pulseCounterManager, settings->pin.get(), settings->qFactor.get(), settings->measurementFrequency.get());
-        params.registerFeature("flow", [meter](JsonObject& telemetry) {
-            meter->populateTelemetry(telemetry);
+// New type-erased factory API
+inline TypeErasedPeripheralFactory makeFactory() {
+    return makePeripheralFactory<FlowMeterSettings>(
+        "flow-meter",
+        "flow-meter",
+        [](PeripheralInitParameters& params, const std::shared_ptr<FlowMeterSettings>& settings) {
+            auto meter = std::make_shared<FlowMeter>(
+                params.name,
+                params.services.pulseCounterManager,
+                settings->pin.get(),
+                settings->qFactor.get(),
+                settings->measurementFrequency.get());
+            params.registerFeature("flow", [meter](JsonObject& telemetry) {
+                meter->populateTelemetry(telemetry);
+            });
+            return meter;
         });
-        return std::make_shared<SimplePeripheral>(params.name, meter);
-    }
-};
+}
 
 }    // namespace farmhub::peripherals::flow_meter
