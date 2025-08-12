@@ -98,10 +98,10 @@ protected:
 
         std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorA }, { "b", motorB } };
 
-    peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::Latching));
-    peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
-    peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::Latching));
-    peripheralManager->registerFactory(chicken_door::makeFactory(motors));
+        peripheralManager->registerFactory(valve::makeFactory(motors, ValveControlStrategyType::Latching));
+        peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
+        peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::Latching));
+        peripheralManager->registerFactory(chicken_door::makeFactory(motors));
     }
 };
 

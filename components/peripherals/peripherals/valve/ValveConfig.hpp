@@ -6,6 +6,7 @@
 
 #include <Configuration.hpp>
 
+#include <peripherals/valve/ValveControlStrategy.hpp>
 #include <peripherals/valve/ValveSchedule.hpp>
 #include <peripherals/valve/ValveScheduler.hpp>
 
@@ -15,12 +16,6 @@ using namespace std::chrono_literals;
 using namespace farmhub::kernel;
 
 namespace farmhub::peripherals::valve {
-
-enum class ValveControlStrategyType : uint8_t {
-    NormallyOpen,
-    NormallyClosed,
-    Latching
-};
 
 class ValveConfig
     : public ConfigurationSection {
