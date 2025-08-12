@@ -1,8 +1,8 @@
 #pragma once
 
+#include <functional>
 #include <map>
 #include <memory>
-#include <functional>
 #include <tuple>
 #include <type_traits>
 
@@ -52,7 +52,7 @@ public:
     TypeErasedPeripheral() = default;
 
     template <typename ImplPtr>
-    static TypeErasedPeripheral wrap(std::string name, ImplPtr impl) {
+    static TypeErasedPeripheral wrap(std::string name, const ImplPtr& impl) {
         TypeErasedPeripheral p;
         p.name = std::move(name);
         // Keep the implementation alive via shared_ptr<void>
@@ -68,7 +68,9 @@ public:
     }
 
     void shutdown(const ShutdownParameters& params) const {
-        if (_shutdown) _shutdown(params);
+        if (_shutdown) {
+            _shutdown(params);
+        }
     }
 
     std::string name;
@@ -148,14 +150,15 @@ public:
 struct TypeErasedPeripheralFactory {
     // Identifiers
     std::string factoryType;
-    std::string peripheralType;  // Usually same as factoryType, but can differ
+    std::string peripheralType;    // Usually same as factoryType, but can differ
 
     // Creator function: mirrors PeripheralFactoryBase::createPeripheral, but returns TypeErasedPeripheral
     std::function<TypeErasedPeripheral(
         PeripheralInitParameters& params,
         const std::shared_ptr<FileSystem>& fs,
         const std::string& jsonSettings,
-        JsonObject& initConfigJson)> create;
+        JsonObject& initConfigJson)>
+        create;
 };
 
 // Internal helpers to constrain factory callables
@@ -188,13 +191,14 @@ TypeErasedPeripheralFactory makePeripheralFactory(std::string factoryType,
     f.factoryType = std::move(factoryType);
     f.peripheralType = peripheralType.empty() ? f.factoryType : std::move(peripheralType);
     f.create = [settingsTuple, makeImpl = std::move(makeImpl)](auto& params,
-                      const std::shared_ptr<FileSystem>& fs,
-                      const std::string& jsonSettings,
-                      JsonObject& initConfigJson) -> TypeErasedPeripheral {
+                   const std::shared_ptr<FileSystem>& fs,
+                   const std::string& jsonSettings,
+                   JsonObject& initConfigJson) -> TypeErasedPeripheral {
         // Construct and load settings
         auto settings = std::apply([](auto&&... a) {
             return std::make_shared<TSettings>(std::forward<decltype(a)>(a)...);
-        }, settingsTuple);
+        },
+            settingsTuple);
         settings->loadFromString(jsonSettings);
 
         // Create concrete implementation via user-provided callable
@@ -297,16 +301,16 @@ public:
             factory->factoryType.c_str());
         const std::string key = factory->factoryType;
         const std::string periphType = factory->peripheralType;
-        auto raw = factory.get();
+        auto* raw = factory.get();
         factories.insert(std::make_pair(key, std::move(factory)));
         // Also register a bridged type-erased factory that forwards to the legacy one
         TypeErasedPeripheralFactory bridged {
             .factoryType = key,
             .peripheralType = periphType,
             .create = [raw](auto& params,
-                           const std::shared_ptr<FileSystem>& fs,
-                           const std::string& jsonSettings,
-                           JsonObject& initConfigJson) -> TypeErasedPeripheral {
+                          const std::shared_ptr<FileSystem>& fs,
+                          const std::string& jsonSettings,
+                          JsonObject& initConfigJson) -> TypeErasedPeripheral {
                 // Delegate to legacy factory which also handles configuration & MQTT wiring
                 std::shared_ptr<PeripheralBase> base = raw->createPeripheral(params, fs, jsonSettings, initConfigJson);
                 return TypeErasedPeripheral::wrap(params.name, std::move(base));
@@ -441,12 +445,12 @@ private:
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
 
     // TODO Use an unordered_map?
-    std::map<std::string, std::unique_ptr<PeripheralFactoryBase>> factories;           // Legacy factories
-    std::map<std::string, TypeErasedPeripheralFactory> erasedFactories;                // New factories
+    std::map<std::string, std::unique_ptr<PeripheralFactoryBase>> factories;    // Legacy factories
+    std::map<std::string, TypeErasedPeripheralFactory> erasedFactories;         // New factories
     Mutex stateMutex;
     State state = State::Running;
-    std::list<std::shared_ptr<PeripheralBase>> peripherals;                            // Legacy peripherals
-    std::list<TypeErasedPeripheral> erasedPeripherals;                                  // New peripherals
+    std::list<std::shared_ptr<PeripheralBase>> peripherals;    // Legacy peripherals
+    std::list<TypeErasedPeripheral> erasedPeripherals;         // New peripherals
 };
 
 }    // namespace farmhub::peripherals

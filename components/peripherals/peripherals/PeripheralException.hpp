@@ -12,4 +12,4 @@ public:
     }
 };
 
-}
+}    // namespace farmhub::peripherals

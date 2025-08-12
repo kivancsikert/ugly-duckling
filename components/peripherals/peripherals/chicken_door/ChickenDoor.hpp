@@ -196,8 +196,7 @@ public:
         }
     }
 
-    // Overload to integrate with the generic factory's configuration wiring
-    void configure(const std::shared_ptr<ChickenDoorConfig>& config) {
+    void configure(const std::shared_ptr<ChickenDoorConfig>& config) override {
         configure(
             config->openLevel.get(),
             config->closeLevel.get(),
