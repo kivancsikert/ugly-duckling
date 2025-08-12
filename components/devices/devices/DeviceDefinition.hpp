@@ -45,20 +45,20 @@ public:
     virtual ~DeviceDefinition() = default;
 
     virtual void registerPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<TDeviceSettings>& settings) {
-        peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht3xSensor>>("sht3x", 0x44 /* Also supports 0x45 */));
+        peripheralManager->registerFactory(environment::makeFactoryForSht3x());
         // TODO Unify these two factories
-        peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht2xSensor>>("sht2x", 0x40 /* Not configurable */));
-        peripheralManager->registerFactory(std::make_unique<environment::I2CEnvironmentFactory<environment::Sht2xSensor>>("htu2x", 0x40 /* Not configurable */));
+        peripheralManager->registerFactory(environment::makeFactoryForSht2x("sht2x"));
+        peripheralManager->registerFactory(environment::makeFactoryForSht2x("htu2x"));
 
-        peripheralManager->registerFactory(std::make_unique<environment::SoilMoistureSensorFactory>());
-        peripheralManager->registerFactory(std::make_unique<environment::Ds18B20SoilSensorFactory>());
+        peripheralManager->registerFactory(environment::makeFactoryForSoilMoisture());
+        peripheralManager->registerFactory(environment::makeFactoryForDs18b20());
 
-        peripheralManager->registerFactory(std::make_unique<fence::ElectricFenceMonitorFactory>());
+        peripheralManager->registerFactory(fence::makeFactory());
 
-        peripheralManager->registerFactory(std::make_unique<light_sensor::Bh1750Factory>());
-        peripheralManager->registerFactory(std::make_unique<light_sensor::Tsl2591Factory>());
+        peripheralManager->registerFactory(light_sensor::makeFactoryForBh1750());
+        peripheralManager->registerFactory(light_sensor::makeFactoryForTsl2591());
 
-        peripheralManager->registerFactory(std::make_unique<multiplexer::Xl9535Factory>());
+        peripheralManager->registerFactory(multiplexer::makeFactoryForXl9535());
 
         peripheralManager->registerFactory(analog_meter::makeFactory());
 

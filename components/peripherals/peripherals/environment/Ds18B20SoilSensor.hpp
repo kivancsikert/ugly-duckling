@@ -57,20 +57,18 @@ private:
     onewire_addr_t sensor {};
 };
 
-class Ds18B20SoilSensorFactory
-    : public PeripheralFactory<SinglePinSettings> {
-public:
-    Ds18B20SoilSensorFactory()
-        : PeripheralFactory<SinglePinSettings>("environment:ds18b20", "environment") {
-    }
-
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<SinglePinSettings>& settings) override {
-        auto sensor = std::make_shared<Ds18B20SoilSensor>(settings->pin.get());
-        params.registerFeature("temperature", [sensor](JsonObject& telemetryJson) {
-            telemetryJson["value"] = sensor->getTemperature();
+// Erased factory
+inline TypeErasedPeripheralFactory makeFactoryForDs18b20() {
+    return makePeripheralFactory<SinglePinSettings>(
+        "environment:ds18b20",
+        "environment",
+        [](PeripheralInitParameters& params, const std::shared_ptr<SinglePinSettings>& settings) {
+            auto sensor = std::make_shared<Ds18B20SoilSensor>(settings->pin.get());
+            params.registerFeature("temperature", [sensor](JsonObject& telemetryJson) {
+                telemetryJson["value"] = sensor->getTemperature();
+            });
+            return sensor;
         });
-        return std::make_shared<SimplePeripheral>(params.name, sensor);
-    }
-};
+}
 
 }    // namespace farmhub::peripherals::environment

@@ -65,21 +65,19 @@ private:
     i2c_dev_t sensor {};
 };
 
-class Bh1750Factory
-    : public PeripheralFactory<Bh1750Settings> {
-public:
-    Bh1750Factory()
-        : PeripheralFactory<Bh1750Settings>("light-sensor:bh1750", "light-sensor") {
-    }
-
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<Bh1750Settings>& settings) override {
-        I2CConfig i2cConfig = settings->parse(0x23);
-        auto sensor = std::make_shared<Bh1750>(params.name, params.services.i2c, i2cConfig, settings->measurementFrequency.get(), settings->latencyInterval.get());
-        params.registerFeature("light", [sensor](JsonObject& telemetryJson) {
-            telemetryJson["value"] = sensor->getCurrentLevel();
+// Type-erased factory
+inline TypeErasedPeripheralFactory makeFactoryForBh1750() {
+    return makePeripheralFactory<Bh1750Settings>(
+        "light-sensor:bh1750",
+        "light-sensor",
+        [](PeripheralInitParameters& params, const std::shared_ptr<Bh1750Settings>& settings) {
+            I2CConfig i2cConfig = settings->parse(0x23);
+            auto sensor = std::make_shared<Bh1750>(params.name, params.services.i2c, i2cConfig, settings->measurementFrequency.get(), settings->latencyInterval.get());
+            params.registerFeature("light", [sensor](JsonObject& telemetryJson) {
+                telemetryJson["value"] = sensor->getCurrentLevel();
+            });
+            return sensor;
         });
-        return std::make_shared<SimplePeripheral>(params.name, sensor);
-    }
-};
+}
 
 }    // namespace farmhub::peripherals::light_sensor

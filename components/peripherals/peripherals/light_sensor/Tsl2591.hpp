@@ -24,8 +24,6 @@ namespace farmhub::peripherals::light_sensor {
 
 static constexpr uint8_t TSL2591_ADDR = 0x29;
 
-class Tsl2591Factory;
-
 class Tsl2591Settings
     : public I2CSettings {
 public:
@@ -76,21 +74,19 @@ private:
     tsl2591_t sensor {};
 };
 
-class Tsl2591Factory
-    : public PeripheralFactory<Tsl2591Settings> {
-public:
-    Tsl2591Factory()
-        : PeripheralFactory<Tsl2591Settings>("light-sensor:tsl2591", "light-sensor") {
-    }
-
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<Tsl2591Settings>& settings) override {
-        I2CConfig i2cConfig = settings->parse(TSL2591_ADDR);
-        auto sensor = std::make_shared<Tsl2591>(params.name, params.services.i2c, i2cConfig, settings->measurementFrequency.get(), settings->latencyInterval.get());
-        params.registerFeature("light", [sensor](JsonObject& telemetryJson) {
-            telemetryJson["value"] = sensor->getCurrentLevel();
+// Type-erased factory
+inline TypeErasedPeripheralFactory makeFactoryForTsl2591() {
+    return makePeripheralFactory<Tsl2591Settings>(
+        "light-sensor:tsl2591",
+        "light-sensor",
+        [](PeripheralInitParameters& params, const std::shared_ptr<Tsl2591Settings>& settings) {
+            I2CConfig i2cConfig = settings->parse(TSL2591_ADDR);
+            auto sensor = std::make_shared<Tsl2591>(params.name, params.services.i2c, i2cConfig, settings->measurementFrequency.get(), settings->latencyInterval.get());
+            params.registerFeature("light", [sensor](JsonObject& telemetryJson) {
+                telemetryJson["value"] = sensor->getCurrentLevel();
+            });
+            return sensor;
         });
-        return std::make_shared<SimplePeripheral>(params.name, sensor);
-    }
-};
+}
 
 }    // namespace farmhub::peripherals::light_sensor

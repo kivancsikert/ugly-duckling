@@ -83,4 +83,22 @@ private:
     double humidity = std::numeric_limits<double>::quiet_NaN();
 };
 
+// Type-erased factory for SHT3x environment sensor
+inline TypeErasedPeripheralFactory makeFactoryForSht3x() {
+    return makePeripheralFactory<I2CSettings>(
+        "environment:sht3x",
+        "environment",
+        [](PeripheralInitParameters& params, const std::shared_ptr<I2CSettings>& settings) {
+            I2CConfig i2cConfig = settings->parse(0x44 /* Also supports 0x45 */);
+            auto sensor = std::make_shared<Sht3xSensor>("sht3x", params.services.i2c, i2cConfig);
+            params.registerFeature("temperature", [sensor](JsonObject& telemetryJson) {
+                telemetryJson["value"] = sensor->getTemperature();
+            });
+            params.registerFeature("moisture", [sensor](JsonObject& telemetryJson) {
+                telemetryJson["value"] = sensor->getMoisture();
+            });
+            return sensor;
+        });
+}
+
 }    // namespace farmhub::peripherals::environment
