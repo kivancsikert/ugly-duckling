@@ -76,7 +76,7 @@ jobs:
           command: |
             ccache --max-size=${{ env.CCACHE_MAXSIZE }} && \
             ./generate-clang-tidy-compile-db.py && \
-            clang-tidy -p build/clang-tidy main/main.cpp
+            clang-tidy -p build/clang-tidy $(find main components -type f -name '*.cpp' -not -path '*/test/*' -not -path '*/build/*')
 
       - name: Rename firmware artifact
         run: |

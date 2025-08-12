@@ -1,5 +1,9 @@
 #include "Motors.hpp"
 #include "PeripheralException.hpp"
+#include "drivers/MotorDriver.hpp"
+#include <map>
+#include <memory>
+#include <string>
 
 namespace farmhub::peripherals {
 
@@ -11,8 +15,9 @@ std::shared_ptr<PwmMotorDriver> findMotor(
         return motors.begin()->second;
     }
     for (const auto& m : motors) {
-        if (m.first == motorName)
+        if (m.first == motorName) {
             return m.second;
+        }
     }
     throw PeripheralCreationException("failed to find motor: " + motorName);
 }

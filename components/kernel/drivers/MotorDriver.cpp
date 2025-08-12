@@ -8,4 +8,4 @@ MotorPhase operator-(MotorPhase phase) {
         : MotorPhase::FORWARD;
 }
 
-}
+}    // namespace farmhub::kernel::drivers
