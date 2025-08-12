@@ -68,28 +68,26 @@ public:
     Property<std::size_t> windowSize { this, "windowSize", 1 };
 };
 
-class AnalogMeterFactory
-    : public PeripheralFactory<AnalogMeterSettings> {
-public:
-    AnalogMeterFactory()
-        : PeripheralFactory<AnalogMeterSettings>("analog-meter") {
-    }
+inline TypeErasedPeripheralFactory makeFactory() {
+    return makePeripheralFactory<AnalogMeterSettings, EmptyConfiguration>(
+        "analog-meter",
+        "analog-meter",
+        [](PeripheralInitParameters& params, const std::shared_ptr<AnalogMeterSettings>& settings) {
+            auto meter = std::make_shared<AnalogMeter>(
+                params.name,
+                settings->pin.get(),
+                settings->offset.get(),
+                settings->multiplier.get(),
+                settings->measurementFrequency.get(),
+                settings->windowSize.get());
 
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<AnalogMeterSettings>& settings) override {
-        auto meter = std::make_shared<AnalogMeter>(
-            params.name,
-            settings->pin.get(),
-            settings->offset.get(),
-            settings->multiplier.get(),
-            settings->measurementFrequency.get(),
-            settings->windowSize.get());
+            // Register telemetry feature
+            params.registerFeature(settings->type.get(), [meter](JsonObject& telemetryJson) {
+                telemetryJson["value"] = meter->getValue();
+            });
 
-        params.registerFeature(settings->type.get(), [meter](JsonObject& telemetryJson) {
-            telemetryJson["value"] = meter->getValue();
+            return meter;
         });
-
-        return std::make_shared<SimplePeripheral>(params.name, meter);
-    }
-};
+}
 
 }    // namespace farmhub::peripherals::analog_meter

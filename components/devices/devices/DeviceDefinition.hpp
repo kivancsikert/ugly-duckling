@@ -60,7 +60,7 @@ public:
 
         peripheralManager->registerFactory(std::make_unique<multiplexer::Xl9535Factory>());
 
-        peripheralManager->registerFactory(std::make_unique<analog_meter::AnalogMeterFactory>());
+        peripheralManager->registerFactory(analog_meter::makeFactory());
 
         registerDeviceSpecificPeripheralFactories(peripheralManager, services, settings);
     }
