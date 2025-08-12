@@ -18,6 +18,8 @@
 #include <drivers/SwitchManager.hpp>
 #include <utility>
 
+#include "PeripheralException.hpp"
+
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 
@@ -104,14 +106,6 @@ protected:
 };
 
 // Peripheral factories
-
-class PeripheralCreationException
-    : public std::runtime_error {
-public:
-    explicit PeripheralCreationException(const std::string& reason)
-        : std::runtime_error(reason) {
-    }
-};
 
 struct PeripheralServices {
     const std::shared_ptr<I2CManager> i2c;

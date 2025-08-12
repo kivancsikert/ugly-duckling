@@ -5,7 +5,7 @@
 
 #include <Configuration.hpp>
 #include <mqtt/MqttDriver.hpp>
-#include <peripherals/Motorized.hpp>
+#include <peripherals/Motors.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/flow_meter/FlowMeter.hpp>
 #include <peripherals/valve/Valve.hpp>
@@ -63,18 +63,18 @@ public:
 };
 
 class FlowControlFactory
-    : public PeripheralFactory<FlowControlSettings, FlowControlConfig, ValveControlStrategyType>,
-      protected Motorized {
+    : public PeripheralFactory<FlowControlSettings, FlowControlConfig, ValveControlStrategyType> {
 public:
     FlowControlFactory(
         const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
         ValveControlStrategyType defaultStrategy)
         : PeripheralFactory<FlowControlSettings, FlowControlConfig, ValveControlStrategyType>("flow-control", defaultStrategy)
-        , Motorized(motors) {
+        , motors(motors) {
     }
 
     std::shared_ptr<Peripheral<FlowControlConfig>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<FlowControlSettings>& settings) override {
-        auto strategy = settings->valve.get()->createValveControlStrategy(this);
+        auto motor = findMotor(motors, settings->valve.get()->motor.get());
+        auto strategy = settings->valve.get()->createValveControlStrategy(motor);
 
         auto valve = std::make_shared<Valve>(
             params.name,
@@ -99,6 +99,9 @@ public:
 
         return std::make_shared<FlowControl>(params.name, valve, flowMeter);
     }
+
+private:
+    const std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors;
 };
 
 }    // namespace farmhub::peripherals::flow_control

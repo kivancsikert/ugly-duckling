@@ -72,13 +72,11 @@ public:
      */
     Property<milliseconds> switchDuration { this, "switchDuration", 500ms };
 
-    std::unique_ptr<ValveControlStrategy> createValveControlStrategy(const Motorized* motorOwner) const {
+    std::unique_ptr<ValveControlStrategy> createValveControlStrategy(const std::shared_ptr<PwmMotorDriver>& motor) const {
         PinPtr pin = this->pin.get();
         if (pin != nullptr) {
             return std::make_unique<LatchingPinValveControlStrategy>(pin);
         }
-
-        std::shared_ptr<PwmMotorDriver> motor = motorOwner->findMotor(this->motor.get());
 
         auto switchDuration = this->switchDuration.get();
         auto holdDuty = this->holdDuty.get() / 100.0;

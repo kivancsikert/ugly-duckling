@@ -16,6 +16,7 @@
 #include <drivers/MotorDriver.hpp>
 #include <drivers/SwitchManager.hpp>
 
+#include <peripherals/Motors.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/light_sensor/Bh1750.hpp>
 #include <peripherals/light_sensor/LightSensor.hpp>
@@ -123,8 +124,8 @@ public:
 };
 
 class ChickenDoorComponent final
-    : Named
-    , public HasConfig<ChickenDoorConfig> {
+    : Named,
+      public HasConfig<ChickenDoorConfig> {
 public:
     ChickenDoorComponent(
         const std::string& name,
@@ -434,7 +435,7 @@ inline TypeErasedPeripheralFactory makeFactory(const std::map<std::string, std::
     return makePeripheralFactory<ChickenDoorSettings, ChickenDoorConfig>(
         "chicken-door",
         "chicken-door",
-    [motors](PeripheralInitParameters& params, const std::shared_ptr<ChickenDoorSettings>& settings) {
+        [motors](PeripheralInitParameters& params, const std::shared_ptr<ChickenDoorSettings>& settings) {
             // Instantiate light sensor based on settings
             std::shared_ptr<LightSensor> lightSensor;
             const auto lightSensorType = settings->lightSensor.get()->type.get();
@@ -468,7 +469,7 @@ inline TypeErasedPeripheralFactory makeFactory(const std::map<std::string, std::
                     settings->lightSensor.get()->latencyInterval.get());
             }
 
-            auto motor = farmhub::peripherals::findMotor(motors, settings->motor.get());
+            auto motor = findMotor(motors, settings->motor.get());
 
             auto door = std::make_shared<ChickenDoorComponent>(
                 params.name,

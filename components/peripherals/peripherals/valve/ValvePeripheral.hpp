@@ -10,7 +10,7 @@
 #include <Telemetry.hpp>
 #include <drivers/MotorDriver.hpp>
 
-#include <peripherals/Motorized.hpp>
+#include <peripherals/Motors.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/valve/Valve.hpp>
 #include <peripherals/valve/ValveConfig.hpp>
@@ -45,18 +45,18 @@ private:
 };
 
 class ValveFactory
-    : public PeripheralFactory<ValveSettings, ValveConfig, ValveControlStrategyType>,
-      protected Motorized {
+    : public PeripheralFactory<ValveSettings, ValveConfig, ValveControlStrategyType> {
 public:
     ValveFactory(
         const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
         ValveControlStrategyType defaultStrategy)
         : PeripheralFactory<ValveSettings, ValveConfig, ValveControlStrategyType>("valve", defaultStrategy)
-        , Motorized(motors) {
+        , motors(motors) {
     }
 
     std::shared_ptr<Peripheral<ValveConfig>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<ValveSettings>& settings) override {
-        auto strategy = settings->createValveControlStrategy(this);
+        auto motor = findMotor(motors, settings->motor.get());
+        auto strategy = settings->createValveControlStrategy(motor);
         auto valve = std::make_shared<Valve>(
             params.name,
             std::move(strategy),
@@ -67,6 +67,9 @@ public:
         });
         return std::make_shared<ValvePeripheral>(params.name, valve);
     }
+
+private:
+    const std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors;
 };
 
 }    // namespace farmhub::peripherals::valve

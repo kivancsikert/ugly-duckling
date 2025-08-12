@@ -1,4 +1,6 @@
 idf_component_register(
+    SRCS
+        drivers/MotorDriver.cpp
     INCLUDE_DIRS "."
     REQUIRES
         bblanchon__arduinojson

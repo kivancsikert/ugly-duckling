@@ -12,6 +12,7 @@ component_compile_options(-Wextra)
 component_compile_options(-Wunused)
 component_compile_options(-Wreturn-local-addr)
 component_compile_options(-Werror)
+component_compile_options("-fconcepts-diagnostics-depth=4")
 
 if(NOT DEFINED WOKWI)
     set(WOKWI "$ENV{WOKWI}")
