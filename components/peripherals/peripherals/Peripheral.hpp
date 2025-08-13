@@ -6,6 +6,7 @@
 #include <memory>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <BootClock.hpp>
@@ -18,7 +19,6 @@
 #include <PwmManager.hpp>
 #include <Telemetry.hpp>
 #include <drivers/SwitchManager.hpp>
-#include <utility>
 
 #include "PeripheralException.hpp"
 
@@ -28,18 +28,6 @@ using namespace farmhub::kernel::drivers;
 namespace farmhub::peripherals {
 
 // Peripherals
-
-// Forward declarations and common types
-struct ShutdownParameters {
-    // Placeholder for future parameters
-};
-
-// Explicit shutdown capability for implementations that support graceful shutdown
-class HasShutdown {
-public:
-    virtual ~HasShutdown() = default;
-    virtual void shutdown(const ShutdownParameters& params) = 0;
-};
 
 using Peripheral = kernel::Handle;
 
@@ -65,8 +53,6 @@ struct PeripheralInitParameters {
     const PeripheralServices& services;
     const std::shared_ptr<TelemetryCollector> telemetryCollector;
     const JsonArray features;
-    // Allows factories to register a shutdown callback with the manager
-    std::function<void(std::function<void(const ShutdownParameters&)>)> registerShutdown;
 };
 
 // Use the generic kernel::Factory for peripherals
@@ -137,13 +123,6 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
                 }
             });
 
-            // If implementation supports shutdown, register it with the manager now
-            if constexpr (std::is_base_of_v<HasShutdown, Impl>) {
-                params.registerShutdown([impl](const ShutdownParameters& p) {
-                    std::static_pointer_cast<HasShutdown>(impl)->shutdown(p);
-                });
-            }
-
             return Peripheral::wrap(std::move(impl));
         },
     };
@@ -166,26 +145,18 @@ public:
     }
 
     bool createPeripheral(const std::string& peripheralSettings, JsonArray peripheralsInitJson) {
-        if (state == State::Stopped) {
-            LOGE("Not creating peripherals because the peripheral manager is stopped");
-            return false;
-        }
-
         auto initJson = peripheralsInitJson.add<JsonObject>();
         try {
             createFromSettings(
                 peripheralSettings,
                 initJson,
-                [&](const std::string& name, const std::string& settings, const PeripheralFactory& factory) {
+                [&](const std::string& name, const PeripheralFactory& factory, const std::string& settings) {
                     PeripheralInitParameters params = {
                         .name = name,
                         .mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + factory.productType + "/" + name),
                         .services = services,
                         .telemetryCollector = telemetryCollector,
                         .features = initJson["features"].to<JsonArray>(),
-                        .registerShutdown = [this, name](std::function<void(const ShutdownParameters&)> cb) {
-                            shutdownCallbacks.emplace_back(name, std::move(cb));
-                        },
                     };
                     JsonObject initConfigJson = initJson["config"].to<JsonObject>();
                     return factory.create(params, fs, settings, initConfigJson);
@@ -199,38 +170,11 @@ public:
         }
     }
 
-    void shutdown() {
-        Lock lock(getMutex());
-        if (state == State::Stopped) {
-            LOGD("Peripheral manager is already stopped");
-            return;
-        }
-        LOGI("Shutting down peripheral manager");
-        state = State::Stopped;
-        ShutdownParameters parameters = {};
-        for (auto& [name, cb] : shutdownCallbacks) {
-            LOGI("Shutting down peripheral '%s'", name.c_str());
-            try {
-                cb(parameters);
-            } catch (const std::exception& e) {
-                LOGE("Shutdown of peripheral '%s' threw: %s", name.c_str(), e.what());
-            }
-        }
-    }
-
 private:
-    enum class State : uint8_t {
-        Running,
-        Stopped
-    };
-
     const std::shared_ptr<FileSystem> fs;
     const std::shared_ptr<TelemetryCollector> telemetryCollector;
     const PeripheralServices services;
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
-
-    State state = State::Running;
-    std::vector<std::pair<std::string, std::function<void(const ShutdownParameters&)>>> shutdownCallbacks;
 };
 
 }    // namespace farmhub::peripherals

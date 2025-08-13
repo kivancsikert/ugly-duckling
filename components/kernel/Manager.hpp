@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <functional>
 #include <list>
 #include <map>
@@ -12,6 +13,18 @@
 #include <Configuration.hpp>
 
 namespace farmhub::kernel {
+
+// Forward declarations and common types
+struct ShutdownParameters {
+    // Placeholder for future parameters
+};
+
+// Explicit shutdown capability for implementations that support graceful shutdown
+class HasShutdown {
+public:
+    virtual ~HasShutdown() = default;
+    virtual void shutdown(const ShutdownParameters& params) = 0;
+};
 
 // Generic, TU-stable type tokens: address of per-type inline variable
 template <typename T>
@@ -31,6 +44,14 @@ public:
         // Store the impl as void and record a per-type token
         h._holder = std::static_pointer_cast<void>(impl);
         h._typeTag = &TypeTokenVar<Impl>;
+
+        // If implementation supports shutdown, register it with the manager now
+        if constexpr (std::is_base_of_v<HasShutdown, Impl>) {
+            h._shutdown = ([impl](const ShutdownParameters& p) {
+                std::static_pointer_cast<HasShutdown>(impl)->shutdown(p);
+            });
+        }
+
         return h;
     }
 
@@ -43,9 +64,16 @@ public:
         return {};
     }
 
+    void shutdown(const ShutdownParameters& p) {
+        if (_shutdown) {
+            _shutdown(p);
+        }
+    }
+
 private:
     std::shared_ptr<void> _holder;
     const void* _typeTag { nullptr };
+    std::function<void(const ShutdownParameters& p)> _shutdown;
 };
 
 // A lightweight, generic factory descriptor. The CreateFn is the concrete callable type
@@ -57,7 +85,7 @@ struct Factory {
     CreateFn create;            // callable to create Product
 };
 
-template <typename Product, typename FactoryT>
+template <std::derived_from<Handle> Product, typename FactoryT>
 class Manager {
 public:
     explicit Manager(std::string managed)
@@ -79,12 +107,37 @@ public:
         return {};
     }
 
+    void shutdown() {
+        Lock lock(this->getMutex());
+        if (state == State::Stopped) {
+            return;
+        }
+        LOGI("Shutting down %s manager",
+            managed.c_str());
+        state = State::Stopped;
+        ShutdownParameters parameters = {};
+        for (auto& [name, instance] : instances) {
+            LOGI("Shutting down %s '%s'",
+                managed.c_str(), name.c_str());
+            try {
+                instance.shutdown(parameters);
+            } catch (const std::exception& e) {
+                LOGE("Shutdown of %s '%s' failed: %s",
+                    managed.c_str(), name.c_str(), e.what());
+            }
+        }
+    }
+
 protected:
     void createWithFactory(
         const std::string& name,
         const std::string& type,
         const std::function<Product(const FactoryT&)>& make) {
         Lock lock(mutex);
+        if (state == State::Stopped) {
+            throw std::runtime_error("Not creating " + managed + " because the peripheral manager is stopped");
+        }
+
         LOGD("Creating peripheral '%s' with factory '%s'",
             name.c_str(), type.c_str());
         auto it = factories.find(type);
@@ -96,7 +149,7 @@ protected:
         instances.emplace(name, std::move(instance));
     }
 
-    Mutex& getMutex() {
+    RecursiveMutex& getMutex() {
         return mutex;
     }
 
@@ -104,8 +157,15 @@ protected:
 
 private:
     std::map<std::string, FactoryT> factories;
-    mutable Mutex mutex;
+    mutable RecursiveMutex mutex;
     std::unordered_map<std::string, Product> instances;
+
+    enum class State : uint8_t {
+        Running,
+        Stopped
+    };
+
+    State state = State::Running;
 };
 
 template <typename Product, typename FactoryT>
@@ -120,7 +180,7 @@ protected:
     void createFromSettings(
         const std::string& settingsAsString,
         JsonObject initJson,
-        const std::function<Product(const std::string&, const std::string&, const FactoryT&)>& make) {
+        const std::function<Product(const std::string&, const FactoryT&, const std::string&)>& make) {
         LOGI("Creating %s with settings: %s",
             this->managed.c_str(), settingsAsString.c_str());
         std::shared_ptr<ProductSettings> settings = std::make_shared<ProductSettings>();
@@ -138,7 +198,7 @@ protected:
                 initJson["type"] = factory.productType;
                 initJson["factory"] = factory.factoryType;
                 settings->params.store(initJson, true);
-                return make(name, settings->params.get().get(), factory);
+                return make(name, factory, settings->params.get().get());
             });
         } catch (const std::exception& e) {
             throw std::runtime_error("Failed to create " + this->managed + " '" + name + "' because: " + e.what());
