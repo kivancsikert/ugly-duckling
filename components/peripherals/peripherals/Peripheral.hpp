@@ -55,19 +55,12 @@ struct PeripheralInitParameters {
     const JsonArray features;
 };
 
-// Use the generic kernel::Factory for peripherals
 using PeripheralCreateFn = std::function<Peripheral(
     PeripheralInitParameters& params,
     const std::shared_ptr<FileSystem>& fs,
     const std::string& jsonSettings,
     JsonObject& initConfigJson)>;
 using PeripheralFactory = kernel::Factory<Peripheral, PeripheralCreateFn>;
-
-// Internal helpers to constrain factory callables
-template <typename T>
-struct is_shared_ptr : std::false_type { };
-template <typename T>
-struct is_shared_ptr<std::shared_ptr<T>> : std::true_type { };
 
 // Helper to build a PeripheralFactory while keeping strong types for settings/config
 template <
@@ -102,26 +95,26 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
             auto impl = makeImpl(params, settings);
 
             // Configuration lifecycle, mirroring the templated factory behavior
-            auto config = std::make_shared<TConfig>();
-            auto configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + params.name, config);
             if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
+                auto config = std::make_shared<TConfig>();
+                auto configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + params.name, config);
                 std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(config);
-            }
-            // Store configuration in init message
-            config->store(initConfigJson, false);
+                // Store configuration in init message
+                config->store(initConfigJson, false);
 
-            // Subscribe for config updates
-            params.mqttRoot->subscribe("config", [name = params.name, configFile, impl](const std::string&, const JsonObject& cfgJson) {
-                LOGD("Received configuration update for peripheral: %s", name.c_str());
-                try {
-                    configFile->update(cfgJson);
-                    if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
-                        std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(configFile->getConfig());
+                // Subscribe for config updates
+                params.mqttRoot->subscribe("config", [name = params.name, configFile, impl](const std::string&, const JsonObject& cfgJson) {
+                    LOGD("Received configuration update for peripheral: %s", name.c_str());
+                    try {
+                        configFile->update(cfgJson);
+                        if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
+                            std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(configFile->getConfig());
+                        }
+                    } catch (const std::exception& e) {
+                        LOGE("Failed to update configuration for peripheral '%s' because %s", name.c_str(), e.what());
                     }
-                } catch (const std::exception& e) {
-                    LOGE("Failed to update configuration for peripheral '%s' because %s", name.c_str(), e.what());
-                }
-            });
+                });
+            }
 
             return Peripheral::wrap(std::move(impl));
         },
