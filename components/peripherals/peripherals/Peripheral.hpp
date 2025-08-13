@@ -151,14 +151,14 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
 
 // Peripheral manager
 
-class PeripheralManager final : public kernel::Manager<Peripheral, PeripheralFactory> {
+class PeripheralManager final : public kernel::SettingsBasedManager<Peripheral, PeripheralFactory> {
 public:
     PeripheralManager(
         const std::shared_ptr<FileSystem>& fs,
         const std::shared_ptr<TelemetryCollector>& telemetryCollector,
         PeripheralServices services,
         const std::shared_ptr<MqttRoot>& mqttDeviceRoot)
-        : kernel::Manager<Peripheral, PeripheralFactory>("peripheral")
+        : kernel::SettingsBasedManager<Peripheral, PeripheralFactory>("peripheral")
         , fs(fs)
         , telemetryCollector(telemetryCollector)
         , services(std::move(services))
@@ -171,34 +171,15 @@ public:
             return false;
         }
 
-        // TODO Move createFromSettings() up
-        LOGI("Creating peripheral with settings: %s",
-            peripheralSettings.c_str());
-        std::shared_ptr<PeripheralSettings> settings = std::make_shared<PeripheralSettings>();
-        try {
-            settings->loadFromString(peripheralSettings);
-        } catch (const std::exception& e) {
-            LOGE("Failed to parse peripheral settings because %s:\n%s",
-                e.what(), peripheralSettings.c_str());
-            return false;
-        }
-
         auto initJson = peripheralsInitJson.add<JsonObject>();
-        auto name = settings->name.get();
         try {
-            createWithFactory(
-                name,
-                settings->type.get(),
-                [&](const PeripheralFactory& factory) {
-                    const auto& productType = factory.productType;
-                    initJson["name"] = name;
-                    initJson["type"] = productType;
-                    initJson["factory"] = factory.factoryType;
-                    settings->params.store(initJson, true);
-
+            createFromSettings(
+                peripheralSettings,
+                initJson,
+                [&](const std::string& name, const std::string& settings, const PeripheralFactory& factory) {
                     PeripheralInitParameters params = {
                         .name = name,
-                        .mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + productType + "/" + name),
+                        .mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + factory.productType + "/" + name),
                         .services = services,
                         .telemetryCollector = telemetryCollector,
                         .features = initJson["features"].to<JsonArray>(),
@@ -207,12 +188,12 @@ public:
                         },
                     };
                     JsonObject initConfigJson = initJson["config"].to<JsonObject>();
-                    return factory.create(params, fs, settings->params.get().get(), initConfigJson);
+                    return factory.create(params, fs, settings, initConfigJson);
                 });
             return true;
         } catch (const std::exception& e) {
-            LOGE("Failed to create peripheral '%s' because %s",
-                name.c_str(), e.what());
+            LOGE("%s",
+                e.what());
             initJson["error"] = std::string(e.what());
             return false;
         }
@@ -237,20 +218,7 @@ public:
         }
     }
 
-    // Typed lookup without RTTI: returns nullptr if not found or wrong type
-    template <typename T>
-    std::shared_ptr<T> getPeripheral(const std::string& name) const {
-        return getInstance<T>(name);
-    }
-
 private:
-    class PeripheralSettings : public ConfigurationSection {
-    public:
-        Property<std::string> name { this, "name" };
-        Property<std::string> type { this, "type" };
-        Property<JsonAsString> params { this, "params" };
-    };
-
     enum class State : uint8_t {
         Running,
         Stopped

@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include <Concurrent.hpp>
+#include <Configuration.hpp>
 
 namespace farmhub::kernel {
 
@@ -68,7 +69,6 @@ public:
         factories.emplace(factory.factoryType, std::move(factory));
     }
 
-protected:
     template <typename T>
     std::shared_ptr<T> getInstance(const std::string& name) const {
         Lock lock(mutex);
@@ -79,13 +79,17 @@ protected:
         return {};
     }
 
-    void createWithFactory(const std::string& name, const std::string& type, const std::function<Product(const FactoryT&)>& make) {
+protected:
+    void createWithFactory(
+        const std::string& name,
+        const std::string& type,
+        const std::function<Product(const FactoryT&)>& make) {
         Lock lock(mutex);
         LOGD("Creating peripheral '%s' with factory '%s'",
             name.c_str(), type.c_str());
         auto it = factories.find(type);
         if (it == factories.end()) {
-            throw std::runtime_error("Factory not found");
+            throw std::runtime_error("Factory for '" + type + "' not found");
         }
         const auto& factory = it->second;
         Product instance = make(factory);
@@ -96,11 +100,58 @@ protected:
         return mutex;
     }
 
+    const std::string managed;
+
 private:
-    std::string managed;
     std::map<std::string, FactoryT> factories;
     mutable Mutex mutex;
     std::unordered_map<std::string, Product> instances;
+};
+
+template <typename Product, typename FactoryT>
+class SettingsBasedManager
+    : public Manager<Product, FactoryT> {
+public:
+    explicit SettingsBasedManager(std::string managed)
+        : Manager<Product, FactoryT>(std::move(managed)) {
+    }
+
+protected:
+    void createFromSettings(
+        const std::string& settingsAsString,
+        JsonObject initJson,
+        const std::function<Product(const std::string&, const std::string&, const FactoryT&)>& make) {
+        LOGI("Creating %s with settings: %s",
+            this->managed.c_str(), settingsAsString.c_str());
+        std::shared_ptr<ProductSettings> settings = std::make_shared<ProductSettings>();
+        try {
+            settings->loadFromString(settingsAsString);
+        } catch (const std::exception& e) {
+            throw std::runtime_error(
+                "Failed to parse " + this->managed + " settings because " + e.what() + ":\n" + settingsAsString);
+        }
+
+        const auto& name = settings->name.get();
+        try {
+            this->createWithFactory(name, settings->type.get(), [&](const FactoryT& factory) {
+                initJson["name"] = name;
+                initJson["type"] = factory.productType;
+                initJson["factory"] = factory.factoryType;
+                settings->params.store(initJson, true);
+                return make(name, settings->params.get().get(), factory);
+            });
+        } catch (const std::exception& e) {
+            throw std::runtime_error("Failed to create " + this->managed + " '" + name + "' because: " + e.what());
+        }
+    }
+
+private:
+    class ProductSettings : public ConfigurationSection {
+    public:
+        Property<std::string> name { this, "name" };
+        Property<std::string> type { this, "type" };
+        Property<JsonAsString> params { this, "params" };
+    };
 };
 
 }    // namespace farmhub::kernel
