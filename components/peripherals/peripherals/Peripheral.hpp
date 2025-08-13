@@ -26,6 +26,10 @@ namespace farmhub::peripherals {
 
 // Peripherals
 
+// One-per-type inline variable to provide a TU-stable token address
+template <typename T>
+inline constexpr char typeTokenVar = 0;
+
 // Forward declarations and common types
 struct ShutdownParameters {
     // Placeholder for future parameters
@@ -49,9 +53,11 @@ public:
         p.name = std::move(name);
         // Keep the implementation alive via shared_ptr<void>
         p._holder = std::static_pointer_cast<void>(impl);
+        // Capture a compile-time type token (no RTTI): unique address per Impl type
+        using Impl = std::remove_reference_t<decltype(*impl)>;
+        p._typeTag = typeTokenFor<Impl>();
         // Bind shutdown if available via HasShutdown; otherwise, no-op
         p._shutdown = [impl](const ShutdownParameters& params) {
-            using Impl = std::remove_reference_t<decltype(*impl)>;
             if constexpr (std::is_base_of_v<HasShutdown, Impl>) {
                 std::static_pointer_cast<HasShutdown>(impl)->shutdown(params);
             }
@@ -68,8 +74,25 @@ public:
     std::string name;
 
 private:
+    template <typename T>
+    static const void* typeTokenFor() {
+        return &typeTokenVar<T>;
+    }
+
+public:
+    template <typename T>
+    std::shared_ptr<T> tryGet() const {
+        if (_typeTag == typeTokenFor<T>()) {
+            // Safe: we validate type via token before casting from void
+            return std::static_pointer_cast<T>(_holder);
+        }
+        return {};
+    }
+
+private:
     std::shared_ptr<void> _holder;
     std::function<void(const ShutdownParameters&)> _shutdown;
+    const void* _typeTag { nullptr };
 };
 
 // Peripheral factories
@@ -288,6 +311,20 @@ public:
                 peripheral.name.c_str());
             peripheral.shutdown(parameters);
         }
+    }
+
+    // Typed lookup without RTTI: returns nullptr if not found or wrong type
+    template <typename T>
+    std::shared_ptr<T> getPeripheral(const std::string& name) const {
+        Lock lock(stateMutex);
+        for (const auto& p : peripherals) {
+            if (p.name == name) {
+                if (auto ptr = p.tryGet<T>()) {
+                    return ptr;
+                }
+            }
+        }
+        return {};
     }
 
 private:
