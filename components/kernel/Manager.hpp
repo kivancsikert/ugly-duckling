@@ -83,7 +83,7 @@ protected:
         return {};
     }
 
-    void createWithFactory(const std::string& name, const std::string& type, std::function<Product(const FactoryT&)> make) {
+    void createWithFactory(const std::string& name, const std::string& type, const std::function<Product(const FactoryT&)>& make) {
         Lock lock(mutex);
         LOGD("Creating peripheral '%s' with factory '%s'",
             name.c_str(), type.c_str());
@@ -101,7 +101,7 @@ private:
     const FactoryT* getFactory(const std::string& type) const {
         auto it = factories.find(type);
         if (it == factories.end()) {
-            throw new std::runtime_error("Factory not found");
+            throw std::runtime_error("Factory not found");
         }
         return &it->second;
     }

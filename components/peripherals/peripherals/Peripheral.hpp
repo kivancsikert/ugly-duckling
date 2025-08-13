@@ -190,7 +190,7 @@ public:
                 name,
                 settings->type.get(),
                 [&](const PeripheralFactory& factory) {
-                    auto& productType = factory.productType;
+                    const auto& productType = factory.productType;
                     initJson["name"] = name;
                     initJson["type"] = productType;
                     initJson["factory"] = factory.factoryType;
