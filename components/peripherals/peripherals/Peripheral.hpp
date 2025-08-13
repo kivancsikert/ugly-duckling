@@ -11,8 +11,8 @@
 #include <BootClock.hpp>
 #include <Configuration.hpp>
 #include <EspException.hpp>
-#include <Factory.hpp>
 #include <I2CManager.hpp>
+#include <Manager.hpp>
 #include <PcntManager.hpp>
 #include <PulseCounter.hpp>
 #include <PwmManager.hpp>
@@ -161,23 +161,18 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
 
 // Peripheral manager
 
-class PeripheralManager final {
+class PeripheralManager final : public kernel::Manager<Peripheral, PeripheralFactory> {
 public:
     PeripheralManager(
         const std::shared_ptr<FileSystem>& fs,
         const std::shared_ptr<TelemetryCollector>& telemetryCollector,
         PeripheralServices services,
         const std::shared_ptr<MqttRoot>& mqttDeviceRoot)
-        : fs(fs)
+        : kernel::Manager<Peripheral, PeripheralFactory>("peripheral")
+        , fs(fs)
         , telemetryCollector(telemetryCollector)
         , services(std::move(services))
         , mqttDeviceRoot(mqttDeviceRoot) {
-    }
-
-    void registerFactory(PeripheralFactory factory) {
-        LOGD("Registering peripheral factory: %s",
-            factory.factoryType.c_str());
-        factories.emplace(factory.factoryType, std::move(factory));
     }
 
     bool createPeripheral(const std::string& peripheralSettings, JsonArray peripheralsInitJson) {
@@ -196,7 +191,7 @@ public:
         std::string factoryType = settings->type.get();
         const auto& nameBeforeCreation = nameFromSettings.empty() ? factoryType : nameFromSettings;
 
-        Lock lock(stateMutex);
+        Lock lock(getMutex());
         if (state == State::Stopped) {
             LOGE("Not creating peripheral '%s' because the peripheral manager is stopped",
                 nameBeforeCreation.c_str());
@@ -209,15 +204,15 @@ public:
         LOGD("Creating peripheral '%s' with factory '%s'",
             nameBeforeCreation.c_str(), factoryType.c_str());
 
-        const auto it = factories.find(factoryType);
-        if (it == factories.end()) {
+        const auto* factoryPtr = kernel::Manager<Peripheral, PeripheralFactory>::findFactory(factoryType);
+        if (factoryPtr == nullptr) {
             LOGE("Failed to create '%s' peripheral '%s' because factory not found",
                 factoryType.c_str(), nameBeforeCreation.c_str());
             initJson["error"] = "Factory not found: '" + factoryType + "'";
             return false;
         }
-
-        const std::string& productType = it->second.productType;
+        auto factory = *factoryPtr;
+        const std::string& productType = factory.productType;
         initJson["type"] = productType;
         const auto& name = nameFromSettings.empty() ? productType : nameFromSettings;
         initJson["name"] = name;
@@ -235,8 +230,8 @@ public:
                 },
             };
             JsonObject initConfigJson = initJson["config"].to<JsonObject>();
-            Peripheral peripheral = it->second.create(params, fs, settings->params.get().get(), initConfigJson);
-            peripherals.push_back(std::move(peripheral));
+            Peripheral peripheral = factory.create(params, fs, settings->params.get().get(), initConfigJson);
+            addInstance(std::move(peripheral));
 
             return true;
         } catch (const std::exception& e) {
@@ -253,7 +248,7 @@ public:
     }
 
     void shutdown() {
-        Lock lock(stateMutex);
+        Lock lock(getMutex());
         if (state == State::Stopped) {
             LOGD("Peripheral manager is already stopped");
             return;
@@ -274,15 +269,7 @@ public:
     // Typed lookup without RTTI: returns nullptr if not found or wrong type
     template <typename T>
     std::shared_ptr<T> getPeripheral(const std::string& name) const {
-        Lock lock(stateMutex);
-        for (const auto& p : peripherals) {
-            if (p.name == name) {
-                if (auto ptr = p.tryGet<T>()) {
-                    return ptr;
-                }
-            }
-        }
-        return {};
+        return getInstance<T>(name);
     }
 
 private:
@@ -303,11 +290,7 @@ private:
     const PeripheralServices services;
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
 
-    // TODO Use an unordered_map?
-    std::map<std::string, PeripheralFactory> factories;
-    Mutex stateMutex;
     State state = State::Running;
-    std::list<Peripheral> peripherals;
     std::vector<std::pair<std::string, std::function<void(const ShutdownParameters&)>>> shutdownCallbacks;
 };
 
