@@ -135,11 +135,11 @@ protected:
         const std::function<Product(const FactoryT&)>& make) {
         Lock lock(mutex);
         if (state == State::Stopped) {
-            throw std::runtime_error("Not creating " + managed + " because the peripheral manager is stopped");
+            throw std::runtime_error("Not creating " + managed + " because the manager is stopped");
         }
 
-        LOGD("Creating peripheral '%s' with factory '%s'",
-            name.c_str(), type.c_str());
+        LOGD("Creating %s '%s' with factory '%s'",
+            managed.c_str(), name.c_str(), type.c_str());
         auto it = factories.find(type);
         if (it == factories.end()) {
             throw std::runtime_error("Factory for '" + type + "' not found");
