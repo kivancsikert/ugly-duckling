@@ -6,6 +6,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <concepts>
 #include <memory>
 #include <string>
 
@@ -24,8 +25,12 @@ static const char* const farmhubVersion = reinterpret_cast<const char*>(esp_app_
 #include <Strings.hpp>
 #include <mqtt/MqttLog.hpp>
 
+#include <devices/DeviceSettings.hpp>
+#include <functions/Function.hpp>
 #include <peripherals/Peripheral.hpp>
 
+using namespace farmhub::devices;
+using namespace farmhub::functions;
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
 
@@ -292,8 +297,7 @@ void initTelemetryPublishTask(
             powerManager->populateTelemetry(powerManagementData);
 
             auto features = telemetry["features"].to<JsonArray>();
-            telemetryCollector->collect(features);
-        }, Retention::NoRetain, QoS::AtLeastOnce);
+            telemetryCollector->collect(features); }, Retention::NoRetain, QoS::AtLeastOnce);
 
         // Signal that we are still alive
         watchdog->restart();
@@ -312,9 +316,10 @@ void initTelemetryPublishTask(
 enum class InitState : std::uint8_t {
     Success = 0,
     PeripheralError = 1,
+    FunctionError = 2,
 };
 
-template <class TDeviceDefinition, class TDeviceSettings>
+template <class TDeviceDefinition, std::derived_from<DeviceSettings> TDeviceSettings>
 static void startDevice() {
     auto i2c = std::make_shared<I2CManager>();
     auto battery = initBattery<TDeviceDefinition>(i2c);
@@ -469,6 +474,25 @@ static void startDevice() {
         }
     }
 
+    JsonDocument functionsInitDoc;
+    auto functionsInitJson = functionsInitDoc.to<JsonArray>();
+    auto functionServices = FunctionServices {
+        .peripherals = peripheralManager
+    };
+    auto functionManager = std::make_shared<FunctionManager>(fs, functionServices, mqttRoot);
+    shutdownManager->registerShutdownListener([functionManager]() {
+        functionManager->shutdown();
+    });
+
+    auto& functionsSettings = settings->functions.get();
+    LOGI("Loading configuration for %d user-configured functions",
+        functionsSettings.size());
+    for (auto& functionSettings : functionsSettings) {
+        if (!functionManager->createFunction(functionSettings.get(), functionsInitJson)) {
+            initState = InitState::FunctionError;
+        }
+    }
+
     initTelemetryPublishTask(settings->publishInterval.get(), watchdog, mqttRoot, batteryManager, powerManager, wifi, telemetryCollector, telemetryPublishQueue);
 
     // Enable power saving once we are done initializing
@@ -476,7 +500,7 @@ static void startDevice() {
 
     mqttRoot->publish(
         "init",
-        [settings, initState, peripheralsInitJson, powerManager](JsonObject& json) {
+        [settings, initState, peripheralsInitJson, functionsInitJson, powerManager](JsonObject& json) {
             // TODO Remove redundant mentions of "ugly-duckling"
             json["type"] = "ugly-duckling";
             json["model"] = settings->model.get();
@@ -494,6 +518,7 @@ static void startDevice() {
             json["time"] = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
             json["state"] = static_cast<int>(initState);
             json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
+            json["functions"].to<JsonArray>().set(functionsInitJson);
             json["sleepWhenIdle"] = powerManager->sleepWhenIdle;
 
             CrashManager::handleCrashReport(json);

@@ -27,6 +27,7 @@ public:
     NamedConfigurationEntry<RtcDriver::Config> ntp { this, "ntp" };
 
     ArrayProperty<JsonAsString> peripherals { this, "peripherals" };
+    ArrayProperty<JsonAsString> functions { this, "functions" };
 
     Property<bool> sleepWhenIdle { this, "sleepWhenIdle", true };
 
