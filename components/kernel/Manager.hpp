@@ -83,8 +83,12 @@ protected:
         Lock lock(mutex);
         LOGD("Creating peripheral '%s' with factory '%s'",
             name.c_str(), type.c_str());
-        const FactoryT* factory = getFactory(type);
-        Product instance = make(*factory);
+        auto it = factories.find(type);
+        if (it == factories.end()) {
+            throw std::runtime_error("Factory not found");
+        }
+        const auto& factory = it->second;
+        Product instance = make(factory);
         instances.emplace(name, std::move(instance));
     }
 
@@ -93,15 +97,6 @@ protected:
     }
 
 private:
-    // Find a factory by type key; returns nullptr when not found
-    const FactoryT* getFactory(const std::string& type) const {
-        auto it = factories.find(type);
-        if (it == factories.end()) {
-            throw std::runtime_error("Factory not found");
-        }
-        return &it->second;
-    }
-
     std::string managed;
     std::map<std::string, FactoryT> factories;
     mutable Mutex mutex;
