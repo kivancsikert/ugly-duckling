@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 
 #include <Concurrent.hpp>
 
@@ -67,39 +68,28 @@ public:
     }
 
     void registerFactory(FactoryT factory) {
-        LOGD("Registering %s factory: %s",
-            managed.c_str(),
-            factory.factoryType.c_str());
+        LOGD("Registering %s factory: %s", managed.c_str(), factory.factoryType.c_str());
         factories.emplace(factory.factoryType, std::move(factory));
     }
 
 protected:
-    // Find a factory by type key; returns nullptr when not found
-    const FactoryT* findFactory(const std::string& type) const {
-        auto it = factories.find(type);
-        if (it == factories.end()) {
-            return nullptr;
-        }
-        return &it->second;
-    }
-
-    // Add a created product instance to the managed list
-    void addInstance(Product instance) {
-        Lock lock(mutex);
-        instances.push_back(std::move(instance));
-    }
-
     template <typename T>
-    std::shared_ptr<T> getInstance(const std::string& name) {
+    std::shared_ptr<T> getInstance(const std::string& name) const {
         Lock lock(mutex);
-        for (const auto& inst : instances) {
-            if (inst.name == name) {
-                if (auto ptr = inst.template tryGet<T>()) {
-                    return ptr;
-                }
-            }
+        auto it = instances.find(name);
+        if (it != instances.end()) {
+            return it->second.template tryGet<T>();
         }
         return {};
+    }
+
+    void createWithFactory(const std::string& name, const std::string& type, std::function<Product(const FactoryT&)> make) {
+        Lock lock(mutex);
+        LOGD("Creating peripheral '%s' with factory '%s'",
+            name.c_str(), type.c_str());
+        const FactoryT* factory = getFactory(type);
+        Product instance = make(*factory);
+        instances.emplace(name, std::move(instance));
     }
 
     Mutex& getMutex() {
@@ -107,10 +97,19 @@ protected:
     }
 
 private:
+    // Find a factory by type key; returns nullptr when not found
+    const FactoryT* getFactory(const std::string& type) const {
+        auto it = factories.find(type);
+        if (it == factories.end()) {
+            throw new std::runtime_error("Factory not found");
+        }
+        return &it->second;
+    }
+
     std::string managed;
     std::map<std::string, FactoryT> factories;
-    Mutex mutex;
-    std::list<Product> instances;
+    mutable Mutex mutex;
+    std::unordered_map<std::string, Product> instances;
 };
 
 }    // namespace farmhub::kernel
