@@ -1,14 +1,17 @@
 #pragma once
 
 #include <functional>
+#include <list>
 #include <map>
 #include <memory>
 #include <tuple>
 #include <type_traits>
+#include <vector>
 
 #include <BootClock.hpp>
 #include <Configuration.hpp>
 #include <EspException.hpp>
+#include <Factory.hpp>
 #include <I2CManager.hpp>
 #include <PcntManager.hpp>
 #include <PulseCounter.hpp>
@@ -26,10 +29,6 @@ namespace farmhub::peripherals {
 
 // Peripherals
 
-// One-per-type inline variable to provide a TU-stable token address
-template <typename T>
-inline constexpr char typeTokenVar = 0;
-
 // Forward declarations and common types
 struct ShutdownParameters {
     // Placeholder for future parameters
@@ -42,58 +41,7 @@ public:
     virtual void shutdown(const ShutdownParameters& params) = 0;
 };
 
-// Peripheral instance wrapper to allow heterogeneous storage without inheritance
-class Peripheral final {
-public:
-    Peripheral() = default;
-
-    template <typename ImplPtr>
-    static Peripheral wrap(std::string name, const ImplPtr& impl) {
-        Peripheral p;
-        p.name = std::move(name);
-        // Keep the implementation alive via shared_ptr<void>
-        p._holder = std::static_pointer_cast<void>(impl);
-        // Capture a compile-time type token (no RTTI): unique address per Impl type
-        using Impl = std::remove_reference_t<decltype(*impl)>;
-        p._typeTag = typeTokenFor<Impl>();
-        // Bind shutdown if available via HasShutdown; otherwise, no-op
-        p._shutdown = [impl](const ShutdownParameters& params) {
-            if constexpr (std::is_base_of_v<HasShutdown, Impl>) {
-                std::static_pointer_cast<HasShutdown>(impl)->shutdown(params);
-            }
-        };
-        return p;
-    }
-
-    void shutdown(const ShutdownParameters& params) const {
-        if (_shutdown) {
-            _shutdown(params);
-        }
-    }
-
-    std::string name;
-
-private:
-    template <typename T>
-    static const void* typeTokenFor() {
-        return &typeTokenVar<T>;
-    }
-
-public:
-    template <typename T>
-    std::shared_ptr<T> tryGet() const {
-        if (_typeTag == typeTokenFor<T>()) {
-            // Safe: we validate type via token before casting from void
-            return std::static_pointer_cast<T>(_holder);
-        }
-        return {};
-    }
-
-private:
-    std::shared_ptr<void> _holder;
-    std::function<void(const ShutdownParameters&)> _shutdown;
-    const void* _typeTag { nullptr };
-};
+using Peripheral = kernel::Handle;
 
 // Peripheral factories
 
@@ -117,22 +65,17 @@ struct PeripheralInitParameters {
     const PeripheralServices& services;
     const std::shared_ptr<TelemetryCollector> telemetryCollector;
     const JsonArray features;
+    // Allows factories to register a shutdown callback with the manager
+    std::function<void(std::function<void(const ShutdownParameters&)>)> registerShutdown;
 };
 
-// A non-templated factory representation producing peripheral instances
-struct PeripheralFactory {
-    // Identifiers
-    std::string factoryType;
-    std::string peripheralType;    // Usually same as factoryType, but can differ
-
-    // Creator function: returns a Peripheral
-    std::function<Peripheral(
-        PeripheralInitParameters& params,
-        const std::shared_ptr<FileSystem>& fs,
-        const std::string& jsonSettings,
-        JsonObject& initConfigJson)>
-        create;
-};
+// Use the generic kernel::Factory for peripherals
+using PeripheralCreateFn = std::function<Peripheral(
+    PeripheralInitParameters& params,
+    const std::shared_ptr<FileSystem>& fs,
+    const std::string& jsonSettings,
+    JsonObject& initConfigJson)>;
+using PeripheralFactory = kernel::Factory<Peripheral, PeripheralCreateFn>;
 
 // Internal helpers to constrain factory callables
 template <typename T>
@@ -164,7 +107,7 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
     auto effectiveType = peripheralType.empty() ? factoryType : peripheralType;
     return PeripheralFactory {
         .factoryType = std::move(factoryType),
-        .peripheralType = std::move(effectiveType),
+        .productType = std::move(effectiveType),
         .create = [settingsTuple, makeImpl = std::move(makeImpl)](auto& params,
                       const std::shared_ptr<FileSystem>& fs,
                       const std::string& jsonSettings,
@@ -201,6 +144,15 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
                     LOGE("Failed to update configuration for peripheral '%s' because %s", name.c_str(), e.what());
                 }
             });
+
+            // If implementation supports shutdown, register it with the manager now
+            if constexpr (std::is_base_of_v<HasShutdown, Impl>) {
+                if (params.registerShutdown) {
+                    params.registerShutdown([impl](const ShutdownParameters& p) {
+                        std::static_pointer_cast<HasShutdown>(impl)->shutdown(p);
+                    });
+                }
+            }
 
             return Peripheral::wrap(params.name, std::move(impl));
         },
@@ -265,19 +217,22 @@ public:
             return false;
         }
 
-        const std::string& peripheralType = it->second.peripheralType;
-        initJson["type"] = peripheralType;
-        const auto& name = nameFromSettings.empty() ? peripheralType : nameFromSettings;
+        const std::string& productType = it->second.productType;
+        initJson["type"] = productType;
+        const auto& name = nameFromSettings.empty() ? productType : nameFromSettings;
         initJson["name"] = name;
         settings->params.store(initJson, true);
 
         try {
             PeripheralInitParameters params = {
                 .name = name,
-                .mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + peripheralType + "/" + name),
+                .mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + productType + "/" + name),
                 .services = services,
                 .telemetryCollector = telemetryCollector,
                 .features = initJson["features"].to<JsonArray>(),
+                .registerShutdown = [this, name](std::function<void(const ShutdownParameters&)> cb) {
+                    shutdownCallbacks.emplace_back(name, std::move(cb));
+                },
             };
             JsonObject initConfigJson = initJson["config"].to<JsonObject>();
             Peripheral peripheral = it->second.create(params, fs, settings->params.get().get(), initConfigJson);
@@ -306,10 +261,13 @@ public:
         LOGI("Shutting down peripheral manager");
         state = State::Stopped;
         ShutdownParameters parameters = {};
-        for (auto& peripheral : peripherals) {
-            LOGI("Shutting down peripheral '%s'",
-                peripheral.name.c_str());
-            peripheral.shutdown(parameters);
+        for (auto& [name, cb] : shutdownCallbacks) {
+            LOGI("Shutting down peripheral '%s'", name.c_str());
+            try {
+                cb(parameters);
+            } catch (const std::exception& e) {
+                LOGE("Shutdown of peripheral '%s' threw: %s", name.c_str(), e.what());
+            }
         }
     }
 
@@ -350,6 +308,7 @@ private:
     Mutex stateMutex;
     State state = State::Running;
     std::list<Peripheral> peripherals;
+    std::vector<std::pair<std::string, std::function<void(const ShutdownParameters&)>>> shutdownCallbacks;
 };
 
 }    // namespace farmhub::peripherals
