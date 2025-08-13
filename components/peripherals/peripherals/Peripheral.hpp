@@ -100,7 +100,8 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
     return PeripheralFactory {
         .factoryType = std::move(factoryType),
         .productType = std::move(effectiveType),
-        .create = [settingsTuple, makeImpl = std::move(makeImpl)](auto& params,
+        .create = [settingsTuple, makeImpl = std::move(makeImpl)](
+                      PeripheralInitParameters& params,
                       const std::shared_ptr<FileSystem>& fs,
                       const std::string& jsonSettings,
                       JsonObject& initConfigJson) -> Peripheral {
@@ -138,11 +139,9 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
 
             // If implementation supports shutdown, register it with the manager now
             if constexpr (std::is_base_of_v<HasShutdown, Impl>) {
-                if (params.registerShutdown) {
-                    params.registerShutdown([impl](const ShutdownParameters& p) {
-                        std::static_pointer_cast<HasShutdown>(impl)->shutdown(p);
-                    });
-                }
+                params.registerShutdown([impl](const ShutdownParameters& p) {
+                    std::static_pointer_cast<HasShutdown>(impl)->shutdown(p);
+                });
             }
 
             return Peripheral::wrap(std::move(impl));
@@ -172,6 +171,7 @@ public:
             return false;
         }
 
+        // TODO Move createFromSettings() up
         LOGI("Creating peripheral with settings: %s",
             peripheralSettings.c_str());
         std::shared_ptr<PeripheralSettings> settings = std::make_shared<PeripheralSettings>();
