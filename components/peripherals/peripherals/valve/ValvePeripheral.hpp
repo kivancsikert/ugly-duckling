@@ -26,7 +26,7 @@ inline PeripheralFactory makeFactory(
 	const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
 	ValveControlStrategyType defaultStrategy) {
 
-	return makePeripheralFactory<ValveSettings, ValveConfig>(
+	return makePeripheralFactory<Valve, ValveSettings, ValveConfig>(
 		"valve",
 		"valve",
 		[motors](PeripheralInitParameters& params, const std::shared_ptr<ValveSettings>& settings) {

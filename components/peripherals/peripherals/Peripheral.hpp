@@ -83,24 +83,16 @@ struct is_shared_ptr : std::false_type { };
 template <typename T>
 struct is_shared_ptr<std::shared_ptr<T>> : std::true_type { };
 
-template <typename F, typename TSettings>
-concept MakeImplProducesSharedPtr = requires(F f, PeripheralInitParameters& p, std::shared_ptr<TSettings> s) {
-    typename std::invoke_result_t<F, PeripheralInitParameters&, std::shared_ptr<TSettings>>;
-    requires is_shared_ptr<std::invoke_result_t<F, PeripheralInitParameters&, std::shared_ptr<TSettings>>>::value;
-};
-
 // Helper to build a PeripheralFactory while keeping strong types for settings/config
 template <
+    typename Impl,
     std::derived_from<ConfigurationSection> TSettings,
     std::derived_from<ConfigurationSection> TConfig = EmptyConfiguration,
-    typename MakeImpl,
     typename... TSettingsArgs>
 PeripheralFactory makePeripheralFactory(const std::string& factoryType,
     const std::string& peripheralType,
-    MakeImpl makeImpl,
+    std::function<std::shared_ptr<Impl>(PeripheralInitParameters&, const std::shared_ptr<TSettings>&)> makeImpl,
     TSettingsArgs... settingsArgs) {
-    static_assert(MakeImplProducesSharedPtr<MakeImpl, TSettings>,
-        "makeImpl must be callable with (PeripheralInitParameters&, std::shared_ptr<TSettings>) and return std::shared_ptr<Impl>");
     auto settingsTuple = std::make_tuple(std::forward<TSettingsArgs>(settingsArgs)...);
 
     // Build the factory using designated initializers (C++20+)
@@ -125,7 +117,6 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
             // Configuration lifecycle, mirroring the templated factory behavior
             auto config = std::make_shared<TConfig>();
             auto configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + params.name, config);
-            using Impl = std::remove_reference_t<decltype(*impl)>;
             if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
                 std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(config);
             }

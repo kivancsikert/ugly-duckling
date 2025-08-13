@@ -57,7 +57,7 @@ private:
 };
 
 inline PeripheralFactory makeFactoryForSoilMoisture() {
-    return makePeripheralFactory<SoilMoistureSensorSettings>(
+    return makePeripheralFactory<SoilMoistureSensor, SoilMoistureSensorSettings>(
         "environment:soil-moisture",
         "environment",
         [](PeripheralInitParameters& params, const std::shared_ptr<SoilMoistureSensorSettings>& settings) {
