@@ -4,8 +4,9 @@
 #include <utility>
 
 #include <Configuration.hpp>
+#include <Named.hpp>
 #include <mqtt/MqttDriver.hpp>
-#include <peripherals/Motorized.hpp>
+#include <peripherals/Motors.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/flow_meter/FlowMeter.hpp>
 #include <peripherals/valve/Valve.hpp>
@@ -18,36 +19,33 @@ using namespace farmhub::peripherals::valve;
 
 namespace farmhub::peripherals::flow_control {
 
-class FlowControlConfig
-    : public ValveConfig {
-};
+class FlowControlConfig : public ValveConfig { };
 
-class FlowControlFactory;
-
-class FlowControl : public Peripheral<FlowControlConfig> {
+class FlowControl
+    : public Named,
+      public HasConfig<FlowControlConfig>,
+      public HasShutdown {
 public:
     FlowControl(
         const std::string& name,
         const std::shared_ptr<Valve>& valve,
         const std::shared_ptr<FlowMeter>& flowMeter)
-        : Peripheral<FlowControlConfig>(name)
+        : Named(name)
         , valve(valve)
         , flowMeter(flowMeter) {
     }
 
-    void configure(const std::shared_ptr<FlowControlConfig> config) override {
+    void configure(const std::shared_ptr<FlowControlConfig>& config) override {
         valve->configure(config->schedule.get(), config->overrideState.get(), config->overrideUntil.get());
     }
 
-    void shutdown(const ShutdownParameters /*parameters*/) override {
+    void shutdown(const ShutdownParameters& /*parameters*/) override {
         valve->closeBeforeShutdown();
     }
 
 private:
     std::shared_ptr<Valve> valve;
     std::shared_ptr<FlowMeter> flowMeter;
-
-    friend class FlowControlFactory;
 };
 
 class FlowControlSettings
@@ -62,43 +60,38 @@ public:
     NamedConfigurationEntry<FlowMeterSettings> flowMeter;
 };
 
-class FlowControlFactory
-    : public PeripheralFactory<FlowControlSettings, FlowControlConfig, ValveControlStrategyType>,
-      protected Motorized {
-public:
-    FlowControlFactory(
-        const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
-        ValveControlStrategyType defaultStrategy)
-        : PeripheralFactory<FlowControlSettings, FlowControlConfig, ValveControlStrategyType>("flow-control", defaultStrategy)
-        , Motorized(motors) {
-    }
+inline PeripheralFactory makeFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors, ValveControlStrategyType defaultStrategy) {
+    return makePeripheralFactory<FlowControlSettings, FlowControlConfig>(
+        "flow-control",
+        "flow-control",
+        [motors](PeripheralInitParameters& params, const std::shared_ptr<FlowControlSettings>& settings) {
+            auto motor = findMotor(motors, settings->valve.get()->motor.get());
+            auto strategy = settings->valve.get()->createValveControlStrategy(motor);
 
-    std::shared_ptr<Peripheral<FlowControlConfig>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<FlowControlSettings>& settings) override {
-        auto strategy = settings->valve.get()->createValveControlStrategy(this);
+            auto valve = std::make_shared<Valve>(
+                params.name,
+                std::move(strategy),
+                params.mqttRoot,
+                params.services.telemetryPublisher);
 
-        auto valve = std::make_shared<Valve>(
-            params.name,
-            std::move(strategy),
-            params.mqttRoot,
-            params.services.telemetryPublisher);
+            auto flowMeterConfig = settings->flowMeter.get();
+            auto flowMeter = std::make_shared<FlowMeter>(
+                params.name,
+                params.services.pulseCounterManager,
+                flowMeterConfig->pin.get(),
+                flowMeterConfig->qFactor.get(),
+                flowMeterConfig->measurementFrequency.get());
 
-        auto flowMeterConfig = settings->flowMeter.get();
-        auto flowMeter = std::make_shared<FlowMeter>(
-            params.name,
-            params.services.pulseCounterManager,
-            flowMeterConfig->pin.get(),
-            flowMeterConfig->qFactor.get(),
-            flowMeterConfig->measurementFrequency.get());
+            params.registerFeature("valve", [valve](JsonObject& telemetry) {
+                valve->populateTelemetry(telemetry);
+            });
+            params.registerFeature("flow", [flowMeter](JsonObject& telemetry) {
+                flowMeter->populateTelemetry(telemetry);
+            });
 
-        params.registerFeature("valve", [valve](JsonObject& telemetry) {
-            valve->populateTelemetry(telemetry);
-        });
-        params.registerFeature("flow", [flowMeter](JsonObject& telemetry) {
-            flowMeter->populateTelemetry(telemetry);
-        });
-
-        return std::make_shared<FlowControl>(params.name, valve, flowMeter);
-    }
-};
+            return std::make_shared<FlowControl>(params.name, valve, flowMeter);
+        },
+        defaultStrategy);
+}
 
 }    // namespace farmhub::peripherals::flow_control

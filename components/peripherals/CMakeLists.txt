@@ -1,4 +1,8 @@
 idf_component_register(
-    INCLUDE_DIRS "."
-    REQUIRES kernel
+    SRCS
+        peripherals/Motors.cpp
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        kernel
 )

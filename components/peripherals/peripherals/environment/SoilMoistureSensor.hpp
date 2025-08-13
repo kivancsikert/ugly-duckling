@@ -56,22 +56,17 @@ private:
     AnalogPin pin;
 };
 
-class SoilMoistureSensorFactory;
-
-class SoilMoistureSensorFactory
-    : public PeripheralFactory<SoilMoistureSensorSettings> {
-public:
-    SoilMoistureSensorFactory()
-        : PeripheralFactory<SoilMoistureSensorSettings>("environment:soil-moisture", "environment") {
-    }
-
-    std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<SoilMoistureSensorSettings>& settings) override {
-        auto sensor = std::make_shared<SoilMoistureSensor>(settings->air.get(), settings->water.get(), settings->pin.get());
-        params.registerFeature("moisture", [sensor](JsonObject& telemetryJson) {
-            telemetryJson["value"] = sensor->getMoisture();
+inline PeripheralFactory makeFactoryForSoilMoisture() {
+    return makePeripheralFactory<SoilMoistureSensorSettings>(
+        "environment:soil-moisture",
+        "environment",
+        [](PeripheralInitParameters& params, const std::shared_ptr<SoilMoistureSensorSettings>& settings) {
+            auto sensor = std::make_shared<SoilMoistureSensor>(settings->air.get(), settings->water.get(), settings->pin.get());
+            params.registerFeature("moisture", [sensor](JsonObject& telemetryJson) {
+                telemetryJson["value"] = sensor->getMoisture();
+            });
+            return sensor;
         });
-        return std::make_shared<SimplePeripheral>(params.name, sensor);
-    }
-};
+}
 
 }    // namespace farmhub::peripherals::environment

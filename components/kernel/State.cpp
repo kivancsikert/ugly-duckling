@@ -1,4 +1,5 @@
 #include "State.hpp"
+#include "freertos/idf_additions.h"
 
 namespace farmhub::kernel {
 

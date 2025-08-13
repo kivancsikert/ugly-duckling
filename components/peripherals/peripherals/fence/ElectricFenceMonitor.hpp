@@ -16,8 +16,6 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::fence {
 
-class ElectricFenceMonitorFactory;
-
 struct FencePinConfig {
     InternalPinPtr pin;
     uint16_t voltage {};
@@ -95,20 +93,17 @@ private:
     std::list<FencePin> pins;
 };
 
-class ElectricFenceMonitorFactory
-    : public PeripheralFactory<ElectricFenceMonitorSettings> {
-public:
-    ElectricFenceMonitorFactory()
-        : PeripheralFactory<ElectricFenceMonitorSettings>("electric-fence") {
-    }
-
-std::shared_ptr<Peripheral<EmptyConfiguration>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<ElectricFenceMonitorSettings>& settings) override {
-        auto monitor = std::make_shared<ElectricFenceMonitor>(params.name, params.services.pulseCounterManager, settings);
-        params.registerFeature("voltage", [monitor](JsonObject& telemetryJson) {
-            telemetryJson["value"] = monitor->getVoltage();
+inline PeripheralFactory makeFactory() {
+    return makePeripheralFactory<ElectricFenceMonitorSettings>(
+        "electric-fence",
+        "electric-fence",
+        [](PeripheralInitParameters& params, const std::shared_ptr<ElectricFenceMonitorSettings>& settings) {
+            auto monitor = std::make_shared<ElectricFenceMonitor>(params.name, params.services.pulseCounterManager, settings);
+            params.registerFeature("voltage", [monitor](JsonObject& telemetryJson) {
+                telemetryJson["value"] = monitor->getVoltage();
+            });
+            return monitor;
         });
-        return std::make_shared<SimplePeripheral>(params.name, monitor);
-    }
-};
+}
 
 }    // namespace farmhub::peripherals::fence

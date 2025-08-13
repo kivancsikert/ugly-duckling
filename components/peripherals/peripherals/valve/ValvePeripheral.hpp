@@ -10,7 +10,7 @@
 #include <Telemetry.hpp>
 #include <drivers/MotorDriver.hpp>
 
-#include <peripherals/Motorized.hpp>
+#include <peripherals/Motors.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/valve/Valve.hpp>
 #include <peripherals/valve/ValveConfig.hpp>
@@ -22,51 +22,29 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::valve {
 
-class ValvePeripheral
-    : public Peripheral<ValveConfig> {
-public:
-    ValvePeripheral(
-        const std::string& name,
-        const std::shared_ptr<Valve>& valve)
-        : Peripheral<ValveConfig>(name)
-        , valve(valve) {
-    }
+inline PeripheralFactory makeFactory(
+	const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
+	ValveControlStrategyType defaultStrategy) {
 
-    void configure(const std::shared_ptr<ValveConfig> config) override {
-        valve->configure(config->schedule.get(), config->overrideState.get(), config->overrideUntil.get());
-    }
+	return makePeripheralFactory<ValveSettings, ValveConfig>(
+		"valve",
+		"valve",
+		[motors](PeripheralInitParameters& params, const std::shared_ptr<ValveSettings>& settings) {
+			auto motor = findMotor(motors, settings->motor.get());
+			auto strategy = settings->createValveControlStrategy(motor);
+			auto valve = std::make_shared<Valve>(
+				params.name,
+				std::move(strategy),
+				params.mqttRoot,
+				params.services.telemetryPublisher);
 
-    void shutdown(const ShutdownParameters /*parameters*/) override {
-        valve->closeBeforeShutdown();
-    }
+			params.registerFeature("valve", [valve](JsonObject& telemetry) {
+				valve->populateTelemetry(telemetry);
+			});
 
-private:
-    std::shared_ptr<Valve> valve;
-};
-
-class ValveFactory
-    : public PeripheralFactory<ValveSettings, ValveConfig, ValveControlStrategyType>,
-      protected Motorized {
-public:
-    ValveFactory(
-        const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
-        ValveControlStrategyType defaultStrategy)
-        : PeripheralFactory<ValveSettings, ValveConfig, ValveControlStrategyType>("valve", defaultStrategy)
-        , Motorized(motors) {
-    }
-
-    std::shared_ptr<Peripheral<ValveConfig>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<ValveSettings>& settings) override {
-        auto strategy = settings->createValveControlStrategy(this);
-        auto valve = std::make_shared<Valve>(
-            params.name,
-            std::move(strategy),
-            params.mqttRoot,
-            params.services.telemetryPublisher);
-        params.registerFeature("valve", [valve](JsonObject& telemetry) {
-            valve->populateTelemetry(telemetry);
-        });
-        return std::make_shared<ValvePeripheral>(params.name, valve);
-    }
-};
+			return valve;
+		},
+		defaultStrategy);
+}
 
 }    // namespace farmhub::peripherals::valve

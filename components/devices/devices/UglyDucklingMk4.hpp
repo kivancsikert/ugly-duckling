@@ -86,10 +86,10 @@ protected:
 
         std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "default", motor } };
 
-        peripheralManager->registerFactory(std::make_unique<ValveFactory>(motors, ValveControlStrategyType::NormallyClosed));
-        peripheralManager->registerFactory(std::make_unique<FlowMeterFactory>());
-        peripheralManager->registerFactory(std::make_unique<FlowControlFactory>(motors, ValveControlStrategyType::NormallyClosed));
-        peripheralManager->registerFactory(std::make_unique<ChickenDoorFactory>(motors));
+        peripheralManager->registerFactory(valve::makeFactory(motors, ValveControlStrategyType::NormallyClosed));
+        peripheralManager->registerFactory(flow_meter::makeFactory());
+        peripheralManager->registerFactory(flow_control::makeFactory(motors, ValveControlStrategyType::NormallyClosed));
+        peripheralManager->registerFactory(chicken_door::makeFactory(motors));
     }
 };
 

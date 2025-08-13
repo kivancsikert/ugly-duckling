@@ -1,19 +1,23 @@
 #pragma once
 
+#include <functional>
 #include <map>
 #include <memory>
+#include <tuple>
+#include <type_traits>
 
 #include <BootClock.hpp>
 #include <Configuration.hpp>
 #include <EspException.hpp>
 #include <I2CManager.hpp>
-#include <Named.hpp>
 #include <PcntManager.hpp>
 #include <PulseCounter.hpp>
 #include <PwmManager.hpp>
 #include <Telemetry.hpp>
 #include <drivers/SwitchManager.hpp>
 #include <utility>
+
+#include "PeripheralException.hpp"
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
@@ -22,59 +26,53 @@ namespace farmhub::peripherals {
 
 // Peripherals
 
-class PeripheralBase
-    : public Named {
-public:
-    explicit PeripheralBase(const std::string& name)
-        : Named(name) {
-    }
-
-    virtual ~PeripheralBase() = default;
-
-    struct ShutdownParameters {
-        // Placeholder for future parameters
-    };
-
-    virtual void shutdown(const ShutdownParameters parameters) {
-    }
+// Forward declarations and common types
+struct ShutdownParameters {
+    // Placeholder for future parameters
 };
 
-template <std::derived_from<ConfigurationSection> TConfig>
-class Peripheral
-    : public PeripheralBase {
+// Explicit shutdown capability for implementations that support graceful shutdown
+class HasShutdown {
 public:
-    explicit Peripheral(const std::string& name)
-        : PeripheralBase(name) {
-    }
-
-    virtual void configure(std::shared_ptr<TConfig> /*config*/) = 0;
+    virtual ~HasShutdown() = default;
+    virtual void shutdown(const ShutdownParameters& params) = 0;
 };
 
-class SimplePeripheral
-    : public Peripheral<EmptyConfiguration> {
+// Peripheral instance wrapper to allow heterogeneous storage without inheritance
+class Peripheral final {
 public:
-    explicit SimplePeripheral(const std::string& name, const std::shared_ptr<void>& component)
-        : Peripheral<EmptyConfiguration>(name)
-        , component(component) {
+    Peripheral() = default;
+
+    template <typename ImplPtr>
+    static Peripheral wrap(std::string name, const ImplPtr& impl) {
+        Peripheral p;
+        p.name = std::move(name);
+        // Keep the implementation alive via shared_ptr<void>
+        p._holder = std::static_pointer_cast<void>(impl);
+        // Bind shutdown if available via HasShutdown; otherwise, no-op
+        p._shutdown = [impl](const ShutdownParameters& params) {
+            using Impl = std::remove_reference_t<decltype(*impl)>;
+            if constexpr (std::is_base_of_v<HasShutdown, Impl>) {
+                std::static_pointer_cast<HasShutdown>(impl)->shutdown(params);
+            }
+        };
+        return p;
     }
 
-    void configure(const std::shared_ptr<EmptyConfiguration> /*config*/) override {
-        LOGV("No configuration to apply for simple peripheral: %s", name.c_str());
+    void shutdown(const ShutdownParameters& params) const {
+        if (_shutdown) {
+            _shutdown(params);
+        }
     }
 
-protected:
-    const std::shared_ptr<void> component;
+    std::string name;
+
+private:
+    std::shared_ptr<void> _holder;
+    std::function<void(const ShutdownParameters&)> _shutdown;
 };
 
 // Peripheral factories
-
-class PeripheralCreationException
-    : public std::runtime_error {
-public:
-    explicit PeripheralCreationException(const std::string& reason)
-        : std::runtime_error(reason) {
-    }
-};
 
 struct PeripheralServices {
     const std::shared_ptr<I2CManager> i2c;
@@ -98,68 +96,93 @@ struct PeripheralInitParameters {
     const JsonArray features;
 };
 
-class PeripheralFactoryBase {
-public:
-    PeripheralFactoryBase(const std::string& factoryType, const std::string& peripheralType)
-        : factoryType(factoryType)
-        , peripheralType(peripheralType) {
-    }
+// A non-templated factory representation producing peripheral instances
+struct PeripheralFactory {
+    // Identifiers
+    std::string factoryType;
+    std::string peripheralType;    // Usually same as factoryType, but can differ
 
-    virtual ~PeripheralFactoryBase() = default;
-
-    virtual std::shared_ptr<PeripheralBase> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<FileSystem>& fs, const std::string& jsonSettings, JsonObject& initConfigJson) = 0;
-
-    const std::string factoryType;
-    const std::string peripheralType;
+    // Creator function: returns a Peripheral
+    std::function<Peripheral(
+        PeripheralInitParameters& params,
+        const std::shared_ptr<FileSystem>& fs,
+        const std::string& jsonSettings,
+        JsonObject& initConfigJson)>
+        create;
 };
 
-template <std::derived_from<ConfigurationSection> TSettings, std::derived_from<ConfigurationSection> TConfig = EmptyConfiguration, typename... TSettingsArgs>
-class PeripheralFactory : public PeripheralFactoryBase {
-public:
-    // By default use the factory type as the peripheral type
-    explicit PeripheralFactory(const std::string& type, TSettingsArgs... settingsArgs)
-        : PeripheralFactory(type, type, std::forward<TSettingsArgs>(settingsArgs)...) {
-    }
+// Internal helpers to constrain factory callables
+template <typename T>
+struct is_shared_ptr : std::false_type { };
+template <typename T>
+struct is_shared_ptr<std::shared_ptr<T>> : std::true_type { };
 
-    PeripheralFactory(const std::string& factoryType, const std::string& peripheralType, TSettingsArgs... settingsArgs)
-        : PeripheralFactoryBase(factoryType, peripheralType)
-        , settingsArgs(std::forward<TSettingsArgs>(settingsArgs)...) {
-    }
+template <typename F, typename TSettings>
+concept MakeImplProducesSharedPtr = requires(F f, PeripheralInitParameters& p, std::shared_ptr<TSettings> s) {
+    typename std::invoke_result_t<F, PeripheralInitParameters&, std::shared_ptr<TSettings>>;
+    requires is_shared_ptr<std::invoke_result_t<F, PeripheralInitParameters&, std::shared_ptr<TSettings>>>::value;
+};
 
-    std::shared_ptr<PeripheralBase> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<FileSystem>& fs, const std::string& jsonSettings, JsonObject& initConfigJson) override {
-        std::shared_ptr<TSettings> settings = std::apply([](TSettingsArgs... args) {
-            return std::make_shared<TSettings>(std::forward<TSettingsArgs>(args)...);
-        },
-            settingsArgs);
-        settings->loadFromString(jsonSettings);
-        const auto& name = params.name;
-        std::shared_ptr<Peripheral<TConfig>> peripheral = createPeripheral(params, settings);
+// Helper to build a PeripheralFactory while keeping strong types for settings/config
+template <
+    std::derived_from<ConfigurationSection> TSettings,
+    std::derived_from<ConfigurationSection> TConfig = EmptyConfiguration,
+    typename MakeImpl,
+    typename... TSettingsArgs>
+PeripheralFactory makePeripheralFactory(const std::string& factoryType,
+    const std::string& peripheralType,
+    MakeImpl makeImpl,
+    TSettingsArgs... settingsArgs) {
+    static_assert(MakeImplProducesSharedPtr<MakeImpl, TSettings>,
+        "makeImpl must be callable with (PeripheralInitParameters&, std::shared_ptr<TSettings>) and return std::shared_ptr<Impl>");
+    auto settingsTuple = std::make_tuple(std::forward<TSettingsArgs>(settingsArgs)...);
 
-        std::shared_ptr<TConfig> config = std::make_shared<TConfig>();
-        // Use short prefix because SPIFFS has a 32 character limit
-        std::shared_ptr<ConfigurationFile<TConfig>> configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + name, config);
-        peripheral->configure(config);
-        // Store configuration in init message
-        config->store(initConfigJson, false);
+    // Build the factory using designated initializers (C++20+)
+    auto effectiveType = peripheralType.empty() ? factoryType : peripheralType;
+    return PeripheralFactory {
+        .factoryType = std::move(factoryType),
+        .peripheralType = std::move(effectiveType),
+        .create = [settingsTuple, makeImpl = std::move(makeImpl)](auto& params,
+                      const std::shared_ptr<FileSystem>& fs,
+                      const std::string& jsonSettings,
+                      JsonObject& initConfigJson) -> Peripheral {
+            // Construct and load settings
+            auto settings = std::apply([](auto&&... a) {
+                return std::make_shared<TSettings>(std::forward<decltype(a)>(a)...);
+            },
+                settingsTuple);
+            settings->loadFromString(jsonSettings);
 
-        params.mqttRoot->subscribe("config", [name, configFile, peripheral](const std::string&, const JsonObject& configJson) {
-            LOGD("Received configuration update for peripheral: %s", name.c_str());
-            try {
-                configFile->update(configJson);
-                peripheral->configure(configFile->getConfig());
-            } catch (const std::exception& e) {
-                LOGE("Failed to update configuration for peripheral '%s' because %s",
-                    name.c_str(), e.what());
+            // Create concrete implementation via user-provided callable
+            auto impl = makeImpl(params, settings);
+
+            // Configuration lifecycle, mirroring the templated factory behavior
+            auto config = std::make_shared<TConfig>();
+            auto configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + params.name, config);
+            using Impl = std::remove_reference_t<decltype(*impl)>;
+            if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
+                std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(config);
             }
-        });
-        return peripheral;
-    }
+            // Store configuration in init message
+            config->store(initConfigJson, false);
 
-    virtual std::shared_ptr<Peripheral<TConfig>> createPeripheral(PeripheralInitParameters& params, const std::shared_ptr<TSettings>& settings) = 0;
+            // Subscribe for config updates
+            params.mqttRoot->subscribe("config", [name = params.name, configFile, impl](const std::string&, const JsonObject& cfgJson) {
+                LOGD("Received configuration update for peripheral: %s", name.c_str());
+                try {
+                    configFile->update(cfgJson);
+                    if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
+                        std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(configFile->getConfig());
+                    }
+                } catch (const std::exception& e) {
+                    LOGE("Failed to update configuration for peripheral '%s' because %s", name.c_str(), e.what());
+                }
+            });
 
-private:
-    std::tuple<TSettingsArgs...> settingsArgs;
-};
+            return Peripheral::wrap(params.name, std::move(impl));
+        },
+    };
+}
 
 // Peripheral manager
 
@@ -176,10 +199,10 @@ public:
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 
-    void registerFactory(std::unique_ptr<PeripheralFactoryBase> factory) {
+    void registerFactory(PeripheralFactory factory) {
         LOGD("Registering peripheral factory: %s",
-            factory->factoryType.c_str());
-        factories.insert(std::make_pair(factory->factoryType, std::move(factory)));
+            factory.factoryType.c_str());
+        factories.emplace(factory.factoryType, std::move(factory));
     }
 
     bool createPeripheral(const std::string& peripheralSettings, JsonArray peripheralsInitJson) {
@@ -211,7 +234,7 @@ public:
         LOGD("Creating peripheral '%s' with factory '%s'",
             nameBeforeCreation.c_str(), factoryType.c_str());
 
-        auto it = factories.find(factoryType);
+        const auto it = factories.find(factoryType);
         if (it == factories.end()) {
             LOGE("Failed to create '%s' peripheral '%s' because factory not found",
                 factoryType.c_str(), nameBeforeCreation.c_str());
@@ -219,7 +242,7 @@ public:
             return false;
         }
 
-        const std::string& peripheralType = it->second->peripheralType;
+        const std::string& peripheralType = it->second.peripheralType;
         initJson["type"] = peripheralType;
         const auto& name = nameFromSettings.empty() ? peripheralType : nameFromSettings;
         initJson["name"] = name;
@@ -234,8 +257,7 @@ public:
                 .features = initJson["features"].to<JsonArray>(),
             };
             JsonObject initConfigJson = initJson["config"].to<JsonObject>();
-            std::shared_ptr<PeripheralBase> peripheral = it->second->createPeripheral(params, fs, settings->params.get().get(), initConfigJson);
-
+            Peripheral peripheral = it->second.create(params, fs, settings->params.get().get(), initConfigJson);
             peripherals.push_back(std::move(peripheral));
 
             return true;
@@ -260,11 +282,11 @@ public:
         }
         LOGI("Shutting down peripheral manager");
         state = State::Stopped;
-        PeripheralBase::ShutdownParameters parameters;
+        ShutdownParameters parameters = {};
         for (auto& peripheral : peripherals) {
             LOGI("Shutting down peripheral '%s'",
-                peripheral->name.c_str());
-            peripheral->shutdown(parameters);
+                peripheral.name.c_str());
+            peripheral.shutdown(parameters);
         }
     }
 
@@ -287,10 +309,10 @@ private:
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
 
     // TODO Use an unordered_map?
-    std::map<std::string, std::unique_ptr<PeripheralFactoryBase>> factories;
+    std::map<std::string, PeripheralFactory> factories;
     Mutex stateMutex;
     State state = State::Running;
-    std::list<std::shared_ptr<PeripheralBase>> peripherals;
+    std::list<Peripheral> peripherals;
 };
 
 }    // namespace farmhub::peripherals

@@ -64,4 +64,23 @@ private:
     i2c_dev_t sensor {};
 };
 
+inline PeripheralFactory makeFactoryForSht2x(const std::string& sensorKey) {
+    // sensorKey: "sht2x" or "htu2x"
+    return makePeripheralFactory<I2CSettings>(
+        "environment:" + sensorKey,
+        "environment",
+        [sensorKey](PeripheralInitParameters& params, const std::shared_ptr<I2CSettings>& settings) {
+            // Address is fixed to 0x40 for these devices
+            I2CConfig i2cConfig = settings->parse(0x40);
+            auto sensor = std::make_shared<Sht2xSensor>(sensorKey, params.services.i2c, i2cConfig);
+            params.registerFeature("temperature", [sensor](JsonObject& telemetryJson) {
+                telemetryJson["value"] = sensor->getTemperature();
+            });
+            params.registerFeature("moisture", [sensor](JsonObject& telemetryJson) {
+                telemetryJson["value"] = sensor->getMoisture();
+            });
+            return sensor;
+        });
+}
+
 }    // namespace farmhub::peripherals::environment

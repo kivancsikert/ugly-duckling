@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace farmhub::kernel::drivers {
 
 enum class MotorPhase : int8_t {
@@ -7,11 +9,7 @@ enum class MotorPhase : int8_t {
     REVERSE = -1
 };
 
-MotorPhase operator-(MotorPhase phase) {
-    return phase == MotorPhase::FORWARD
-        ? MotorPhase::REVERSE
-        : MotorPhase::FORWARD;
-}
+MotorPhase operator-(MotorPhase phase);
 
 class PwmMotorDriver {
 public:
