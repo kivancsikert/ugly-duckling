@@ -145,7 +145,7 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
                 }
             }
 
-            return Peripheral::wrap(params.name, std::move(impl));
+            return Peripheral::wrap(std::move(impl));
         },
     };
 }

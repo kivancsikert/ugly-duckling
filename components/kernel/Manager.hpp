@@ -24,18 +24,14 @@ public:
     Handle() = default;
 
     template <typename ImplPtr>
-    static Handle wrap(std::string name, const ImplPtr& impl) {
+    static Handle wrap(const ImplPtr& impl) {
         Handle h;
-        h.name = std::move(name);
         using Impl = std::remove_reference_t<decltype(*impl)>;
         // Store the impl as void and record a per-type token
         h._holder = std::static_pointer_cast<void>(impl);
         h._typeTag = &TypeTokenVar<Impl>;
         return h;
     }
-
-    // Name of the instance (product-specific semantics)
-    std::string name;
 
     // Typed access without RTTI
     template <typename T>
