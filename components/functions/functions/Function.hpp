@@ -38,7 +38,7 @@ FunctionFactory makeFunctionFactory(
 
     // Build the factory using designated initializers (C++20+)
     return FunctionFactory {
-        .factoryType = std::move(type),
+        .factoryType = type,
         .productType = std::move(type),
         .create = [settingsTuple, makeImpl = std::move(makeImpl)](
                       FunctionInitParameters& params,
