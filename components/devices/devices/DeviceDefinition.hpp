@@ -16,7 +16,7 @@
 #include <drivers/BatteryDriver.hpp>
 #include <drivers/LedDriver.hpp>
 
-#include <functions/Plot.hpp>
+#include <functions/PlotController.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/analog_meter/AnalogMeter.hpp>
 #include <peripherals/environment/Ds18B20SoilSensor.hpp>
@@ -68,7 +68,7 @@ public:
     }
 
     void registerFunctionFactories(const std::shared_ptr<FunctionManager>& functionManager) {
-        functionManager->registerFactory(plot::makeFactory());
+        functionManager->registerFactory(plot_controller::makeFactory());
     }
 
     /**

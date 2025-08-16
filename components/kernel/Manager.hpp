@@ -106,6 +106,7 @@ public:
             if (instance == nullptr) {
                 throw std::runtime_error("Instance '" + name + "' is not of the required type");
             }
+            return instance;
         }
         throw std::runtime_error("Instance '" + name + "' not found");
     }

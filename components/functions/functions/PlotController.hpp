@@ -18,17 +18,17 @@ using namespace farmhub::peripherals;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
 
-namespace farmhub::functions::plot {
+namespace farmhub::functions::plot_controller {
 
 class PlotConfig : public ValveConfig {
 };
 
-class Plot
+class PlotController
     : public Named,
       public HasConfig<PlotConfig>,
       public HasShutdown {
 public:
-    Plot(
+    PlotController(
         const std::string& name,
         const std::shared_ptr<Valve>& valve,
         const std::shared_ptr<FlowMeter>& flowMeter)
@@ -58,13 +58,13 @@ public:
 };
 
 inline FunctionFactory makeFactory() {
-    return makeFunctionFactory<Plot, PlotSettings, PlotConfig>(
-        "plot",
+    return makeFunctionFactory<PlotController, PlotSettings, PlotConfig>(
+        "plot-controller",
         [](const FunctionInitParameters& params, const std::shared_ptr<PlotSettings>& settings) {
             auto valve = params.peripherals->getInstance<Valve>(settings->valve.get());
             auto flowMeter = params.peripherals->getInstance<FlowMeter>(settings->flowMeter.get());
-            return std::make_shared<Plot>(params.name, valve, flowMeter);
+            return std::make_shared<PlotController>(params.name, valve, flowMeter);
         });
 }
 
-}    // namespace farmhub::functions::plot
+}    // namespace farmhub::functions::plot_controller
