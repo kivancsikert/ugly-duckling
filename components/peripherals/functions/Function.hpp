@@ -11,12 +11,9 @@ namespace farmhub::functions {
 
 using Function = kernel::Handle;
 
-struct FunctionServices {
-    const std::shared_ptr<PeripheralManager> peripherals;
-};
-
 struct FunctionInitParameters {
     const std::string name;
+    const std::shared_ptr<PeripheralManager> peripherals;
     const std::shared_ptr<MqttRoot> mqttRoot;
 };
 
@@ -33,17 +30,16 @@ template <
     std::derived_from<ConfigurationSection> TSettings,
     std::derived_from<ConfigurationSection> TConfig = EmptyConfiguration,
     typename... TSettingsArgs>
-FunctionFactory makeFunctionFactory(const std::string& factoryType,
-    const std::string& functionType,
-    std::function<std::shared_ptr<Impl>(FunctionInitParameters&, const std::shared_ptr<TSettings>&)> makeImpl,
+FunctionFactory makeFunctionFactory(
+    const std::string& type,
+    std::function<std::shared_ptr<Impl>(const FunctionInitParameters&, const std::shared_ptr<TSettings>&)> makeImpl,
     TSettingsArgs... settingsArgs) {
     auto settingsTuple = std::make_tuple(std::forward<TSettingsArgs>(settingsArgs)...);
 
     // Build the factory using designated initializers (C++20+)
-    auto effectiveType = functionType.empty() ? factoryType : functionType;
     return FunctionFactory {
-        .factoryType = std::move(factoryType),
-        .productType = std::move(effectiveType),
+        .factoryType = std::move(type),
+        .productType = std::move(type),
         .create = [settingsTuple, makeImpl = std::move(makeImpl)](
                       FunctionInitParameters& params,
                       const std::shared_ptr<FileSystem>& fs,
@@ -90,11 +86,11 @@ class FunctionManager : public kernel::SettingsBasedManager<Function, FunctionFa
 public:
     FunctionManager(
         const std::shared_ptr<FileSystem>& fs,
-        FunctionServices services,
+        const std::shared_ptr<PeripheralManager>& peripherals,
         const std::shared_ptr<MqttRoot>& mqttDeviceRoot)
         : kernel::SettingsBasedManager<Function, FunctionFactory>("function")
         , fs(fs)
-        , services(std::move(services))
+        , peripherals(peripherals)
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 
@@ -107,7 +103,8 @@ public:
                 [&](const std::string& name, const FunctionFactory& factory, const std::string& settings) {
                     FunctionInitParameters params = {
                         .name = name,
-                        .mqttRoot = mqttDeviceRoot->forSuffix("functions/" + factory.productType + "/" + name),
+                        .peripherals = peripherals,
+                        .mqttRoot = mqttDeviceRoot->forSuffix("functions/" + name),
                     };
                     JsonObject initConfigJson = initJson["config"].to<JsonObject>();
                     return factory.create(params, fs, settings, initConfigJson);
@@ -123,7 +120,7 @@ public:
 
 private:
     const std::shared_ptr<FileSystem>& fs;
-    const FunctionServices services;
+    const std::shared_ptr<PeripheralManager>& peripherals;
     const std::shared_ptr<MqttRoot>& mqttDeviceRoot;
 };
 

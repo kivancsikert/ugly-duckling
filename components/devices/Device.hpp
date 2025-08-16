@@ -25,6 +25,7 @@ static const char* const farmhubVersion = reinterpret_cast<const char*>(esp_app_
 #include <Strings.hpp>
 #include <mqtt/MqttLog.hpp>
 
+#include <devices/DeviceDefinition.hpp>
 #include <devices/DeviceSettings.hpp>
 #include <functions/Function.hpp>
 #include <peripherals/Peripheral.hpp>
@@ -319,7 +320,7 @@ enum class InitState : std::uint8_t {
     FunctionError = 2,
 };
 
-template <class TDeviceDefinition, std::derived_from<DeviceSettings> TDeviceSettings>
+template <std::derived_from<DeviceSettings> TDeviceSettings, std::derived_from<DeviceDefinition<TDeviceSettings>> TDeviceDefinition>
 static void startDevice() {
     auto i2c = std::make_shared<I2CManager>();
     auto battery = initBattery<TDeviceDefinition>(i2c);
@@ -442,6 +443,13 @@ static void startDevice() {
     });
     deviceDefinition->registerPeripheralFactories(peripheralManager, peripheralServices, settings);
 
+    // Init functions
+    auto functionManager = std::make_shared<FunctionManager>(fs, peripheralManager, mqttRoot);
+    shutdownManager->registerShutdownListener([functionManager]() {
+        functionManager->shutdown();
+    });
+    deviceDefinition->registerFunctionFactories(functionManager);
+
     // Init telemetry
     mqttRoot->registerCommand("ping", [telemetryPublisher](const JsonObject&, JsonObject& response) {
         telemetryPublisher->requestTelemetryPublishing();
@@ -451,10 +459,11 @@ static void startDevice() {
     // We want RTC to be in sync before we start setting up peripherals
     states->rtcInSync.awaitSet();
 
+    InitState initState = InitState::Success;
+
     // Init peripherals
     JsonDocument peripheralsInitDoc;
     auto peripheralsInitJson = peripheralsInitDoc.to<JsonArray>();
-    InitState initState = InitState::Success;
 
     auto builtInPeripheralsSettings = deviceDefinition->getBuiltInPeripherals();
     LOGD("Loading configuration for %d built-in peripherals",
@@ -476,14 +485,6 @@ static void startDevice() {
 
     JsonDocument functionsInitDoc;
     auto functionsInitJson = functionsInitDoc.to<JsonArray>();
-    auto functionServices = FunctionServices {
-        .peripherals = peripheralManager
-    };
-    auto functionManager = std::make_shared<FunctionManager>(fs, functionServices, mqttRoot);
-    shutdownManager->registerShutdownListener([functionManager]() {
-        functionManager->shutdown();
-    });
-
     auto& functionsSettings = settings->functions.get();
     LOGI("Loading configuration for %d user-configured functions",
         functionsSettings.size());

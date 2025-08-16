@@ -19,11 +19,11 @@ using namespace farmhub::peripherals::valve;
 
 namespace farmhub::peripherals::flow_control {
 
-class FlowControlConfig : public ValveConfig { };
+class PlotConfig : public ValveConfig { };
 
 class FlowControl
     : public Named,
-      public HasConfig<FlowControlConfig>,
+      public HasConfig<PlotConfig>,
       public HasShutdown {
 public:
     FlowControl(
@@ -35,7 +35,7 @@ public:
         , flowMeter(flowMeter) {
     }
 
-    void configure(const std::shared_ptr<FlowControlConfig>& config) override {
+    void configure(const std::shared_ptr<PlotConfig>& config) override {
         valve->configure(config->schedule.get(), config->overrideState.get(), config->overrideUntil.get());
     }
 
@@ -48,10 +48,10 @@ private:
     std::shared_ptr<FlowMeter> flowMeter;
 };
 
-class FlowControlSettings
+class PlotSettings
     : public ConfigurationSection {
 public:
-    explicit FlowControlSettings(ValveControlStrategyType defaultStrategy)
+    explicit PlotSettings(ValveControlStrategyType defaultStrategy)
         : valve(this, "valve", defaultStrategy)
         , flowMeter(this, "flow-meter") {
     }
@@ -61,10 +61,10 @@ public:
 };
 
 inline PeripheralFactory makeFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors, ValveControlStrategyType defaultStrategy) {
-    return makePeripheralFactory<FlowControl, FlowControlSettings, FlowControlConfig>(
+    return makePeripheralFactory<FlowControl, PlotSettings, PlotConfig>(
         "flow-control",
         "flow-control",
-        [motors](PeripheralInitParameters& params, const std::shared_ptr<FlowControlSettings>& settings) {
+        [motors](PeripheralInitParameters& params, const std::shared_ptr<PlotSettings>& settings) {
             auto motor = findMotor(motors, settings->valve.get()->motor.get());
             auto strategy = settings->valve.get()->createValveControlStrategy(motor);
 

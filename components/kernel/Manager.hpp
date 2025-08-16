@@ -102,9 +102,12 @@ public:
         Lock lock(mutex);
         auto it = instances.find(name);
         if (it != instances.end()) {
-            return it->second.template tryGet<T>();
+            auto instance = it->second.template tryGet<T>();
+            if (instance == nullptr) {
+                throw std::runtime_error("Instance '" + name + "' is not of the required type");
+            }
         }
-        return {};
+        throw std::runtime_error("Instance '" + name + "' not found");
     }
 
     void shutdown() {
