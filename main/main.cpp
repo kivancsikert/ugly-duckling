@@ -25,5 +25,5 @@ using Settings = farmhub::devices::Mk8Settings;
 #endif
 
 extern "C" void app_main() {
-    startDevice<Definition, Settings>();
+    startDevice<Settings, Definition>();
 }

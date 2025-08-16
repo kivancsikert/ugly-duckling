@@ -58,7 +58,7 @@ private:
 };
 
 inline PeripheralFactory makeFactoryForDs18b20() {
-    return makePeripheralFactory<SinglePinSettings>(
+    return makePeripheralFactory<Ds18B20SoilSensor, SinglePinSettings>(
         "environment:ds18b20",
         "environment",
         [](PeripheralInitParameters& params, const std::shared_ptr<SinglePinSettings>& settings) {

@@ -439,7 +439,7 @@ protected:
 
 inline PeripheralFactory makeFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors) {
 
-    return makePeripheralFactory<ChickenDoorSettings, ChickenDoorConfig>(
+    return makePeripheralFactory<ChickenDoorComponent, ChickenDoorSettings, ChickenDoorConfig>(
         "chicken-door",
         "chicken-door",
         [motors](PeripheralInitParameters& params, const std::shared_ptr<ChickenDoorSettings>& settings) {

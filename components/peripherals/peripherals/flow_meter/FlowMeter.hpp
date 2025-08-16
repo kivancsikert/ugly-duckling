@@ -99,7 +99,7 @@ private:
 };
 
 inline PeripheralFactory makeFactory() {
-    return makePeripheralFactory<FlowMeterSettings>(
+    return makePeripheralFactory<FlowMeter, FlowMeterSettings>(
         "flow-meter",
         "flow-meter",
         [](PeripheralInitParameters& params, const std::shared_ptr<FlowMeterSettings>& settings) {
