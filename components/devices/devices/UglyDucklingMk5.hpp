@@ -7,7 +7,6 @@
 #include <drivers/LedDriver.hpp>
 
 #include <peripherals/chicken_door/ChickenDoor.hpp>
-#include <peripherals/flow_control/FlowControl.hpp>
 #include <peripherals/flow_meter/FlowMeter.hpp>
 #include <peripherals/valve/ValvePeripheral.hpp>
 
@@ -15,7 +14,6 @@
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals::chicken_door;
-using namespace farmhub::peripherals::flow_control;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
 
@@ -100,7 +98,6 @@ protected:
 
         peripheralManager->registerFactory(valve::makeFactory(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(flow_meter::makeFactory());
-        peripheralManager->registerFactory(flow_control::makeFactory(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(chicken_door::makeFactory(motors));
     }
 };
