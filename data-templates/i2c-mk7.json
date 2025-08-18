@@ -1,6 +1,6 @@
 {
-  "instance": "DEVICE_INSTANCE",
-  "id": "DEVICE_ID",
+  "instance": "test-mk7-xxx",
+  "location": "bumblebee",
   "peripherals": [
     {
       "type": "environment:htu2x",

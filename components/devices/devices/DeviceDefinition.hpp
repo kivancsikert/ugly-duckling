@@ -3,6 +3,7 @@
 #include <concepts>
 #include <list>
 #include <memory>
+#include <utility>
 
 #include <ArduinoJson.h>
 
@@ -15,6 +16,7 @@
 #include <drivers/BatteryDriver.hpp>
 #include <drivers/LedDriver.hpp>
 
+#include <functions/PlotController.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/analog_meter/AnalogMeter.hpp>
 #include <peripherals/environment/Ds18B20SoilSensor.hpp>
@@ -26,8 +28,8 @@
 #include <peripherals/light_sensor/Bh1750.hpp>
 #include <peripherals/light_sensor/Tsl2591.hpp>
 #include <peripherals/multiplexer/Xl9535.hpp>
-#include <utility>
 
+using namespace farmhub::functions;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 using namespace farmhub::peripherals;
@@ -44,7 +46,7 @@ public:
 
     virtual ~DeviceDefinition() = default;
 
-    virtual void registerPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<TDeviceSettings>& settings) {
+    void registerPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<TDeviceSettings>& settings) {
         peripheralManager->registerFactory(environment::makeFactoryForSht3x());
         // TODO Unify these two factories
         peripheralManager->registerFactory(environment::makeFactoryForSht2x("sht2x"));
@@ -63,6 +65,10 @@ public:
         peripheralManager->registerFactory(analog_meter::makeFactory());
 
         registerDeviceSpecificPeripheralFactories(peripheralManager, services, settings);
+    }
+
+    void registerFunctionFactories(const std::shared_ptr<FunctionManager>& functionManager) {
+        functionManager->registerFactory(plot_controller::makeFactory());
     }
 
     /**

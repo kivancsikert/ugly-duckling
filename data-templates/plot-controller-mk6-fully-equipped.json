@@ -3,15 +3,17 @@
   "location": "bumblebee",
   "peripherals": [
     {
-      "name": "flow-control",
-      "type": "flow-control",
+      "name": "flow-meter",
+      "type": "flow-meter",
       "params": {
-        "valve": {
-          "motor": "b"
-        },
-        "flow-meter": {
-          "pin": "B1"
-        }
+        "pin": "B1"
+      }
+    },
+    {
+      "name": "valve",
+      "type": "valve",
+      "params": {
+        "motor": "b"
       }
     },
     {
@@ -28,6 +30,16 @@
         "air": 3017,
         "pin": "A1",
         "water": 1105
+      }
+    }
+  ],
+  "functions": [
+    {
+      "name": "plot",
+      "type": "plot-controller",
+      "params": {
+        "flowMeter": "flow-meter",
+        "valve": "valve"
       }
     }
   ],
