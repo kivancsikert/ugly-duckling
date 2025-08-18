@@ -1,6 +1,6 @@
 {
-  "instance": "chicken-door",
-  "location": "hawthorn",
+  "instance": "test-mk6-xxx",
+  "location": "bumblebee",
   "peripherals": [
     {
       "name": "chicken-door-a",

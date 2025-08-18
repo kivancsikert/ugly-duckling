@@ -1,19 +1,19 @@
 {
-  "instance": "test-wokwi",
+  "instance": "test-mk7-xxx",
   "location": "bumblebee",
   "peripherals": [
     {
       "name": "flow-meter",
       "type": "flow-meter",
       "params": {
-        "pin": "B1"
+        "pin": "A1"
       }
     },
     {
       "name": "valve",
       "type": "valve",
       "params": {
-        "motor": "b"
+        "motor": "a"
       }
     }
   ],

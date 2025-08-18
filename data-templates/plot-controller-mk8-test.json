@@ -1,7 +1,8 @@
 {
-  "instance": "test-mk8-1",
-  "id": "ud0800-001",
+  "instance": "test-mk8-xxx",
   "location": "bumblebee",
   "peripherals": [
+  ],
+  "functions": [
   ]
 }
