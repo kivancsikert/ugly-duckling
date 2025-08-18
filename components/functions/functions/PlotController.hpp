@@ -11,7 +11,6 @@
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/flow_meter/FlowMeter.hpp>
 #include <peripherals/valve/Valve.hpp>
-#include <peripherals/valve/ValveConfig.hpp>
 
 using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
@@ -20,7 +19,22 @@ using namespace farmhub::peripherals::valve;
 
 namespace farmhub::functions::plot_controller {
 
-class PlotConfig : public ValveConfig {
+class PlotConfig : public ConfigurationSection {
+public:
+    ArrayProperty<ValveSchedule> schedule { this, "schedule" };
+    Property<std::string> overrideState { this, "overrideState" };
+    Property<time_point<system_clock>> overrideUntil { this, "overrideUntil" };
+
+    ValveState getOverrideState() {
+        auto state = overrideState.get();
+        if (state == "open") {
+            return ValveState::OPEN;
+        } else if (state == "closed") {
+            return ValveState::CLOSED;
+        } else {
+            return ValveState::NONE;
+        }
+    }
 };
 
 class PlotController
@@ -38,7 +52,7 @@ public:
     }
 
     void configure(const std::shared_ptr<PlotConfig>& config) override {
-        valve->configure(config->schedule.get(), config->overrideState.get(), config->overrideUntil.get());
+        valve->configure(config->schedule.get(), config->getOverrideState(), config->overrideUntil.get());
     }
 
     void shutdown(const ShutdownParameters& /*parameters*/) override {
