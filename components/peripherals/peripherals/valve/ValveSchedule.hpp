@@ -47,6 +47,10 @@ using farmhub::peripherals::valve::ValveSchedule;
 template <>
 struct Converter<system_clock::time_point> {
     static void toJson(system_clock::time_point src, JsonVariant dst) {
+        if (src == system_clock::time_point{}) {
+            dst.set(nullptr);
+            return;
+        }
         time_t t = system_clock::to_time_t(src);
         tm tm {};
         (void) localtime_r(&t, &tm);
@@ -56,6 +60,9 @@ struct Converter<system_clock::time_point> {
     }
 
     static system_clock::time_point fromJson(JsonVariantConst src) {
+        if (src.isNull()) {
+            return system_clock::time_point{};
+        }
         tm tm {};
         strptime(src.as<const char*>(), "%FT%TZ", &tm);
         tm.tm_isdst = 0;

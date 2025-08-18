@@ -29,7 +29,7 @@ using namespace farmhub::peripherals;
 namespace farmhub::peripherals::valve {
 
 class Valve
-    : Named
+    : public Named
     , public HasConfig<ValveConfig>
     , public HasShutdown {
 public:
@@ -159,7 +159,7 @@ public:
     }
 
     void configure(const std::list<ValveSchedule>& schedules, ValveState overrideState, time_point<system_clock> overrideUntil) {
-        LOGD("Configuring valve %s with %d schedules; override state %d until %lld",
+        LOGD("Configuring valve '%s' with %d schedules; override state %d until %lld",
             name.c_str(),
             schedules.size(),
             static_cast<int>(overrideState),

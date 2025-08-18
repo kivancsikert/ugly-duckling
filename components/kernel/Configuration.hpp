@@ -213,7 +213,7 @@ public:
     }
 
     void load(const JsonObject& json) override {
-        if (json[name].is<JsonVariant>()) {
+        if (!json[name].isNull() && json[name].is<JsonVariant>()) {
             value = json[name].as<T>();
             configured = true;
         } else {

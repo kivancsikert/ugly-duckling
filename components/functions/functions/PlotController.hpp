@@ -49,6 +49,8 @@ public:
         : Named(name)
         , valve(valve)
         , flowMeter(flowMeter) {
+        LOGD("Creating plot controller '%s' with valve '%s' and flow meter '%s'",
+            name.c_str(), valve->name.c_str(), flowMeter->name.c_str());
     }
 
     void configure(const std::shared_ptr<PlotConfig>& config) override {
