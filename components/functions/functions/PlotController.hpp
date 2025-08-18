@@ -25,15 +25,15 @@ public:
     Property<std::string> overrideState { this, "overrideState" };
     Property<time_point<system_clock>> overrideUntil { this, "overrideUntil" };
 
-    ValveState getOverrideState() {
+    ValveState getOverrideState() const {
         auto state = overrideState.get();
         if (state == "open") {
             return ValveState::OPEN;
-        } else if (state == "closed") {
-            return ValveState::CLOSED;
-        } else {
-            return ValveState::NONE;
         }
+        if (state == "closed") {
+            return ValveState::CLOSED;
+        }
+        return ValveState::NONE;
     }
 };
 
