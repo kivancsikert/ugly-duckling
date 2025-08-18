@@ -27,7 +27,8 @@ public:
     Property<milliseconds> measurementFrequency { this, "measurementFrequency", 1s };
 };
 
-class FlowMeter {
+class FlowMeter
+    : public Named {
 public:
     FlowMeter(
         const std::string& name,
@@ -35,7 +36,8 @@ public:
         const InternalPinPtr& pin,
         double qFactor,
         milliseconds measurementFrequency)
-        : qFactor(qFactor) {
+        : Named(name)
+        , qFactor(qFactor) {
 
         LOGI("Initializing flow meter on pin %s with Q = %.2f",
             pin->getName().c_str(), qFactor);
