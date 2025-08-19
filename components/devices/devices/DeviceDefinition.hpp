@@ -36,6 +36,16 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::devices {
 
+#define UD_DEFINE_PIN3(GPIO, VAR, STR) \
+    static const InternalPinPtr VAR = InternalPin::registerPin(STR, GPIO);
+
+#define UD_DEFINE_PIN2(GPIO, VAR) \
+    UD_DEFINE_PIN3(GPIO, VAR, #VAR)
+
+#define UD_GET_MACRO(_1, _2, _3, NAME, ...) NAME
+
+#define DEFINE_PIN(...) UD_GET_MACRO(__VA_ARGS__, UD_DEFINE_PIN3, UD_DEFINE_PIN2)(__VA_ARGS__)
+
 template <std::derived_from<DeviceSettings> TDeviceSettings>
 class DeviceDefinition {
 public:

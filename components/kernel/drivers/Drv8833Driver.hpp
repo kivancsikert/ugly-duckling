@@ -15,7 +15,7 @@ using namespace std::chrono;
 namespace farmhub::kernel::drivers {
 
 /**
- * @brief Texas Instruments DRV883 dual motor driver.
+ * @brief Texas Instruments DRV8833 dual motor driver.
  *
  * https://www.ti.com/lit/gpn/DRV8833
  */
@@ -50,7 +50,7 @@ public:
         : faultPin(faultPin)
         , sleepPin(sleepPin) {
 
-        LOGI("Initializing DRV8833 on pins fault = %s, sleep = %s",
+        LOGI("Initializing motor driver on pins fault = %s, sleep = %s",
             faultPin->getName().c_str(),
             sleepPin->getName().c_str());
 
@@ -71,7 +71,7 @@ private:
         const InternalPinPtr& bin2Pin,
         bool reverse) {
 
-        LOGI("Initializing DRV8833 motors on pins ain1 = %s, ain2 = %s, bin1 = %s, bin2 = %s",
+        LOGI("Initializing motors on pins ain1 = %s, ain2 = %s, bin1 = %s, bin2 = %s",
             ain1Pin->getName().c_str(),
             ain2Pin->getName().c_str(),
             bin1Pin->getName().c_str(),
