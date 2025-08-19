@@ -25,8 +25,8 @@ public:
         const BatteryParameters& parameters)
         : BatteryDriver(parameters)
         , device(i2c->createDevice("battery:bq27220", sda, scl, address)) {
-        LOGI("Initializing BQ27220 driver on SDA %s, SCL %s",
-            sda->getName().c_str(), scl->getName().c_str());
+        LOGI("Initializing BQ27220 driver on SDA %s, SCL %s, address 0x%02X",
+            sda->getName().c_str(), scl->getName().c_str(), address);
 
         auto deviceType = readControlWord(0x0001);
         if (deviceType != 0x0220) {
