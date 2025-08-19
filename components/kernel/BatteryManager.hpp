@@ -35,7 +35,7 @@ public:
         std::shared_ptr<ShutdownManager> shutdownManager)
         : battery(std::move(battery))
         , shutdownManager(std::move(shutdownManager)) {
-        Task::loop("battery", 3072, [this](Task& task) {
+        Task::loop("battery", 4096, [this](Task& task) {
             checkBatteryVoltage(task);
         });
     }
@@ -56,8 +56,7 @@ public:
 
 private:
     void checkBatteryVoltage(Task& task) {
-        task.delayUntil(LOW_POWER_CHECK_INTERVAL);
-        auto currentVoltage = battery->getVoltage();
+                auto currentVoltage = battery->getVoltage();
         batteryVoltage.record(currentVoltage);
         auto voltage = batteryVoltage.getAverage();
 
@@ -72,6 +71,7 @@ private:
             Task::delay(LOW_BATTERY_SHUTDOWN_TIMEOUT);
             enterLowPowerDeepSleep();
         }
+        task.delayUntil(LOW_POWER_CHECK_INTERVAL);
     };
 
     const std::shared_ptr<BatteryDriver> battery;
