@@ -107,7 +107,7 @@ private:
         } else if (eventBase == IP_EVENT) {
             driver->onIpEvent(eventId, eventData);
         } else if (eventBase == WIFI_PROV_EVENT) {
-            WiFiDriver::onWiFiProvEvent(eventId, eventData);
+            driver->onWiFiProvEvent(eventId, eventData);
         }
     }
 
@@ -189,7 +189,7 @@ private:
         }
     }
 
-    static void onWiFiProvEvent(int32_t eventId, void* eventData) {
+    void onWiFiProvEvent(int32_t eventId, void* eventData) {
         switch (eventId) {
             case WIFI_PROV_START: {
                 LOGTD(Tag::WIFI, "provisioning started");
@@ -216,6 +216,7 @@ private:
             }
             case WIFI_PROV_END: {
                 LOGTD(Tag::WIFI, "provisioning finished");
+                eventQueue.offer(WiFiEvent::PROVISIONING_FINISHED);
                 wifi_prov_mgr_deinit();
                 break;
             }
@@ -274,7 +275,6 @@ private:
                         LOGTD(Tag::WIFI, "Disconnected from the network");
                         break;
                     case WiFiEvent::PROVISIONING_FINISHED:
-                        networkConnecting.clear();
                         configPortalRunning.clear();
                         break;
                 }
