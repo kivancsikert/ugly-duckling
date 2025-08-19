@@ -1,10 +1,6 @@
 #include <Device.hpp>
 
-#if defined(MK4)
-#include <devices/UglyDucklingMk4.hpp>
-using Definition = farmhub::devices::UglyDucklingMk4;
-using Settings = farmhub::devices::Mk4Settings;
-#elif defined(MK5)
+#if defined(MK5)
 #include <devices/UglyDucklingMk5.hpp>
 using Definition = farmhub::devices::UglyDucklingMk5;
 using Settings = farmhub::devices::Mk5Settings;
@@ -20,6 +16,10 @@ using Settings = farmhub::devices::Mk7Settings;
 #include <devices/UglyDucklingMk8.hpp>
 using Definition = farmhub::devices::UglyDucklingMk8;
 using Settings = farmhub::devices::Mk8Settings;
+#elif defined(MKX)
+#include <devices/UglyDucklingMkX.hpp>
+using Definition = farmhub::devices::UglyDucklingMkX;
+using Settings = farmhub::devices::MkXSettings;
 #else
 #error "No device defined"
 #endif
