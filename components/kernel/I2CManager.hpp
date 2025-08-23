@@ -58,7 +58,8 @@ public:
                   .clk_flags = 0,    // Use default clock flags
                   .master {
                       // TODO Allow clock speed to be configured
-                      .clk_speed = 400000,
+                      //      And use higher speed for internal I2C
+                      .clk_speed = 200000,
                   },
               },
           }) {
