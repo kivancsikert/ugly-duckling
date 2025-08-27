@@ -2,7 +2,7 @@
 
 namespace farmhub::peripherals::api {
 
-using Percent = double; // 0..100
+using Percent = double;    // 0..100
 using Liters = double;
 
-}
+}    // namespace farmhub::peripherals::api
