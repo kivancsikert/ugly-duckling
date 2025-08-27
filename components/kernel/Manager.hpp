@@ -112,7 +112,7 @@ public:
     }
 
     void shutdown() {
-        Lock lock(this->getMutex());
+        Lock lock(mutex);
         if (state == State::Stopped) {
             return;
         }
@@ -151,10 +151,6 @@ protected:
         const auto& factory = it->second;
         Handle instance = make(factory);
         instances.emplace(name, std::move(instance));
-    }
-
-    RecursiveMutex& getMutex() {
-        return mutex;
     }
 
     const std::string managed;
