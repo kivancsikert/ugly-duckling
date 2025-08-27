@@ -139,7 +139,6 @@ jobs:
             pytest \
               --embedded-services idf,wokwi \
               --root-logdir /logs \
-              --timeout=120 \
               ./pytest_unit-tests.py \
               --wokwi-timeout=120000
 

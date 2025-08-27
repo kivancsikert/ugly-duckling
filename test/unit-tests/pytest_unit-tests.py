@@ -5,4 +5,4 @@ import pytest
 from pytest_embedded import Dut
 
 def test_all(dut: Dut) -> None:
-    dut.expect_exact("All tests passed")
+    dut.expect_exact("All tests passed", timeout = 120)
