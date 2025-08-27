@@ -9,7 +9,9 @@ extern "C" void app_main(void) {
         NULL
     };
 
-    auto result = Catch::Session().run(argc, argv);
+    Catch::Session session;
+    session.configData().rngSeed = 12345;
+    auto result = session.run(argc, argv);
     if (result != 0) {
         printf("Test failed with result %d\n", result);
     } else {

@@ -131,11 +131,25 @@ jobs:
         run: |
             docker run \
             -v .:/project \
+            -v ./artifacts/pytest-logs:/logs \
             -w /project/test/unit-tests \
             -e HOME=/tmp \
             -e WOKWI_CLI_TOKEN=${{ secrets.WOKWI_CLI_TOKEN }} \
             lptr/pytest-embedded:latest \
-            pytest --embedded-services idf,wokwi ./pytest_unit-tests.py
+            pytest \
+              --embedded-services idf,wokwi \
+              --root-logdir /logs \
+              ./pytest_unit-tests.py \
+              --wokwi-timeout=120000
+
+      - name: Upload pytest-embedded logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-embedded-logs
+          path: |
+            artifacts/pytest-logs/**
+          if-no-files-found: warn
 
   integ-test:
     runs-on: ubuntu-latest

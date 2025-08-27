@@ -1,9 +1,10 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 
 #include <peripherals/Peripheral.hpp>
-#include <utility>
+#include <peripherals/api/ISoilMoistureSensor.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
@@ -19,7 +20,8 @@ public:
     Property<uint16_t> water { this, "water", 1000 };
 };
 
-class SoilMoistureSensor final {
+class SoilMoistureSensor final
+    : public api::ISoilMoistureSensor {
 public:
     SoilMoistureSensor(
         int airValue,
@@ -33,7 +35,7 @@ public:
             pin->getName().c_str(), airValue, waterValue);
     }
 
-    double getMoisture() {
+    double getMoisture() override {
         std::optional<uint16_t> soilMoistureValue = pin.analogRead();
         if (!soilMoistureValue.has_value()) {
             LOGD("Failed to read soil moisture value");

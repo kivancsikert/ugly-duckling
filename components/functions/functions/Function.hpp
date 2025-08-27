@@ -9,20 +9,18 @@ using farmhub::peripherals::PeripheralManager;
 
 namespace farmhub::functions {
 
-using Function = kernel::Handle;
-
 struct FunctionInitParameters {
     const std::string name;
     const std::shared_ptr<PeripheralManager> peripherals;
     const std::shared_ptr<MqttRoot> mqttRoot;
 };
 
-using FunctionCreateFn = std::function<Function(
+using FunctionCreateFn = std::function<Handle(
     FunctionInitParameters& params,
     const std::shared_ptr<FileSystem>& fs,
     const std::string& jsonSettings,
     JsonObject& initConfigJson)>;
-using FunctionFactory = kernel::Factory<Function, FunctionCreateFn>;
+using FunctionFactory = kernel::Factory<FunctionCreateFn>;
 
 // Helper to build a FunctionFactory while keeping strong types for settings/config
 template <
@@ -44,7 +42,7 @@ FunctionFactory makeFunctionFactory(
                       FunctionInitParameters& params,
                       const std::shared_ptr<FileSystem>& fs,
                       const std::string& jsonSettings,
-                      JsonObject& initConfigJson) -> Function {
+                      JsonObject& initConfigJson) -> Handle {
             // Construct and load settings
             auto settings = std::apply([](auto&&... a) {
                 return std::make_shared<TSettings>(std::forward<decltype(a)>(a)...);
@@ -77,18 +75,18 @@ FunctionFactory makeFunctionFactory(
                 });
             }
 
-            return Function::wrap(std::move(impl));
+            return Handle::wrap(std::move(impl));
         },
     };
 }
 
-class FunctionManager : public kernel::SettingsBasedManager<Function, FunctionFactory> {
+class FunctionManager : public kernel::SettingsBasedManager<FunctionFactory> {
 public:
     FunctionManager(
         const std::shared_ptr<FileSystem>& fs,
         const std::shared_ptr<PeripheralManager>& peripherals,
         const std::shared_ptr<MqttRoot>& mqttDeviceRoot)
-        : kernel::SettingsBasedManager<Function, FunctionFactory>("function")
+        : kernel::SettingsBasedManager<FunctionFactory>("function")
         , fs(fs)
         , peripherals(peripherals)
         , mqttDeviceRoot(mqttDeviceRoot) {

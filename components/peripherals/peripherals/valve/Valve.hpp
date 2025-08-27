@@ -18,7 +18,7 @@
 #include <drivers/MotorDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
-#include <peripherals/valve/ValveConfig.hpp>
+#include <peripherals/api/IValve.hpp>
 #include <peripherals/valve/ValveControlStrategy.hpp>
 #include <peripherals/valve/ValveScheduler.hpp>
 
@@ -28,10 +28,10 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::valve {
 
-class Valve
-    : public Named
-    , public HasConfig<ValveConfig>
-    , public HasShutdown {
+class Valve final
+    : public api::IValve,
+      public Named,
+      public HasShutdown {
 public:
     Valve(
         const std::string& name,
@@ -154,10 +154,6 @@ public:
         });
     }
 
-    void configure(const std::shared_ptr<ValveConfig>& config) override {
-        configure(config->schedule.get(), config->overrideState.get(), config->overrideUntil.get());
-    }
-
     void configure(const std::list<ValveSchedule>& schedules, ValveState overrideState, time_point<system_clock> overrideUntil) {
         LOGD("Configuring valve '%s' with %d schedules; override state %d until %lld",
             name.c_str(),
@@ -189,6 +185,18 @@ public:
     // Allow graceful shutdown
     void shutdown(const ShutdownParameters& /*params*/) override {
         closeBeforeShutdown();
+    }
+
+    void setState(bool shouldBeOpen) override {
+        if (shouldBeOpen) {
+            open();
+        } else {
+            close();
+        }
+    }
+
+    bool isOpen() override {
+        return state == ValveState::OPEN;
     }
 
 private:

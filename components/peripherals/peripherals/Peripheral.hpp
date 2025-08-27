@@ -27,10 +27,6 @@ using namespace farmhub::kernel::drivers;
 
 namespace farmhub::peripherals {
 
-// Peripherals
-
-using Peripheral = kernel::Handle;
-
 // Peripheral factories
 
 struct PeripheralServices {
@@ -55,12 +51,12 @@ struct PeripheralInitParameters {
     const JsonArray features;
 };
 
-using PeripheralCreateFn = std::function<Peripheral(
+using PeripheralCreateFn = std::function<Handle(
     PeripheralInitParameters& params,
     const std::shared_ptr<FileSystem>& fs,
     const std::string& jsonSettings,
     JsonObject& initConfigJson)>;
-using PeripheralFactory = kernel::Factory<Peripheral, PeripheralCreateFn>;
+using PeripheralFactory = kernel::Factory<PeripheralCreateFn>;
 
 // Helper to build a PeripheralFactory while keeping strong types for settings/config
 template <
@@ -83,7 +79,7 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
                       PeripheralInitParameters& params,
                       const std::shared_ptr<FileSystem>& fs,
                       const std::string& jsonSettings,
-                      JsonObject& initConfigJson) -> Peripheral {
+                      JsonObject& initConfigJson) -> Handle {
             // Construct and load settings
             auto settings = std::apply([](auto&&... a) {
                 return std::make_shared<TSettings>(std::forward<decltype(a)>(a)...);
@@ -116,21 +112,21 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
                 });
             }
 
-            return Peripheral::wrap(std::move(impl));
+            return Handle::wrap(std::move(impl));
         },
     };
 }
 
 // Peripheral manager
 
-class PeripheralManager final : public kernel::SettingsBasedManager<Peripheral, PeripheralFactory> {
+class PeripheralManager final : public kernel::SettingsBasedManager<PeripheralFactory> {
 public:
     PeripheralManager(
         const std::shared_ptr<FileSystem>& fs,
         const std::shared_ptr<TelemetryCollector>& telemetryCollector,
         PeripheralServices services,
         const std::shared_ptr<MqttRoot>& mqttDeviceRoot)
-        : kernel::SettingsBasedManager<Peripheral, PeripheralFactory>("peripheral")
+        : kernel::SettingsBasedManager<PeripheralFactory>("peripheral")
         , fs(fs)
         , telemetryCollector(telemetryCollector)
         , services(std::move(services))
