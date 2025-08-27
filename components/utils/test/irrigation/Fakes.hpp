@@ -3,7 +3,13 @@
 
 #include <deque>
 
+#include <peripherals/api/IFlowMeter.hpp>
+#include <peripherals/api/ISoilMoistureSensor.hpp>
+#include <peripherals/api/IValve.hpp>
+
 #include <utils/irrigation/IrrigationController.hpp>
+
+using namespace farmhub::peripherals::api;
 
 namespace farmhub::utils::irrigation {
 
@@ -17,28 +23,31 @@ struct FakeClock {
     }
 };
 
-struct FakeValve {
+class FakeValve : public IValve {
+public:
     bool open { false };
-    void setState(bool shouldBeOpen) {
+    void setState(bool shouldBeOpen) override {
         open = shouldBeOpen;
     }
-    [[nodiscard]] bool isOpen() const {
+    [[nodiscard]] bool isOpen() override {
         return open;
     }
 };
 
-struct FakeFlow {
+class FakeFlowMeter : public IFlowMeter {
+public:
     Liters bucket { 0.0 };
-    Liters getVolume() {
+    Liters getVolume() override {
         auto r = bucket;
         bucket = 0.0;
         return r;
     }
 };
 
-struct FakeMoisture {
+class FakeSoilMoistureSensor : public ISoilMoistureSensor {
+public:
     Percent moisture { 50.0 };
-    Percent getMoisture() {
+    Percent getMoisture() override {
         return moisture;
     }
 };
@@ -49,7 +58,7 @@ struct SoilSimulator {
     double gainPercentPerLiter = 0.25;              // % / L
     ms deadTime { std::chrono::seconds { 10 } };    // transport delay
     ms tau { std::chrono::seconds { 20 } };         // time constant
-    double evaporationPercentPerMin = 0.03;             // natural decay when valve off
+    double evaporationPercentPerMin = 0.03;         // natural decay when valve off
 
     struct Input {
         ms time {};
@@ -81,7 +90,7 @@ struct SoilSimulator {
             const double ageInMillis = static_cast<double>((now - (u.time + deadTime)).count());
             const double tauInMillis = static_cast<double>(tau.count());
             const double rise = 1.0 - std::exp(-ageInMillis / tauInMillis);    // 0..1
-            dm_total += gainPercentPerLiter * u.volume * rise;       // % contribution
+            dm_total += gainPercentPerLiter * u.volume * rise;                 // % contribution
         }
 
         // Crude discrete application so moisture approaches the simulated target smoothly

@@ -18,6 +18,7 @@
 #include <drivers/MotorDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
+#include <peripherals/api/IValve.hpp>
 #include <peripherals/valve/ValveConfig.hpp>
 #include <peripherals/valve/ValveControlStrategy.hpp>
 #include <peripherals/valve/ValveScheduler.hpp>
@@ -28,8 +29,9 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::valve {
 
-class Valve
-    : public Named
+class Valve final
+    : public api::IValve
+    , public Named
     , public HasConfig<ValveConfig>
     , public HasShutdown {
 public:
@@ -191,7 +193,7 @@ public:
         closeBeforeShutdown();
     }
 
-    void setState(bool shouldBeOpen) {
+    void setState(bool shouldBeOpen) override {
         if (shouldBeOpen) {
             open();
         } else {
@@ -199,7 +201,7 @@ public:
         }
     }
 
-    bool isOpen() {
+    bool isOpen() override {
         return state == ValveState::OPEN;
     }
 

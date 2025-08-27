@@ -9,14 +9,16 @@
 #include <string_view>
 #include <utility>
 
+#include <peripherals/api/IFlowMeter.hpp>
+#include <peripherals/api/ISoilMoistureSensor.hpp>
+#include <peripherals/api/IValve.hpp>
+
 using namespace std::chrono_literals;
+using namespace farmhub::peripherals::api;
 
 namespace farmhub::utils::irrigation {
 
 // ---------- Strong-ish units ----------
-using Percent = double;    // 0..100
-using Liters = double;
-
 using ms = std::chrono::milliseconds;
 using s = std::chrono::seconds;
 
@@ -25,24 +27,6 @@ template <class T>
 concept Clock = requires(const T& clock) {
     // Monotonic time in milliseconds since some epoch. Must not go backwards.
     { clock.now() } -> std::same_as<ms>;
-};
-
-template <class T>
-concept Valve = requires(T& valve, const T& constValve, bool shouldBeOpen) {
-    { valve.setState(shouldBeOpen) } -> std::same_as<void>;
-    { constValve.isOpen() } -> std::same_as<bool>;
-};
-
-template <class T>
-concept FlowMeter = requires(T& flowMeter) {
-    // Returns liters accumulated since last call and resets its internal counter.
-    { flowMeter.getVolume() } -> std::same_as<Liters>;
-};
-
-template <class T>
-concept MoistureSensor = requires(T& sensor) {
-    // Returns a raw moisture percentage reading (0..100). Caller should filter.
-    { sensor.getMoisture() } -> std::same_as<Percent>;
 };
 
 // ---------- Notification hook ----------
@@ -121,15 +105,15 @@ namespace detail {
 constexpr double epsilon = 1e-3;
 }    // namespace detail
 
-template <Clock TClock, Valve TValve, FlowMeter TFlow, MoistureSensor TMoist>
+template <Clock TClock>
 class IrrigationController {
 public:
     IrrigationController(
         Config config,
         TClock& clock,
-        TValve& valve,
-        TFlow& flowMeter,
-        TMoist& moistureSensor,
+        std::shared_ptr<IValve> valve,
+        std::shared_ptr<IFlowMeter> flowMeter,
+        std::shared_ptr<ISoilMoistureSensor> moistureSensor,
         Notifier notify = nullptr)
         : config { std::move(config) }
         , clock { clock }
@@ -184,9 +168,9 @@ private:
     Telemetry telemetry {};
 
     TClock& clock;
-    TValve& valve;
-    TFlow& flowMeter;
-    TMoist& moistureSensor;
+    std::shared_ptr<IValve> valve;
+    std::shared_ptr<IFlowMeter> flowMeter;
+    std::shared_ptr<ISoilMoistureSensor> moistureSensor;
     Notifier notify;
 
     State state { State::Idle };
@@ -210,7 +194,7 @@ private:
             lastSample = now;
         }
 
-        telemetry.rawMoisture = moistureSensor.getMoisture();
+        telemetry.rawMoisture = moistureSensor->getMoisture();
 
         // EMA for moisture
         if (std::isnan(telemetry.moisture)) {
@@ -262,18 +246,18 @@ private:
         volumeDelivered = 0.0;
         waterStartTime = clock.now();
 
-        valve.setState(true);
+        valve->setState(true);
         state = State::Watering;
     }
 
     void continueWatering() {
-        volumeDelivered += flowMeter.getVolume();
+        volumeDelivered += flowMeter->getVolume();
 
         const bool reached = volumeDelivered + detail::epsilon >= volumePlanned;
         const bool timeout = (clock.now() - waterStartTime) >= config.valveTimeout;
 
         if (reached || timeout) {
-            valve.setState(false);
+            valve->setState(false);
             telemetry.totalVolume += volumeDelivered;
             telemetry.totalCycles += 1;
             telemetry.lastVolumeDelivered = volumeDelivered;

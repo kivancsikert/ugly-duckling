@@ -13,6 +13,7 @@
 #include <utility>
 
 #include <peripherals/Peripheral.hpp>
+#include <peripherals/api/IFlowMeter.hpp>
 
 using namespace farmhub::kernel::mqtt;
 
@@ -27,8 +28,9 @@ public:
     Property<milliseconds> measurementFrequency { this, "measurementFrequency", 1s };
 };
 
-class FlowMeter
-    : public Named {
+class FlowMeter final
+    : public api::IFlowMeter,
+      public Named {
 public:
     FlowMeter(
         const std::string& name,
@@ -70,7 +72,7 @@ public:
         });
     }
 
-    double getVolume() {
+    double getVolume() override {
         Lock lock(updateMutex);
         return getVolumeAndReset();
     }

@@ -16,9 +16,9 @@ void log(std::string_view message) {
 
 TEST_CASE("Waters up to band without overshoot") {
     FakeClock clock;
-    FakeValve valve;
-    FakeFlow flowMeter;
-    FakeMoisture moistureSensor;
+    auto valve = std::make_shared<FakeValve>();
+    auto flowMeter = std::make_shared<FakeFlowMeter>();
+    auto moistureSensor = std::make_shared<FakeSoilMoistureSensor>();
     SoilSimulator soil;
 
     Config config = {
@@ -30,17 +30,17 @@ TEST_CASE("Waters up to band without overshoot") {
     IrrigationController controller { config, clock, valve, flowMeter, moistureSensor, log };
 
     // Simulate 30 minutes at 1s tick
-    moistureSensor.moisture = 55.0;
+    moistureSensor->moisture = 55.0;
     for (int i = 0; i < 1800; ++i) {
         // Produce flow when valve is on
-        if (valve.isOpen()) {
+        if (valve->isOpen()) {
             constexpr Liters flowRatePerMinute = 15.0; // L / min
             const Liters volumePerTick = flowRatePerMinute * chrono_ratio(oneTick, 1min);
-            flowMeter.bucket += volumePerTick;
+            flowMeter->bucket += volumePerTick;
             soil.inject(clock.now(), volumePerTick);
         }
         controller.tick();
-        soil.step(clock.now(), moistureSensor.moisture, oneTick);
+        soil.step(clock.now(), moistureSensor->moisture, oneTick);
         clock.advance(oneTick);
         if (controller.getTelemetry().moisture >= config.targetLow && controller.getState() == State::Idle) {
             break;
@@ -48,7 +48,7 @@ TEST_CASE("Waters up to band without overshoot") {
     }
 
     REQUIRE(controller.getTelemetry().moisture >= config.targetLow);
-    REQUIRE(valve.isOpen() == false);
+    REQUIRE(valve->isOpen() == false);
 }
 
 }    // namespace farmhub::utils::irrigation
