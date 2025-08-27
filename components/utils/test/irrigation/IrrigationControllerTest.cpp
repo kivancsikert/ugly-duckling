@@ -4,7 +4,11 @@
 
 #include "Fakes.hpp"
 
+#include <utils/Chrono.hpp>
+
 namespace farmhub::utils::irrigation {
+
+constexpr auto oneTick = 1000ms;
 
 void log(std::string_view message) {
     printf("Irrigation controller: %s\n", message.data());
@@ -26,14 +30,14 @@ TEST_CASE("Waters up to band without overshoot") {
     IrrigationController controller { config, clock, valve, flowMeter, moistureSensor, log };
 
     // Simulate 30 minutes at 1s tick
-    constexpr auto oneTick = 1000ms;
     moistureSensor.moisture = 55.0;
     for (int i = 0; i < 1800; ++i) {
-        // produce flow when valve is on
+        // Produce flow when valve is on
         if (valve.isOpen()) {
-            const auto litersThisTick = 0.25;    // 15 L/min
-            flowMeter.bucket += litersThisTick;
-            soil.inject(clock.now(), litersThisTick);
+            constexpr Liters flowRatePerMinute = 15.0; // L / min
+            const Liters volumePerTick = flowRatePerMinute * chrono_ratio(oneTick, 1min);
+            flowMeter.bucket += volumePerTick;
+            soil.inject(clock.now(), volumePerTick);
         }
         controller.tick();
         soil.step(clock.now(), moistureSensor.moisture, oneTick);
