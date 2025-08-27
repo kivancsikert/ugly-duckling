@@ -6,41 +6,45 @@
 
 namespace farmhub::utils::irrigation {
 
+void log(std::string_view message) {
+    printf("Irrigation controller: %s\n", message.data());
+}
+
 TEST_CASE("Waters up to band without overshoot") {
-    FakeClock clk;
-    FakeValve val;
-    FakeFlow flow;
+    FakeClock clock;
+    FakeValve valve;
+    FakeFlow flowMeter;
     FakeMoisture moistureSensor;
-    SoilSim sim;
+    SoilSimulator soil;
 
-    Config cfg;
-    cfg.targetLow = 60;
-    cfg.targetHigh = 80;
-    cfg.valveTimeout = std::chrono::minutes { 2 };
+    Config config = {
+        .targetLow = 60,
+        .targetHigh = 80,
+        .valveTimeout = std::chrono::minutes { 2 },
+    };
 
-    Notifier note = [](std::string_view) { };
-
-    IrrigationController ctrl { cfg, clk, val, flow, moistureSensor, std::move(note) };
+    IrrigationController controller { config, clock, valve, flowMeter, moistureSensor, log };
 
     // Simulate 30 minutes at 1s tick
-    constexpr auto dt = ms { 1000 };
+    constexpr auto oneTick = 1000ms;
     moistureSensor.moisture = 55.0;
     for (int i = 0; i < 1800; ++i) {
         // produce flow when valve is on
-        if (val.isOpen()) {
-            const auto liters_this_tick = 0.25;    // 15 L/min
-            flow.bucket += liters_this_tick;
-            sim.inject(clk.now(), liters_this_tick);
+        if (valve.isOpen()) {
+            const auto litersThisTick = 0.25;    // 15 L/min
+            flowMeter.bucket += litersThisTick;
+            soil.inject(clock.now(), litersThisTick);
         }
-        ctrl.tick();
-        sim.step(clk.now(), moistureSensor.moisture, dt);
-        clk.advance(dt);
-        if (ctrl.getTelemetry().moisture >= cfg.targetLow && ctrl.getState() == State::Idle)
+        controller.tick();
+        soil.step(clock.now(), moistureSensor.moisture, oneTick);
+        clock.advance(oneTick);
+        if (controller.getTelemetry().moisture >= config.targetLow && controller.getState() == State::Idle) {
             break;
+        }
     }
 
-    REQUIRE(ctrl.getTelemetry().moisture >= cfg.targetLow);
-    REQUIRE_FALSE(val.isOpen());
+    REQUIRE(controller.getTelemetry().moisture >= config.targetLow);
+    REQUIRE(valve.isOpen() == false);
 }
 
 }    // namespace farmhub::utils::irrigation

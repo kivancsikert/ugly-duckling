@@ -8,12 +8,12 @@
 namespace farmhub::utils::irrigation {
 
 struct FakeClock {
-    ms t { 0 };
+    ms time { 0 };
     [[nodiscard]] ms now() const {
-        return t;
+        return time;
     }
     void advance(ms dt) {
-        t += dt;
+        time += dt;
     }
 };
 
@@ -44,25 +44,26 @@ struct FakeMoisture {
 };
 
 // Simple FOPDT-ish soil simulator (test-only)
-struct SoilSim {
+struct SoilSimulator {
     // Parameters
-    double K_percent_per_liter = 0.25;         // % / L
-    ms deadTime { std::chrono::seconds { 10 } };     // transport delay
-    ms tau { std::chrono::seconds { 20 } };    // time constant
-    double evap_percent_per_min = 0.03;        // natural decay when valve off
+    double gainPercentPerLiter = 0.25;              // % / L
+    ms deadTime { std::chrono::seconds { 10 } };    // transport delay
+    ms tau { std::chrono::seconds { 20 } };         // time constant
+    double evaporationPercentPerMin = 0.03;             // natural decay when valve off
 
     struct Input {
-        ms t{};
-        Liters liters{};
+        ms time {};
+        Liters volume {};
     };
-    std::deque<Input> hist{};
+    std::deque<Input> history {};
 
-    void inject(ms now, Liters liters) {
-        if (liters > 0.0)
-            hist.push_back({ now, liters });
+    void inject(ms now, Liters volume) {
+        if (volume > 0.0) {
+            history.push_back({ now, volume });
+        }
         // Trim very old inputs
-        while (!hist.empty() && (now - hist.front().t) > (deadTime + 10 * tau)) {
-            hist.pop_front();
+        while (!history.empty() && (now - history.front().time) > (deadTime + 10 * tau)) {
+            history.pop_front();
         }
     }
 
@@ -70,17 +71,17 @@ struct SoilSim {
     void step(ms now, Percent& moisture, ms dt) const {
         // Evaporative drift (approximate: linear decay)
         const double dt_min = static_cast<double>(dt.count()) / 60000.0;
-        moisture = std::max(0.0, moisture - (evap_percent_per_min * dt_min));
+        moisture = std::max(0.0, moisture - (evaporationPercentPerMin * dt_min));
 
         // Aggregate rise from all past inputs after dead-time
         double dm_total = 0.0;
-        for (auto const& u : hist) {
-            if (now <= u.t + deadTime)
+        for (auto const& u : history) {
+            if (now <= u.time + deadTime)
                 continue;    // not arrived yet
-            const double age_ms = static_cast<double>((now - (u.t + deadTime)).count());
-            const double tau_ms = static_cast<double>(tau.count());
-            const double rise = 1.0 - std::exp(-age_ms / tau_ms);    // 0..1
-            dm_total += K_percent_per_liter * u.liters * rise;       // % contribution
+            const double ageInMillis = static_cast<double>((now - (u.time + deadTime)).count());
+            const double tauInMillis = static_cast<double>(tau.count());
+            const double rise = 1.0 - std::exp(-ageInMillis / tauInMillis);    // 0..1
+            dm_total += gainPercentPerLiter * u.volume * rise;       // % contribution
         }
 
         // Crude discrete application so moisture approaches the simulated target smoothly
