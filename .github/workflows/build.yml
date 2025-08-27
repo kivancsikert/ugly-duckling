@@ -137,6 +137,15 @@ jobs:
             lptr/pytest-embedded:latest \
             pytest --embedded-services idf,wokwi ./pytest_unit-tests.py --wokwi-timeout=60000
 
+      - name: Upload pytest-embedded logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-embedded-logs
+          path: |
+            /tmp/pytest-embedded/**
+          if-no-files-found: warn
+
   integ-test:
     runs-on: ubuntu-latest
 
