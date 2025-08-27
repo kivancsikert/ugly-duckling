@@ -191,6 +191,18 @@ public:
         closeBeforeShutdown();
     }
 
+    void setState(bool shouldBeOpen) {
+        if (shouldBeOpen) {
+            open();
+        } else {
+            close();
+        }
+    }
+
+    bool isOpen() {
+        return state == ValveState::OPEN;
+    }
+
 private:
     void override(ValveState state, time_point<system_clock> until) {
         if (state == ValveState::NONE) {

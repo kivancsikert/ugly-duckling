@@ -70,6 +70,11 @@ public:
         });
     }
 
+    double getVolume() {
+        Lock lock(updateMutex);
+        return getVolumeAndReset();
+    }
+
     void populateTelemetry(JsonObject& json) {
         Lock lock(updateMutex);
         populateTelemetryUnderLock(json);
@@ -77,8 +82,10 @@ public:
 
 private:
     void populateTelemetryUnderLock(JsonObject& json) {
-        auto currentVolume = volume;
-        volume = 0;
+        getVolumeAndReset();
+        auto currentVolume = unpublishedVolume;
+        unpublishedVolume = 0.0;
+
         // Volume is measured in liters
         json["volume"] = currentVolume;
         auto duration = duration_cast<microseconds>(lastMeasurement - lastPublished);
@@ -89,6 +96,13 @@ private:
         lastPublished = lastMeasurement;
     }
 
+    double getVolumeAndReset() {
+        double currentVolume = volume;
+        volume = 0.0;
+        unpublishedVolume += currentVolume;
+        return currentVolume;
+    }
+
     std::shared_ptr<PulseCounter> counter;
     const double qFactor;
 
@@ -96,6 +110,7 @@ private:
     time_point<boot_clock> lastSeenFlow;
     time_point<boot_clock> lastPublished;
     double volume = 0.0;
+    double unpublishedVolume = 0.0;
 
     Mutex updateMutex;
 };
