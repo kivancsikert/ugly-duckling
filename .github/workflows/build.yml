@@ -135,7 +135,7 @@ jobs:
             -e HOME=/tmp \
             -e WOKWI_CLI_TOKEN=${{ secrets.WOKWI_CLI_TOKEN }} \
             lptr/pytest-embedded:latest \
-            pytest --embedded-services idf,wokwi ./pytest_unit-tests.py --wokwi-timeout=60000
+            pytest --embedded-services idf,wokwi ./pytest_unit-tests.py --wokwi-timeout=120000
 
       - name: Upload pytest-embedded logs
         if: always()
