@@ -24,11 +24,11 @@ TEST_CASE("Waters up to band without overshoot") {
 
     // Simulate 30 minutes at 1s tick
     constexpr auto dt = ms { 1000 };
-    moist.m = 55.f;
+    moist.m = 55.0;
     for (int i = 0; i < 1800; ++i) {
         // produce flow when valve is on
         if (val.is_on()) {
-            const auto liters_this_tick = 0.25f;    // 15 L/min
+            const auto liters_this_tick = 0.25;    // 15 L/min
             flow.bucket += liters_this_tick;
             sim.inject(clk.now(), liters_this_tick);
         }
