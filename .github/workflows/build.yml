@@ -140,6 +140,7 @@ jobs:
               --embedded-services idf,wokwi \
               --root-logdir /logs \
               ./pytest_unit-tests.py \
+              --timeout=120
               --wokwi-timeout=120000
 
       - name: Upload pytest-embedded logs
