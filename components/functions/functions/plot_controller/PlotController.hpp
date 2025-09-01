@@ -42,8 +42,7 @@ public:
 
 class PlotController final
     : public Named,
-      public HasConfig<PlotConfig>,
-      public HasShutdown {
+      public HasConfig<PlotConfig> {
 public:
     PlotController(
         const std::string& name,
@@ -64,10 +63,6 @@ public:
             overrideScheduler.clear();
         }
         timeBasedScheduler.setSchedules(config->schedule.get());
-    }
-
-    void shutdown(const ShutdownParameters& /*parameters*/) override {
-        valve->closeBeforeShutdown();
     }
 
 private:
