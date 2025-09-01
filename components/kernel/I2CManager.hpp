@@ -52,9 +52,10 @@ public:
               .cfg = {
                   .sda_io_num = bus->sda->getGpio(),
                   .scl_io_num = bus->scl->getGpio(),
-                  // TODO Allow this to be configred
-                  .sda_pullup_en = 0,
-                  .scl_pullup_en = 0,
+                  // Note: These enable ~45kOhm pull-ups; we still need stronger external ones
+                  //       for proper operation (~4.7kOhm, or even lower).
+                  .sda_pullup_en = 1,
+                  .scl_pullup_en = 1,
                   .clk_flags = 0,    // Use default clock flags
                   .master {
                       // TODO Allow clock speed to be configured
