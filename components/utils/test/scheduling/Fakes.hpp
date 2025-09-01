@@ -11,7 +11,7 @@
 
 using namespace farmhub::peripherals::api;
 
-namespace farmhub::utils::irrigation {
+namespace farmhub::utils::scheduling {
 
 struct FakeClock {
     ms time { 0 };
@@ -100,4 +100,4 @@ struct SoilSimulator {
     }
 };
 
-}    // namespace farmhub::utils::irrigation
+}    // namespace farmhub::utils::scheduling

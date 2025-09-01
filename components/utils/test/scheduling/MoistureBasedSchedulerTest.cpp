@@ -6,7 +6,7 @@
 
 #include <utils/Chrono.hpp>
 
-namespace farmhub::utils::irrigation {
+namespace farmhub::utils::scheduling {
 
 constexpr auto oneTick = 1000ms;
 
@@ -51,4 +51,4 @@ TEST_CASE("Waters up to band without overshoot") {
     REQUIRE(valve->isOpen() == false);
 }
 
-}    // namespace farmhub::utils::irrigation
+}    // namespace farmhub::utils::scheduling

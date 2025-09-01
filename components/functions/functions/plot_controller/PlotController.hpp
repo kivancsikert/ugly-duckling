@@ -11,33 +11,36 @@
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/flow_meter/FlowMeter.hpp>
 #include <peripherals/valve/Valve.hpp>
+#include <utils/scheduling/OverrideScheduler.hpp>
+#include <utils/scheduling/TimeBasedScheduler.hpp>
 
 using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
 using namespace farmhub::peripherals::flow_meter;
 using namespace farmhub::peripherals::valve;
+using namespace farmhub::utils::scheduling;
 
 namespace farmhub::functions::plot_controller {
 
 class PlotConfig : public ConfigurationSection {
 public:
-    ArrayProperty<ValveSchedule> schedule { this, "schedule" };
+    ArrayProperty<TimeBasedSchedule> schedule { this, "schedule" };
     Property<std::string> overrideState { this, "overrideState" };
     Property<time_point<system_clock>> overrideUntil { this, "overrideUntil" };
 
-    ValveState getOverrideState() const {
+    std::optional<TargetState> getOverrideState() const {
         auto state = overrideState.get();
         if (state == "open") {
-            return ValveState::OPEN;
+            return TargetState::OPEN;
         }
         if (state == "closed") {
-            return ValveState::CLOSED;
+            return TargetState::CLOSED;
         }
-        return ValveState::NONE;
+        return {};
     }
 };
 
-class PlotController
+class PlotController final
     : public Named,
       public HasConfig<PlotConfig>,
       public HasShutdown {
@@ -54,7 +57,13 @@ public:
     }
 
     void configure(const std::shared_ptr<PlotConfig>& config) override {
-        valve->configure(config->schedule.get(), config->getOverrideState(), config->overrideUntil.get());
+        auto overrideState = config->getOverrideState();
+        if (overrideState.has_value()) {
+            overrideScheduler.setOverride(*overrideState, config->overrideUntil.get());
+        } else {
+            overrideScheduler.clear();
+        }
+        timeBasedScheduler.setSchedules(config->schedule.get());
     }
 
     void shutdown(const ShutdownParameters& /*parameters*/) override {
@@ -64,6 +73,9 @@ public:
 private:
     std::shared_ptr<Valve> valve;
     std::shared_ptr<FlowMeter> flowMeter;
+
+    OverrideScheduler overrideScheduler;
+    TimeBasedScheduler timeBasedScheduler;
 };
 
 class PlotSettings
@@ -84,3 +96,32 @@ inline FunctionFactory makeFactory() {
 }
 
 }    // namespace farmhub::functions::plot_controller
+
+namespace ArduinoJson {
+
+using farmhub::utils::scheduling::TimeBasedSchedule;
+
+template <>
+struct Converter<TimeBasedSchedule> {
+    static void toJson(const TimeBasedSchedule& src, JsonVariant dst) {
+        JsonObject obj = dst.to<JsonObject>();
+        obj["start"] = src.start;
+        obj["period"] = src.period.count();
+        obj["duration"] = src.duration.count();
+    }
+
+    static TimeBasedSchedule fromJson(JsonVariantConst src) {
+        auto start = src["start"].as<time_point<system_clock>>();
+        auto period = seconds(src["period"].as<int64_t>());
+        auto duration = seconds(src["duration"].as<int64_t>());
+        return { .start = start, .period = period, .duration = duration };
+    }
+
+    static bool checkJson(JsonVariantConst src) {
+        return src["start"].is<time_point<system_clock>>()
+            && src["period"].is<int64_t>()
+            && src["duration"].is<int64_t>();
+    }
+};
+
+}    // namespace ArduinoJson

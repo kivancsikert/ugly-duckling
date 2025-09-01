@@ -13,10 +13,12 @@
 #include <peripherals/api/ISoilMoistureSensor.hpp>
 #include <peripherals/api/IValve.hpp>
 
+#include <utils/scheduling/IScheduler.hpp>
+
 using namespace std::chrono_literals;
 using namespace farmhub::peripherals::api;
 
-namespace farmhub::utils::irrigation {
+namespace farmhub::utils::scheduling {
 
 // ---------- Strong-ish units ----------
 using ms = std::chrono::milliseconds;
@@ -106,7 +108,7 @@ constexpr double epsilon = 1e-3;
 }    // namespace detail
 
 template <Clock TClock>
-class MoistureBasedScheduler {
+class MoistureBasedScheduler : public IScheduler {
 public:
     MoistureBasedScheduler(
         Config config,
@@ -131,7 +133,7 @@ public:
     }
 
     // Called at a fixed cadence by your task (e.g., every 1–2 seconds).
-    void tick() {
+    ScheduleResult tick() override {
         sampleAndFilter();
 
         switch (state) {
@@ -150,6 +152,12 @@ public:
             case State::Fault: /* stay here */
                 break;
         }
+
+        return {
+            .targetState = state == State::Watering ? TargetState::OPEN : TargetState::CLOSED,
+            // TODO Ask for less frequent callbacks when soaking or
+            .nextDeadline = std::nullopt
+        };
     }
 
     // Control surface
@@ -318,4 +326,4 @@ private:
     }
 };
 
-}    // namespace farmhub::utils::irrigation
+}    // namespace farmhub::utils::scheduling
