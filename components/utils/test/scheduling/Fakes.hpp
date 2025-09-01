@@ -7,7 +7,7 @@
 #include <peripherals/api/ISoilMoistureSensor.hpp>
 #include <peripherals/api/IValve.hpp>
 
-#include <utils/irrigation/IrrigationController.hpp>
+#include <utils/scheduling/MoistureBasedScheduler.hpp>
 
 using namespace farmhub::peripherals::api;
 

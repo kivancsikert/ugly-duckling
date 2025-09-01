@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <utils/irrigation/IrrigationController.hpp>
+#include <utils/scheduling/MoistureBasedScheduler.hpp>
 
 #include "Fakes.hpp"
 
@@ -11,7 +11,7 @@ namespace farmhub::utils::irrigation {
 constexpr auto oneTick = 1000ms;
 
 void log(std::string_view message) {
-    printf("Irrigation controller: %s\n", message.data());
+    printf("Moisture based scheduler: %s\n", message.data());
 }
 
 TEST_CASE("Waters up to band without overshoot") {
@@ -27,7 +27,7 @@ TEST_CASE("Waters up to band without overshoot") {
         .valveTimeout = std::chrono::minutes { 2 },
     };
 
-    IrrigationController controller { config, clock, valve, flowMeter, moistureSensor, log };
+    MoistureBasedScheduler scheduler { config, clock, valve, flowMeter, moistureSensor, log };
 
     // Simulate 30 minutes at 1s tick
     moistureSensor->moisture = 55.0;
@@ -39,15 +39,15 @@ TEST_CASE("Waters up to band without overshoot") {
             flowMeter->bucket += volumePerTick;
             soil.inject(clock.now(), volumePerTick);
         }
-        controller.tick();
+        scheduler.tick();
         soil.step(clock.now(), moistureSensor->moisture, oneTick);
         clock.advance(oneTick);
-        if (controller.getTelemetry().moisture >= config.targetLow && controller.getState() == State::Idle) {
+        if (scheduler.getTelemetry().moisture >= config.targetLow && scheduler.getState() == State::Idle) {
             break;
         }
     }
 
-    REQUIRE(controller.getTelemetry().moisture >= config.targetLow);
+    REQUIRE(scheduler.getTelemetry().moisture >= config.targetLow);
     REQUIRE(valve->isOpen() == false);
 }
 

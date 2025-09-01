@@ -106,9 +106,9 @@ constexpr double epsilon = 1e-3;
 }    // namespace detail
 
 template <Clock TClock>
-class IrrigationController {
+class MoistureBasedScheduler {
 public:
-    IrrigationController(
+    MoistureBasedScheduler(
         Config config,
         TClock& clock,
         std::shared_ptr<IValve> valve,
