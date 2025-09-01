@@ -19,8 +19,7 @@ struct TimeBasedSchedule {
 
 class TimeBasedScheduler : public IScheduler {
 public:
-    TimeBasedScheduler() {
-    }
+    TimeBasedScheduler() = default;
 
     void setSchedules(const std::list<TimeBasedSchedule>& newSchedules) {
         schedules = newSchedules;
@@ -107,7 +106,7 @@ public:
     }
 
 private:
-    std::list<TimeBasedSchedule> schedules {};
+    std::list<TimeBasedSchedule> schedules;
 };
 
 }    // namespace farmhub::utils::scheduling

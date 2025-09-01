@@ -44,7 +44,7 @@ private:
         time_point<system_clock> until;
     };
 
-    std::optional<OverrideState> overrideState {};
+    std::optional<OverrideState> overrideState;
 };
 
 }    // namespace farmhub::utils::scheduling
