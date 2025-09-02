@@ -23,19 +23,27 @@ struct FakeClock {
     }
 };
 
-class FakeValve : public IValve {
-public:
-    bool open { false };
-    void setState(bool shouldBeOpen) override {
-        open = shouldBeOpen;
-    }
-    [[nodiscard]] bool isOpen() override {
-        return open;
+struct FakePeripheral : virtual IPeripheral {
+    const std::string& getName() const override {
+        return "fake";
     }
 };
 
-class FakeFlowMeter : public IFlowMeter {
-public:
+struct FakeValve : FakePeripheral, IValve {
+    bool open { false };
+
+    bool transitionTo(std::optional<TargetState> target) override {
+        auto oldState = open;
+        open = target.value_or(TargetState::CLOSED) == TargetState::OPEN;
+        return oldState != open;
+    }
+
+    ValveState getState() const override {
+        return open ? ValveState::OPEN : ValveState::CLOSED;
+    }
+};
+
+struct FakeFlowMeter : FakePeripheral, IFlowMeter {
     Liters bucket { 0.0 };
     Liters getVolume() override {
         auto r = bucket;
@@ -44,8 +52,7 @@ public:
     }
 };
 
-class FakeSoilMoistureSensor : public ISoilMoistureSensor {
-public:
+struct FakeSoilMoistureSensor : FakePeripheral, ISoilMoistureSensor {
     Percent moisture { 50.0 };
     Percent getMoisture() override {
         return moisture;

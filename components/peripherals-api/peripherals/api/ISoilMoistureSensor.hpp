@@ -1,12 +1,11 @@
 #pragma once
 
+#include "IPeripheral.hpp"
 #include "Units.hpp"
 
 namespace farmhub::peripherals::api {
 
-class ISoilMoistureSensor {
-public:
-    virtual ~ISoilMoistureSensor() = default;
+struct ISoilMoistureSensor : virtual IPeripheral {
     virtual Percent getMoisture() = 0;    // Returns a raw moisture percentage reading
 };
 

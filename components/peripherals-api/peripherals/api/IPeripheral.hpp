@@ -4,8 +4,7 @@
 
 namespace farmhub::peripherals::api {
 
-class IPeripheral {
-public:
+struct IPeripheral {
     virtual ~IPeripheral() = default;
 
     virtual const std::string& getName() const = 0;
