@@ -9,18 +9,15 @@
 #include <Named.hpp>
 #include <functions/Function.hpp>
 #include <mqtt/MqttDriver.hpp>
-#include <peripherals/Motors.hpp>
-#include <peripherals/Peripheral.hpp>
-#include <peripherals/flow_meter/FlowMeter.hpp>
-#include <peripherals/valve/Valve.hpp>
+#include <peripherals/api/IFlowMeter.hpp>
+#include <peripherals/api/IValve.hpp>
 #include <utils/scheduling/OverrideScheduler.hpp>
 #include <utils/scheduling/TimeBasedScheduler.hpp>
 
 using namespace std::chrono;
 using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
-using namespace farmhub::peripherals::flow_meter;
-using namespace farmhub::peripherals::valve;
+using namespace farmhub::peripherals::api;
 using namespace farmhub::utils::scheduling;
 
 namespace farmhub::functions::plot_controller {
@@ -49,15 +46,15 @@ class PlotController final
 public:
     PlotController(
         const std::string& name,
-        const std::shared_ptr<Valve>& valve,
-        const std::shared_ptr<FlowMeter>& flowMeter,
+        const std::shared_ptr<IValve>& valve,
+        const std::shared_ptr<IFlowMeter>& flowMeter,
         const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
         : Named(name)
         , valve(valve)
         , flowMeter(flowMeter)
         , telemetryPublisher(telemetryPublisher) {
         LOGD("Creating plot controller '%s' with valve '%s' and flow meter '%s'",
-            name.c_str(), valve->name.c_str(), flowMeter->name.c_str());
+            name.c_str(), valve->getName().c_str(), flowMeter->getName().c_str());
 
         Task::run(name, 4096, [this, name](Task& /*task*/) {
             auto shouldPublishTelemetry = true;
@@ -122,8 +119,8 @@ private:
         std::list<TimeBasedSchedule> schedules;
     };
 
-    std::shared_ptr<Valve> valve;
-    std::shared_ptr<FlowMeter> flowMeter;
+    std::shared_ptr<IValve> valve;
+    std::shared_ptr<IFlowMeter> flowMeter;
     std::shared_ptr<TelemetryPublisher> telemetryPublisher;
 
     OverrideScheduler overrideScheduler;
@@ -143,8 +140,8 @@ inline FunctionFactory makeFactory() {
     return makeFunctionFactory<PlotController, PlotSettings, PlotConfig>(
         "plot-controller",
         [](const FunctionInitParameters& params, const std::shared_ptr<PlotSettings>& settings) {
-            auto valve = params.peripheral<Valve>(settings->valve.get());
-            auto flowMeter = params.peripheral<FlowMeter>(settings->flowMeter.get());
+            auto valve = params.peripheral<IValve>(settings->valve.get());
+            auto flowMeter = params.peripheral<IFlowMeter>(settings->flowMeter.get());
             return std::make_shared<PlotController>(params.name, valve, flowMeter, params.services.telemetryPublisher);
         });
 }

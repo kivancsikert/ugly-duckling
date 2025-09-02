@@ -1,5 +1,7 @@
 #pragma once
 
+#include "IPeripheral.hpp"
+
 namespace farmhub::peripherals::api {
 
 enum class TargetState : int8_t {
@@ -40,10 +42,7 @@ inline static const char* toString(ValveState state) {
     }
 }
 
-class IValve {
-public:
-    virtual ~IValve() = default;
-
+struct IValve : virtual IPeripheral {
     /**
      * @brief Transition the valve to a new state.
      *

@@ -28,13 +28,13 @@ namespace farmhub::peripherals::valve {
 
 class Valve final
     : public api::IValve,
-      public Named,
+      public Peripheral,
       public HasShutdown {
 public:
     Valve(
         const std::string& name,
         std::unique_ptr<ValveControlStrategy> _strategy)
-        : Named(name)
+        : Peripheral(name)
         , nvs(name)
         , strategy(std::move(_strategy)) {
 

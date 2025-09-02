@@ -23,6 +23,7 @@ using namespace std::chrono_literals;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 using namespace farmhub::peripherals;
+using namespace farmhub::peripherals::api;
 
 namespace farmhub::peripherals::valve {
 
@@ -30,7 +31,7 @@ inline PeripheralFactory makeFactory(
     const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
     ValveControlStrategyType defaultStrategy) {
 
-    return makePeripheralFactory<Valve, ValveSettings>(
+    return makePeripheralFactory<IValve, Valve, ValveSettings>(
         "valve",
         "valve",
         [motors](PeripheralInitParameters& params, const std::shared_ptr<ValveSettings>& settings) {

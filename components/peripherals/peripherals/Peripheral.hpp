@@ -20,12 +20,28 @@
 #include <Telemetry.hpp>
 #include <drivers/SwitchManager.hpp>
 
+#include <peripherals/api/IPeripheral.hpp>
+
 #include "PeripheralException.hpp"
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::peripherals::api;
 
 namespace farmhub::peripherals {
+
+class Peripheral
+    : public virtual IPeripheral,
+      public Named {
+public:
+    Peripheral(const std::string& name)
+        : Named(name) {
+    }
+
+    virtual const std::string& getName() const override {
+        return Named::name;
+    }
+};
 
 // Peripheral factories
 
@@ -60,7 +76,8 @@ using PeripheralFactory = kernel::Factory<PeripheralCreateFn>;
 
 // Helper to build a PeripheralFactory while keeping strong types for settings/config
 template <
-    typename Impl,
+    typename Type,
+    std::derived_from<Type> Impl,
     std::derived_from<ConfigurationSection> TSettings,
     std::derived_from<ConfigurationSection> TConfig = EmptyConfiguration,
     typename... TSettingsArgs>
@@ -111,8 +128,7 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
                     }
                 });
             }
-
-            return Handle::wrap(std::move(impl));
+            return Handle::wrap(std::move(std::static_pointer_cast<Type>(impl)));
         },
     };
 }

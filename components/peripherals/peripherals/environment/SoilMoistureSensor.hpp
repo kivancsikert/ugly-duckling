@@ -21,18 +21,21 @@ public:
 };
 
 class SoilMoistureSensor final
-    : public api::ISoilMoistureSensor {
+    : public api::ISoilMoistureSensor,
+      public Peripheral {
 public:
     SoilMoistureSensor(
+        const std::string& name,
         int airValue,
         int waterValue,
         const InternalPinPtr& pin)
-        : airValue(airValue)
+        : Peripheral(name)
+        , airValue(airValue)
         , waterValue(waterValue)
         , pin(pin) {
 
-        LOGI("Initializing soil moisture sensor on pin %s; air value: %d; water value: %d",
-            pin->getName().c_str(), airValue, waterValue);
+        LOGI("Initializing soil moisture sensor '%s' on pin %s; air value: %d; water value: %d",
+            name.c_str(), pin->getName().c_str(), airValue, waterValue);
     }
 
     double getMoisture() override {
@@ -59,11 +62,15 @@ private:
 };
 
 inline PeripheralFactory makeFactoryForSoilMoisture() {
-    return makePeripheralFactory<SoilMoistureSensor, SoilMoistureSensorSettings>(
+    return makePeripheralFactory<SoilMoistureSensor, SoilMoistureSensor, SoilMoistureSensorSettings>(
         "environment:soil-moisture",
         "environment",
         [](PeripheralInitParameters& params, const std::shared_ptr<SoilMoistureSensorSettings>& settings) {
-            auto sensor = std::make_shared<SoilMoistureSensor>(settings->air.get(), settings->water.get(), settings->pin.get());
+            auto sensor = std::make_shared<SoilMoistureSensor>(
+                params.name,
+                settings->air.get(),
+                settings->water.get(),
+                settings->pin.get());
             params.registerFeature("moisture", [sensor](JsonObject& telemetryJson) {
                 telemetryJson["value"] = sensor->getMoisture();
             });

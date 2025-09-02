@@ -38,12 +38,14 @@ void convertFromJson(JsonVariantConst src, FencePinConfig& dst) {
     dst.voltage = src["voltage"];
 }
 
-class ElectricFenceMonitor final {
+class ElectricFenceMonitor final
+    : public Peripheral {
 public:
     ElectricFenceMonitor(
         const std::string& name,
         const std::shared_ptr<PulseCounterManager>& pulseCounterManager,
-        const std::shared_ptr<ElectricFenceMonitorSettings>& settings) {
+        const std::shared_ptr<ElectricFenceMonitorSettings>& settings)
+        : Peripheral(name) {
 
         std::string pinsDescription;
         for (const auto& pinConfig : settings->pins.get()) {
@@ -94,11 +96,14 @@ private:
 };
 
 inline PeripheralFactory makeFactory() {
-    return makePeripheralFactory<ElectricFenceMonitor, ElectricFenceMonitorSettings>(
+    return makePeripheralFactory<ElectricFenceMonitor, ElectricFenceMonitor, ElectricFenceMonitorSettings>(
         "electric-fence",
         "electric-fence",
         [](PeripheralInitParameters& params, const std::shared_ptr<ElectricFenceMonitorSettings>& settings) {
-            auto monitor = std::make_shared<ElectricFenceMonitor>(params.name, params.services.pulseCounterManager, settings);
+            auto monitor = std::make_shared<ElectricFenceMonitor>(
+                params.name,
+                params.services.pulseCounterManager,
+                settings);
             params.registerFeature("voltage", [monitor](JsonObject& telemetryJson) {
                 telemetryJson["value"] = monitor->getVoltage();
             });

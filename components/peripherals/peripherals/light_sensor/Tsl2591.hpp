@@ -75,12 +75,17 @@ private:
 };
 
 inline PeripheralFactory makeFactoryForTsl2591() {
-    return makePeripheralFactory<Tsl2591, Tsl2591Settings>(
+    return makePeripheralFactory<Tsl2591, Tsl2591, Tsl2591Settings>(
         "light-sensor:tsl2591",
         "light-sensor",
         [](PeripheralInitParameters& params, const std::shared_ptr<Tsl2591Settings>& settings) {
             I2CConfig i2cConfig = settings->parse(TSL2591_ADDR);
-            auto sensor = std::make_shared<Tsl2591>(params.name, params.services.i2c, i2cConfig, settings->measurementFrequency.get(), settings->latencyInterval.get());
+            auto sensor = std::make_shared<Tsl2591>(
+                params.name,
+                params.services.i2c,
+                i2cConfig,
+                settings->measurementFrequency.get(),
+                settings->latencyInterval.get());
             params.registerFeature("light", [sensor](JsonObject& telemetryJson) {
                 telemetryJson["value"] = sensor->getCurrentLevel();
             });

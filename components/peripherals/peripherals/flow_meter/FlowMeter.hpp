@@ -16,6 +16,7 @@
 #include <peripherals/api/IFlowMeter.hpp>
 
 using namespace farmhub::kernel::mqtt;
+using namespace farmhub::peripherals::api;
 
 namespace farmhub::peripherals::flow_meter {
 
@@ -29,8 +30,8 @@ public:
 };
 
 class FlowMeter final
-    : public api::IFlowMeter,
-      public Named {
+    : public virtual api::IFlowMeter,
+      public Peripheral {
 public:
     FlowMeter(
         const std::string& name,
@@ -38,7 +39,7 @@ public:
         const InternalPinPtr& pin,
         double qFactor,
         milliseconds measurementFrequency)
-        : Named(name)
+        : Peripheral(name)
         , qFactor(qFactor) {
 
         LOGI("Initializing flow meter on pin %s with Q = %.2f",
@@ -118,7 +119,7 @@ private:
 };
 
 inline PeripheralFactory makeFactory() {
-    return makePeripheralFactory<FlowMeter, FlowMeterSettings>(
+    return makePeripheralFactory<IFlowMeter, FlowMeter, FlowMeterSettings>(
         "flow-meter",
         "flow-meter",
         [](PeripheralInitParameters& params, const std::shared_ptr<FlowMeterSettings>& settings) {

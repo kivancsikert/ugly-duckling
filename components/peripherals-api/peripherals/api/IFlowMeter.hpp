@@ -1,12 +1,11 @@
 #pragma once
 
+#include "IPeripheral.hpp"
 #include "Units.hpp"
 
 namespace farmhub::peripherals::api {
 
-class IFlowMeter {
-public:
-    virtual ~IFlowMeter() = default;
+struct IFlowMeter : virtual IPeripheral {
     virtual Liters getVolume() = 0;
 };
 

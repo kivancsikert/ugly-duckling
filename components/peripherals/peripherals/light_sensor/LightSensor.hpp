@@ -21,13 +21,13 @@ using namespace farmhub::peripherals;
 namespace farmhub::peripherals::light_sensor {
 
 class LightSensor
-    : Named {
+    : Peripheral {
 public:
     LightSensor(
         const std::string& name,
         seconds measurementFrequency,
         seconds latencyInterval)
-        : Named(name)
+        : Peripheral(name)
         , measurementFrequency(measurementFrequency)
         , level(latencyInterval.count() / measurementFrequency.count()) {
     }

@@ -125,7 +125,7 @@ public:
 };
 
 class ChickenDoorComponent final
-    : Named
+    : Peripheral
     , public HasConfig<ChickenDoorConfig>
     , public HasShutdown {
 public:
@@ -140,7 +140,7 @@ public:
         bool invertSwitches,
         ticks movementTimeout,
         const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
-        : Named(name)
+        : Peripheral(name)
         , mqttRoot(mqttRoot)
         , motor(motor)
         , lightSensor(lightSensor)
@@ -439,7 +439,7 @@ protected:
 
 inline PeripheralFactory makeFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors) {
 
-    return makePeripheralFactory<ChickenDoorComponent, ChickenDoorSettings, ChickenDoorConfig>(
+    return makePeripheralFactory<ChickenDoorComponent, ChickenDoorComponent, ChickenDoorSettings, ChickenDoorConfig>(
         "chicken-door",
         "chicken-door",
         [motors](PeripheralInitParameters& params, const std::shared_ptr<ChickenDoorSettings>& settings) {
