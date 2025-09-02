@@ -27,11 +27,17 @@ inline const char* toString(State state) {
     }
 }
 
-TEST_CASE("Waters up to band without overshoot") {
+TEST_CASE("waters up to band without overshoot") {
     FakeClock clock;
     auto flowMeter = std::make_shared<FakeFlowMeter>();
     auto moistureSensor = std::make_shared<FakeSoilMoistureSensor>();
-    SoilSimulator soil;
+
+    SoilSimulator soil { SoilSimulator::Config {
+        .gainPercentPerLiter = 1.0,
+        .deadTime = 20s,
+        .tau = 40s,
+        .evaporationPercentPerMin = 0.05,
+    } };
 
     Config config = {
         .targetLow = 60,
@@ -43,7 +49,7 @@ TEST_CASE("Waters up to band without overshoot") {
 
     moistureSensor->moisture = 55.0;
     ScheduleResult result;
-    while (clock.now() < 1h) {
+    while (clock.now() < 15min) {
         if (scheduler.getTelemetry().moisture >= config.targetLow && scheduler.getState() == State::Idle) {
             break;
         }

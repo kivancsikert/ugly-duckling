@@ -1,8 +1,8 @@
 // fakes.hpp
 #pragma once
 
-#include <deque>
 #include <cmath>
+#include <deque>
 
 #include <peripherals/api/IFlowMeter.hpp>
 #include <peripherals/api/ISoilMoistureSensor.hpp>
@@ -62,12 +62,13 @@ struct FakeSoilMoistureSensor : FakePeripheral, ISoilMoistureSensor {
 
 // Simple FOPDT-ish soil simulator (test-only)
 struct SoilSimulator {
-    // Parameters (Option B: decaying impulse model)
-    // Each watering creates an impulse whose total integrated contribution (area) tends toward gainPercentPerLiter * volume (%).
-    double gainPercentPerLiter = 0.25;         // Integrated % moisture per liter (area under exponential after dead time)
-    ms deadTime { 10s };                       // Transport delay before water affects moisture
-    ms tau { 20s };                            // Decay time constant of the impulse (roughly effect halves every ~0.69*tau)
-    double evaporationPercentPerMin = 0.03;    // Natural linear evaporation (% per minute)
+    struct Config {
+        // Each watering creates an impulse whose total integrated contribution (area) tends toward gainPercentPerLiter * volume (%).
+        double gainPercentPerLiter;         // Integrated % moisture per liter (area under exponential after dead time)
+        ms deadTime;                        // Transport delay before water affects moisture
+        ms tau;                             // Decay time constant of the impulse (roughly effect halves every ~0.69*tau)
+        double evaporationPercentPerMin;    // Natural linear evaporation (% per minute)
+    };
 
     struct Input {
         ms time {};
@@ -75,12 +76,16 @@ struct SoilSimulator {
     };
     std::deque<Input> wateringHistory {};
 
+    SoilSimulator(const Config& config)
+        : config(config) {
+    }
+
     void inject(ms now, Liters volume) {
         if (volume > 0.0) {
             wateringHistory.push_back({ now, volume });
         }
         // Trim very old inputs (after effect is negligible: ageAfterDead > 8*tau)
-        while (!wateringHistory.empty() && (now - wateringHistory.front().time) > (deadTime + 8 * tau)) {
+        while (!wateringHistory.empty() && (now - wateringHistory.front().time) > (config.deadTime + 8 * config.tau)) {
             wateringHistory.pop_front();
         }
     }
@@ -88,36 +93,38 @@ struct SoilSimulator {
     // Advance one tick (discrete integration of exponential decays)
     void step(ms now, Percent& moisture, ms dt) const {
         if (dt <= 0ms) {
-            return; // nothing to do
+            return;    // nothing to do
         }
 
         // 1. Evaporation (linear approximation)
         const double dtInMin = static_cast<double>(dt.count()) / 60000.0;
-        moisture = std::max(0.0, moisture - (evaporationPercentPerMin * dtInMin));
+        moisture = std::max(0.0, moisture - (config.evaporationPercentPerMin * dtInMin));
 
         // 2. Add contributions from each watering whose dead time has passed.
         //    Exact discrete integral over the interval [t, t+dt] of A * (1/tau) * exp(-age/tau) d(age)
         //    where A = gainPercentPerLiter * volume.
-        const double tauMs = static_cast<double>(tau.count());
+        const double tauMs = static_cast<double>(config.tau.count());
         const double dtMs = static_cast<double>(dt.count());
         const double expNegDtOverTau = std::exp(-dtMs / tauMs);
-        double delta = 0.0; // total percent to add this tick
+        double delta = 0.0;    // total percent to add this tick
         for (auto const& watering : wateringHistory) {
-            auto effectStart = watering.time + deadTime;
+            auto effectStart = watering.time + config.deadTime;
             if (now <= effectStart) {
-                continue; // not started yet
+                continue;    // not started yet
             }
             // Age at current time (start of interval)
             double ageMs = static_cast<double>((now - effectStart).count());
             // Exponential factor at beginning of interval
             double expNegAge = std::exp(-ageMs / tauMs);
             // Increment = A * (exp(-age/tau) - exp(-(age+dt)/tau)) = A * exp(-age/tau) * (1 - exp(-dt/tau))
-            double A = gainPercentPerLiter * watering.volume; // total area (%) this impulse would add over infinite time
+            double A = config.gainPercentPerLiter * watering.volume;    // total area (%) this impulse would add over infinite time
             double inc = A * expNegAge * (1.0 - expNegDtOverTau);
             delta += inc;
         }
         moisture = std::min(100.0, moisture + delta);
     }
+
+    Config config;
 };
 
 }    // namespace farmhub::utils::scheduling
