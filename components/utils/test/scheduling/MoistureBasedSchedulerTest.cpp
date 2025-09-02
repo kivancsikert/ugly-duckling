@@ -1,3 +1,5 @@
+#include <functional>
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <FakeLog.hpp>
@@ -34,10 +36,20 @@ static constexpr SoilSimulator::Config BASIC_SOIL = {
     .evaporationPercentPerMin = 0.05,
 };
 
+using SchedulerRef = MoistureBasedScheduler<FakeClock> const&;
+
 struct SimulationConfig {
-    Percent startMoisture = 55.0;
     seconds timeout = 30min;
     seconds defaultTick = 5s;
+    std::function<bool(SchedulerRef)> stopCondition = [](SchedulerRef scheduler) {
+        if (scheduler.getState() == State::Idle) {
+            LOGV("Reached idle state with moisture level: %f", scheduler.getTelemetry().moisture);
+            return true;
+        }
+        return false;
+    };
+
+    Percent startMoisture = 55.0;
     Liters flowRatePerMinute = 15.0;
 };
 
@@ -65,12 +77,19 @@ SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, Simul
     int steps = 0;
     while (clock.now() < simulationConfig.timeout) {
         result = scheduler.tick();
-        if (scheduler.getState() == State::Idle) {
-            LOGV("Reached idle state with moisture level: %f", scheduler.getTelemetry().moisture);
+        steps++;
+        auto tick = result.nextDeadline.value_or(simulationConfig.defaultTick);
+        LOGV("At %lld sec in %s state, valve is %s, moisture level is %f%%, advancing by %lld sec",
+            duration_cast<seconds>(clock.now()).count(),
+            toString(scheduler.getState()),
+            toString(result.targetState),
+            scheduler.getTelemetry().moisture,
+            duration_cast<seconds>(tick).count());
+
+        if (simulationConfig.stopCondition(scheduler)) {
             break;
         }
 
-        auto tick = result.nextDeadline.value_or(simulationConfig.defaultTick);
         // Produce flow when valve is on
         if (result.targetState == TargetState::OPEN) {
             const Liters volumePerTick = simulationConfig.flowRatePerMinute * chrono_ratio(tick, 1min);
@@ -81,15 +100,7 @@ SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, Simul
 
         soil.step(clock.now(), moistureSensor->moisture, tick);
 
-        LOGV("At %lld sec in %s state, valve is %s, moisture level is %f%%, advancing by %lld sec",
-            duration_cast<seconds>(clock.now()).count(),
-            toString(scheduler.getState()),
-            toString(result.targetState),
-            scheduler.getTelemetry().moisture,
-            duration_cast<seconds>(tick).count());
-
         clock.advance(tick);
-        steps++;
     }
 
     LOGV("Final moisture level: %f after %lld sec, %d steps",
@@ -105,7 +116,7 @@ SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, Simul
     };
 }
 
-TEST_CASE("does not water when moisture is already in band") {
+TEST_CASE("does not water when moisture is already above target") {
     auto result = simulate(
         BASIC_SOIL,
         {
@@ -117,11 +128,11 @@ TEST_CASE("does not water when moisture is already in band") {
         });
 
     REQUIRE(result == SimulationResult {
-        .time = 0ms,
-        .steps = 0,
-        .moisture = 65.0,
-        .state = TargetState::CLOSED
-    });
+                .time = 0ms,
+                .steps = 1,
+                .moisture = 65.0,
+                .state = TargetState::CLOSED,
+            });
 }
 
 TEST_CASE("waters up to band without overshoot") {
@@ -141,6 +152,26 @@ TEST_CASE("waters up to band without overshoot") {
     REQUIRE(result.steps < 80);
     REQUIRE(result.moisture >= 60.0);
     REQUIRE(result.moisture <= 70.0);
+}
+
+TEST_CASE("starts watering after evaporation reduces moisture") {
+    auto result = simulate(
+        BASIC_SOIL,
+        {
+            .targetLow = 60,
+            .targetHigh = 70,
+        },
+        {
+            .stopCondition = [](SchedulerRef scheduler) {
+                return scheduler.getState() != State::Idle;
+            },
+            .startMoisture = 61.0,
+            .flowRatePerMinute = 15.0,
+        });
+
+    REQUIRE(result.state == TargetState::OPEN);
+    REQUIRE(result.steps > 10);
+    REQUIRE(result.moisture < 60.0);
 }
 
 }    // namespace farmhub::utils::scheduling
