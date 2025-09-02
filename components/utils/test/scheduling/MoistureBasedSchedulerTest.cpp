@@ -27,40 +27,49 @@ inline const char* toString(State state) {
     }
 }
 
-TEST_CASE("waters up to band without overshoot") {
+static constexpr SoilSimulator::Config BASIC_SOIL = {
+    .gainPercentPerLiter = 1.0,
+    .deadTime = 20s,
+    .tau = 40s,
+    .evaporationPercentPerMin = 0.05,
+};
+
+struct SimulationConfig {
+    Percent startMoisture = 55.0;
+    seconds timeout = 30min;
+    seconds defaultTick = 5s;
+    Liters flowRatePerMinute = 15.0;
+};
+
+struct SimulationResult {
+    Percent moisture;
+    TargetState state;
+    ms time;
+    int steps;
+};
+
+SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, SimulationConfig simulationConfig) {
     FakeClock clock;
     auto flowMeter = std::make_shared<FakeFlowMeter>();
     auto moistureSensor = std::make_shared<FakeSoilMoistureSensor>();
-
-    SoilSimulator soil { SoilSimulator::Config {
-        .gainPercentPerLiter = 1.0,
-        .deadTime = 20s,
-        .tau = 40s,
-        .evaporationPercentPerMin = 0.05,
-    } };
-
-    Config config = {
-        .targetLow = 60,
-        .targetHigh = 70,
-        .valveTimeout = std::chrono::minutes { 2 },
-    };
-
     MoistureBasedScheduler scheduler { config, clock, flowMeter, moistureSensor };
+    SoilSimulator soil { soilConfig };
 
-    moistureSensor->moisture = 55.0;
+    moistureSensor->moisture = simulationConfig.startMoisture;
+
     ScheduleResult result;
-    while (clock.now() < 15min) {
-        if (scheduler.getTelemetry().moisture >= config.targetLow && scheduler.getState() == State::Idle) {
+    int steps = 0;
+    while (clock.now() < simulationConfig.timeout) {
+        result = scheduler.tick();
+        if (scheduler.getState() == State::Idle) {
+            LOGV("Reached idle state with moisture level: %f", scheduler.getTelemetry().moisture);
             break;
         }
 
-        result = scheduler.tick();
-        auto tick = result.nextDeadline.value_or(5s);
-
+        auto tick = result.nextDeadline.value_or(simulationConfig.defaultTick);
         // Produce flow when valve is on
         if (result.targetState == TargetState::OPEN) {
-            constexpr Liters flowRatePerMinute = 15.0;    // L / min
-            const Liters volumePerTick = flowRatePerMinute * chrono_ratio(tick, 1min);
+            const Liters volumePerTick = simulationConfig.flowRatePerMinute * chrono_ratio(tick, 1min);
             LOGV("Injecting %f liters of water", volumePerTick);
             flowMeter->bucket += volumePerTick;
             soil.inject(clock.now(), volumePerTick);
@@ -76,13 +85,40 @@ TEST_CASE("waters up to band without overshoot") {
             duration_cast<seconds>(tick).count());
 
         clock.advance(tick);
+        steps++;
     }
-    LOGV("Final moisture level: %f after %lld sec",
-        scheduler.getTelemetry().moisture,
-        duration_cast<seconds>(clock.now()).count());
 
-    REQUIRE(scheduler.getTelemetry().moisture >= config.targetLow);
-    REQUIRE(result.targetState == TargetState::CLOSED);
+    LOGV("Final moisture level: %f after %lld sec, %d steps",
+        scheduler.getTelemetry().moisture,
+        duration_cast<seconds>(clock.now()).count(),
+        steps);
+
+    return {
+        .moisture = scheduler.getTelemetry().moisture,
+        .state = result.targetState.value_or(TargetState::CLOSED),
+        .time = clock.now(),
+        .steps = steps,
+    };
+}
+
+TEST_CASE("waters up to band without overshoot") {
+    auto result = simulate(
+        BASIC_SOIL,
+        {
+            .targetLow = 60,
+            .targetHigh = 70,
+            .valveTimeout = std::chrono::minutes { 2 },
+        },
+        {
+            .startMoisture = 55.0,
+            .flowRatePerMinute = 15.0,
+        });
+
+    REQUIRE(result.state == TargetState::CLOSED);
+    REQUIRE(result.time < 15min);
+    REQUIRE(result.steps < 80);
+    REQUIRE(result.moisture >= 60);
+    REQUIRE(result.moisture <= 70);
 }
 
 }    // namespace farmhub::utils::scheduling

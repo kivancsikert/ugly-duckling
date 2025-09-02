@@ -142,7 +142,6 @@ public:
         return state;
     }
 
-    // Called at a fixed cadence by your task (e.g., every 1–2 seconds).
     ScheduleResult tick() override {
         sampleAndFilter();
 
