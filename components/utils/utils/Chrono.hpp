@@ -27,4 +27,37 @@ std::optional<std::chrono::duration<Rep, Period>> minDuration(
     return std::min(*a, *b);
 }
 
+template <class Rep, class Period>
+std::optional<std::chrono::duration<Rep, Period>> minDuration(
+    std::optional<std::chrono::duration<Rep, Period>> a,
+    std::chrono::duration<Rep, Period> b) {
+    if (!a) {
+        return b;
+    }
+    return std::min(*a, b);
+}
+
+template <class Rep, class Period>
+std::optional<std::chrono::duration<Rep, Period>> maxDuration(
+    std::optional<std::chrono::duration<Rep, Period>> a,
+    std::optional<std::chrono::duration<Rep, Period>> b) {
+    if (!a) {
+        return b;
+    }
+    if (!b) {
+        return a;
+    }
+    return std::max(*a, *b);
+}
+
+template <class Rep, class Period>
+std::optional<std::chrono::duration<Rep, Period>> maxDuration(
+    std::optional<std::chrono::duration<Rep, Period>> a,
+    std::chrono::duration<Rep, Period> b) {
+    if (!a) {
+        return b;
+    }
+    return std::max(*a, b);
+}
+
 }    // namespace farmhub::utils

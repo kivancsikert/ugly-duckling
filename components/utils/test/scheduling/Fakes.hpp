@@ -5,7 +5,6 @@
 
 #include <peripherals/api/IFlowMeter.hpp>
 #include <peripherals/api/ISoilMoistureSensor.hpp>
-#include <peripherals/api/IValve.hpp>
 
 #include <utils/scheduling/MoistureBasedScheduler.hpp>
 
@@ -24,26 +23,23 @@ struct FakeClock {
 };
 
 struct FakePeripheral : virtual IPeripheral {
+
+    FakePeripheral(std::string name)
+        : name(std::move(name)) {
+    }
+
     const std::string& getName() const override {
-        return "fake";
-    }
-};
-
-struct FakeValve : FakePeripheral, IValve {
-    bool open { false };
-
-    bool transitionTo(std::optional<TargetState> target) override {
-        auto oldState = open;
-        open = target.value_or(TargetState::CLOSED) == TargetState::OPEN;
-        return oldState != open;
+        return name;
     }
 
-    ValveState getState() const override {
-        return open ? ValveState::OPEN : ValveState::CLOSED;
-    }
+    const std::string name;
 };
 
 struct FakeFlowMeter : FakePeripheral, IFlowMeter {
+    FakeFlowMeter()
+        : FakePeripheral("flow-meter") {
+    }
+
     Liters bucket { 0.0 };
     Liters getVolume() override {
         auto r = bucket;
@@ -53,6 +49,10 @@ struct FakeFlowMeter : FakePeripheral, IFlowMeter {
 };
 
 struct FakeSoilMoistureSensor : FakePeripheral, ISoilMoistureSensor {
+    FakeSoilMoistureSensor()
+        : FakePeripheral("soil-moisture-sensor") {
+    }
+
     Percent moisture { 50.0 };
     Percent getMoisture() override {
         return moisture;

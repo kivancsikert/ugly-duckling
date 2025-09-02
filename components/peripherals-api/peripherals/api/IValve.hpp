@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ArduinoJson.h>
+
 #include "IPeripheral.hpp"
 
 namespace farmhub::peripherals::api {

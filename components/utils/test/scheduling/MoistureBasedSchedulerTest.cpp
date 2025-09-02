@@ -16,7 +16,6 @@ void log(std::string_view message) {
 
 TEST_CASE("Waters up to band without overshoot") {
     FakeClock clock;
-    auto valve = std::make_shared<FakeValve>();
     auto flowMeter = std::make_shared<FakeFlowMeter>();
     auto moistureSensor = std::make_shared<FakeSoilMoistureSensor>();
     SoilSimulator soil;
@@ -27,19 +26,21 @@ TEST_CASE("Waters up to band without overshoot") {
         .valveTimeout = std::chrono::minutes { 2 },
     };
 
-    MoistureBasedScheduler scheduler { config, clock, valve, flowMeter, moistureSensor, log };
+    MoistureBasedScheduler scheduler { config, clock, flowMeter, moistureSensor, log };
 
     // Simulate 30 minutes at 1s tick
     moistureSensor->moisture = 55.0;
+    ScheduleResult result;
     for (int i = 0; i < 1800; ++i) {
+        result = scheduler.tick();
         // Produce flow when valve is on
-        if (valve->isOpen()) {
+        if (result.targetState == TargetState::OPEN) {
             constexpr Liters flowRatePerMinute = 15.0; // L / min
             const Liters volumePerTick = flowRatePerMinute * chrono_ratio(oneTick, 1min);
             flowMeter->bucket += volumePerTick;
             soil.inject(clock.now(), volumePerTick);
         }
-        scheduler.tick();
+
         soil.step(clock.now(), moistureSensor->moisture, oneTick);
         clock.advance(oneTick);
         if (scheduler.getTelemetry().moisture >= config.targetLow && scheduler.getState() == State::Idle) {
@@ -48,7 +49,7 @@ TEST_CASE("Waters up to band without overshoot") {
     }
 
     REQUIRE(scheduler.getTelemetry().moisture >= config.targetLow);
-    REQUIRE(valve->isOpen() == false);
+    REQUIRE(result.targetState == TargetState::CLOSED);
 }
 
 }    // namespace farmhub::utils::scheduling

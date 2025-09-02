@@ -5,6 +5,7 @@
 #include <list>
 #include <optional>
 
+#include <utils/Chrono.hpp>
 #include <utils/scheduling/IScheduler.hpp>
 
 namespace farmhub::utils::scheduling {
@@ -38,45 +39,38 @@ public:
      */
     static ScheduleResult getStateUpdate(const std::list<TimeBasedSchedule>& schedules, time_point<system_clock> now) {
         auto targetState = std::optional<TargetState>();
-        auto validFor = nanoseconds::max();
+        auto validFor = std::optional<milliseconds>();
 
         for (const auto& schedule : schedules) {
-            // #ifndef GTEST
-            //             LOGI("Considering schedule starting at %lld (current time: %lld), period %lld, duration %lld",
-            //                 duration_cast<seconds>(schedule.start.time_since_epoch()).count(),
-            //                 duration_cast<seconds>(now.time_since_epoch()).count(),
-            //                 duration_cast<seconds>(schedule.period).count(),
-            //                 duration_cast<seconds>(schedule.duration).count());
-            // #endif
+            auto offset = duration_cast<milliseconds>(now - schedule.start);
+            LOGV("Offset from schedule start is %lld ms, schedule: open %lld sec / %lld sec",
+                offset.count(),
+                schedule.duration.count(),
+                schedule.period.count());
 
-            if (schedule.start > now) {
+            if (offset < 0ms) {
                 // Schedule has not started yet; valve should be closed according to this schedule
                 // Calculate when this schedule will start for the first time
-                if (!targetState.has_value() || *targetState != TargetState::OPEN) {
+                if (targetState != TargetState::OPEN) {
+                    LOGV("Before schedule starts, should be closed");
                     targetState = TargetState::CLOSED;
-                    validFor = std::min(validFor, schedule.start - now);
+                    validFor = minDuration(validFor, -offset);
+                } else {
+                    LOGV("Before schedule starts, but already open");
                 }
             } else {
                 // This schedule has started; determine if the valve should be open or closed according to this schedule
-                auto diff = now - schedule.start;
-
-                // Damn you, C++ chrono, for not having a working modulo operator
-                auto periodPosition = nanoseconds(duration_cast<nanoseconds>(diff).count() % duration_cast<nanoseconds>(schedule.period).count());
-                // #ifndef GTEST
-                //                 LOGI("Diff: %lld sec, at: %lld sec, should be open until %lld / %lld sec",
-                //                     duration_cast<seconds>(diff).count(),
-                //                     duration_cast<seconds>(periodPosition).count(),
-                //                     duration_cast<seconds>(schedule.duration).count(),
-                //                     duration_cast<seconds>(schedule.period).count());
-                // #endif
+                auto periodPosition = offset % schedule.period;
+                LOGV("Inside schedule at position %lld ms",
+                    periodPosition.count());
 
                 if (periodPosition < schedule.duration) {
                     // The valve should be open according to this schedule
                     // Calculate when this opening period will end
-                    nanoseconds closeAfter = schedule.duration - periodPosition;
-                    if (targetState.has_value() && *targetState == TargetState::OPEN) {
+                    auto closeAfter = schedule.duration - periodPosition;
+                    if (targetState == TargetState::OPEN) {
                         // We already found a schedule to keep this valve open, extend the period if possible
-                        validFor = std::max(validFor, closeAfter);
+                        validFor = maxDuration(validFor, closeAfter);
                     } else {
                         // This is the first schedule to keep the valve open
                         targetState = TargetState::OPEN;
@@ -84,12 +78,12 @@ public:
                     }
                 } else {
                     // The valve should be closed according to this schedule
-                    if (targetState.has_value() && *targetState != TargetState::OPEN) {
+                    if (targetState != TargetState::OPEN) {
                         // There are no other schedules to keep the valve open yet,
                         // calculate when the next opening period will start
                         targetState = TargetState::CLOSED;
-                        nanoseconds openAfter = schedule.period - periodPosition;
-                        validFor = std::min(validFor, openAfter);
+                        auto openAfter = schedule.period - periodPosition;
+                        validFor = minDuration(validFor, openAfter);
                     }
                 }
             }
@@ -97,7 +91,7 @@ public:
 
         return {
             .targetState = targetState,
-            .nextDeadline = duration_cast<milliseconds>(validFor),
+            .nextDeadline = validFor,
             .shouldPublishTelemetry = false,
         };
     }

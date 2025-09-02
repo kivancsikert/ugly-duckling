@@ -11,7 +11,6 @@
 
 #include <peripherals/api/IFlowMeter.hpp>
 #include <peripherals/api/ISoilMoistureSensor.hpp>
-#include <peripherals/api/IValve.hpp>
 
 #include <utils/scheduling/IScheduler.hpp>
 
@@ -113,13 +112,11 @@ public:
     MoistureBasedScheduler(
         Config config,
         TClock& clock,
-        std::shared_ptr<IValve> valve,
         std::shared_ptr<IFlowMeter> flowMeter,
         std::shared_ptr<ISoilMoistureSensor> moistureSensor,
         Notifier notify = nullptr)
         : config { std::move(config) }
         , clock { clock }
-        , valve { valve }
         , flowMeter { flowMeter }
         , moistureSensor { moistureSensor }
         , notify { std::move(notify) } {
@@ -176,7 +173,6 @@ private:
     Telemetry telemetry {};
 
     TClock& clock;
-    std::shared_ptr<IValve> valve;
     std::shared_ptr<IFlowMeter> flowMeter;
     std::shared_ptr<ISoilMoistureSensor> moistureSensor;
     Notifier notify;
@@ -254,7 +250,6 @@ private:
         volumeDelivered = 0.0;
         waterStartTime = clock.now();
 
-        valve->setState(true);
         state = State::Watering;
     }
 
@@ -265,7 +260,6 @@ private:
         const bool timeout = (clock.now() - waterStartTime) >= config.valveTimeout;
 
         if (reached || timeout) {
-            valve->setState(false);
             telemetry.totalVolume += volumeDelivered;
             telemetry.totalCycles += 1;
             telemetry.lastVolumeDelivered = volumeDelivered;
