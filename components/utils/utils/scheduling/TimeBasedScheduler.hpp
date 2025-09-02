@@ -110,3 +110,32 @@ private:
 };
 
 }    // namespace farmhub::utils::scheduling
+
+namespace ArduinoJson {
+
+using farmhub::utils::scheduling::TimeBasedSchedule;
+
+template <>
+struct Converter<TimeBasedSchedule> {
+    static void toJson(const TimeBasedSchedule& src, JsonVariant dst) {
+        JsonObject obj = dst.to<JsonObject>();
+        obj["start"] = src.start;
+        obj["period"] = src.period.count();
+        obj["duration"] = src.duration.count();
+    }
+
+    static TimeBasedSchedule fromJson(JsonVariantConst src) {
+        auto start = src["start"].as<time_point<system_clock>>();
+        auto period = seconds(src["period"].as<int64_t>());
+        auto duration = seconds(src["duration"].as<int64_t>());
+        return { .start = start, .period = period, .duration = duration };
+    }
+
+    static bool checkJson(JsonVariantConst src) {
+        return src["start"].is<time_point<system_clock>>()
+            && src["period"].is<int64_t>()
+            && src["duration"].is<int64_t>();
+    }
+};
+
+}    // namespace ArduinoJson

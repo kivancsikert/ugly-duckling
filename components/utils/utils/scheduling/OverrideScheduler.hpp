@@ -9,29 +9,31 @@
 namespace farmhub::utils::scheduling {
 
 using namespace std::chrono;
-using farmhub::peripherals::valve::ValveState;
+
+struct OverrideSchedule {
+    TargetState state;
+    time_point<system_clock> until;
+};
 
 class OverrideScheduler : public IScheduler {
 public:
-    void setOverride(TargetState state, time_point<system_clock> until) {
-        overrideState = OverrideState {
-            .state = state,
-            .until = until,
-        };
-    }
-
-    void clear() {
-        overrideState.reset();
+    void setOverride(const std::optional<OverrideSchedule>& schedule) {
+        this->schedule = schedule;
     }
 
     ScheduleResult tick() override {
         auto now = std::chrono::system_clock::now();
-        if (overrideState.has_value()) {
-            auto remaining = overrideState->until - now;
+        if (schedule.has_value()) {
+            auto remaining = schedule->until - now;
             if (remaining > 0ns) {
                 return {
-                    .targetState = overrideState->state,
+                    .targetState = schedule->state,
                     .nextDeadline = duration_cast<ms>(remaining),
+                };
+            } else {
+                schedule.reset();
+                return {
+                    .shouldPublishTelemetry = true,
                 };
             }
         }
@@ -39,12 +41,7 @@ public:
     }
 
 private:
-    struct OverrideState {
-        TargetState state;
-        time_point<system_clock> until;
-    };
-
-    std::optional<OverrideState> overrideState;
+    std::optional<OverrideSchedule> schedule;
 };
 
 }    // namespace farmhub::utils::scheduling

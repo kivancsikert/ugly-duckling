@@ -7,8 +7,7 @@
 #include <Configuration.hpp>
 
 #include <peripherals/valve/ValveControlStrategy.hpp>
-#include <peripherals/valve/ValveSchedule.hpp>
-#include <peripherals/valve/ValveScheduler.hpp>
+#include <peripherals/api/IValve.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -16,14 +15,6 @@ using namespace std::chrono_literals;
 using namespace farmhub::kernel;
 
 namespace farmhub::peripherals::valve {
-
-class ValveConfig
-    : public ConfigurationSection {
-public:
-    ArrayProperty<ValveSchedule> schedule { this, "schedule" };
-    Property<ValveState> overrideState { this, "overrideState", ValveState::NONE };
-    Property<time_point<system_clock>> overrideUntil { this, "overrideUntil" };
-};
 
 class ValveSettings
     : public ConfigurationSection {

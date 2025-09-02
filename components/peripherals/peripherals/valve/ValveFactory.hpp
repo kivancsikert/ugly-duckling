@@ -14,7 +14,7 @@
 #include <peripherals/Motors.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/valve/Valve.hpp>
-#include <peripherals/valve/ValveScheduler.hpp>
+#include <peripherals/api/IValve.hpp>
 #include <peripherals/valve/ValveSettings.hpp>
 
 using namespace std::chrono;
@@ -30,7 +30,7 @@ inline PeripheralFactory makeFactory(
     const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors,
     ValveControlStrategyType defaultStrategy) {
 
-    return makePeripheralFactory<Valve, ValveSettings, ValveConfig>(
+    return makePeripheralFactory<Valve, ValveSettings>(
         "valve",
         "valve",
         [motors](PeripheralInitParameters& params, const std::shared_ptr<ValveSettings>& settings) {
@@ -38,9 +38,7 @@ inline PeripheralFactory makeFactory(
             auto strategy = settings->createValveControlStrategy(motor);
             auto valve = std::make_shared<Valve>(
                 params.name,
-                std::move(strategy),
-                params.mqttRoot,
-                params.services.telemetryPublisher);
+                std::move(strategy));
 
             params.registerFeature("valve", [valve](JsonObject& telemetry) {
                 valve->populateTelemetry(telemetry);

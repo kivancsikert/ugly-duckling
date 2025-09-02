@@ -2,6 +2,7 @@
 
 #include <FileSystem.hpp>
 #include <Manager.hpp>
+#include <Telemetry.hpp>
 
 #include <peripherals/Peripheral.hpp>
 
@@ -9,10 +10,20 @@ using farmhub::peripherals::PeripheralManager;
 
 namespace farmhub::functions {
 
+struct FunctionServices {
+    const std::shared_ptr<TelemetryPublisher> telemetryPublisher;
+    const std::shared_ptr<PeripheralManager> peripherals;
+};
+
 struct FunctionInitParameters {
     const std::string name;
-    const std::shared_ptr<PeripheralManager> peripherals;
+    const FunctionServices& services;
     const std::shared_ptr<MqttRoot> mqttRoot;
+
+    template <typename T>
+    std::shared_ptr<T> peripheral(const std::string& name) const {
+        return services.peripherals->getInstance<T>(name);
+    }
 };
 
 using FunctionCreateFn = std::function<Handle(
@@ -84,11 +95,11 @@ class FunctionManager : public kernel::SettingsBasedManager<FunctionFactory> {
 public:
     FunctionManager(
         const std::shared_ptr<FileSystem>& fs,
-        const std::shared_ptr<PeripheralManager>& peripherals,
+        const FunctionServices& services,
         const std::shared_ptr<MqttRoot>& mqttDeviceRoot)
         : kernel::SettingsBasedManager<FunctionFactory>("function")
         , fs(fs)
-        , peripherals(peripherals)
+        , services(services)
         , mqttDeviceRoot(mqttDeviceRoot) {
     }
 
@@ -101,7 +112,7 @@ public:
                 [&](const std::string& name, const FunctionFactory& factory, const std::string& settings) {
                     FunctionInitParameters params = {
                         .name = name,
-                        .peripherals = peripherals,
+                        .services = services,
                         .mqttRoot = mqttDeviceRoot->forSuffix("functions/" + name),
                     };
                     JsonObject initConfigJson = initJson["config"].to<JsonObject>();
@@ -118,7 +129,7 @@ public:
 
 private:
     const std::shared_ptr<FileSystem>& fs;
-    const std::shared_ptr<PeripheralManager>& peripherals;
+    const FunctionServices services;
     const std::shared_ptr<MqttRoot>& mqttDeviceRoot;
 };
 
