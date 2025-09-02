@@ -84,11 +84,11 @@ struct Converter<TargetState> {
         const char* str = src.as<const char*>();
         if (strcmp(str, "CLOSED") == 0) {
             return farmhub::peripherals::api::TargetState::CLOSED;
-        } else if (strcmp(str, "OPEN") == 0) {
-            return farmhub::peripherals::api::TargetState::OPEN;
-        } else {
-            throw std::invalid_argument("Invalid TargetState");
         }
+        if (strcmp(str, "OPEN") == 0) {
+            return farmhub::peripherals::api::TargetState::OPEN;
+        }
+        throw std::invalid_argument("Invalid TargetState");
     }
 
     static bool checkJson(JsonVariantConst src) {
@@ -118,11 +118,11 @@ struct Converter<ValveState> {
         const char* str = src.as<const char*>();
         if (strcmp(str, "CLOSED") == 0) {
             return farmhub::peripherals::api::ValveState::CLOSED;
-        } else if (strcmp(str, "OPEN") == 0) {
-            return farmhub::peripherals::api::ValveState::OPEN;
-        } else {
-            throw std::invalid_argument("Invalid ValveState");
         }
+        if (strcmp(str, "OPEN") == 0) {
+            return farmhub::peripherals::api::ValveState::OPEN;
+        }
+        throw std::invalid_argument("Invalid ValveState");
     }
 
     static bool checkJson(JsonVariantConst src) {

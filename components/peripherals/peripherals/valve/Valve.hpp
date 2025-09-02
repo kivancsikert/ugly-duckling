@@ -87,11 +87,7 @@ public:
     }
 
     bool transitionTo(std::optional<TargetState> target) override {
-        if (target.has_value()) {
-            return transitionTo(*target);
-        } else {
-            return transitionTo(strategy->getDefaultState());
-        }
+        return transitionTo(target.value_or(strategy->getDefaultState()));
     }
 
     ValveState getState() const override {

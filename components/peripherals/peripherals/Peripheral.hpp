@@ -34,11 +34,11 @@ class Peripheral
     : public virtual IPeripheral,
       public Named {
 public:
-    Peripheral(const std::string& name)
+    explicit Peripheral(const std::string& name)
         : Named(name) {
     }
 
-    virtual const std::string& getName() const override {
+    const std::string& getName() const override {
         return Named::name;
     }
 };

@@ -11,6 +11,7 @@
 #include <mqtt/MqttDriver.hpp>
 #include <peripherals/api/IFlowMeter.hpp>
 #include <peripherals/api/IValve.hpp>
+#include <utils/Chrono.hpp>
 #include <utils/scheduling/OverrideScheduler.hpp>
 #include <utils/scheduling/TimeBasedScheduler.hpp>
 
@@ -72,9 +73,9 @@ public:
                     result = timeBasedResult;
                 }
 
-                auto nextDeadline = clamp(result.nextDeadline.has_value()
-                        ? *(result.nextDeadline)
-                        : 1s);
+                auto nextDeadline = clampTicks(
+                    farmhub::utils::minDuration(overrideResult.nextDeadline, timeBasedResult.nextDeadline)
+                        .value_or(ms::max()));
 
                 auto transitionHappened = this->valve->transitionTo(result.targetState);
                 if (transitionHappened) {
@@ -108,9 +109,14 @@ public:
     void configure(const std::shared_ptr<PlotConfig>& config) override {
         auto overrideState = config->getOverrideState();
         auto overrideSpec = overrideState.has_value()
-            ? std::make_optional<OverrideSchedule>({ *overrideState, config->overrideUntil.get() })
+            ? std::make_optional<OverrideSchedule>({
+                  .state = *overrideState,
+                  .until = config->overrideUntil.get(),
+              })
             : std::nullopt;
-        updateQueue.put(ConfigSpec { overrideSpec, config->schedule.get() });
+        updateQueue.put(ConfigSpec {
+            .overrideSpec = overrideSpec,
+            .schedules = config->schedule.get() });
     }
 
 private:

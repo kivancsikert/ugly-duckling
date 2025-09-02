@@ -98,6 +98,7 @@ public:
         return {
             .targetState = targetState,
             .nextDeadline = duration_cast<milliseconds>(validFor),
+            .shouldPublishTelemetry = false,
         };
     }
 

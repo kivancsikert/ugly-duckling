@@ -21,7 +21,7 @@ using namespace farmhub::peripherals;
 namespace farmhub::peripherals::light_sensor {
 
 class LightSensor
-    : Peripheral {
+    : public Peripheral {
 public:
     LightSensor(
         const std::string& name,
@@ -31,8 +31,6 @@ public:
         , measurementFrequency(measurementFrequency)
         , level(latencyInterval.count() / measurementFrequency.count()) {
     }
-
-    virtual ~LightSensor() = default;
 
     double getCurrentLevel() {
         Lock lock(updateAverageMutex);

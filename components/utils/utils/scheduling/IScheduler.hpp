@@ -15,10 +15,10 @@ using ms = std::chrono::milliseconds;
 struct ScheduleResult {
     // The state the scheduler decided to go for at this time, if any
     std::optional<TargetState> targetState;
-    // Earliest time the scheduler needs to be called again (relative), or nullopt if ASAP
+    // Earliest time the scheduler needs to be called again (relative), or nullopt if ALAP
     std::optional<ms> nextDeadline;
     // Whether the caller should publish telemetry
-    bool shouldPublishTelemetry;
+    bool shouldPublishTelemetry { false };
 
     bool operator==(const ScheduleResult& other) const {
         return targetState == other.targetState

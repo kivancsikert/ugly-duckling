@@ -8,7 +8,7 @@ namespace farmhub::kernel {
 
 using ticks = std::chrono::duration<uint32_t, std::ratio<1, configTICK_RATE_HZ>>;
 
-inline static ticks clamp(std::chrono::milliseconds duration) {
+inline static ticks clampTicks(std::chrono::milliseconds duration) {
     if (duration < 0ms) {
         return ticks::zero();
     }

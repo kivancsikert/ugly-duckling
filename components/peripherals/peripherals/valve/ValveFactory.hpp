@@ -13,8 +13,8 @@
 
 #include <peripherals/Motors.hpp>
 #include <peripherals/Peripheral.hpp>
-#include <peripherals/valve/Valve.hpp>
 #include <peripherals/api/IValve.hpp>
+#include <peripherals/valve/Valve.hpp>
 #include <peripherals/valve/ValveSettings.hpp>
 
 using namespace std::chrono;

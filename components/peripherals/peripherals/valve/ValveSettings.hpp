@@ -6,8 +6,8 @@
 
 #include <Configuration.hpp>
 
-#include <peripherals/valve/ValveControlStrategy.hpp>
 #include <peripherals/api/IValve.hpp>
+#include <peripherals/valve/ValveControlStrategy.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
