@@ -42,10 +42,14 @@ struct SimulationConfig {
 };
 
 struct SimulationResult {
-    Percent moisture;
-    TargetState state;
     ms time;
     int steps;
+    Percent moisture;
+    TargetState state;
+
+    bool operator==(const SimulationResult& other) const {
+        return time == other.time && steps == other.steps && moisture == other.moisture && state == other.state;
+    }
 };
 
 SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, SimulationConfig simulationConfig) {
@@ -94,11 +98,30 @@ SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, Simul
         steps);
 
     return {
-        .moisture = scheduler.getTelemetry().moisture,
-        .state = result.targetState.value_or(TargetState::CLOSED),
         .time = clock.now(),
         .steps = steps,
+        .moisture = scheduler.getTelemetry().moisture,
+        .state = result.targetState.value_or(TargetState::CLOSED),
     };
+}
+
+TEST_CASE("does not water when moisture is already in band") {
+    auto result = simulate(
+        BASIC_SOIL,
+        {
+            .targetLow = 60,
+            .targetHigh = 70,
+        },
+        {
+            .startMoisture = 65.0,
+        });
+
+    REQUIRE(result == SimulationResult {
+        .time = 0ms,
+        .steps = 0,
+        .moisture = 65.0,
+        .state = TargetState::CLOSED
+    });
 }
 
 TEST_CASE("waters up to band without overshoot") {
@@ -107,7 +130,6 @@ TEST_CASE("waters up to band without overshoot") {
         {
             .targetLow = 60,
             .targetHigh = 70,
-            .valveTimeout = std::chrono::minutes { 2 },
         },
         {
             .startMoisture = 55.0,
@@ -117,8 +139,26 @@ TEST_CASE("waters up to band without overshoot") {
     REQUIRE(result.state == TargetState::CLOSED);
     REQUIRE(result.time < 15min);
     REQUIRE(result.steps < 80);
-    REQUIRE(result.moisture >= 60);
-    REQUIRE(result.moisture <= 70);
+    REQUIRE(result.moisture >= 60.0);
+    REQUIRE(result.moisture <= 70.0);
 }
 
 }    // namespace farmhub::utils::scheduling
+
+namespace Catch {
+
+using farmhub::utils::scheduling::SimulationResult;
+
+template <>
+struct StringMaker<SimulationResult> {
+    static std::string convert(SimulationResult const& s) {
+        std::ostringstream oss;
+        oss << "SimulationResult{time=" << s.time.count()
+            << "ms, steps=" << s.steps
+            << ", moisture=" << s.moisture
+            << "%, state=" << toString(s.state) << "}";
+        return oss.str();
+    }
+};
+
+}    // namespace Catch
