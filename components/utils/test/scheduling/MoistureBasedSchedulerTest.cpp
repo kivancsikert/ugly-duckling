@@ -1,5 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <FakeLog.hpp>
+
 #include <utils/scheduling/MoistureBasedScheduler.hpp>
 
 #include "Fakes.hpp"
@@ -8,10 +10,21 @@
 
 namespace farmhub::utils::scheduling {
 
-constexpr auto oneTick = 1000ms;
-
-void log(std::string_view message) {
-    printf("Moisture based scheduler: %s\n", message.data());
+inline const char* toString(State state) {
+    switch (state) {
+        case State::Idle:
+            return "idle";
+        case State::Watering:
+            return "watering";
+        case State::Soak:
+            return "soak";
+        case State::UpdateModel:
+            return "update model";
+        case State::Fault:
+            return "fault";
+        default:
+            return "unknown";
+    }
 }
 
 TEST_CASE("Waters up to band without overshoot") {
@@ -22,31 +35,45 @@ TEST_CASE("Waters up to band without overshoot") {
 
     Config config = {
         .targetLow = 60,
-        .targetHigh = 80,
+        .targetHigh = 70,
         .valveTimeout = std::chrono::minutes { 2 },
     };
 
-    MoistureBasedScheduler scheduler { config, clock, flowMeter, moistureSensor, log };
+    MoistureBasedScheduler scheduler { config, clock, flowMeter, moistureSensor };
 
-    // Simulate 30 minutes at 1s tick
     moistureSensor->moisture = 55.0;
     ScheduleResult result;
-    for (int i = 0; i < 1800; ++i) {
+    while (clock.now() < 1h) {
+        if (scheduler.getTelemetry().moisture >= config.targetLow && scheduler.getState() == State::Idle) {
+            break;
+        }
+
         result = scheduler.tick();
+        auto tick = result.nextDeadline.value_or(5s);
+
         // Produce flow when valve is on
         if (result.targetState == TargetState::OPEN) {
-            constexpr Liters flowRatePerMinute = 15.0; // L / min
-            const Liters volumePerTick = flowRatePerMinute * chrono_ratio(oneTick, 1min);
+            constexpr Liters flowRatePerMinute = 15.0;    // L / min
+            const Liters volumePerTick = flowRatePerMinute * chrono_ratio(tick, 1min);
+            LOGV("Injecting %f liters of water", volumePerTick);
             flowMeter->bucket += volumePerTick;
             soil.inject(clock.now(), volumePerTick);
         }
 
-        soil.step(clock.now(), moistureSensor->moisture, oneTick);
-        clock.advance(oneTick);
-        if (scheduler.getTelemetry().moisture >= config.targetLow && scheduler.getState() == State::Idle) {
-            break;
-        }
+        soil.step(clock.now(), moistureSensor->moisture, tick);
+
+        LOGV("At %lld sec in %s state, valve is %s, moisture level is %f%%, advancing by %lld sec",
+            duration_cast<seconds>(clock.now()).count(),
+            toString(scheduler.getState()),
+            toString(result.targetState),
+            scheduler.getTelemetry().moisture,
+            duration_cast<seconds>(tick).count());
+
+        clock.advance(tick);
     }
+    LOGV("Final moisture level: %f after %lld sec",
+        scheduler.getTelemetry().moisture,
+        duration_cast<seconds>(clock.now()).count());
 
     REQUIRE(scheduler.getTelemetry().moisture >= config.targetLow);
     REQUIRE(result.targetState == TargetState::CLOSED);

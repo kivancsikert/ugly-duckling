@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <stdexcept>
 #include <string_view>
 #include <utility>
 
@@ -30,9 +31,6 @@ concept Clock = requires(const T& clock) {
     { clock.now() } -> std::same_as<ms>;
 };
 
-// ---------- Notification hook ----------
-using Notifier = std::move_only_function<void(std::string_view)>;
-
 // ---------- Config & Telemetry ----------
 struct Config {
     // Targets
@@ -53,9 +51,9 @@ struct Config {
     double slopeSettle { 0.01 };
 
     // Soak timing
-    s minDeadTime { std::chrono::minutes { 5 } };
-    s maxTau { std::chrono::hours { 1 } };
-    s valveTimeout { std::chrono::minutes { 30 } };
+    s minDeadTime { 2min };
+    s maxTau { 10min };
+    s valveTimeout { 5min };
 
     // Learning (EWMA)
     double betaGain { 0.20 };
@@ -106,6 +104,23 @@ namespace detail {
 constexpr double epsilon = 1e-3;
 }    // namespace detail
 
+inline static constexpr std::optional<ms> getNextDeadline(State state) {
+    switch (state) {
+        case State::Idle:
+        case State::Soak:
+            return 30s;
+        case State::Watering:
+            return 1s;
+        case State::UpdateModel:
+            // Let's immediately re-assess
+            return 0s;
+        case State::Fault:
+            return {};
+        default:
+            throw std::invalid_argument("Unknown state");
+    }
+}
+
 template <Clock TClock>
 class MoistureBasedScheduler : public IScheduler {
 public:
@@ -113,13 +128,11 @@ public:
         Config config,
         TClock& clock,
         std::shared_ptr<IFlowMeter> flowMeter,
-        std::shared_ptr<ISoilMoistureSensor> moistureSensor,
-        Notifier notify = nullptr)
+        std::shared_ptr<ISoilMoistureSensor> moistureSensor)
         : config { std::move(config) }
         , clock { clock }
         , flowMeter { flowMeter }
-        , moistureSensor { moistureSensor }
-        , notify { std::move(notify) } {
+        , moistureSensor { moistureSensor } {
     }
 
     [[nodiscard]] const Telemetry& getTelemetry() const noexcept {
@@ -152,8 +165,7 @@ public:
 
         return {
             .targetState = state == State::Watering ? TargetState::OPEN : TargetState::CLOSED,
-            // TODO Ask for less frequent callbacks when soaking or
-            .nextDeadline = std::nullopt
+            .nextDeadline = getNextDeadline(state),
         };
     }
 
@@ -175,7 +187,6 @@ private:
     TClock& clock;
     std::shared_ptr<IFlowMeter> flowMeter;
     std::shared_ptr<ISoilMoistureSensor> moistureSensor;
-    Notifier notify;
 
     State state { State::Idle };
 
@@ -227,7 +238,7 @@ private:
         }
 
         if (telemetry.totalVolume >= config.maxTotalVolume) {
-            notify("Water cap reached");
+            LOGD("Water cap reached");
             state = State::Fault;
             return;
         }
@@ -312,7 +323,7 @@ private:
         if (telemetry.moisture >= config.targetLow) {
             state = State::Idle;
         } else if (telemetry.totalVolume >= config.maxTotalVolume) {
-            notify("Irrigation: daily cap reached mid-process.");
+            LOGD("Volume cap reached mid-process");
             state = State::Fault;
         } else {
             state = State::Idle;    // next tick will re-plan a (likely smaller) pulse
