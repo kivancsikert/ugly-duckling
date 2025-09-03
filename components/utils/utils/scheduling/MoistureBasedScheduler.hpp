@@ -143,20 +143,21 @@ public:
     }
 
     ScheduleResult tick() override {
-        sampleAndFilter();
+        const auto now = clock.now();
+        sampleAndFilter(now);
 
         switch (state) {
             case State::Idle:
-                decideOrStartWatering();
+                decideOrStartWatering(now);
                 break;
             case State::Watering:
-                continueWatering();
+                continueWatering(now);
                 break;
             case State::Soak:
-                soak();
+                soak(now);
                 break;
             case State::UpdateModel:
-                updateModel();
+                updateModel(now);
                 break;
             case State::Fault: /* stay here */
                 break;
@@ -202,8 +203,7 @@ private:
     double slopePeak { 0.0 };
     bool sawRise { false };
 
-    void sampleAndFilter() {
-        const auto now = clock.now();
+    void sampleAndFilter(const ms now) {
         if (!lastSample.has_value()) {
             lastSample = now;
         }
@@ -229,7 +229,7 @@ private:
         lastSample = now;
     }
 
-    void decideOrStartWatering() {
+    void decideOrStartWatering(const ms now) {
         const Percent targetMid = 0.5 * (config.targetLow + config.targetHigh);
 
         if (telemetry.moisture >= config.targetLow) {
@@ -258,23 +258,23 @@ private:
 
         telemetry.lastVolumePlanned = volumePlanned;
         volumeDelivered = 0.0;
-        waterStartTime = clock.now();
+        waterStartTime = now;
 
         state = State::Watering;
     }
 
-    void continueWatering() {
+    void continueWatering(const ms now) {
         volumeDelivered += flowMeter->getVolume();
 
         const bool reached = volumeDelivered + detail::epsilon >= volumePlanned;
-        const bool timeout = (clock.now() - waterStartTime) >= config.valveTimeout;
+        const bool timeout = (now - waterStartTime) >= config.valveTimeout;
 
         if (reached || timeout) {
             telemetry.totalVolume += volumeDelivered;
             telemetry.totalCycles += 1;
             telemetry.lastVolumeDelivered = volumeDelivered;
 
-            pulseEndTime = clock.now();
+            pulseEndTime = now;
             moistureAtPulseEnd = telemetry.moisture;
             slopePeak = telemetry.slope;
             sawRise = false;
@@ -283,8 +283,8 @@ private:
         }
     }
 
-    void soak() {
-        const auto timeSincePulseEnd = clock.now() - pulseEndTime;
+    void soak(const ms now) {
+        const auto timeSincePulseEnd = now - pulseEndTime;
         const auto requiredDeadTime = std::max(config.minDeadTime, telemetry.deadTime);
 
         if (timeSincePulseEnd < requiredDeadTime) {
@@ -309,7 +309,7 @@ private:
         }
     }
 
-    void updateModel() {
+    void updateModel(const ms now) {
         const double dMoisture = telemetry.moisture - moistureAtPulseEnd;
         const double dVolume = std::max(volumeDelivered, detail::epsilon);
 
