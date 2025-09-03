@@ -50,12 +50,12 @@ struct PlotConfig : ConfigurationSection {
 };
 
 struct BootClock {
-    ms now() const {
+    static ms now() {
         return duration_cast<ms>(boot_clock::now().time_since_epoch());
     }
 };
 
-enum Mode {
+enum Mode : uint8_t {
     OVERRIDE,
     SCHEDULE,
     SOIL_MOISTURE_TARGET,
@@ -160,25 +160,25 @@ public:
 };
 
 struct NoOpFlowMeter : virtual IFlowMeter, Named {
-    NoOpFlowMeter(const std::string& name) : Named(name) {}
+    explicit NoOpFlowMeter(const std::string& name) : Named(name) {}
 
     Liters getVolume() override {
         return 0;
     }
 
-    const std::string& getName() const {
+    const std::string& getName() const override {
         return Named::name;
     }
 };
 
 struct NoOpSoilMoistureSensor : virtual ISoilMoistureSensor, Named {
-    NoOpSoilMoistureSensor(const std::string& name) : Named(name) {}
+    explicit NoOpSoilMoistureSensor(const std::string& name) : Named(name) {}
 
     Percent getMoisture() override {
         return 0;
     }
 
-    const std::string& getName() const {
+    const std::string& getName() const override {
         return Named::name;
     }
 };

@@ -9,7 +9,7 @@
 namespace farmhub::utils::scheduling {
 
 struct CompositeScheduler : IScheduler {
-    CompositeScheduler(std::list<std::shared_ptr<IScheduler>> schedulers)
+    explicit CompositeScheduler(std::list<std::shared_ptr<IScheduler>> schedulers)
         : schedulers(std::move(schedulers)) {
     }
 
@@ -24,7 +24,7 @@ struct CompositeScheduler : IScheduler {
 
 private:
 
-    inline static ScheduleResult merge(const ScheduleResult& a, const ScheduleResult& b) {
+    static ScheduleResult merge(const ScheduleResult& a, const ScheduleResult& b) {
         return {
             .targetState = a.targetState ? a.targetState : b.targetState,
             .nextDeadline = minDuration(a.nextDeadline, b.nextDeadline),

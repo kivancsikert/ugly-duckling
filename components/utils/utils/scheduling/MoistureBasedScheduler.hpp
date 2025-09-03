@@ -100,7 +100,7 @@ namespace detail {
 constexpr double epsilon = 1e-3;
 }    // namespace detail
 
-inline static constexpr std::optional<ms> getNextDeadline(State state) {
+static constexpr std::optional<ms> getNextDeadline(State state) {
     switch (state) {
         case State::Idle:
         case State::Soak:
@@ -129,10 +129,10 @@ struct MoistureBasedScheduler : IScheduler {
         std::shared_ptr<TClock> clock,
         std::shared_ptr<IFlowMeter> flowMeter,
         std::shared_ptr<ISoilMoistureSensor> moistureSensor)
-        : config { std::move(config) }
+        : config { config }
         , clock { std::move(clock) }
-        , flowMeter { flowMeter }
-        , moistureSensor { moistureSensor } {
+        , flowMeter { std::move(flowMeter) }
+        , moistureSensor { std::move(moistureSensor) } {
     }
 
     [[nodiscard]] const Telemetry& getTelemetry() const noexcept {
@@ -167,7 +167,7 @@ struct MoistureBasedScheduler : IScheduler {
                 soak(now);
                 break;
             case State::UpdateModel:
-                updateModel(now, target);
+                updateModel(now);
                 break;
             case State::Fault: /* stay here */
                 break;
@@ -200,7 +200,7 @@ private:
     State state { State::Idle };
 
     // Internal sampling
-    std::optional<ms> lastSample {};
+    std::optional<ms> lastSample;
     Percent lastMoisture { NAN };
 
     // Pulse bookkeeping
@@ -318,7 +318,7 @@ private:
         }
     }
 
-    void updateModel(const ms now, const MoistureTarget& target) {
+    void updateModel(const ms /*now*/) {
         const double dMoisture = telemetry.moisture - moistureAtPulseEnd;
         const double dVolume = std::max(volumeDelivered, detail::epsilon);
 
@@ -328,13 +328,12 @@ private:
             telemetry.gain = (1.0 - config.betaGain) * telemetry.gain + config.betaGain * observedGain;
         }
 
-        if (telemetry.moisture >= target.low) {
-            state = State::Idle;
-        } else if (telemetry.totalVolume >= config.maxTotalVolume) {
+        if (telemetry.totalVolume >= config.maxTotalVolume) {
             LOGD("Volume cap reached mid-process");
             state = State::Fault;
         } else {
-            state = State::Idle;    // next tick will re-plan a (likely smaller) pulse
+            // Next tick will re-plan a (likely smaller) pulse if needed
+            state = State::Idle;
         }
     }
 };
