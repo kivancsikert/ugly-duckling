@@ -172,6 +172,7 @@ TEST_CASE("starts watering after evaporation reduces moisture") {
     REQUIRE(result.state == TargetState::OPEN);
     REQUIRE(result.steps > 10);
     REQUIRE(result.moisture < 60.0);
+    REQUIRE(result.moisture > 59.0);
 }
 
 }    // namespace farmhub::utils::scheduling
