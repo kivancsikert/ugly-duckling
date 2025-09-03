@@ -20,8 +20,6 @@ struct TimeBasedSchedule {
 
 class TimeBasedScheduler : public IScheduler {
 public:
-    TimeBasedScheduler() = default;
-
     void setSchedules(const std::list<TimeBasedSchedule>& newSchedules) {
         schedules = newSchedules;
     }

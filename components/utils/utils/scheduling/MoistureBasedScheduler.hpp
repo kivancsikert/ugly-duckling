@@ -123,15 +123,14 @@ struct MoistureTarget {
 };
 
 template <Clock TClock>
-class MoistureBasedScheduler : public IScheduler {
-public:
+struct MoistureBasedScheduler : IScheduler {
     MoistureBasedScheduler(
         Config config,
-        TClock& clock,
+        std::shared_ptr<TClock> clock,
         std::shared_ptr<IFlowMeter> flowMeter,
         std::shared_ptr<ISoilMoistureSensor> moistureSensor)
         : config { std::move(config) }
-        , clock { clock }
+        , clock { std::move(clock) }
         , flowMeter { flowMeter }
         , moistureSensor { moistureSensor } {
     }
@@ -154,7 +153,7 @@ public:
         }
         const auto& target = *this->target;
 
-        const auto now = clock.now();
+        const auto now = clock->now();
         sampleAndFilter(now);
 
         switch (state) {
@@ -194,7 +193,7 @@ private:
     std::optional<MoistureTarget> target;
     Telemetry telemetry {};
 
-    TClock& clock;
+    std::shared_ptr<TClock> clock;
     std::shared_ptr<IFlowMeter> flowMeter;
     std::shared_ptr<ISoilMoistureSensor> moistureSensor;
 

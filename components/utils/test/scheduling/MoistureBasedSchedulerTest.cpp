@@ -68,7 +68,7 @@ struct SimulationResult {
 };
 
 SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, std::optional<MoistureTarget> target, SimulationConfig simulationConfig) {
-    FakeClock clock;
+    auto clock = std::make_shared<FakeClock>();
     auto flowMeter = std::make_shared<FakeFlowMeter>();
     auto moistureSensor = std::make_shared<FakeSoilMoistureSensor>();
     MoistureBasedScheduler scheduler { config, clock, flowMeter, moistureSensor };
@@ -79,12 +79,12 @@ SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, std::
 
     ScheduleResult result;
     int steps = 0;
-    while (clock.now() < simulationConfig.timeout) {
+    while (clock->now() < simulationConfig.timeout) {
         result = scheduler.tick();
         steps++;
         auto tick = result.nextDeadline.value_or(simulationConfig.defaultTick);
         LOGV("At %lld sec in %s state, valve is %s, moisture level is %f%%, advancing by %lld sec",
-            duration_cast<seconds>(clock.now()).count(),
+            duration_cast<seconds>(clock->now()).count(),
             toString(scheduler.getState()),
             toString(result.targetState),
             scheduler.getTelemetry().moisture,
@@ -99,21 +99,21 @@ SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, std::
             const Liters volumePerTick = simulationConfig.flowRatePerMinute * chrono_ratio(tick, 1min);
             LOGV("Injecting %f liters of water", volumePerTick);
             flowMeter->bucket += volumePerTick;
-            soil.inject(clock.now(), volumePerTick);
+            soil.inject(clock->now(), volumePerTick);
         }
 
-        soil.step(clock.now(), moistureSensor->moisture, tick);
+        soil.step(clock->now(), moistureSensor->moisture, tick);
 
-        clock.advance(tick);
+        clock->advance(tick);
     }
 
     LOGV("Final moisture level: %f after %lld sec, %d steps",
         scheduler.getTelemetry().moisture,
-        duration_cast<seconds>(clock.now()).count(),
+        duration_cast<seconds>(clock->now()).count(),
         steps);
 
     return {
-        .time = clock.now(),
+        .time = clock->now(),
         .steps = steps,
         .moisture = scheduler.getTelemetry().moisture,
         .targetState = result.targetState,
