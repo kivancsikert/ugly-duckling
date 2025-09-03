@@ -33,13 +33,9 @@ concept Clock = requires(const T& clock) {
 
 // ---------- Config & Telemetry ----------
 struct Config {
-    // Targets
-    Percent targetLow { 60.0 };
-    Percent targetHigh { 80.0 };
-
     // Pulse sizing
-    Liters minV { 0.5 };
-    Liters maxV { 10.0 };
+    Liters minVolume { 0.5 };
+    Liters maxVolume { 10.0 };
     double minGain { 0.05 };    // % per liter (floor)
 
     // Filters
@@ -121,6 +117,11 @@ inline static constexpr std::optional<ms> getNextDeadline(State state) {
     }
 }
 
+struct MoistureTarget {
+    Percent low;
+    Percent high;
+};
+
 template <Clock TClock>
 class MoistureBasedScheduler : public IScheduler {
 public:
@@ -143,12 +144,22 @@ public:
     }
 
     ScheduleResult tick() override {
+        // Without a target we do not schedule watering
+        if (!target) {
+            return {
+                .targetState = {},
+                .nextDeadline = {},
+                .shouldPublishTelemetry = false,
+            };
+        }
+        const auto& target = *this->target;
+
         const auto now = clock.now();
         sampleAndFilter(now);
 
         switch (state) {
             case State::Idle:
-                decideOrStartWatering(now);
+                decideOrStartWatering(now, target);
                 break;
             case State::Watering:
                 continueWatering(now);
@@ -157,7 +168,7 @@ public:
                 soak(now);
                 break;
             case State::UpdateModel:
-                updateModel(now);
+                updateModel(now, target);
                 break;
             case State::Fault: /* stay here */
                 break;
@@ -169,10 +180,8 @@ public:
         };
     }
 
-    // Control surface
-    void setTarget(Percent lo, Percent hi) {
-        config.targetLow = lo;
-        config.targetHigh = hi;
+    void setTarget(std::optional<MoistureTarget> target) {
+        this->target = target;
     }
 
     void resetTotals() {
@@ -182,6 +191,7 @@ public:
 
 private:
     Config config;
+    std::optional<MoistureTarget> target;
     Telemetry telemetry {};
 
     TClock& clock;
@@ -229,10 +239,10 @@ private:
         lastSample = now;
     }
 
-    void decideOrStartWatering(const ms now) {
-        const Percent targetMid = 0.5 * (config.targetLow + config.targetHigh);
+    void decideOrStartWatering(const ms now, const MoistureTarget& target) {
+        const Percent targetMid = 0.5 * (target.low + target.high);
 
-        if (telemetry.moisture >= config.targetLow) {
+        if (telemetry.moisture >= target.low) {
             return;
         }
 
@@ -253,8 +263,8 @@ private:
 
         volumePlanned = detail::clamp(
             targetVolume,
-            config.minV,
-            std::min(config.maxV, config.maxVolumePerCycle));
+            config.minVolume,
+            std::min(config.maxVolume, config.maxVolumePerCycle));
 
         telemetry.lastVolumePlanned = volumePlanned;
         volumeDelivered = 0.0;
@@ -309,7 +319,7 @@ private:
         }
     }
 
-    void updateModel(const ms now) {
+    void updateModel(const ms now, const MoistureTarget& target) {
         const double dMoisture = telemetry.moisture - moistureAtPulseEnd;
         const double dVolume = std::max(volumeDelivered, detail::epsilon);
 
@@ -319,7 +329,7 @@ private:
             telemetry.gain = (1.0 - config.betaGain) * telemetry.gain + config.betaGain * observedGain;
         }
 
-        if (telemetry.moisture >= config.targetLow) {
+        if (telemetry.moisture >= target.low) {
             state = State::Idle;
         } else if (telemetry.totalVolume >= config.maxTotalVolume) {
             LOGD("Volume cap reached mid-process");

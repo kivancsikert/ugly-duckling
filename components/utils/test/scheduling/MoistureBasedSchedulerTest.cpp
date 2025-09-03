@@ -57,18 +57,22 @@ struct SimulationResult {
     ms time;
     int steps;
     Percent moisture;
-    TargetState state;
+    std::optional<TargetState> targetState;
 
     bool operator==(const SimulationResult& other) const {
-        return time == other.time && steps == other.steps && moisture == other.moisture && state == other.state;
+        return time == other.time
+            && steps == other.steps
+            && moisture == other.moisture
+            && targetState == other.targetState;
     }
 };
 
-SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, SimulationConfig simulationConfig) {
+SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, std::optional<MoistureTarget> target, SimulationConfig simulationConfig) {
     FakeClock clock;
     auto flowMeter = std::make_shared<FakeFlowMeter>();
     auto moistureSensor = std::make_shared<FakeSoilMoistureSensor>();
     MoistureBasedScheduler scheduler { config, clock, flowMeter, moistureSensor };
+    scheduler.setTarget(target);
     SoilSimulator soil { soilConfig };
 
     moistureSensor->moisture = simulationConfig.startMoisture;
@@ -112,16 +116,34 @@ SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, Simul
         .time = clock.now(),
         .steps = steps,
         .moisture = scheduler.getTelemetry().moisture,
-        .state = result.targetState.value_or(TargetState::CLOSED),
+        .targetState = result.targetState,
     };
+}
+
+SimulationResult simulate(SoilSimulator::Config soilConfig, MoistureTarget target, SimulationConfig simulationConfig) {
+    return simulate(soilConfig, {}, target, simulationConfig);
+}
+
+TEST_CASE("does not water when there is no target specified") {
+    auto result = simulate(
+        BASIC_SOIL,
+        {},
+        {},
+        {
+            .startMoisture = 10.0,
+        });
+
+    REQUIRE(result.time == 0ms);
+    REQUIRE(result.steps == 1);
+    REQUIRE(result.targetState.has_value() == false);
 }
 
 TEST_CASE("does not water when moisture is already above target") {
     auto result = simulate(
         BASIC_SOIL,
         {
-            .targetLow = 60,
-            .targetHigh = 70,
+            .low = 60,
+            .high = 70,
         },
         {
             .startMoisture = 65.0,
@@ -131,7 +153,7 @@ TEST_CASE("does not water when moisture is already above target") {
                 .time = 0ms,
                 .steps = 1,
                 .moisture = 65.0,
-                .state = TargetState::CLOSED,
+                .targetState = TargetState::CLOSED,
             });
 }
 
@@ -139,15 +161,15 @@ TEST_CASE("waters up to band without overshoot") {
     auto result = simulate(
         BASIC_SOIL,
         {
-            .targetLow = 60,
-            .targetHigh = 70,
+            .low = 60,
+            .high = 70,
         },
         {
             .startMoisture = 55.0,
             .flowRatePerMinute = 15.0,
         });
 
-    REQUIRE(result.state == TargetState::CLOSED);
+    REQUIRE(result.targetState == TargetState::CLOSED);
     REQUIRE(result.time < 15min);
     REQUIRE(result.steps < 80);
     REQUIRE(result.moisture >= 60.0);
@@ -158,8 +180,8 @@ TEST_CASE("starts watering after evaporation reduces moisture") {
     auto result = simulate(
         BASIC_SOIL,
         {
-            .targetLow = 60,
-            .targetHigh = 70,
+            .low = 60,
+            .high = 70,
         },
         {
             .stopCondition = [](SchedulerRef scheduler) {
@@ -169,7 +191,7 @@ TEST_CASE("starts watering after evaporation reduces moisture") {
             .flowRatePerMinute = 15.0,
         });
 
-    REQUIRE(result.state == TargetState::OPEN);
+    REQUIRE(result.targetState == TargetState::OPEN);
     REQUIRE(result.steps > 10);
     REQUIRE(result.moisture < 60.0);
     REQUIRE(result.moisture > 59.0);
@@ -188,7 +210,7 @@ struct StringMaker<SimulationResult> {
         oss << "SimulationResult{time=" << s.time.count()
             << "ms, steps=" << s.steps
             << ", moisture=" << s.moisture
-            << "%, state=" << toString(s.state) << "}";
+            << "%, targetState=" << toString(s.targetState) << "}";
         return oss.str();
     }
 };
