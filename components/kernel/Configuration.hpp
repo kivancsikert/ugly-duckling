@@ -208,11 +208,11 @@ public:
         parent->add(*this);
     }
 
-    const T get() const {
+    T get() const {
         return configured ? value : defaultValue;
     }
 
-    const std::optional<T> getIfPresent() const {
+    std::optional<T> getIfPresent() const {
         if (configured) {
             return value;
         }
