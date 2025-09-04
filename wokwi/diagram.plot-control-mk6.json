@@ -121,14 +121,20 @@
       "left": 153.6,
       "attrs": { "color": "green", "label": "Flash", "bounce": "0" }
     },
-    { "type": "board-ds18b20", "id": "temp1", "top": -39.53, "left": -63.12, "attrs": {
-      "deviceID": "010203040506",
-      "family": "40",
-      "temperature": "25.0"
-    } },
-    { "type": "wokwi-potentiometer", "id": "soil-moisture", "top": -58.9, "left": -153.8, "attrs": {
-      "value": "2000"
-    } },
+    {
+      "type": "board-ds18b20",
+      "id": "temp1",
+      "top": -39.53,
+      "left": -63.12,
+      "attrs": { "deviceID": "010203040506", "family": "40", "temperature": "25.0" }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "soil-moisture",
+      "top": -58.9,
+      "left": -153.8,
+      "attrs": { "value": "2000" }
+    },
     {
       "type": "wokwi-text",
       "id": "text1",
@@ -142,6 +148,13 @@
       "top": -105.6,
       "left": -67.2,
       "attrs": { "text": "Soil\ntemp" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "flow",
+      "top": 15.8,
+      "left": -240,
+      "attrs": { "color": "blue", "label": "Flow" }
     }
   ],
   "connections": [
@@ -178,7 +191,14 @@
     [ "esp:GND.2", "temp1:GND", "black", [ "v-9.6", "h-153.6" ] ],
     [ "pot1:VCC", "esp:3V3.1", "red", [ "v0" ] ],
     [ "pot1:GND", "esp:GND.2", "black", [ "v0" ] ],
-    [ "pot1:SIG", "esp:6", "green", [ "v0" ] ]
+    [ "pot1:SIG", "esp:6", "green", [ "v0" ] ],
+    [ "soil-moisture:GND", "esp:GND.2", "black", [ "v38.4", "h9.6" ] ],
+    [ "soil-moisture:VCC", "esp:3V3.1", "red", [ "v0" ] ],
+    [ "esp:6", "soil-moisture:SIG", "green", [ "h0" ] ],
+    [ "btn2:2.r", "esp:5", "green", [ "h9.8", "v19.4" ] ],
+    [ "soil-moisture:VCC", "btn2:1.r", "red", [ "v0" ] ],
+    [ "flow:2.r", "esp:5", "green", [ "h19.4", "v19.4" ] ],
+    [ "soil-moisture:VCC", "flow:1.r", "red", [ "v0" ] ]
   ],
   "dependencies": {}
 }

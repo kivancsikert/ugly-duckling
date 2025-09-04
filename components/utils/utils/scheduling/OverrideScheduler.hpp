@@ -17,6 +17,11 @@ struct OverrideSchedule {
 
 class OverrideScheduler : public IScheduler {
 public:
+
+    const char* getName() const override {
+        return "override";
+    }
+
     void setOverride(const std::optional<OverrideSchedule>& schedule) {
         this->schedule = schedule;
     }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string.h>
+
 #include <string>
 
 #include <esp_log.h>
@@ -78,19 +79,19 @@ inline bool loggingTagInList(const char* tag, const char* list) {
     return false;
 }
 
-#define LOGGING_TAG(name)                                      \
-    static constexpr const char* TAG = "farmhub:" name;        \
-    struct TAG##_LoggerInit {                                  \
-        TAG##_LoggerInit() {                                   \
+// LOGGING_TAG(varName, "tagname")
+#define LOGGING_TAG(varName, name)                             \
+    static constexpr const char* varName = "farmhub:" name;    \
+    struct varName##_LoggerInit {                              \
+        varName##_LoggerInit() {                               \
             esp_log_level_t lvl = FARMHUB_LOG_LEVEL;           \
-            /* if tag is in FARMHUB_LOG_VERBOSE, bump level */ \
             if (loggingTagInList(name, FARMHUB_LOG_VERBOSE)) { \
                 lvl = ESP_LOG_VERBOSE;                         \
             }                                                  \
-            esp_log_level_set(TAG, lvl);                       \
+            esp_log_level_set(varName, lvl);                   \
         }                                                      \
     };                                                         \
-    static const TAG##_LoggerInit TAG##_logger_init;
+    static const varName##_LoggerInit varName##_logger_init;
 
 class Log {
 public:

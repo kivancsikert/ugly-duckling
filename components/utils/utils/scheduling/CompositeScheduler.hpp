@@ -17,9 +17,13 @@ struct CompositeScheduler : IScheduler {
         ScheduleResult result;
         for (auto& scheduler : schedulers) {
             auto subResult = scheduler->tick();
-            result = merge(result, subResult);
+             result = merge(result, subResult);
         }
         return result;
+    }
+
+    const char* getName() const override {
+        return "composite";
     }
 
 private:

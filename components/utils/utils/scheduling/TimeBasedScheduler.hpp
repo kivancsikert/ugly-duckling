@@ -20,6 +20,11 @@ struct TimeBasedSchedule {
 
 class TimeBasedScheduler : public IScheduler {
 public:
+
+    const char* getName() const override {
+        return "time";
+    }
+
     void setSchedules(const std::list<TimeBasedSchedule>& newSchedules) {
         schedules = newSchedules;
     }
@@ -41,7 +46,7 @@ public:
 
         for (const auto& schedule : schedules) {
             auto offset = duration_cast<milliseconds>(now - schedule.start);
-            LOGV("Offset from schedule start is %lld ms, schedule: open %lld sec / %lld sec",
+            LOGTV(SCHEDULING, "Offset from schedule start is %lld ms, schedule: open %lld sec / %lld sec",
                 offset.count(),
                 schedule.duration.count(),
                 schedule.period.count());
@@ -50,16 +55,16 @@ public:
                 // Schedule has not started yet; valve should be closed according to this schedule
                 // Calculate when this schedule will start for the first time
                 if (targetState != TargetState::OPEN) {
-                    LOGV("Before schedule starts, should be closed");
+                    LOGTV(SCHEDULING, "Before schedule starts, should be closed");
                     targetState = TargetState::CLOSED;
                     validFor = minDuration(validFor, -offset);
                 } else {
-                    LOGV("Before schedule starts, but already open");
+                    LOGTV(SCHEDULING, "Before schedule starts, but already open");
                 }
             } else {
                 // This schedule has started; determine if the valve should be open or closed according to this schedule
                 auto periodPosition = offset % schedule.period;
-                LOGV("Inside schedule at position %lld ms",
+                LOGTV(SCHEDULING, "Inside schedule at position %lld ms",
                     periodPosition.count());
 
                 if (periodPosition < schedule.duration) {

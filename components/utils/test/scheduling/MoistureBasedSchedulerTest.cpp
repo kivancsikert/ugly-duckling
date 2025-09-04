@@ -12,23 +12,6 @@
 
 namespace farmhub::utils::scheduling {
 
-inline const char* toString(State state) {
-    switch (state) {
-        case State::Idle:
-            return "idle";
-        case State::Watering:
-            return "watering";
-        case State::Soak:
-            return "soak";
-        case State::UpdateModel:
-            return "update model";
-        case State::Fault:
-            return "fault";
-        default:
-            return "unknown";
-    }
-}
-
 static constexpr SoilSimulator::Config BASIC_SOIL = {
     .gainPercentPerLiter = 1.0,
     .deadTime = 20s,
@@ -43,7 +26,7 @@ struct SimulationConfig {
     seconds defaultTick = 5s;
     std::function<bool(SchedulerRef)> stopCondition = [](SchedulerRef scheduler) {
         if (scheduler.getState() == State::Idle) {
-            LOGV("Reached idle state with moisture level: %f", scheduler.getTelemetry().moisture);
+            LOGTV(TEST, "Reached idle state with moisture level: %f", scheduler.getTelemetry().moisture);
             return true;
         }
         return false;
@@ -83,7 +66,7 @@ SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, std::
         result = scheduler.tick();
         steps++;
         auto tick = result.nextDeadline.value_or(simulationConfig.defaultTick);
-        LOGV("At %lld sec in %s state, valve is %s, moisture level is %f%%, advancing by %lld sec",
+        LOGTV(TEST, "At %lld sec in %s state, valve is %s, moisture level is %f%%, advancing by %lld sec",
             duration_cast<seconds>(clock->now()).count(),
             toString(scheduler.getState()),
             toString(result.targetState),
@@ -97,7 +80,7 @@ SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, std::
         // Produce flow when valve is on
         if (result.targetState == TargetState::OPEN) {
             const Liters volumePerTick = simulationConfig.flowRatePerMinute * chrono_ratio(tick, 1min);
-            LOGV("Injecting %f liters of water", volumePerTick);
+            LOGTV(TEST, "Injecting %f liters of water", volumePerTick);
             flowMeter->bucket += volumePerTick;
             soil.inject(clock->now(), volumePerTick);
         }
@@ -107,7 +90,7 @@ SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, std::
         clock->advance(tick);
     }
 
-    LOGV("Final moisture level: %f after %lld sec, %d steps",
+    LOGTV(TEST, "Final moisture level: %f after %lld sec, %d steps",
         scheduler.getTelemetry().moisture,
         duration_cast<seconds>(clock->now()).count(),
         steps);

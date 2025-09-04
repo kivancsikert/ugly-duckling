@@ -10,7 +10,7 @@
 
 namespace farmhub::utils::scheduling {
 
-LOGGING_TAG("scheduling")
+LOGGING_TAG(SCHEDULING, "scheduling")
 
 using ms = std::chrono::milliseconds;
 
@@ -32,6 +32,7 @@ struct ScheduleResult {
 struct IScheduler {
     virtual ~IScheduler() = default;
     virtual ScheduleResult tick() = 0;
+    virtual const char* getName() const = 0;
 };
 
 }    // namespace farmhub::utils::scheduling
