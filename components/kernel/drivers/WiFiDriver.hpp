@@ -20,6 +20,8 @@ using namespace farmhub::kernel;
 
 namespace farmhub::kernel::drivers {
 
+LOGGING_TAG(WIFI, "wifi")
+
 class WiFiDriver final {
 public:
     WiFiDriver(
@@ -31,7 +33,7 @@ public:
         , networkReady(networkReady)
         , configPortalRunning(configPortalRunning)
         , hostname(hostname) {
-        LOGTD(Tag::WIFI, "Registering WiFi handlers");
+        LOGTD(WIFI, "Registering WiFi handlers");
 
         // Initialize TCP/IP adapter and event loop
         ESP_ERROR_CHECK(esp_netif_init());
@@ -82,7 +84,7 @@ public:
             if (err == ESP_OK) {
                 json["rssi"] = apInfo.rssi;
             } else {
-                LOGTD(Tag::WIFI, "Failed to get AP info: %s", esp_err_to_name(err));
+                LOGTD(WIFI, "Failed to get AP info: %s", esp_err_to_name(err));
             }
         }
     }
@@ -114,13 +116,13 @@ private:
     void onWiFiEvent(int32_t eventId, void* eventData) {
         switch (eventId) {
             case WIFI_EVENT_STA_START: {
-                LOGTD(Tag::WIFI, "Started");
+                LOGTD(WIFI, "Started");
                 stationStarted.set();
                 eventQueue.offer(WiFiEvent::STARTED);
                 break;
             }
             case WIFI_EVENT_STA_STOP: {
-                LOGTD(Tag::WIFI, "Stopped");
+                LOGTD(WIFI, "Stopped");
                 stationStarted.clear();
                 break;
             }
@@ -131,7 +133,7 @@ private:
                     Lock lock(metadataMutex);
                     ssid = newSsid;
                 }
-                LOGTD(Tag::WIFI, "Connected to the AP %s",
+                LOGTD(WIFI, "Connected to the AP %s",
                     newSsid.c_str());
                 break;
             }
@@ -143,16 +145,16 @@ private:
                     ssid.reset();
                 }
                 eventQueue.offer(WiFiEvent::DISCONNECTED);
-                LOGTD(Tag::WIFI, "Disconnected from the AP %.*s, reason: %d",
+                LOGTD(WIFI, "Disconnected from the AP %.*s, reason: %d",
                     event->ssid_len, reinterpret_cast<const char*>(event->ssid), event->reason);
                 break;
             }
             case WIFI_EVENT_AP_STACONNECTED: {
-                LOGTI(Tag::WIFI, "SoftAP transport connected");
+                LOGTI(WIFI, "SoftAP transport connected");
                 break;
             }
             case WIFI_EVENT_AP_STADISCONNECTED: {
-                LOGTI(Tag::WIFI, "SoftAP transport disconnected");
+                LOGTI(WIFI, "SoftAP transport disconnected");
                 break;
             }
             default:
@@ -171,7 +173,7 @@ private:
                 }
                 eventQueue.offer(WiFiEvent::CONNECTED);
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
-                LOGTD(Tag::WIFI, "Got IP - " IPSTR, IP2STR(&event->ip_info.ip));
+                LOGTD(WIFI, "Got IP - " IPSTR, IP2STR(&event->ip_info.ip));
                 break;
             }
             case IP_EVENT_STA_LOST_IP: {
@@ -181,7 +183,7 @@ private:
                     ip.reset();
                 }
                 eventQueue.offer(WiFiEvent::DISCONNECTED);
-                LOGTD(Tag::WIFI, "Lost IP");
+                LOGTD(WIFI, "Lost IP");
                 break;
             }
             default:
@@ -192,18 +194,18 @@ private:
     void onWiFiProvEvent(int32_t eventId, void* eventData) {
         switch (eventId) {
             case WIFI_PROV_START: {
-                LOGTD(Tag::WIFI, "provisioning started");
+                LOGTD(WIFI, "provisioning started");
                 break;
             }
             case WIFI_PROV_CRED_RECV: {
                 auto* wifiConfig = static_cast<wifi_sta_config_t*>(eventData);
-                LOGTD(Tag::WIFI, "Received Wi-Fi credentials for SSID '%s'",
+                LOGTD(WIFI, "Received Wi-Fi credentials for SSID '%s'",
                     reinterpret_cast<const char*>(wifiConfig->ssid));
                 break;
             }
             case WIFI_PROV_CRED_FAIL: {
                 auto* reason = static_cast<wifi_prov_sta_fail_reason_t*>(eventData);
-                LOGTD(Tag::WIFI, "provisioning failed because %s",
+                LOGTD(WIFI, "provisioning failed because %s",
                     *reason == WIFI_PROV_STA_AUTH_ERROR
                         ? "authentication failed"
                         : "AP not found");
@@ -211,11 +213,11 @@ private:
                 break;
             }
             case WIFI_PROV_CRED_SUCCESS: {
-                LOGTD(Tag::WIFI, "provisioning successful");
+                LOGTD(WIFI, "provisioning successful");
                 break;
             }
             case WIFI_PROV_END: {
-                LOGTD(Tag::WIFI, "provisioning finished");
+                LOGTD(WIFI, "provisioning finished");
                 eventQueue.offer(WiFiEvent::PROVISIONING_FINISHED);
                 wifi_prov_mgr_deinit();
                 break;
@@ -234,16 +236,16 @@ private:
             if (!connected) {
                 if (configPortalRunning.isSet()) {
                     // TODO Add some sort of timeout here
-                    LOGTV(Tag::WIFI, "Provisioning already running");
+                    LOGTV(WIFI, "Provisioning already running");
                     goto handleEvents;
                 }
                 if (networkConnecting.isSet()) {
                     if (boot_clock::now() - connectingSince < WIFI_CONNECTION_TIMEOUT) {
-                        LOGTV(Tag::WIFI, "Already connecting");
+                        LOGTV(WIFI, "Already connecting");
                         goto handleEvents;
                     }
 
-                    LOGTI(Tag::WIFI, "Connection timed out, retrying");
+                    LOGTI(WIFI, "Connection timed out, retrying");
                     networkConnecting.clear();
                     ensureWifiStopped();
                 }
@@ -259,7 +261,7 @@ private:
                         if (!configPortalRunning.isSet()) {
                             esp_err_t err = esp_wifi_connect();
                             if (err != ESP_OK) {
-                                LOGTD(Tag::WIFI, "Failed to start connecting: %s, stopping", esp_err_to_name(err));
+                                LOGTD(WIFI, "Failed to start connecting: %s, stopping", esp_err_to_name(err));
                                 ensureWifiStopped();
                             }
                         }
@@ -267,12 +269,12 @@ private:
                     case WiFiEvent::CONNECTED:
                         connected = true;
                         networkConnecting.clear();
-                        LOGTD(Tag::WIFI, "Connected to the network");
+                        LOGTD(WIFI, "Connected to the network");
                         break;
                     case WiFiEvent::DISCONNECTED:
                         connected = false;
                         networkConnecting.clear();
-                        LOGTD(Tag::WIFI, "Disconnected from the network");
+                        LOGTD(WIFI, "Disconnected from the network");
                         break;
                     case WiFiEvent::PROVISIONING_FINISHED:
                         configPortalRunning.clear();
@@ -287,7 +289,7 @@ private:
         networkConnecting.set();
 
 #ifdef WOKWI
-        LOGTD(Tag::WIFI, "Skipping provisioning on Wokwi");
+        LOGTD(WIFI, "Skipping provisioning on Wokwi");
         wifi_config_t wifiConfig = {};
         strncpy(reinterpret_cast<char*>(wifiConfig.sta.ssid), "Wokwi-GUEST", sizeof(wifiConfig.sta.ssid) - 1);
         wifiConfig.sta.ssid[sizeof(wifiConfig.sta.ssid) - 1] = '\0';
@@ -300,11 +302,11 @@ private:
         if (provisioned) {
             wifi_config_t wifiConfig;
             ESP_ERROR_CHECK(esp_wifi_get_config(WIFI_IF_STA, &wifiConfig));
-            LOGTI(Tag::WIFI, "Connecting using stored credentials to %s",
+            LOGTI(WIFI, "Connecting using stored credentials to %s",
                 wifiConfig.sta.ssid);
             connectToStation(wifiConfig);
         } else {
-            LOGTI(Tag::WIFI, "No stored credentials, starting provisioning");
+            LOGTI(WIFI, "No stored credentials, starting provisioning");
             configPortalRunning.set();
             startProvisioning();
         }
@@ -314,19 +316,19 @@ private:
     void ensureWifiStationStarted(wifi_config_t& config) {
         if (!stationStarted.isSet()) {
             auto listenInterval = 20;
-            LOGTV(Tag::WIFI, "Enabling power save mode, listen interval: %d DTIM beacons (%d ms)",
+            LOGTV(WIFI, "Enabling power save mode, listen interval: %d DTIM beacons (%d ms)",
                 listenInterval, listenInterval * 100);
             config.sta.listen_interval = listenInterval;
 #ifdef SOC_PM_SUPPORT_WIFI_WAKEUP
-            LOGTV(Tag::WIFI, "Enabling wake on WiFi");
+            LOGTV(WIFI, "Enabling wake on WiFi");
             ESP_ERROR_CHECK(esp_sleep_enable_wifi_wakeup());
 #endif
 #ifdef SOC_PM_SUPPORT_BEACON_WAKEUP
-            LOGTV(Tag::WIFI, "Enabling wake on WiFi beacon");
+            LOGTV(WIFI, "Enabling wake on WiFi beacon");
             ESP_ERROR_CHECK(esp_sleep_enable_wifi_beacon_wakeup());
 #endif
 
-            LOGTD(Tag::WIFI, "Starting station");
+            LOGTD(WIFI, "Starting station");
             ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
             ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
             ESP_ERROR_CHECK(esp_wifi_start());
@@ -339,20 +341,20 @@ private:
             if (networkReady.isSet()) {
                 ensureWifiDisconnected();
             }
-            LOGTD(Tag::WIFI, "Stopping");
+            LOGTD(WIFI, "Stopping");
             // This might return ESP_ERR_WIFI_STOP_STATE, but we can ignore it
             esp_err_t err = esp_wifi_stop();
             if (err != ESP_OK) {
-                LOGTD(Tag::WIFI, "Failed to stop WiFi: %s, assuming we are still okay", esp_err_to_name(err));
+                LOGTD(WIFI, "Failed to stop WiFi: %s, assuming we are still okay", esp_err_to_name(err));
             }
         }
-        LOGTD(Tag::WIFI, "Stopping WiFi");
+        LOGTD(WIFI, "Stopping WiFi");
     }
 
     void ensureWifiDisconnected() {
         networkReady.clear();
         if (stationStarted.isSet()) {
-            LOGTD(Tag::WIFI, "Disconnecting");
+            LOGTD(WIFI, "Disconnecting");
             ESP_ERROR_CHECK(esp_wifi_disconnect());
         }
     }
@@ -381,7 +383,7 @@ private:
         esp_wifi_get_mac(WIFI_IF_STA, mac);
         (void) snprintf(serviceName, sizeof(serviceName), "%s%02X%02X%02X",
             ssid_prefix, mac[3], mac[4], mac[5]);
-        LOGTD(Tag::WIFI, "Starting provisioning service '%s'",
+        LOGTD(WIFI, "Starting provisioning service '%s'",
             serviceName);
 
         ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(WIFI_PROV_SECURITY_1, pop, serviceName, serviceKey));

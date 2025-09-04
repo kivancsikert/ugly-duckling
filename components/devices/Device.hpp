@@ -325,8 +325,6 @@ static void startDevice() {
     auto i2c = std::make_shared<I2CManager>();
     auto battery = initBattery<TDeviceDefinition>(i2c);
 
-    Log::init();
-
     initNvsFlash();
 
     // Install GPIO ISR service

@@ -11,6 +11,8 @@
 
 namespace farmhub::kernel::drivers {
 
+LOGGING_TAG(MDNS, "mdns")
+
 struct MdnsRecord {
     std::string hostname;
     esp_ip4_addr_t ip {};
@@ -65,21 +67,21 @@ public:
         , mdnsReady(mdnsReady) {
         // TODO Add error handling
         Task::run("mdns:init", 4096, [networkReady, mdnsReady, instanceName, hostname, version](Task& /*task*/) {
-            LOGTI(Tag::MDNS, "initializing");
+            LOGTI(MDNS, "initializing");
             networkReady.awaitSet();
 
             ESP_ERROR_CHECK(mdns_init());
 
             mdns_hostname_set(hostname.c_str());
             mdns_instance_name_set(instanceName.c_str());
-            LOGTD(Tag::MDNS, "Advertising service %s on %s.local, version: %s",
+            LOGTD(MDNS, "Advertising service %s on %s.local, version: %s",
                 instanceName.c_str(), hostname.c_str(), version.c_str());
             mdns_service_add(instanceName.c_str(), "_farmhub", "_tcp", 80, nullptr, 0);
             mdns_txt_item_t txt[] = {
                 { "version", version.c_str() },
             };
             mdns_service_txt_set("_farmhub", "_tcp", txt, 1);
-            LOGTI(Tag::MDNS, "configured");
+            LOGTI(MDNS, "configured");
 
             mdnsReady.set();
         });
@@ -103,16 +105,16 @@ private:
         if (loadFromCache) {
             if (nvs.get(cacheKey, record)) {
                 if (record.validate()) {
-                    LOGTD(Tag::MDNS, "found %s in NVS cache: %s",
+                    LOGTD(MDNS, "found %s in NVS cache: %s",
                         cacheKey.c_str(), record.hostname.c_str());
                     return true;
                 }
-                LOGTD(Tag::MDNS, "invalid record in NVS cache for %s, removing",
+                LOGTD(MDNS, "invalid record in NVS cache for %s, removing",
                     cacheKey.c_str());
                 nvs.remove(cacheKey);
             }
         } else {
-            LOGTD(Tag::MDNS, "removing untrusted record for %s from NVS cache",
+            LOGTD(MDNS, "removing untrusted record for %s from NVS cache",
                 cacheKey.c_str());
             nvs.remove(cacheKey);
         }
@@ -123,12 +125,12 @@ private:
         mdns_result_t* results = nullptr;
         esp_err_t err = mdns_query_ptr(std::string("_" + serviceName).c_str(), std::string("_" + port).c_str(), timeout.count(), 1, &results);
         if (err != 0) {
-            LOGTE(Tag::MDNS, "query failed for %s.%s: %d",
+            LOGTE(MDNS, "query failed for %s.%s: %d",
                 serviceName.c_str(), port.c_str(), err);
             return false;
         }
         if (results == nullptr) {
-            LOGTI(Tag::MDNS, "no results found for %s.%s",
+            LOGTI(MDNS, "no results found for %s.%s",
                 serviceName.c_str(), port.c_str());
             return false;
         }

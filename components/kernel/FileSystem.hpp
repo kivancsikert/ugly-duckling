@@ -14,6 +14,8 @@
 
 namespace farmhub::kernel {
 
+LOGGING_TAG(FS, "fs")
+
 static constexpr const char* PARTITION = "data";
 
 class FileSystem {
@@ -87,7 +89,7 @@ public:
     bool readDir(const std::string& path, const std::function<void(const std::string&, size_t)>& callback) const {
         DIR* dir = opendir(resolve(path).c_str());
         if (dir == nullptr) {
-            LOGTE(Tag::FS, "Failed to open directory: %s", path.c_str());
+            LOGTE(FS, "Failed to open directory: %s", path.c_str());
             return false;
         }
 
@@ -107,10 +109,10 @@ public:
     static bool format() {
         esp_err_t ret = esp_spiffs_format("data");
         if (ret == ESP_OK) {
-            LOGTV(Tag::FS, "SPIFFS partition '%s' formatted successfully", PARTITION);
+            LOGTV(FS, "SPIFFS partition '%s' formatted successfully", PARTITION);
             return true;
         }
-        LOGTE(Tag::FS, "Error formatting SPIFFS partition '%s': %s\n", PARTITION, esp_err_to_name(ret));
+        LOGTE(FS, "Error formatting SPIFFS partition '%s': %s\n", PARTITION, esp_err_to_name(ret));
         return false;
     }
 
@@ -126,20 +128,20 @@ public:
 
         switch (ret) {
             case ESP_OK: {
-                LOGTI(Tag::FS, "SPIFFS partition '%s' mounted successfully", PARTITION);
+                LOGTI(FS, "SPIFFS partition '%s' mounted successfully", PARTITION);
                 readDir("/", [](const std::string& name, size_t size) {
-                    LOGTI(Tag::FS, " - %s (%u bytes)", name.c_str(), size);
+                    LOGTI(FS, " - %s (%u bytes)", name.c_str(), size);
                 });
                 break;
             }
             case ESP_FAIL:
-                LOGTE(Tag::FS, "Failed to mount partition '%s'", PARTITION);
+                LOGTE(FS, "Failed to mount partition '%s'", PARTITION);
                 break;
             case ESP_ERR_NOT_FOUND:
-                LOGTE(Tag::FS, "Failed to find SPIFFS partition '%s'", PARTITION);
+                LOGTE(FS, "Failed to find SPIFFS partition '%s'", PARTITION);
                 break;
             default:
-                LOGTE(Tag::FS, "Failed to initialize SPIFFS partition '%s' (%s)", PARTITION, esp_err_to_name(ret));
+                LOGTE(FS, "Failed to initialize SPIFFS partition '%s' (%s)", PARTITION, esp_err_to_name(ret));
                 break;
         }
     }
