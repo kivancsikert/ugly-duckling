@@ -3,4 +3,5 @@ idf_component_register(SRC_DIRS "." "scheduling"
                     REQUIRES
                         utils
                         catch2
+                        unit-test-support
                     WHOLE_ARCHIVE)
