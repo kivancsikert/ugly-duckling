@@ -16,8 +16,13 @@ struct CompositeScheduler : IScheduler {
     ScheduleResult tick() override {
         ScheduleResult result;
         for (auto& scheduler : schedulers) {
+            // Stop ticking lower priority schedulers once we have a decision
+            if (result.targetState) {
+                // TODO Reset unused schedulers
+                break;
+            }
             auto subResult = scheduler->tick();
-             result = merge(result, subResult);
+            result = merge(result, subResult);
         }
         return result;
     }
@@ -27,7 +32,6 @@ struct CompositeScheduler : IScheduler {
     }
 
 private:
-
     static ScheduleResult merge(const ScheduleResult& a, const ScheduleResult& b) {
         return {
             .targetState = a.targetState ? a.targetState : b.targetState,
