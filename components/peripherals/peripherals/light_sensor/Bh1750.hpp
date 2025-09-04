@@ -66,12 +66,17 @@ private:
 };
 
 inline PeripheralFactory makeFactoryForBh1750() {
-    return makePeripheralFactory<Bh1750, Bh1750Settings>(
+    return makePeripheralFactory<Bh1750, Bh1750, Bh1750Settings>(
         "light-sensor:bh1750",
         "light-sensor",
         [](PeripheralInitParameters& params, const std::shared_ptr<Bh1750Settings>& settings) {
             I2CConfig i2cConfig = settings->parse(0x23);
-            auto sensor = std::make_shared<Bh1750>(params.name, params.services.i2c, i2cConfig, settings->measurementFrequency.get(), settings->latencyInterval.get());
+            auto sensor = std::make_shared<Bh1750>(
+                params.name,
+                params.services.i2c,
+                i2cConfig,
+                settings->measurementFrequency.get(),
+                settings->latencyInterval.get());
             params.registerFeature("light", [sensor](JsonObject& telemetryJson) {
                 telemetryJson["value"] = sensor->getCurrentLevel();
             });

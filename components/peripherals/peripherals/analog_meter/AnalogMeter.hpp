@@ -21,7 +21,7 @@ using namespace farmhub::kernel::mqtt;
 namespace farmhub::peripherals::analog_meter {
 
 class AnalogMeter final
-    : Named {
+    : Peripheral {
 public:
     AnalogMeter(
         const std::string& name,
@@ -30,7 +30,7 @@ public:
         double multiplier,
         milliseconds measurementFrequency,
         std::size_t windowSize)
-        : Named(name)
+        : Peripheral(name)
         , pin(pin)
         , value(windowSize) {
 
@@ -70,7 +70,7 @@ public:
 };
 
 inline PeripheralFactory makeFactory() {
-    return makePeripheralFactory<AnalogMeter, AnalogMeterSettings>(
+    return makePeripheralFactory<AnalogMeter, AnalogMeter, AnalogMeterSettings>(
         "analog-meter",
         "analog-meter",
         [](PeripheralInitParameters& params, const std::shared_ptr<AnalogMeterSettings>& settings) {

@@ -87,11 +87,6 @@ public:
         return TaskHandle { handle };
     }
 
-    enum class RunResult : uint8_t {
-        OK,
-        TIMEOUT,
-    };
-
     static TaskHandle loop(const std::string& name, uint32_t stackSize, const TaskFunction& loopFunction) {
         return Task::loop(name, stackSize, DEFAULT_PRIORITY, loopFunction);
     }

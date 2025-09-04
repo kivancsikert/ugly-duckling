@@ -10,16 +10,18 @@ class Xl9535Settings
     : public I2CSettings {
 };
 
-class Xl9535 final {
-
+class Xl9535 final
+    : public Peripheral {
 public:
     Xl9535(
         const std::string& name,
         const std::shared_ptr<I2CManager>& i2c,
         const I2CConfig& config)
-        : device(i2c->createDevice(name, config)) {
-        LOGI("Initializing XL9535 multiplexer with %s",
-            config.toString().c_str());
+        : Peripheral(name)
+        , device(i2c->createDevice(name, config)) {
+
+        LOGI("Initializing XL9535 multiplexer '%s' with %s",
+            name.c_str(), config.toString().c_str());
     }
 
     void pinMode(uint8_t pin, Pin::Mode mode) {
@@ -103,11 +105,15 @@ private:
 };
 
 inline PeripheralFactory makeFactoryForXl9535() {
-    return makePeripheralFactory<Xl9535, Xl9535Settings>(
+    return makePeripheralFactory<Xl9535, Xl9535, Xl9535Settings>(
         "multiplexer:xl9535",
         "multiplexer",
         [](PeripheralInitParameters& params, const std::shared_ptr<Xl9535Settings>& settings) {
-            auto multiplexer = std::make_shared<Xl9535>(params.name, params.services.i2c, settings->parse());
+            auto multiplexer = std::make_shared<Xl9535>(
+                params.name,
+                params.services.i2c,
+                settings->parse());
+
             // Register external pins
             for (int i = 0; i < 16; i++) {
                 std::string pinName = params.name + ":" + std::to_string(i);

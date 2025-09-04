@@ -60,38 +60,38 @@ public:
 
 private:
     enum class KernelState : uint8_t {
-        BOOTING,
-        NETWORK_CONNECTING,
-        NETWORK_CONFIGURING,
-        RTC_SYNCING,
-        MQTT_CONNECTING,
-        INIT_FINISHING,
-        TRANSMITTING,
-        IDLE
+        Booting,
+        NetworkConnecting,
+        NetworkConfiguring,
+        RtcSyncing,
+        MqttConnecting,
+        InitFinishing,
+        Transmitting,
+        Idle
     };
 
     static void updateState(const std::shared_ptr<LedDriver>& statusLed, const std::shared_ptr<ModuleStates>& states) {
-        KernelState state = KernelState::BOOTING;
+        KernelState state = KernelState::Booting;
         while (true) {
             KernelState newState;
             if (states->configPortalRunning.isSet()) {
                 // We are waiting for the user to configure the network
-                newState = KernelState::NETWORK_CONFIGURING;
+                newState = KernelState::NetworkConfiguring;
             } else if (states->networkConnecting.isSet()) {
                 // We are waiting for network connection
-                newState = KernelState::NETWORK_CONNECTING;
+                newState = KernelState::NetworkConnecting;
             } else if (!states->rtcInSync.isSet()) {
-                newState = KernelState::RTC_SYNCING;
+                newState = KernelState::RtcSyncing;
             } else if (!states->mqttReady.isSet()) {
                 // We are waiting for MQTT connection
-                newState = KernelState::MQTT_CONNECTING;
+                newState = KernelState::MqttConnecting;
             } else if (!states->kernelReady.isSet()) {
                 // We are waiting for init to finish
-                newState = KernelState::INIT_FINISHING;
+                newState = KernelState::InitFinishing;
             } else if (states->networkReady.isSet()) {
-                newState = KernelState::TRANSMITTING;
+                newState = KernelState::Transmitting;
             } else {
-                newState = KernelState::IDLE;
+                newState = KernelState::Idle;
             }
 
             if (newState != state) {
@@ -99,26 +99,26 @@ private:
                     static_cast<int>(state), static_cast<int>(newState));
                 state = newState;
                 switch (newState) {
-                    case KernelState::BOOTING:
+                    case KernelState::Booting:
                         statusLed->turnOff();
                         break;
-                    case KernelState::NETWORK_CONNECTING:
+                    case KernelState::NetworkConnecting:
                         statusLed->blink(200ms);
                         break;
-                    case KernelState::NETWORK_CONFIGURING:
+                    case KernelState::NetworkConfiguring:
                         statusLed->blinkPattern({ 100ms, -100ms, 100ms, -100ms, 100ms, -500ms });
                         break;
-                    case KernelState::RTC_SYNCING:
+                    case KernelState::RtcSyncing:
                         statusLed->blink(500ms);
                         break;
-                    case KernelState::MQTT_CONNECTING:
+                    case KernelState::MqttConnecting:
                         statusLed->blink(1000ms);
                         break;
-                    case KernelState::INIT_FINISHING:
+                    case KernelState::InitFinishing:
                         statusLed->blink(1500ms);
                         break;
-                    case KernelState::TRANSMITTING:
-                    case KernelState::IDLE:
+                    case KernelState::Transmitting:
+                    case KernelState::Idle:
                         statusLed->turnOff();
                         break;
                 };

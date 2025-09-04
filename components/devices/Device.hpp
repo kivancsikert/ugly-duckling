@@ -325,8 +325,6 @@ static void startDevice() {
     auto i2c = std::make_shared<I2CManager>();
     auto battery = initBattery<TDeviceDefinition>(i2c);
 
-    Log::init();
-
     initNvsFlash();
 
     // Install GPIO ISR service
@@ -427,6 +425,8 @@ static void startDevice() {
     auto pulseCounterManager = std::make_shared<PulseCounterManager>();
     auto pwm = std::make_shared<PwmManager>();
     auto telemetryCollector = std::make_shared<TelemetryCollector>();
+
+    // Init peripherals
     auto peripheralServices = PeripheralServices {
         .i2c = i2c,
         .pcntManager = pcnt,
@@ -435,8 +435,6 @@ static void startDevice() {
         .switches = switches,
         .telemetryPublisher = telemetryPublisher,
     };
-
-    // Init peripherals
     auto peripheralManager = std::make_shared<PeripheralManager>(fs, telemetryCollector, peripheralServices, mqttRoot);
     shutdownManager->registerShutdownListener([peripheralManager]() {
         peripheralManager->shutdown();
@@ -444,7 +442,11 @@ static void startDevice() {
     deviceDefinition->registerPeripheralFactories(peripheralManager, peripheralServices, settings);
 
     // Init functions
-    auto functionManager = std::make_shared<FunctionManager>(fs, peripheralManager, mqttRoot);
+    auto functionServices = FunctionServices {
+        .telemetryPublisher = telemetryPublisher,
+        .peripherals = peripheralManager,
+    };
+    auto functionManager = std::make_shared<FunctionManager>(fs, functionServices, mqttRoot);
     shutdownManager->registerShutdownListener([functionManager]() {
         functionManager->shutdown();
     });

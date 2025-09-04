@@ -10,6 +10,8 @@
 
 namespace farmhub::kernel {
 
+LOGGING_TAG(NVS, "nvs")
+
 /**
  * @brief Thread-safe NVS store for JSON serializable objects.
  */
@@ -32,7 +34,7 @@ public:
                 case ESP_ERR_NVS_NOT_FOUND:
                     break;
                 default:
-                    LOGTW(Tag::NVS, "contains(%s) = failed to read: %s", key, esp_err_to_name(err));
+                    LOGTW(NVS, "contains(%s) = failed to read: %s", key, esp_err_to_name(err));
                     break;
             }
             return err;
@@ -50,23 +52,23 @@ public:
             size_t length = 0;
             esp_err_t err = nvs_get_str(handle, key, nullptr, &length);
             if (err != ESP_OK) {
-                LOGTV(Tag::NVS, "get(%s) = failed to read length: %s", key, esp_err_to_name(err));
+                LOGTV(NVS, "get(%s) = failed to read length: %s", key, esp_err_to_name(err));
                 return err;
             }
 
             std::string json(length, '\0');
             err = nvs_get_str(handle, key, json.data(), &length);
             if (err != ESP_OK) {
-                LOGTE(Tag::NVS, "get(%s) = failed to read data: %s", key, esp_err_to_name(err));
+                LOGTE(NVS, "get(%s) = failed to read data: %s", key, esp_err_to_name(err));
                 return err;
             }
 
-            LOGTV(Tag::NVS, "get(%s) = %s", key, json.c_str());
+            LOGTV(NVS, "get(%s) = %s", key, json.c_str());
 
             JsonDocument jsonDocument;
             DeserializationError jsonError = deserializeJson(jsonDocument, json);
             if (jsonError) {
-                LOGTE(Tag::NVS, "get(%s) = invalid JSON: %s", key, jsonError.c_str());
+                LOGTE(NVS, "get(%s) = invalid JSON: %s", key, jsonError.c_str());
                 return ESP_FAIL;
             }
 
@@ -88,11 +90,11 @@ public:
             std::string jsonString;
             serializeJson(jsonDocument, jsonString);
 
-            LOGTV(Tag::NVS, "set(%s) = %s", key, jsonString.c_str());
+            LOGTV(NVS, "set(%s) = %s", key, jsonString.c_str());
 
             esp_err_t err = nvs_set_str(handle, key, jsonString.c_str());
             if (err != ESP_OK) {
-                LOGTE(Tag::NVS, "set(%s) = failed to write: %s", key, esp_err_to_name(err));
+                LOGTE(NVS, "set(%s) = failed to write: %s", key, esp_err_to_name(err));
                 return err;
             }
 
@@ -106,10 +108,10 @@ public:
 
     bool remove(const char* key) {
         return withPreferences(false, [&](nvs_handle_t handle) {
-            LOGTV(Tag::NVS, "remove(%s)", key);
+            LOGTV(NVS, "remove(%s)", key);
             esp_err_t err = nvs_erase_key(handle, key);
             if (err != ESP_OK) {
-                LOGTE(Tag::NVS, "remove(%s) = cannot delete: %s", key, esp_err_to_name(err));
+                LOGTE(NVS, "remove(%s) = cannot delete: %s", key, esp_err_to_name(err));
                 return err;
             }
 
@@ -120,7 +122,7 @@ public:
 private:
     esp_err_t withPreferences(bool readOnly, const std::function<esp_err_t(nvs_handle_t)>& action) {
         Lock lock(preferencesMutex);
-        LOGTV(Tag::NVS, "%s '%s'", readOnly ? "read" : "write", name.c_str());
+        LOGTV(NVS, "%s '%s'", readOnly ? "read" : "write", name.c_str());
 
         nvs_handle_t handle;
         esp_err_t err = nvs_open(name.c_str(), readOnly ? NVS_READONLY : NVS_READWRITE, &handle);
@@ -128,12 +130,12 @@ private:
             case ESP_OK:
                 break;
             case ESP_ERR_NVS_NOT_FOUND:
-                LOGTV(Tag::NVS, "namespace '%s' does not exist yet, nothing to read",
+                LOGTV(NVS, "namespace '%s' does not exist yet, nothing to read",
                     name.c_str());
                 return ESP_ERR_NOT_FOUND;
                 break;
             default:
-                LOGTW(Tag::NVS, "failed to open NVS to %s '%s': %s",
+                LOGTW(NVS, "failed to open NVS to %s '%s': %s",
                     readOnly ? "read" : "write", name.c_str(), esp_err_to_name(err));
                 break;
         }
@@ -141,7 +143,7 @@ private:
         esp_err_t result = action(handle);
         nvs_close(handle);
 
-        LOGTV(Tag::NVS, "finished %s '%s', result: %s",
+        LOGTV(NVS, "finished %s '%s', result: %s",
             readOnly ? "read" : "write", name.c_str(), esp_err_to_name(result));
         return result;
     }

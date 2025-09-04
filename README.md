@@ -221,3 +221,12 @@ pytest --embedded-services idf,wokwi pytest_unit-tests.py
 ```
 
 Make sure to set the `WOKWI_CLI_TOKEN` environment variable.
+
+If `pytest` is not available, install it by running in the currently used ESP-IDF version home:
+
+```bash
+./install.sh --enable-pytest
+pip install pytest-embedded-wokwi
+```
+
+(Make sure to run with the right IDF-installed Python version so `pytest` is installed in the right environment.)

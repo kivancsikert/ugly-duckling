@@ -102,18 +102,18 @@ private:
         void drive(MotorPhase phase, double duty) override {
             int dutyValue = static_cast<int>((forwardChannel.maxValue() + forwardChannel.maxValue() * duty) / 2);
             LOGD("Driving motor %s on pins %s/%s at %d%% (duty = %d)",
-                phase == MotorPhase::FORWARD ? "forward" : "reverse",
+                phase == MotorPhase::Forward ? "forward" : "reverse",
                 forwardChannel.getName().c_str(),
                 reverseChannel.getName().c_str(),
                 (int) (duty * 100),
                 dutyValue);
 
             switch (phase) {
-                case MotorPhase::FORWARD:
+                case MotorPhase::Forward:
                     forwardChannel.write(dutyValue);
                     reverseChannel.write(0);
                     break;
-                case MotorPhase::REVERSE:
+                case MotorPhase::Reverse:
                     forwardChannel.write(0);
                     reverseChannel.write(dutyValue);
                     break;

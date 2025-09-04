@@ -1,3 +1,7 @@
+#ifdef FARMHUB_DEBUG
+#include <cstdio>
+#endif
+
 #include <Device.hpp>
 
 #if defined(MK5)
@@ -25,5 +29,10 @@ using Settings = farmhub::devices::MkXSettings;
 #endif
 
 extern "C" void app_main() {
+#ifdef FARMHUB_DEBUG
+    // Reset ANSI colors
+    printf("\033[0m");
+#endif
+
     startDevice<Settings, Definition>();
 }

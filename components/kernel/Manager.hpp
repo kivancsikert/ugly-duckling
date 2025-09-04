@@ -77,15 +77,15 @@ private:
 };
 
 // A lightweight, generic factory descriptor. The CreateFn is the concrete callable type
-// (often a std::function) that returns a Product from domain-specific parameters.
-template <typename Product, typename CreateFn>
+// (often a std::function) that returns a Handle from domain-specific parameters.
+template <typename CreateFn>
 struct Factory {
     std::string factoryType;    // key used for registration
     std::string productType;    // human-readable/type-identifying string
-    CreateFn create;            // callable to create Product
+    CreateFn create;            // callable to create Handle
 };
 
-template <std::derived_from<Handle> Product, typename FactoryT>
+template <typename FactoryT>
 class Manager {
 public:
     explicit Manager(std::string managed)
@@ -112,7 +112,7 @@ public:
     }
 
     void shutdown() {
-        Lock lock(this->getMutex());
+        Lock lock(mutex);
         if (state == State::Stopped) {
             return;
         }
@@ -136,7 +136,7 @@ protected:
     void createWithFactory(
         const std::string& name,
         const std::string& type,
-        const std::function<Product(const FactoryT&)>& make) {
+        const std::function<Handle(const FactoryT&)>& make) {
         Lock lock(mutex);
         if (state == State::Stopped) {
             throw std::runtime_error("Not creating " + managed + " because the manager is stopped");
@@ -149,12 +149,8 @@ protected:
             throw std::runtime_error("Factory for '" + type + "' not found");
         }
         const auto& factory = it->second;
-        Product instance = make(factory);
+        Handle instance = make(factory);
         instances.emplace(name, std::move(instance));
-    }
-
-    RecursiveMutex& getMutex() {
-        return mutex;
     }
 
     const std::string managed;
@@ -162,7 +158,7 @@ protected:
 private:
     std::map<std::string, FactoryT> factories;
     mutable RecursiveMutex mutex;
-    std::unordered_map<std::string, Product> instances;
+    std::unordered_map<std::string, Handle> instances;
 
     enum class State : uint8_t {
         Running,
@@ -172,19 +168,19 @@ private:
     State state = State::Running;
 };
 
-template <typename Product, typename FactoryT>
+template <typename FactoryT>
 class SettingsBasedManager
-    : public Manager<Product, FactoryT> {
+    : public Manager<FactoryT> {
 public:
     explicit SettingsBasedManager(std::string managed)
-        : Manager<Product, FactoryT>(std::move(managed)) {
+        : Manager<FactoryT>(std::move(managed)) {
     }
 
 protected:
     void createFromSettings(
         const std::string& settingsAsString,
         JsonObject initJson,
-        const std::function<Product(const std::string&, const FactoryT&, const std::string&)>& make) {
+        const std::function<Handle(const std::string&, const FactoryT&, const std::string&)>& make) {
         LOGI("Creating %s with settings: %s",
             this->managed.c_str(), settingsAsString.c_str());
         std::shared_ptr<ProductSettings> settings = std::make_shared<ProductSettings>();

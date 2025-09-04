@@ -6,10 +6,11 @@
 #include <Task.hpp>
 #include <drivers/MotorDriver.hpp>
 
-#include "ValveScheduler.hpp"
+#include <peripherals/api/IValve.hpp>
 
 using namespace std::chrono;
 using namespace farmhub::kernel::drivers;
+using namespace farmhub::peripherals::api;
 
 namespace farmhub::peripherals::valve {
 
@@ -25,7 +26,7 @@ public:
 
     virtual void open() = 0;
     virtual void close() = 0;
-    virtual ValveState getDefaultState() const = 0;
+    virtual TargetState getDefaultState() const = 0;
 
     virtual std::string describe() const = 0;
 };
@@ -52,13 +53,13 @@ public:
     }
 
 protected:
-    void driveAndHold(ValveState targetState) {
+    void driveAndHold(TargetState targetState) {
         switch (targetState) {
-            case ValveState::OPEN:
-                driveAndHold(MotorPhase::FORWARD);
+            case TargetState::Open:
+                driveAndHold(MotorPhase::Forward);
                 break;
-            case ValveState::CLOSED:
-                driveAndHold(MotorPhase::REVERSE);
+            case TargetState::Closed:
+                driveAndHold(MotorPhase::Reverse);
                 break;
             default:
                 // Ignore
@@ -85,15 +86,15 @@ public:
     }
 
     void open() override {
-        driveAndHold(ValveState::OPEN);
+        driveAndHold(TargetState::Open);
     }
 
     void close() override {
         controller->stop();
     }
 
-    ValveState getDefaultState() const override {
-        return ValveState::CLOSED;
+    TargetState getDefaultState() const override {
+        return TargetState::Closed;
     }
 
     std::string describe() const override {
@@ -113,11 +114,11 @@ public:
     }
 
     void close() override {
-        driveAndHold(ValveState::CLOSED);
+        driveAndHold(TargetState::Closed);
     }
 
-    ValveState getDefaultState() const override {
-        return ValveState::OPEN;
+    TargetState getDefaultState() const override {
+        return TargetState::Open;
     }
 
     std::string describe() const override {
@@ -135,19 +136,19 @@ public:
     }
 
     void open() override {
-        controller->drive(MotorPhase::FORWARD, switchDuty);
+        controller->drive(MotorPhase::Forward, switchDuty);
         Task::delay(switchDuration);
         controller->stop();
     }
 
     void close() override {
-        controller->drive(MotorPhase::REVERSE, switchDuty);
+        controller->drive(MotorPhase::Reverse, switchDuty);
         Task::delay(switchDuration);
         controller->stop();
     }
 
-    ValveState getDefaultState() const override {
-        return ValveState::NONE;
+    TargetState getDefaultState() const override {
+        return TargetState::Closed;
     }
 
     std::string describe() const override {
@@ -175,8 +176,8 @@ public:
         pin->digitalWrite(0);
     }
 
-    ValveState getDefaultState() const override {
-        return ValveState::NONE;
+    TargetState getDefaultState() const override {
+        return TargetState::Closed;
     }
 
     std::string describe() const override {

@@ -75,10 +75,10 @@ public:
         wakeUp();
         enablePin->digitalWrite(1);
 
-        int direction = (phase == MotorPhase::FORWARD ? 1 : -1);
+        int direction = (phase == MotorPhase::Forward ? 1 : -1);
         int dutyValue = static_cast<int>(phaseChannel.maxValue() * (0.5 + direction * duty / 2));
         LOGD("Driving motor %s at %.2f%%",
-            phase == MotorPhase::FORWARD ? "forward" : "reverse",
+            phase == MotorPhase::Forward ? "forward" : "reverse",
             duty * 100);
 
         phaseChannel.write(dutyValue);

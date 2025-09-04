@@ -18,6 +18,8 @@
 
 namespace farmhub::kernel {
 
+LOGGING_TAG(PM, "pm")
+
 class PowerManagementLock {
 public:
     PowerManagementLock(const std::string& name, esp_pm_lock_type_t type)
@@ -66,7 +68,7 @@ public:
     explicit PowerManager(bool requestedSleepWhenIdle)
         : sleepWhenIdle(shouldSleepWhenIdle(requestedSleepWhenIdle)) {
 
-        LOGTV(Tag::PM, "Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
+        LOGTV(PM, "Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",
             CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ, MIN_CPU_FREQ_MHZ, sleepWhenIdle ? "enabled" : "disabled");
         esp_pm_config_t pm_config = {
             .max_freq_mhz = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
@@ -127,24 +129,24 @@ private:
     static bool shouldSleepWhenIdle(bool requestedSleepWhenIdle) {
         if (requestedSleepWhenIdle) {
 #if FARMHUB_DEBUG
-            LOGTI(Tag::PM, "Light sleep is disabled in debug mode");
+            LOGTI(PM, "Light sleep is disabled in debug mode");
             return false;
 #elif WOKWI
             // See https://github.com/wokwi/wokwi-features/issues/922
-            LOGTI(Tag::PM, "Light sleep is disabled when running under Wokwi");
+            LOGTI(PM, "Light sleep is disabled when running under Wokwi");
             return false;
 #elif not(CONFIG_PM_ENABLE)
-            LOGTI(Tag::PM, "Power management is disabled because CONFIG_PM_ENABLE is not set");
+            LOGTI(PM, "Power management is disabled because CONFIG_PM_ENABLE is not set");
             return false;
 #elif not(CONFIG_FREERTOS_USE_TICKLESS_IDLE)
-            LOGTI(Tag::PM, "Light sleep is disabled because CONFIG_FREERTOS_USE_TICKLESS_IDLE is not set");
+            LOGTI(PM, "Light sleep is disabled because CONFIG_FREERTOS_USE_TICKLESS_IDLE is not set");
             return false;
 #else
-            LOGTI(Tag::PM, "Light sleep is enabled");
+            LOGTI(PM, "Light sleep is enabled");
             return true;
 #endif
         } else {
-            LOGTI(Tag::PM, "Light sleep is disabled");
+            LOGTI(PM, "Light sleep is disabled");
             return false;
         }
     }

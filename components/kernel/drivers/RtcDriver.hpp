@@ -18,6 +18,8 @@ using namespace std::chrono_literals;
 
 namespace farmhub::kernel::drivers {
 
+LOGGING_TAG(RTC, "rtc")
+
 /**
  * @brief Ensures the real-time clock is properly set up and holds a real time.
  *
@@ -42,7 +44,7 @@ public:
         , rtcInSync(rtcInSync) {
 
         if (isTimeSet()) {
-            LOGTI(Tag::RTC, "time is already set");
+            LOGTI(RTC, "time is already set");
             rtcInSync.set();
         }
 
@@ -54,7 +56,7 @@ public:
                         trustMdnsCache = true;
                     } else {
                         // Attempt a retry, but with mDNS cache disabled
-                        LOGTE(Tag::RTC, "NTP update failed, retrying in 10 seconds with mDNS cache disabled");
+                        LOGTE(RTC, "NTP update failed, retrying in 10 seconds with mDNS cache disabled");
                         trustMdnsCache = false;
                         Task::delay(10s);
                         continue;
@@ -92,21 +94,21 @@ private:
         ESP_ERROR_CHECK(esp_netif_sntp_init(&config));
 
 #ifdef WOKWI
-        LOGTI(Tag::RTC, "using default NTP server for Wokwi");
+        LOGTI(RTC, "using default NTP server for Wokwi");
 #else
         // TODO Check this
         if (!ntpConfig->host.get().empty()) {
-            LOGTD(Tag::RTC, "using NTP server %s from configuration",
+            LOGTD(RTC, "using NTP server %s from configuration",
                 ntpConfig->host.get().c_str());
             esp_sntp_setservername(0, ntpConfig->host.get().c_str());
         } else {
             MdnsRecord ntpServer;
             if (mdns->lookupService("ntp", "udp", ntpServer, trustMdnsCache)) {
-                LOGTD(Tag::RTC, "using NTP server %s from mDNS",
+                LOGTD(RTC, "using NTP server %s from mDNS",
                     ntpServer.toString().c_str());
                 esp_sntp_setserver(0, reinterpret_cast<const ip_addr_t*>(&ntpServer.ip));
             } else {
-                LOGTD(Tag::RTC, "no NTP server configured, using default");
+                LOGTD(RTC, "no NTP server configured, using default");
             }
         }
 #endif
@@ -121,11 +123,11 @@ private:
         if (ret == ESP_OK || ret == ESP_ERR_NOT_FINISHED) {
             rtcInSync.set();
             success = true;
-            LOGTD(Tag::RTC, "sync finished successfully");
+            LOGTD(RTC, "sync finished successfully");
         } else if (ret == ESP_ERR_TIMEOUT) {
-            LOGTD(Tag::RTC, "waiting for time sync timed out");
+            LOGTD(RTC, "waiting for time sync timed out");
         } else {
-            LOGTD(Tag::RTC, "waiting for time sync returned 0x%x", ret);
+            LOGTD(RTC, "waiting for time sync returned 0x%x", ret);
         }
 
         esp_netif_sntp_deinit();

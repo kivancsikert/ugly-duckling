@@ -13,8 +13,10 @@
 #include <utility>
 
 #include <peripherals/Peripheral.hpp>
+#include <peripherals/api/IFlowMeter.hpp>
 
 using namespace farmhub::kernel::mqtt;
+using namespace farmhub::peripherals::api;
 
 namespace farmhub::peripherals::flow_meter {
 
@@ -27,8 +29,9 @@ public:
     Property<milliseconds> measurementFrequency { this, "measurementFrequency", 1s };
 };
 
-class FlowMeter
-    : public Named {
+class FlowMeter final
+    : public virtual api::IFlowMeter,
+      public Peripheral {
 public:
     FlowMeter(
         const std::string& name,
@@ -36,7 +39,7 @@ public:
         const InternalPinPtr& pin,
         double qFactor,
         milliseconds measurementFrequency)
-        : Named(name)
+        : Peripheral(name)
         , qFactor(qFactor) {
 
         LOGI("Initializing flow meter on pin %s with Q = %.2f",
@@ -70,6 +73,11 @@ public:
         });
     }
 
+    double getVolume() override {
+        Lock lock(updateMutex);
+        return getVolumeAndReset();
+    }
+
     void populateTelemetry(JsonObject& json) {
         Lock lock(updateMutex);
         populateTelemetryUnderLock(json);
@@ -77,8 +85,10 @@ public:
 
 private:
     void populateTelemetryUnderLock(JsonObject& json) {
-        auto currentVolume = volume;
-        volume = 0;
+        getVolumeAndReset();
+        auto currentVolume = unpublishedVolume;
+        unpublishedVolume = 0.0;
+
         // Volume is measured in liters
         json["volume"] = currentVolume;
         auto duration = duration_cast<microseconds>(lastMeasurement - lastPublished);
@@ -89,6 +99,13 @@ private:
         lastPublished = lastMeasurement;
     }
 
+    double getVolumeAndReset() {
+        double currentVolume = volume;
+        volume = 0.0;
+        unpublishedVolume += currentVolume;
+        return currentVolume;
+    }
+
     std::shared_ptr<PulseCounter> counter;
     const double qFactor;
 
@@ -96,12 +113,13 @@ private:
     time_point<boot_clock> lastSeenFlow;
     time_point<boot_clock> lastPublished;
     double volume = 0.0;
+    double unpublishedVolume = 0.0;
 
     Mutex updateMutex;
 };
 
 inline PeripheralFactory makeFactory() {
-    return makePeripheralFactory<FlowMeter, FlowMeterSettings>(
+    return makePeripheralFactory<IFlowMeter, FlowMeter, FlowMeterSettings>(
         "flow-meter",
         "flow-meter",
         [](PeripheralInitParameters& params, const std::shared_ptr<FlowMeterSettings>& settings) {

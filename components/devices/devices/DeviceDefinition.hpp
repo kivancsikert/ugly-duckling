@@ -16,7 +16,7 @@
 #include <drivers/BatteryDriver.hpp>
 #include <drivers/LedDriver.hpp>
 
-#include <functions/PlotController.hpp>
+#include <functions/plot_controller/PlotController.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/analog_meter/AnalogMeter.hpp>
 #include <peripherals/environment/Ds18B20SoilSensor.hpp>

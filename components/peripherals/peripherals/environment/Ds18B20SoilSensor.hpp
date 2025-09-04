@@ -19,14 +19,17 @@ namespace farmhub::peripherals::environment {
  *
  * Note: Needs a 4.7k pull-up resistor between the data and power lines.
  */
-class Ds18B20SoilSensor final {
+class Ds18B20SoilSensor final
+    : public Peripheral {
 public:
     explicit Ds18B20SoilSensor(
+        const std::string& name,
         const InternalPinPtr& pin)
-        : pin(pin) {
+        : Peripheral(name)
+        , pin(pin) {
 
-        LOGI("Initializing DS18B20 soil temperature sensor on pin %s",
-            pin->getName().c_str());
+        LOGI("Initializing DS18B20 soil temperature sensor '%s' on pin %s",
+            name.c_str(), pin->getName().c_str());
 
         gpio_set_pull_mode(pin->getGpio(), GPIO_PULLUP_ONLY);
 
@@ -58,11 +61,13 @@ private:
 };
 
 inline PeripheralFactory makeFactoryForDs18b20() {
-    return makePeripheralFactory<Ds18B20SoilSensor, SinglePinSettings>(
+    return makePeripheralFactory<Ds18B20SoilSensor, Ds18B20SoilSensor, SinglePinSettings>(
         "environment:ds18b20",
         "environment",
         [](PeripheralInitParameters& params, const std::shared_ptr<SinglePinSettings>& settings) {
-            auto sensor = std::make_shared<Ds18B20SoilSensor>(settings->pin.get());
+            auto sensor = std::make_shared<Ds18B20SoilSensor>(
+                params.name,
+                settings->pin.get());
             params.registerFeature("temperature", [sensor](JsonObject& telemetryJson) {
                 telemetryJson["value"] = sensor->getTemperature();
             });

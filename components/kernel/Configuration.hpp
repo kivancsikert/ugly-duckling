@@ -208,8 +208,15 @@ public:
         parent->add(*this);
     }
 
-    const T& get() const {
+    T get() const {
         return configured ? value : defaultValue;
+    }
+
+    std::optional<T> getIfPresent() const {
+        if (configured) {
+            return value;
+        }
+        return std::nullopt;
     }
 
     void load(const JsonObject& json) override {

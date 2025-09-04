@@ -16,6 +16,8 @@
 
 namespace farmhub::kernel {
 
+LOGGING_TAG(PULSE, "pulse")
+
 class PulseCounterManager;
 static void handlePulseCounterInterrupt(void* arg);
 
@@ -51,20 +53,20 @@ public:
         // TODO Where should this be called?
         ESP_ERROR_THROW(esp_sleep_enable_gpio_wakeup());
 
-        LOGTD(Tag::PCNT, "Registered interrupt-based pulse counter unit on pin %s",
+        LOGTD(PULSE, "Registered interrupt-based pulse counter unit on pin %s",
             pin->getName().c_str());
     }
 
     uint32_t getCount() const {
         uint32_t count = edgeCount.load();
-        LOGTV(Tag::PCNT, "Counted %" PRIu32 " pulses on pin %s",
+        LOGTV(PULSE, "Counted %" PRIu32 " pulses on pin %s",
             count, pin->getName().c_str());
         return count;
     }
 
     uint32_t reset() {
         uint32_t count = edgeCount.exchange(0);
-        LOGTV(Tag::PCNT, "Counted %" PRIu32 " pulses and cleared on pin %s",
+        LOGTV(PULSE, "Counted %" PRIu32 " pulses and cleared on pin %s",
             count, pin->getName().c_str());
         return count;
     }

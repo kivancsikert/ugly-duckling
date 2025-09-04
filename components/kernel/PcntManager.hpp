@@ -9,6 +9,8 @@
 
 namespace farmhub::kernel {
 
+LOGGING_TAG(PCNT, "pcnt")
+
 /**
  * @brief Counts pulses on a GPIO pin using the Pulse Counter (PCNT) peripheral.
  *
@@ -25,14 +27,14 @@ struct PulseCounterUnit {
     int getCount() const {
         int count;
         pcnt_unit_get_count(unit, &count);
-        LOGTV(Tag::PCNT, "Counted %d pulses on pin %s",
+        LOGTV(PCNT, "Counted %d pulses on pin %s",
             count, pin->getName().c_str());
         return count;
     }
 
     void clear() {
         pcnt_unit_clear_count(unit);
-        LOGTV(Tag::PCNT, "Cleared counter on pin %s",
+        LOGTV(PCNT, "Cleared counter on pin %s",
             pin->getName().c_str());
     }
 
@@ -85,7 +87,7 @@ public:
         ESP_ERROR_THROW(pcnt_unit_clear_count(unit));
         ESP_ERROR_THROW(pcnt_unit_start(unit));
 
-        LOGTD(Tag::PCNT, "Registered PCNT unit on pin %s",
+        LOGTD(PCNT, "Registered PCNT unit on pin %s",
             pin->getName().c_str());
         return std::make_shared<PulseCounterUnit>(unit, pin);
     }

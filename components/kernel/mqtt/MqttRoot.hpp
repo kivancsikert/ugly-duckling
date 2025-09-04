@@ -27,7 +27,7 @@ public:
                     publish("responses/" + command, responseDoc, Retention::NoRetain, QoS::ExactlyOnce);
                 }
             } else {
-                LOGTE(Tag::MQTT, "Unknown command: %s", command.c_str());
+                LOGTE(MQTT, "Unknown command: %s", command.c_str());
             }
         });
     }
