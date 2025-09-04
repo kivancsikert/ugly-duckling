@@ -66,10 +66,11 @@ public:
 
 // helper: check if substring is in comma-separated list
 inline bool loggingTagInList(const char* tag, const char* list) {
-    if (!list)
+    if (list == nullptr) {
         return false;
+    }
     const char* p = strstr(list, tag);
-    while (p) {
+    while (p != nullptr) {
         const char* after = p + strlen(tag);
         if ((p == list || p[-1] == ',') && (*after == '\0' || *after == ',')) {
             return true;
