@@ -34,19 +34,8 @@ struct SoilMoistureTarget : ConfigurationSection {
 struct PlotConfig : ConfigurationSection {
     ArrayProperty<TimeBasedSchedule> schedule { this, "schedule" };
     NamedConfigurationEntry<SoilMoistureTarget> soilMoistureTarget { this, "soilMoistureTarget" };
-    Property<std::string> overrideState { this, "overrideState" };
+    Property<TargetState> overrideState { this, "overrideState" };
     Property<time_point<system_clock>> overrideUntil { this, "overrideUntil" };
-
-    std::optional<TargetState> getOverrideState() const {
-        auto state = overrideState.get();
-        if (state == "open") {
-            return TargetState::OPEN;
-        }
-        if (state == "closed") {
-            return TargetState::CLOSED;
-        }
-        return {};
-    }
 };
 
 struct BootClock {
@@ -122,7 +111,7 @@ public:
     }
 
     void configure(const std::shared_ptr<PlotConfig>& config) override {
-        auto overrideState = config->getOverrideState();
+        auto overrideState = config->overrideState.getIfPresent();
         auto overrideSpec = overrideState.has_value()
             ? std::make_optional<OverrideSchedule>({
                   .state = *overrideState,
