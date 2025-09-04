@@ -10,6 +10,8 @@
 
 namespace farmhub::utils::scheduling {
 
+LOGGING_TAG("scheduling")
+
 using ms = std::chrono::milliseconds;
 
 struct ScheduleResult {

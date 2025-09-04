@@ -133,6 +133,7 @@ struct MoistureBasedScheduler : IScheduler {
         , clock { std::move(clock) }
         , flowMeter { std::move(flowMeter) }
         , moistureSensor { std::move(moistureSensor) } {
+        LOGTD(TAG, "Moisture based scheduler initialized");
     }
 
     [[nodiscard]] const Telemetry& getTelemetry() const noexcept {
@@ -242,11 +243,12 @@ private:
         const Percent targetMid = 0.5 * (target.low + target.high);
 
         if (telemetry.moisture >= target.low) {
+            LOGTV(TAG, "Moisture OK (%.1f%% >= %.1f%%), no watering needed", telemetry.moisture, target.low);
             return;
         }
 
         if (telemetry.totalVolume >= config.maxTotalVolume) {
-            LOGD("Water cap reached");
+            LOGTD(TAG, "Water cap reached");
             state = State::Fault;
             return;
         }
@@ -269,6 +271,8 @@ private:
         volumeDelivered = 0.0;
         waterStartTime = now;
 
+        LOGTV(TAG, "Starting watering, planned volume: %.1f L", volumePlanned);
+
         state = State::Watering;
     }
 
@@ -279,6 +283,9 @@ private:
         const bool timeout = (now - waterStartTime) >= config.valveTimeout;
 
         if (reached || timeout) {
+            LOGTD(TAG, "Watering finished after %.1f L delivered (reason: %s), starting soaking",
+                volumeDelivered,
+                reached ? "volume reached" : "timeout");
             telemetry.totalVolume += volumeDelivered;
             telemetry.totalCycles += 1;
             telemetry.lastVolumeDelivered = volumeDelivered;
@@ -307,13 +314,21 @@ private:
                 slopePeak = std::max(slopePeak, telemetry.slope);
             }
             if (timeSincePulseEnd > config.maxTau) {
+                LOGTD(TAG, "No rise detected after %lld s and %.1f L, assuming settled",
+                    duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
                 state = State::UpdateModel;    // give up waiting
             }
             return;
         }
 
         // After rise, wait for settle
-        if (telemetry.slope < config.slopeSettle || timeSincePulseEnd > config.maxTau) {
+        if (telemetry.slope < config.slopeSettle) {
+            LOGTD(TAG, "Settled after %lld ms and %.1f L, updating model",
+                duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
+            state = State::UpdateModel;
+        } else if (timeSincePulseEnd > config.maxTau) {
+            LOGTD(TAG, "Hasn't fully settled after %lld ms and %.1f L, updating model",
+                duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
             state = State::UpdateModel;
         }
     }
@@ -329,7 +344,7 @@ private:
         }
 
         if (telemetry.totalVolume >= config.maxTotalVolume) {
-            LOGD("Volume cap reached mid-process");
+            LOGTD(TAG, "Volume cap reached mid-process");
             state = State::Fault;
         } else {
             // Next tick will re-plan a (likely smaller) pulse if needed
