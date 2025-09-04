@@ -33,10 +33,10 @@ using namespace std::chrono_literals;
 namespace farmhub::peripherals::chicken_door {
 
 enum class DoorState : int8_t {
-    INITIALIZED = -2,
-    CLOSED = -1,
-    NONE = 0,
-    OPEN = 1
+    Initialized = -2,
+    Closed = -1,
+    None = 0,
+    Open = 1
 };
 
 bool convertToJson(const DoorState& src, JsonVariant dst) {
@@ -116,7 +116,7 @@ public:
     /**
      * @brief The state to override the schedule with.
      */
-    Property<DoorState> overrideState { this, "overrideState", DoorState::NONE };
+    Property<DoorState> overrideState { this, "overrideState", DoorState::None };
 
     /**
      * @brief Until when the override state is valid.
@@ -170,7 +170,7 @@ public:
 
         mqttRoot->registerCommand("override", [this](const JsonObject& request, JsonObject& response) {
             auto overrideState = request["state"].as<DoorState>();
-            auto overrideUntil = overrideState == DoorState::NONE
+            auto overrideUntil = overrideState == DoorState::None
                 ? time_point<system_clock>::min()
                 : system_clock::now() + (request["duration"].is<JsonVariant>() ? request["duration"].as<seconds>() : 1h);
             updateQueue.put(ConfigureSpec {
@@ -193,7 +193,7 @@ public:
         telemetry["state"] = lastState;
         telemetry["targetState"] = lastTargetState;
         telemetry["operationState"] = operationState;
-        if (overrideState != DoorState::NONE) {
+        if (overrideState != DoorState::None) {
             telemetry["overrideState"] = overrideState;
         }
     }
@@ -228,7 +228,7 @@ private:
         while (operationState == OperationState::RUNNING) {
             DoorState currentState = determineCurrentState();
             DoorState targetState = determineTargetState(currentState);
-            if (currentState == DoorState::NONE && targetState == lastState) {
+            if (currentState == DoorState::None && targetState == lastState) {
                 // We have previously reached the target state, but we have lost the signal from the switches.
                 // We assume the door is still in the target state to prevent it from moving when it shouldn't.
                 currentState = lastState;
@@ -241,10 +241,10 @@ private:
                     watchdog.restart();
                 }
                 switch (targetState) {
-                    case DoorState::OPEN:
+                    case DoorState::Open:
                         motor->drive(MotorPhase::FORWARD, 1);
                         break;
-                    case DoorState::CLOSED:
+                    case DoorState::Closed:
                         motor->drive(MotorPhase::REVERSE, 1);
                         break;
                     default:
@@ -293,11 +293,11 @@ private:
                             this->openLevel = arg.openLevel;
                             this->closeLevel = arg.closeLevel;
 
-                            if (arg.overrideState == DoorState::NONE) {
+                            if (arg.overrideState == DoorState::None) {
                                 LOGI("Override cancelled");
                             } else {
                                 LOGI("Override to %s, remaining duration: %lld sec",
-                                    arg.overrideState == DoorState::OPEN ? "OPEN" : "CLOSED",
+                                    arg.overrideState == DoorState::Open ? "Open" : "Closed",
                                     duration_cast<seconds>(arg.overrideUntil - system_clock::now()).count());
                             }
                             overrideState = arg.overrideState;
@@ -343,37 +343,37 @@ private:
         bool close = closedSwitch->isEngaged() ^ invertSwitches;
         if (open && close) {
             LOGD("Both open and close switches are engaged");
-            return DoorState::NONE;
+            return DoorState::None;
         }
         if (open) {
-            return DoorState::OPEN;
+            return DoorState::Open;
         }
         if (close) {
-            return DoorState::CLOSED;
+            return DoorState::Closed;
         }
-        return DoorState::NONE;
+        return DoorState::None;
     }
 
     DoorState determineTargetState(DoorState currentState) {
-        if (overrideState != DoorState::NONE) {
+        if (overrideState != DoorState::None) {
             if (overrideUntil >= system_clock::now()) {
                 return overrideState;
             }
             LOGI("Override expired, returning to scheduled state");
             Lock lock(stateMutex);
-            overrideState = DoorState::NONE;
+            overrideState = DoorState::None;
             overrideUntil = time_point<system_clock>::min();
         }
 
         auto lightLevel = lightSensor->getCurrentLevel();
         if (lightLevel >= openLevel) {
-            return DoorState::OPEN;
+            return DoorState::Open;
         }
         if (lightLevel <= closeLevel) {
-            return DoorState::CLOSED;
+            return DoorState::Closed;
         }
-        return currentState == DoorState::NONE
-            ? DoorState::CLOSED
+        return currentState == DoorState::None
+            ? DoorState::Closed
             : currentState;
     }
 
@@ -408,9 +408,9 @@ private:
     OperationState operationState = OperationState::RUNNING;
 
     Mutex stateMutex;
-    DoorState lastState = DoorState::INITIALIZED;
-    DoorState lastTargetState = DoorState::INITIALIZED;
-    DoorState overrideState = DoorState::NONE;
+    DoorState lastState = DoorState::Initialized;
+    DoorState lastTargetState = DoorState::Initialized;
+    DoorState overrideState = DoorState::None;
     time_point<system_clock> overrideUntil = time_point<system_clock>::min();
 
     std::optional<PowerManagementLockGuard> sleepLock;

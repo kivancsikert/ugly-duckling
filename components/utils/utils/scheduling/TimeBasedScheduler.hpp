@@ -54,9 +54,9 @@ public:
             if (offset < 0ms) {
                 // Schedule has not started yet; valve should be closed according to this schedule
                 // Calculate when this schedule will start for the first time
-                if (targetState != TargetState::OPEN) {
+                if (targetState != TargetState::Open) {
                     LOGTV(SCHEDULING, "Before schedule starts, should be closed");
-                    targetState = TargetState::CLOSED;
+                    targetState = TargetState::Closed;
                     validFor = minDuration(validFor, -offset);
                 } else {
                     LOGTV(SCHEDULING, "Before schedule starts, but already open");
@@ -71,20 +71,20 @@ public:
                     // The valve should be open according to this schedule
                     // Calculate when this opening period will end
                     auto closeAfter = schedule.duration - periodPosition;
-                    if (targetState == TargetState::OPEN) {
+                    if (targetState == TargetState::Open) {
                         // We already found a schedule to keep this valve open, extend the period if possible
                         validFor = maxDuration(validFor, closeAfter);
                     } else {
                         // This is the first schedule to keep the valve open
-                        targetState = TargetState::OPEN;
+                        targetState = TargetState::Open;
                         validFor = closeAfter;
                     }
                 } else {
                     // The valve should be closed according to this schedule
-                    if (targetState != TargetState::OPEN) {
+                    if (targetState != TargetState::Open) {
                         // There are no other schedules to keep the valve open yet,
                         // calculate when the next opening period will start
-                        targetState = TargetState::CLOSED;
+                        targetState = TargetState::Closed;
                         auto openAfter = schedule.period - periodPosition;
                         validFor = minDuration(validFor, openAfter);
                     }

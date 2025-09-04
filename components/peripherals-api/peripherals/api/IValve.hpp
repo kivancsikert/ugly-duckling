@@ -7,38 +7,38 @@
 namespace farmhub::peripherals::api {
 
 enum class TargetState : int8_t {
-    CLOSED = -1,
-    OPEN = 1
+    Closed = -1,
+    Open = 1
 };
 
 inline static const char* toString(std::optional<TargetState> state) {
     if (!state.has_value()) {
-        return "NONE";
+        return "None";
     }
     switch (state.value()) {
-        case TargetState::CLOSED:
-            return "CLOSED";
-        case TargetState::OPEN:
-            return "OPEN";
+        case TargetState::Closed:
+            return "Closed";
+        case TargetState::Open:
+            return "Open";
         default:
             return "INVALID";
     }
 }
 
 enum class ValveState : int8_t {
-    CLOSED = -1,
-    NONE = 0,
-    OPEN = 1
+    Closed = -1,
+    None = 0,
+    Open = 1
 };
 
 inline static const char* toString(ValveState state) {
     switch (state) {
-        case ValveState::CLOSED:
-            return "CLOSED";
-        case ValveState::OPEN:
-            return "OPEN";
-        case ValveState::NONE:
-            return "NONE";
+        case ValveState::Closed:
+            return "Closed";
+        case ValveState::Open:
+            return "Open";
+        case ValveState::None:
+            return "None";
         default:
             return "INVALID";
     }
@@ -70,11 +70,11 @@ template <>
 struct Converter<TargetState> {
     static void toJson(TargetState src, JsonVariant dst) {
         switch (src) {
-            case TargetState::CLOSED:
-                dst.set("CLOSED");
+            case TargetState::Closed:
+                dst.set("Closed");
                 break;
-            case TargetState::OPEN:
-                dst.set("OPEN");
+            case TargetState::Open:
+                dst.set("Open");
                 break;
             default:
                 throw std::invalid_argument("Invalid TargetState");
@@ -84,11 +84,11 @@ struct Converter<TargetState> {
 
     static farmhub::peripherals::api::TargetState fromJson(JsonVariantConst src) {
         const char* str = src.as<const char*>();
-        if (strcmp(str, "CLOSED") == 0) {
-            return farmhub::peripherals::api::TargetState::CLOSED;
+        if (strcmp(str, "Closed") == 0) {
+            return farmhub::peripherals::api::TargetState::Closed;
         }
-        if (strcmp(str, "OPEN") == 0) {
-            return farmhub::peripherals::api::TargetState::OPEN;
+        if (strcmp(str, "Open") == 0) {
+            return farmhub::peripherals::api::TargetState::Open;
         }
         throw std::invalid_argument("Invalid TargetState");
     }
@@ -104,11 +104,11 @@ template <>
 struct Converter<ValveState> {
     static void toJson(ValveState src, JsonVariant dst) {
         switch (src) {
-            case ValveState::CLOSED:
-                dst.set("CLOSED");
+            case ValveState::Closed:
+                dst.set("Closed");
                 break;
-            case ValveState::OPEN:
-                dst.set("OPEN");
+            case ValveState::Open:
+                dst.set("Open");
                 break;
             default:
                 throw std::invalid_argument("Invalid ValveState");
@@ -118,11 +118,11 @@ struct Converter<ValveState> {
 
     static farmhub::peripherals::api::ValveState fromJson(JsonVariantConst src) {
         const char* str = src.as<const char*>();
-        if (strcmp(str, "CLOSED") == 0) {
-            return farmhub::peripherals::api::ValveState::CLOSED;
+        if (strcmp(str, "Closed") == 0) {
+            return farmhub::peripherals::api::ValveState::Closed;
         }
-        if (strcmp(str, "OPEN") == 0) {
-            return farmhub::peripherals::api::ValveState::OPEN;
+        if (strcmp(str, "Open") == 0) {
+            return farmhub::peripherals::api::ValveState::Open;
         }
         throw std::invalid_argument("Invalid ValveState");
     }

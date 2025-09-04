@@ -55,10 +55,10 @@ public:
 protected:
     void driveAndHold(TargetState targetState) {
         switch (targetState) {
-            case TargetState::OPEN:
+            case TargetState::Open:
                 driveAndHold(MotorPhase::FORWARD);
                 break;
-            case TargetState::CLOSED:
+            case TargetState::Closed:
                 driveAndHold(MotorPhase::REVERSE);
                 break;
             default:
@@ -86,7 +86,7 @@ public:
     }
 
     void open() override {
-        driveAndHold(TargetState::OPEN);
+        driveAndHold(TargetState::Open);
     }
 
     void close() override {
@@ -94,7 +94,7 @@ public:
     }
 
     TargetState getDefaultState() const override {
-        return TargetState::CLOSED;
+        return TargetState::Closed;
     }
 
     std::string describe() const override {
@@ -114,11 +114,11 @@ public:
     }
 
     void close() override {
-        driveAndHold(TargetState::CLOSED);
+        driveAndHold(TargetState::Closed);
     }
 
     TargetState getDefaultState() const override {
-        return TargetState::OPEN;
+        return TargetState::Open;
     }
 
     std::string describe() const override {
@@ -148,7 +148,7 @@ public:
     }
 
     TargetState getDefaultState() const override {
-        return TargetState::CLOSED;
+        return TargetState::Closed;
     }
 
     std::string describe() const override {
@@ -177,7 +177,7 @@ public:
     }
 
     TargetState getDefaultState() const override {
-        return TargetState::CLOSED;
+        return TargetState::Closed;
     }
 
     std::string describe() const override {

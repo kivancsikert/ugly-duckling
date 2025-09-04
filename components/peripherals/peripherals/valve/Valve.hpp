@@ -43,15 +43,15 @@ public:
 
         TargetState initState;
         switch (strategy->getDefaultState()) {
-            case TargetState::OPEN:
+            case TargetState::Open:
                 LOGI("Assuming valve '%s' is open by default",
                     name.c_str());
-                initState = TargetState::OPEN;
+                initState = TargetState::Open;
                 break;
-            case TargetState::CLOSED:
+            case TargetState::Closed:
                 LOGI("Assuming valve '%s' is closed by default",
                     name.c_str());
-                initState = TargetState::CLOSED;
+                initState = TargetState::Closed;
                 break;
             default:
                 // Try to load from NVS
@@ -61,7 +61,7 @@ public:
                     LOGI("Restored state for valve '%s' from NVS: %d",
                         name.c_str(), static_cast<int>(state));
                 } else {
-                    initState = TargetState::CLOSED;
+                    initState = TargetState::Closed;
                     LOGI("No stored state for valve '%s', defaulting to closed",
                         name.c_str());
                 }
@@ -101,7 +101,7 @@ private:
             PowerManagementLockGuard sleepLock(PowerManager::noLightSleep);
             strategy->open();
         }
-        setState(ValveState::OPEN);
+        setState(ValveState::Open);
     }
 
     void close() {
@@ -110,13 +110,13 @@ private:
             PowerManagementLockGuard sleepLock(PowerManager::noLightSleep);
             strategy->close();
         }
-        setState(ValveState::CLOSED);
+        setState(ValveState::Closed);
     }
 
     bool transitionTo(TargetState target) {
         // Ignore if the state is already set
-        if ((this->state == ValveState::OPEN && target == TargetState::OPEN)
-            || (this->state == ValveState::CLOSED && target == TargetState::CLOSED)) {
+        if ((this->state == ValveState::Open && target == TargetState::Open)
+            || (this->state == ValveState::Closed && target == TargetState::Closed)) {
             return false;
         }
         doTransitionTo(target);
@@ -125,10 +125,10 @@ private:
 
     void doTransitionTo(TargetState state) {
         switch (state) {
-            case TargetState::OPEN:
+            case TargetState::Open:
                 open();
                 break;
-            case TargetState::CLOSED:
+            case TargetState::Closed:
                 close();
                 break;
             default:
@@ -147,7 +147,7 @@ private:
 
     NvsStore nvs;
     const std::unique_ptr<ValveControlStrategy> strategy;
-    ValveState state = ValveState::NONE;
+    ValveState state = ValveState::None;
 };
 
 }    // namespace farmhub::peripherals::valve

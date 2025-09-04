@@ -54,7 +54,7 @@ struct StringMaker<ScheduleResult> {
         if (r.nextDeadline.has_value()) {
             oss << r.nextDeadline->count() << "ms";
         } else {
-            oss << "NONE";
+            oss << "None";
         }
         oss << ", publish=" << (r.shouldPublishTelemetry ? "true" : "false") << "}";
         return oss.str();
@@ -74,23 +74,23 @@ TEST_CASE("keeps closed until schedule starts") {
     std::list<TimeBasedSchedule> schedules {
         TimeBasedSchedule { .start = T0, .period = 1h, .duration = 15s },
     };
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 - 1s) == ScheduleResult { .targetState = TargetState::CLOSED, .nextDeadline = 1s });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 - 1s) == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 1s });
 }
 
 TEST_CASE("keeps open when schedule is started and in period") {
     std::list<TimeBasedSchedule> schedules {
         TimeBasedSchedule { .start = T0, .period = 1h, .duration = 15s },
     };
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0) == ScheduleResult { .targetState = TargetState::OPEN, .nextDeadline = 15s });
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 1s) == ScheduleResult { .targetState = TargetState::OPEN, .nextDeadline = 14s });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 15s });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 1s) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 14s });
 }
 
 TEST_CASE("keeps closed when schedule is started and outside period") {
     std::list<TimeBasedSchedule> schedules {
         TimeBasedSchedule { .start = T0, .period = 1h, .duration = 15s },
     };
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 15s) == ScheduleResult { .targetState = TargetState::CLOSED, .nextDeadline = 1h - 15s });
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 16s) == ScheduleResult { .targetState = TargetState::CLOSED, .nextDeadline = 1h - 16s });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 15s) == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 1h - 15s });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 16s) == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 1h - 16s });
 }
 
 TEST_CASE("when there are overlapping schedules keep closed until earliest opens") {
@@ -101,8 +101,8 @@ TEST_CASE("when there are overlapping schedules keep closed until earliest opens
         TimeBasedSchedule { .start = T0 + 10min, .period = 1h, .duration = 15min },
     };
     // Keep closed until first schedule starts
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0) == ScheduleResult { .targetState = TargetState::CLOSED, .nextDeadline = 5min });
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 1s) == ScheduleResult { .targetState = TargetState::CLOSED, .nextDeadline = 5min - 1s });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0) == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 5min });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 1s) == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 5min - 1s });
 }
 
 TEST_CASE("when there are overlapping schedules keep open until latest closes") {
@@ -113,15 +113,15 @@ TEST_CASE("when there are overlapping schedules keep open until latest closes") 
         TimeBasedSchedule { .start = T0 + 10min, .period = 1h, .duration = 15min },
     };
     // Open when first schedule starts, and keep open
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 5min) == ScheduleResult { .targetState = TargetState::OPEN, .nextDeadline = 15min });
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 5min + 1s) == ScheduleResult { .targetState = TargetState::OPEN, .nextDeadline = 15min - 1s });
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 10min) == ScheduleResult { .targetState = TargetState::OPEN, .nextDeadline = 15min });
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 15min) == ScheduleResult { .targetState = TargetState::OPEN, .nextDeadline = 10min });
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 25min - 1s) == ScheduleResult { .targetState = TargetState::OPEN, .nextDeadline = 1s });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 5min) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 15min });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 5min + 1s) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 15min - 1s });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 10min) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 15min });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 15min) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 10min });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 25min - 1s) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 1s });
 
     // Close again after later schedule ends, and reopen when first schedule starts again
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 25min) == ScheduleResult { .targetState = TargetState::CLOSED, .nextDeadline = 40min });
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 25min + 1s) == ScheduleResult { .targetState = TargetState::CLOSED, .nextDeadline = 40min - 1s });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 25min) == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 40min });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 25min + 1s) == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 40min - 1s });
 }
 
 TEST_CASE("handles back-to-back schedules without gap") {
@@ -131,14 +131,14 @@ TEST_CASE("handles back-to-back schedules without gap") {
         TimeBasedSchedule { .start = T0 + 10s, .period = 30s, .duration = 10s },
     };
 
-    // At start => OPEN for 10s
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0) == ScheduleResult { .targetState = TargetState::OPEN, .nextDeadline = 10s });
-    // Just before switch => still OPEN
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 10s - 1ms) == ScheduleResult { .targetState = TargetState::OPEN, .nextDeadline = 1ms });
-    // Exactly at boundary => next schedule keeps it OPEN for another 10s
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 10s) == ScheduleResult { .targetState = TargetState::OPEN, .nextDeadline = 10s });
-    // After second ends => CLOSED until next period
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 20s) == ScheduleResult { .targetState = TargetState::CLOSED, .nextDeadline = 10s });
+    // At start => Open for 10s
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 10s });
+    // Just before switch => still Open
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 10s - 1ms) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 1ms });
+    // Exactly at boundary => next schedule keeps it Open for another 10s
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 10s) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 10s });
+    // After second ends => Closed until next period
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 20s) == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 10s });
 }
 
 TEST_CASE("stays closed until first open, then reverts correctly") {
@@ -146,12 +146,12 @@ TEST_CASE("stays closed until first open, then reverts correctly") {
         TimeBasedSchedule { .start = T0 + 5s, .period = 60s, .duration = 2s },
     };
 
-    // Before first start => NONE
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0) == ScheduleResult { .targetState = TargetState::CLOSED, .nextDeadline = 5s });
-    // During open => OPEN
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 5s + 500ms) == ScheduleResult { .targetState = TargetState::OPEN, .nextDeadline = 1500ms });
-    // After close => NONE until next period
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 7s) == ScheduleResult { .targetState = TargetState::CLOSED, .nextDeadline = 58s });
+    // Before first start => None
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0) == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 5s });
+    // During open => Open
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 5s + 500ms) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 1500ms });
+    // After close => None until next period
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 7s) == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 58s });
 }
 
 TEST_CASE("non-overlapping sequences alternate open and closed as expected") {
@@ -160,9 +160,9 @@ TEST_CASE("non-overlapping sequences alternate open and closed as expected") {
         TimeBasedSchedule { .start = T0 + 10s, .period = 20s, .duration = 5s },
     };
 
-    // 0..5s OPEN, 5..10s CLOSED, 10..15s OPEN, 15..20s CLOSED
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 0s) == ScheduleResult { .targetState = TargetState::OPEN, .nextDeadline = 5s });
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 5s) == ScheduleResult { .targetState = TargetState::CLOSED, .nextDeadline = 5s });
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 10s) == ScheduleResult { .targetState = TargetState::OPEN, .nextDeadline = 5s });
-    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 15s) == ScheduleResult { .targetState = TargetState::CLOSED, .nextDeadline = 5s });
+    // 0..5s Open, 5..10s Closed, 10..15s Open, 15..20s Closed
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 0s) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 5s });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 5s) == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 5s });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 10s) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 5s });
+    REQUIRE(TimeBasedScheduler::getStateUpdate(schedules, T0 + 15s) == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 5s });
 }

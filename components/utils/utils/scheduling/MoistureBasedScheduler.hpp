@@ -193,7 +193,7 @@ struct MoistureBasedScheduler : IScheduler {
                 break;
         }
 
-        auto targetState = state == State::Watering ? TargetState::OPEN : TargetState::CLOSED;
+        auto targetState = state == State::Watering ? TargetState::Open : TargetState::Closed;
         auto nextDeadline = getNextDeadline(state);
 
         LOGTV(SCHEDULING, "Tick done: state=%s, targetState=%s, nextDeadline=%s",

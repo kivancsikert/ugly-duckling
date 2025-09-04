@@ -78,7 +78,7 @@ SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, std::
         }
 
         // Produce flow when valve is on
-        if (result.targetState == TargetState::OPEN) {
+        if (result.targetState == TargetState::Open) {
             const Liters volumePerTick = simulationConfig.flowRatePerMinute * chrono_ratio(tick, 1min);
             LOGTV(TEST, "Injecting %f liters of water", volumePerTick);
             flowMeter->bucket += volumePerTick;
@@ -136,7 +136,7 @@ TEST_CASE("does not water when moisture is already above target") {
                 .time = 0ms,
                 .steps = 1,
                 .moisture = 65.0,
-                .targetState = TargetState::CLOSED,
+                .targetState = TargetState::Closed,
             });
 }
 
@@ -152,7 +152,7 @@ TEST_CASE("waters up to band without overshoot") {
             .flowRatePerMinute = 15.0,
         });
 
-    REQUIRE(result.targetState == TargetState::CLOSED);
+    REQUIRE(result.targetState == TargetState::Closed);
     REQUIRE(result.time < 15min);
     REQUIRE(result.steps < 80);
     REQUIRE(result.moisture >= 60.0);
@@ -174,7 +174,7 @@ TEST_CASE("starts watering after evaporation reduces moisture") {
             .flowRatePerMinute = 15.0,
         });
 
-    REQUIRE(result.targetState == TargetState::OPEN);
+    REQUIRE(result.targetState == TargetState::Open);
     REQUIRE(result.steps > 10);
     REQUIRE(result.moisture < 60.0);
     REQUIRE(result.moisture > 59.0);
