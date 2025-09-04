@@ -131,7 +131,17 @@
     { "type": "wokwi-gnd", "id": "gnd2", "top": 288, "left": -307.8, "attrs": {} },
     { "type": "wokwi-vcc", "id": "vcc1", "top": 287.04, "left": -9.4, "rotate": 180, "attrs": {} },
     { "type": "wokwi-vcc", "id": "vcc2", "top": 18.24, "left": -38.2, "rotate": 180, "attrs": {} },
-    { "type": "wokwi-gnd", "id": "gnd3", "top": 19.2, "left": -77.4, "attrs": {} }
+    { "type": "wokwi-gnd", "id": "gnd3", "top": 19.2, "left": -77.4, "attrs": {} },
+    {
+      "type": "chip-scope",
+      "id": "scope-flow",
+      "top": -210.18,
+      "left": -388.8,
+      "attrs": {
+        "sampleTimeUs": "100",
+        "trace0Color": "6"
+      }
+    }
   ],
   "connections": [
     [ "esp:TX", "$serialMonitor:RX", "", [] ],
@@ -164,7 +174,11 @@
     [ "gnd3:GND", "temp1:GND", "black", [ "v-9.6", "h9.6" ] ],
     [ "and1:OUT", "esp:5", "green", [ "h-9.6", "v-76.8" ] ],
     [ "led-flow:A", "and1:OUT", "green", [ "v19.2", "h9.6", "v76.8" ] ],
-    [ "led-flow:C", "r8:1", "green", [ "v0" ] ]
+    [ "led-flow:C", "r8:1", "green", [ "v0" ] ],
+    [ "and1:OUT", "scope-flow:D0", "green", [ "h-172.8", "v-336" ] ]
   ],
-  "dependencies": { "chip-pwm": "github:Dlloydev/Wokwi-Chip-PWM@1.0.6" }
+  "dependencies": {
+    "chip-pwm": "github:Dlloydev/Wokwi-Chip-PWM@1.0.6",
+    "chip-scope": "github:Dlloydev/Wokwi-Chip-scope@1.0.7"
+  }
 }
