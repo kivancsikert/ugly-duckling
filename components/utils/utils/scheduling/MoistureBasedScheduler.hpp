@@ -344,8 +344,8 @@ private:
         // Wait for rise first
         if (!sawRise) {
             if (telemetry.slope > config.slopeRise) {
-                LOGTD(SCHEDULING, "Rise detected after %lld s and %.1f L, continuing",
-                    duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
+                LOGTD(SCHEDULING, "Rise of %.1f%% detected after %lld s and %.1f L, continuing",
+                    telemetry.slope, duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
                 sawRise = true;
                 slopePeak = std::max(slopePeak, telemetry.slope);
             } else {
