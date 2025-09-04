@@ -93,12 +93,12 @@ public:
 
                 auto transitionHappened = valve->transitionTo(result.targetState);
                 if (transitionHappened) {
-                    LOGI("Plot controller '%s' transitioned to state %d, will evaluate again after %lld ms",
+                    LOGI("Plot controller '%s' transitioned to state %s, will evaluate again after %lld ms",
                         name.c_str(),
                         farmhub::peripherals::api::toString(result.targetState),
                         duration_cast<milliseconds>(nextDeadline).count());
                 } else {
-                    LOGD("Plot controller '%s' stayed in state %d, will evaluate again after %lld ms",
+                    LOGD("Plot controller '%s' stayed in state %s, will evaluate again after %lld ms",
                         name.c_str(),
                         farmhub::peripherals::api::toString(result.targetState),
                         duration_cast<milliseconds>(nextDeadline).count());
