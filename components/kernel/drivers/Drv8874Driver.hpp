@@ -64,15 +64,15 @@ public:
 
         int dutyValue = static_cast<int>((in1Channel.maxValue() + in1Channel.maxValue() * duty) / 2);
         LOGD("Driving motor %s at %.2f%%",
-            phase == MotorPhase::FORWARD ? "forward" : "reverse",
+            phase == MotorPhase::Forward ? "forward" : "reverse",
             duty * 100);
 
         switch (phase) {
-            case MotorPhase::FORWARD:
+            case MotorPhase::Forward:
                 in1Channel.write(dutyValue);
                 in2Channel.write(0);
                 break;
-            case MotorPhase::REVERSE:
+            case MotorPhase::Reverse:
                 in1Channel.write(0);
                 in2Channel.write(dutyValue);
                 break;

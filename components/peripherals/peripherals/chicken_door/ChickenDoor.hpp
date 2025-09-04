@@ -47,8 +47,8 @@ void convertFromJson(JsonVariantConst src, DoorState& dst) {
 }
 
 enum class OperationState : uint8_t {
-    RUNNING,
-    WATCHDOG_TIMEOUT
+    Running,
+    WatchdogTimeout
 };
 
 bool convertToJson(const OperationState& src, JsonVariant dst) {
@@ -219,13 +219,13 @@ public:
         // Stop movement and cancel watchdog; exit run loop
         motor->stop();
         watchdog.cancel();
-        operationState = OperationState::WATCHDOG_TIMEOUT; // causes runLoop to exit
+        operationState = OperationState::WatchdogTimeout; // causes runLoop to exit
     }
 
 private:
     void runLoop() {
         bool shouldPublishTelemetry = true;
-        while (operationState == OperationState::RUNNING) {
+        while (operationState == OperationState::Running) {
             DoorState currentState = determineCurrentState();
             DoorState targetState = determineTargetState(currentState);
             if (currentState == DoorState::None && targetState == lastState) {
@@ -242,10 +242,10 @@ private:
                 }
                 switch (targetState) {
                     case DoorState::Open:
-                        motor->drive(MotorPhase::FORWARD, 1);
+                        motor->drive(MotorPhase::Forward, 1);
                         break;
                     case DoorState::Closed:
-                        motor->drive(MotorPhase::REVERSE, 1);
+                        motor->drive(MotorPhase::Reverse, 1);
                         break;
                     default:
                         motor->stop();
@@ -306,7 +306,7 @@ private:
                             shouldPublishTelemetry = true;
                         } else if constexpr (std::is_same_v<T, WatchdogTimeout>) {
                             LOGE("Watchdog timed out, stopping operation");
-                            operationState = OperationState::WATCHDOG_TIMEOUT;
+                            operationState = OperationState::WatchdogTimeout;
                             motor->stop();
                             shouldPublishTelemetry = true;
                         }
@@ -405,7 +405,7 @@ private:
 
     Queue<std::variant<StateUpdated, ConfigureSpec, WatchdogTimeout>> updateQueue { "chicken-door-status", 2 };
 
-    OperationState operationState = OperationState::RUNNING;
+    OperationState operationState = OperationState::Running;
 
     Mutex stateMutex;
     DoorState lastState = DoorState::Initialized;

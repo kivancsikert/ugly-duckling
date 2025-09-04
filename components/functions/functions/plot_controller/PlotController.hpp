@@ -44,12 +44,6 @@ struct BootClock {
     }
 };
 
-enum Mode : uint8_t {
-    OVERRIDE,
-    SCHEDULE,
-    SOIL_MOISTURE_TARGET,
-};
-
 class PlotController final
     : public Named,
       public HasConfig<PlotConfig> {

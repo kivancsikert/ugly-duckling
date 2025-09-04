@@ -56,10 +56,10 @@ protected:
     void driveAndHold(TargetState targetState) {
         switch (targetState) {
             case TargetState::Open:
-                driveAndHold(MotorPhase::FORWARD);
+                driveAndHold(MotorPhase::Forward);
                 break;
             case TargetState::Closed:
-                driveAndHold(MotorPhase::REVERSE);
+                driveAndHold(MotorPhase::Reverse);
                 break;
             default:
                 // Ignore
@@ -136,13 +136,13 @@ public:
     }
 
     void open() override {
-        controller->drive(MotorPhase::FORWARD, switchDuty);
+        controller->drive(MotorPhase::Forward, switchDuty);
         Task::delay(switchDuration);
         controller->stop();
     }
 
     void close() override {
-        controller->drive(MotorPhase::REVERSE, switchDuty);
+        controller->drive(MotorPhase::Reverse, switchDuty);
         Task::delay(switchDuration);
         controller->stop();
     }

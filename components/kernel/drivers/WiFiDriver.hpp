@@ -118,7 +118,7 @@ private:
             case WIFI_EVENT_STA_START: {
                 LOGTD(WIFI, "Started");
                 stationStarted.set();
-                eventQueue.offer(WiFiEvent::STARTED);
+                eventQueue.offer(WiFiEvent::Started);
                 break;
             }
             case WIFI_EVENT_STA_STOP: {
@@ -144,7 +144,7 @@ private:
                     Lock lock(metadataMutex);
                     ssid.reset();
                 }
-                eventQueue.offer(WiFiEvent::DISCONNECTED);
+                eventQueue.offer(WiFiEvent::Disconnected);
                 LOGTD(WIFI, "Disconnected from the AP %.*s, reason: %d",
                     event->ssid_len, reinterpret_cast<const char*>(event->ssid), event->reason);
                 break;
@@ -171,7 +171,7 @@ private:
                     Lock lock(metadataMutex);
                     ip = event->ip_info.ip;
                 }
-                eventQueue.offer(WiFiEvent::CONNECTED);
+                eventQueue.offer(WiFiEvent::Connected);
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
                 LOGTD(WIFI, "Got IP - " IPSTR, IP2STR(&event->ip_info.ip));
                 break;
@@ -182,7 +182,7 @@ private:
                     Lock lock(metadataMutex);
                     ip.reset();
                 }
-                eventQueue.offer(WiFiEvent::DISCONNECTED);
+                eventQueue.offer(WiFiEvent::Disconnected);
                 LOGTD(WIFI, "Lost IP");
                 break;
             }
@@ -218,7 +218,7 @@ private:
             }
             case WIFI_PROV_END: {
                 LOGTD(WIFI, "provisioning finished");
-                eventQueue.offer(WiFiEvent::PROVISIONING_FINISHED);
+                eventQueue.offer(WiFiEvent::ProvisioningFinished);
                 wifi_prov_mgr_deinit();
                 break;
             }
@@ -257,7 +257,7 @@ private:
             for (auto event = eventQueue.pollIn(WIFI_CHECK_INTERVAL); event.has_value(); event = eventQueue.poll()) {
                 // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
                 switch (event.value()) {
-                    case WiFiEvent::STARTED:
+                    case WiFiEvent::Started:
                         if (!configPortalRunning.isSet()) {
                             esp_err_t err = esp_wifi_connect();
                             if (err != ESP_OK) {
@@ -266,17 +266,17 @@ private:
                             }
                         }
                         break;
-                    case WiFiEvent::CONNECTED:
+                    case WiFiEvent::Connected:
                         connected = true;
                         networkConnecting.clear();
                         LOGTD(WIFI, "Connected to the network");
                         break;
-                    case WiFiEvent::DISCONNECTED:
+                    case WiFiEvent::Disconnected:
                         connected = false;
                         networkConnecting.clear();
                         LOGTD(WIFI, "Disconnected from the network");
                         break;
-                    case WiFiEvent::PROVISIONING_FINISHED:
+                    case WiFiEvent::ProvisioningFinished:
                         configPortalRunning.clear();
                         break;
                 }
@@ -404,10 +404,10 @@ private:
     StateSource stationStarted = internalStates.createStateSource("wifi:station-started");
 
     enum class WiFiEvent : uint8_t {
-        STARTED,
-        CONNECTED,
-        DISCONNECTED,
-        PROVISIONING_FINISHED,
+        Started,
+        Connected,
+        Disconnected,
+        ProvisioningFinished,
     };
 
     CopyQueue<WiFiEvent> eventQueue { "wifi-events", 16 };
