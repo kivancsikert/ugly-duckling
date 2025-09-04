@@ -1,0 +1,184 @@
+{
+  "version": 1,
+  "author": "Lóránt Pintér",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-s3-devkitc-1", "id": "esp", "top": -0.18, "left": 4.57, "attrs": {} },
+    {
+      "type": "wokwi-led",
+      "id": "statusLed",
+      "top": -32.4,
+      "left": 186.2,
+      "attrs": { "color": "white", "label": "Status" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 32.75,
+      "left": 163.2,
+      "attrs": { "value": "22" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "statusLed2",
+      "top": -32.4,
+      "left": 253.4,
+      "attrs": { "color": "white", "label": "Status-2" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r7",
+      "top": 32.75,
+      "left": 230.4,
+      "attrs": { "value": "22" }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "battery",
+      "top": -106.9,
+      "left": 9.4,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r2",
+      "top": 119.45,
+      "left": -116.6,
+      "rotate": 180,
+      "attrs": { "value": "22" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dain1Led",
+      "top": 63.6,
+      "left": -178.6,
+      "attrs": { "color": "yellow", "label": "DAIN1", "flip": "" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dain2Led",
+      "top": 63.6,
+      "left": -111.4,
+      "attrs": { "color": "orange", "label": "DAIN2", "flip": "" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r3",
+      "top": 119.45,
+      "left": -193.4,
+      "rotate": 180,
+      "attrs": { "value": "22" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "nsleepLed",
+      "top": 140.4,
+      "left": -53.8,
+      "attrs": { "color": "red", "label": "NSleep", "flip": "" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r4",
+      "top": 196.25,
+      "left": -59,
+      "rotate": 180,
+      "attrs": { "value": "22" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dbin1Led",
+      "top": 169.2,
+      "left": -178.6,
+      "attrs": { "color": "yellow", "label": "DBIN1", "flip": "" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r5",
+      "top": 227.25,
+      "left": -109.6,
+      "rotate": 180,
+      "attrs": { "value": "22" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "dbin2Led",
+      "top": 169.2,
+      "left": -111.4,
+      "attrs": { "color": "orange", "label": "DBIN2", "flip": "" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r6",
+      "top": 225.05,
+      "left": -193.4,
+      "rotate": 180,
+      "attrs": { "value": "22" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn1",
+      "top": 169.4,
+      "left": 153.6,
+      "attrs": { "color": "green", "label": "Flash", "bounce": "0" }
+    },
+    { "type": "board-ds18b20", "id": "temp1", "top": -39.53, "left": -63.12, "attrs": {
+      "deviceID": "010203040506",
+      "family": "40",
+      "temperature": "25.0"
+    } },
+    { "type": "wokwi-potentiometer", "id": "soil-moisture", "top": -58.9, "left": -153.8, "attrs": {
+      "value": "2000"
+    } },
+    {
+      "type": "wokwi-text",
+      "id": "text1",
+      "top": -105.6,
+      "left": -153.6,
+      "attrs": { "text": "Soil\nmoisture" }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text2",
+      "top": -105.6,
+      "left": -67.2,
+      "attrs": { "text": "Soil\ntemp" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "statusLed:C", "esp:2", "black", [] ],
+    [ "statusLed:A", "r1:2", "green", [] ],
+    [ "r1:1", "esp:3V3.2", "green", [ "v0" ] ],
+    [ "battery:VCC", "esp:3V3.1", "red", [ "v0" ] ],
+    [ "battery:GND", "esp:GND.2", "black", [ "v0" ] ],
+    [ "battery:SIG", "esp:1", "green", [ "v0" ] ],
+    [ "dain1Led:A", "esp:16", "green", [] ],
+    [ "dain1Led:C", "r3:2", "green", [ "h-28.4", "v19.2" ] ],
+    [ "r2:1", "esp:GND.1", "black", [ "v0" ] ],
+    [ "dain2Led:A", "esp:17", "green", [] ],
+    [ "dain2Led:C", "r2:2", "green", [ "h0" ] ],
+    [ "r3:1", "esp:GND.1", "black", [ "v0" ] ],
+    [ "nsleepLed:A", "esp:47", "green", [ "v0" ] ],
+    [ "dbin1Led:A", "esp:8", "green", [] ],
+    [ "dbin1Led:C", "r6:2", "green", [] ],
+    [ "r5:1", "esp:GND.1", "black", [ "v0" ] ],
+    [ "dbin2Led:A", "esp:18", "green", [] ],
+    [ "dbin2Led:C", "r5:2", "green", [] ],
+    [ "r6:1", "esp:GND.1", "black", [ "v0" ] ],
+    [ "statusLed2:A", "r7:2", "green", [] ],
+    [ "r7:1", "esp:3V3.2", "green", [ "v0" ] ],
+    [ "statusLed2:C", "esp:4", "green", [ "v0" ] ],
+    [ "nsleepLed:C", "r4:2", "green", [ "h-18.8", "v28.8" ] ],
+    [ "r4:1", "esp:GND.1", "black", [ "v0" ] ],
+    [ "esp:GND.4", "btn1:2.l", "black", [ "h0" ] ],
+    [ "esp:0", "btn1:1.l", "green", [ "h0" ] ],
+    [ "esp:15", "temp1:DQ", "green", [ "h0" ] ],
+    [ "esp:3V3.1", "temp1:VCC", "red", [ "v0" ] ],
+    [ "esp:GND.2", "temp1:GND", "black", [ "v-9.6", "h-153.6" ] ],
+    [ "pot1:VCC", "esp:3V3.1", "red", [ "v0" ] ],
+    [ "pot1:GND", "esp:GND.2", "black", [ "v0" ] ],
+    [ "pot1:SIG", "esp:6", "green", [ "v0" ] ]
+  ],
+  "dependencies": {}
+}
