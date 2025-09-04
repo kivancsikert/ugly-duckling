@@ -133,7 +133,7 @@
       "id": "soil-moisture",
       "top": -58.9,
       "left": -153.8,
-      "attrs": { "value": "2000" }
+      "attrs": { "value": "512" }
     },
     {
       "type": "wokwi-text",
