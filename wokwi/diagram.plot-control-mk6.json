@@ -152,9 +152,16 @@
     {
       "type": "wokwi-pushbutton",
       "id": "flow",
-      "top": 15.8,
-      "left": -240,
+      "top": 35,
+      "left": -249.6,
       "attrs": { "color": "blue", "label": "Flow" }
+    },
+    {
+      "type": "chip-pwm",
+      "id": "pwm1",
+      "top": 29.82,
+      "left": -386.99,
+      "attrs": { "coefficientHz": "6", "exponentHz": "2", "duty": "50" }
     }
   ],
   "connections": [
@@ -197,8 +204,8 @@
     [ "esp:6", "soil-moisture:SIG", "green", [ "h0" ] ],
     [ "btn2:2.r", "esp:5", "green", [ "h9.8", "v19.4" ] ],
     [ "soil-moisture:VCC", "btn2:1.r", "red", [ "v0" ] ],
-    [ "flow:2.r", "esp:5", "green", [ "h19.4", "v19.4" ] ],
-    [ "soil-moisture:VCC", "flow:1.r", "red", [ "v0" ] ]
+    [ "flow:2.r", "esp:5", "green", [ "h0" ] ],
+    [ "flow:1.l", "pwm1:OUT", "green", [ "h0" ] ]
   ],
-  "dependencies": {}
+  "dependencies": { "chip-pwm": "github:Dlloydev/Wokwi-Chip-PWM@1.0.6" }
 }
