@@ -162,6 +162,47 @@
       "top": 29.82,
       "left": -386.99,
       "attrs": { "coefficientHz": "6", "exponentHz": "2", "duty": "50" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led10",
+      "top": 344.8,
+      "left": -113.8,
+      "rotate": 270,
+      "attrs": { "color": "green" }
+    },
+    { "type": "wokwi-gnd", "id": "gnd2", "top": 384, "left": -10.2, "attrs": {} },
+    {
+      "type": "wokwi-led",
+      "id": "led11",
+      "top": 315.6,
+      "left": -113.8,
+      "rotate": 270,
+      "attrs": { "color": "red", "flip": "1" }
+    },
+    { "type": "wokwi-gnd", "id": "gnd3", "top": 289.4, "left": -9.8, "rotate": 180, "attrs": {} },
+    {
+      "type": "wokwi-resistor",
+      "id": "r10",
+      "top": 330.35,
+      "left": -67.2,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r11",
+      "top": 369.05,
+      "left": -68.6,
+      "rotate": 180,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-flip-flop-d",
+      "id": "flop2",
+      "top": 336.4,
+      "left": -9.6,
+      "rotate": 180,
+      "attrs": {}
     }
   ],
   "connections": [
@@ -205,7 +246,17 @@
     [ "btn2:2.r", "esp:5", "green", [ "h9.8", "v19.4" ] ],
     [ "soil-moisture:VCC", "btn2:1.r", "red", [ "v0" ] ],
     [ "flow:2.r", "esp:5", "green", [ "h0" ] ],
-    [ "flow:1.l", "pwm1:OUT", "green", [ "h0" ] ]
+    [ "flow:1.l", "pwm1:OUT", "green", [ "h0" ] ],
+    [ "r5:1", "led2:C", "green", [ "v0" ] ],
+    [ "r6:2", "led1:C", "green", [ "v0" ] ],
+    [ "r10:1", "led11:C", "green", [ "v0" ] ],
+    [ "gnd3:GND", "r10:2", "black", [ "v0" ] ],
+    [ "gnd2:GND", "r11:1", "black", [ "v0" ] ],
+    [ "r11:2", "led10:C", "green", [ "v0" ] ],
+    [ "flop2:NOTQ", "led11:A", "green", [ "h0" ] ],
+    [ "flop2:Q", "led10:A", "green", [ "v0" ] ],
+    [ "flop2:CLK", "esp:47", "green", [ "h0" ] ],
+    [ "flop2:D", "esp:8", "green", [ "h28.8", "v-230.4" ] ]
   ],
   "dependencies": { "chip-pwm": "github:Dlloydev/Wokwi-Chip-PWM@1.0.6" }
 }
