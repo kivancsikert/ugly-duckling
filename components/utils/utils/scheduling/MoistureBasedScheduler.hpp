@@ -204,6 +204,7 @@ struct MoistureBasedScheduler : IScheduler {
         return {
             .targetState = targetState,
             .nextDeadline = nextDeadline,
+            .shouldPublishTelemetry = false,
         };
     }
 
@@ -361,11 +362,11 @@ private:
 
         // After rise, wait for settle
         if (telemetry.slope < config.slopeSettle) {
-            LOGTD(SCHEDULING, "Settled after %lld ms and %.1f L, updating model",
+            LOGTD(SCHEDULING, "Settled after %lld s and %.1f L, updating model",
                 duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
             state = State::UpdateModel;
         } else if (timeSincePulseEnd > config.tau) {
-            LOGTD(SCHEDULING, "Hasn't fully settled after %lld ms and %.1f L, updating model",
+            LOGTD(SCHEDULING, "Hasn't fully settled after %lld s and %.1f L, updating model",
                 duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
             state = State::UpdateModel;
         }
