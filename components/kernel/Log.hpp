@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string.h>
 #include <string>
 
 #include <esp_log.h>
@@ -52,11 +53,44 @@ public:
 
 #ifndef FARMHUB_LOG_LEVEL
 #ifdef FARMHUB_DEBUG
-#define FARMHUB_LOG_LEVEL FARMHUB_LOG_LEVEL_DEBUG
+#define FARMHUB_LOG_LEVEL ESP_LOG_DEBUG
 #else
-#define FARMHUB_LOG_LEVEL FARMHUB_LOG_LEVEL_INFO
+#define FARMHUB_LOG_LEVEL ESP_LOG_INFO
 #endif
 #endif
+
+#ifndef FARMHUB_LOG_VERBOSE
+#define FARMHUB_LOG_VERBOSE ""
+#endif
+
+// helper: check if substring is in comma-separated list
+inline bool loggingTagInList(const char* tag, const char* list) {
+    if (!list)
+        return false;
+    const char* p = strstr(list, tag);
+    while (p) {
+        const char* after = p + strlen(tag);
+        if ((p == list || p[-1] == ',') && (*after == '\0' || *after == ',')) {
+            return true;
+        }
+        p = strstr(after, tag);
+    }
+    return false;
+}
+
+#define LOGGING_TAG(name)                                      \
+    static constexpr const char* TAG = "farmhub:" name;        \
+    struct TAG##_LoggerInit {                                  \
+        TAG##_LoggerInit() {                                   \
+            esp_log_level_t lvl = FARMHUB_LOG_LEVEL;           \
+            /* if tag is in FARMHUB_LOG_VERBOSE, bump level */ \
+            if (loggingTagInList(name, FARMHUB_LOG_VERBOSE)) { \
+                lvl = ESP_LOG_VERBOSE;                         \
+            }                                                  \
+            esp_log_level_set(TAG, lvl);                       \
+        }                                                      \
+    };                                                         \
+    static const TAG##_LoggerInit TAG##_logger_init;
 
 class Log {
 public:
