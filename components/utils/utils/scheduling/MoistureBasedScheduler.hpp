@@ -43,7 +43,7 @@ struct MoistureBasedSchedulerSettings {
     double alphaSlope { 0.40 };       // EMA for slope
 
     // Slope thresholds in % / min
-    double slopeRise { 0.05 };
+    double slopeRise { 0.03 };
     double slopeSettle { 0.01 };
 
     // Soak timing
@@ -279,7 +279,7 @@ private:
             telemetry.slope = settings.alphaSlope * slopeInst + (1.0 - settings.alphaSlope) * telemetry.slope;
         }
 
-        LOGTV(SCHEDULING, "Moisture: %.1f%% (raw: %.1f%%), Slope: %.1f%%/min",
+        LOGTV(SCHEDULING, "Moisture: %.1f%% (raw: %.1f%%), Slope: %.2f%%/min",
             telemetry.moisture, telemetry.rawMoisture, telemetry.slope);
         lastMoisture = telemetry.moisture;
         lastSample = now;
@@ -359,16 +359,16 @@ private:
         // Wait for rise first
         if (!sawRise) {
             if (telemetry.slope > settings.slopeRise) {
-                LOGTI(SCHEDULING, "Rise of %.1f%% detected after %lld s and %.1f L, continuing",
+                LOGTI(SCHEDULING, "Rise of %.2f%%/min detected after %lld s and %.1f L, continuing",
                     telemetry.slope, duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
                 sawRise = true;
                 slopePeak = std::max(slopePeak, telemetry.slope);
             } else {
-                LOGTV(SCHEDULING, "No rise detected yet after %lld s and %.1f L (%.1f < %.1f)",
+                LOGTV(SCHEDULING, "No rise detected yet after %lld s and %.1f L (%.2f%%/min < %.2f%%/min)",
                     duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered, telemetry.slope, settings.slopeRise);
             }
             if (timeSincePulseEnd > settings.tau) {
-                LOGTI(SCHEDULING, "Assuming settled after %lld s and %.1f L, peak slope: %.1f%%/min, updating model",
+                LOGTI(SCHEDULING, "Assuming settled after %lld s and %.1f L, peak slope: %.2f%%/min, updating model",
                     duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered, slopePeak);
                 state = State::UpdateModel;    // give up waiting
             }
@@ -381,7 +381,7 @@ private:
                 duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
             state = State::UpdateModel;
         } else if (timeSincePulseEnd > settings.tau) {
-            LOGTI(SCHEDULING, "Assuming settled after %lld s and %.1f L, peak slope: %.1f%%/min, updating model",
+            LOGTI(SCHEDULING, "Assuming settled after %lld s and %.1f L, peak slope: %.2f%%/min, updating model",
                 duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered, slopePeak);
             state = State::UpdateModel;
         }
@@ -396,7 +396,7 @@ private:
             const auto oldGain = telemetry.gain;
             const double observedGain = dMoisture / dVolume;    // % per liter, K_obs
             telemetry.gain = (1.0 - settings.betaGain) * telemetry.gain + settings.betaGain * observedGain;
-            LOGTI(SCHEDULING, "Updating model, gain changed from %.1f%%/L to %.1f%%/L (%.1f L delivered, observed gain %.1f%%/L)",
+            LOGTI(SCHEDULING, "Updating model, gain changed from %.2f%%/L to %.2f%%/L (%.1f L delivered, observed gain %.2f%%/L)",
                 oldGain, telemetry.gain, volumeDelivered, observedGain);
         }
 
