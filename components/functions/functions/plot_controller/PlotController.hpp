@@ -63,7 +63,8 @@ public:
         auto compositeScheduler = std::make_shared<CompositeScheduler>(std::list<std::shared_ptr<IScheduler>> {
             overrideScheduler,
             timeBasedScheduler,
-            moistureBasedScheduler });
+            moistureBasedScheduler,
+        });
 
         Task::run(name, 4096, [this, name, valve, compositeScheduler, overrideScheduler, timeBasedScheduler, moistureBasedScheduler, telemetryPublisher](Task& /*task*/) {
             auto shouldPublishTelemetry = true;
@@ -148,14 +149,12 @@ struct MoistureBasedSchedulerSettings : ConfigurationSection {
     Property<double> slopeSettle { this, "slopeSettle", 0.01 };
 
     // Soak timing
-    Property<seconds> deadTime { this, "deadTime", 5min }; // Td
+    Property<seconds> deadTime { this, "deadTime", 5min };    // Td
     Property<seconds> tau { this, "tau", 30min };
     Property<seconds> valveTimeout { this, "valveTimeout", 5min };
 
     // Learning (EWMA)
     Property<double> betaGain { this, "betaGain", 0.20 };
-    Property<double> betaDelay { this, "betaDelay", 0.20 };
-    Property<double> betaTau { this, "betaTau", 0.20 };
 
     // Quotas / safety
     Property<Liters> maxTotalVolume { this, "maxTotalVolume", NAN };
@@ -231,8 +230,6 @@ inline FunctionFactory makeFactory() {
                         .valveTimeout = moistureBasedSettings->valveTimeout.get(),
 
                         .betaGain = moistureBasedSettings->betaGain.get(),
-                        .betaDelay = moistureBasedSettings->betaDelay.get(),
-                        .betaTau = moistureBasedSettings->betaTau.get(),
 
                         .maxTotalVolume = moistureBasedSettings->maxTotalVolume.get(),
                     },

@@ -53,8 +53,6 @@ struct MoistureBasedSchedulerSettings {
 
     // Learning (EWMA)
     double betaGain { 0.20 };
-    double betaDelay { 0.20 };
-    double betaTau { 0.20 };
 
     // Quotas / safety
     Liters maxTotalVolume { NAN };
@@ -146,7 +144,27 @@ struct MoistureBasedScheduler : IScheduler {
         , clock { std::move(clock) }
         , flowMeter { std::move(flowMeter) }
         , moistureSensor { std::move(moistureSensor) } {
-        LOGTD(SCHEDULING, "Moisture based scheduler initialized");
+
+        LOGTI(SCHEDULING, "Initializing moisture based scheduler"
+                          ", volume: %.1f-%.1f L"
+                          ", min. gain: %.2f%%/L"
+                          ", alpha moisture: %.2f, alpha slope: %.2f"
+                          ", slope rise: %.2f%%/min, settle: %.2f%%/min"
+                          ", dead time %lld s, tau: %lld s, valve timeout: %lld s"
+                          ", beta gain: %.2f"
+                          ", maxTotalVolume: %.1f L",
+            settings.minVolume,
+            settings.maxVolume,
+            settings.minGain,
+            settings.alphaMoisture,
+            settings.alphaSlope,
+            settings.slopeRise,
+            settings.slopeSettle,
+            duration_cast<seconds>(settings.deadTime).count(),
+            duration_cast<seconds>(settings.tau).count(),
+            duration_cast<seconds>(settings.valveTimeout).count(),
+            settings.betaGain,
+            settings.maxTotalVolume);
     }
 
     const char* getName() const override {
