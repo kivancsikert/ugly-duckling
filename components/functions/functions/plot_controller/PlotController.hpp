@@ -145,7 +145,7 @@ struct MoistureBasedSchedulerSettings : ConfigurationSection {
     Property<double> alphaSlope { this, "alphaSlope", 0.40 };
 
     // Slope thresholds in % / min
-    Property<double> slopeRise { this, "slopeRise", 0.05 };
+    Property<double> slopeRise { this, "slopeRise", 0.03 };
     Property<double> slopeSettle { this, "slopeSettle", 0.01 };
 
     // Soak timing
