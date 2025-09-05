@@ -57,7 +57,6 @@ struct Config {
     double betaTau { 0.20 };
 
     // Quotas / safety
-    Liters maxVolumePerCycle { 30.0 };
     Liters maxTotalVolume { 120.0 };
 
     // Fault heuristics
@@ -273,12 +272,13 @@ private:
         const Percent targetMid = 0.5 * (target.low + target.high);
 
         if (telemetry.moisture >= target.low) {
-            LOGTV(SCHEDULING, "Moisture OK (%.1f%% >= %.1f%%), no watering needed", telemetry.moisture, target.low);
+            LOGTV(SCHEDULING, "Moisture OK (%.1f%% >= %.1f%%), no watering needed",
+                telemetry.moisture, target.low);
             return;
         }
 
         if (telemetry.totalVolume >= config.maxTotalVolume) {
-            LOGTD(SCHEDULING, "Water cap reached");
+            LOGTW(SCHEDULING, "Water cap reached");
             state = State::Fault;
             return;
         }
@@ -292,17 +292,14 @@ private:
             targetVolume *= 0.5;
         }
 
-        volumePlanned = detail::clamp(
-            targetVolume,
-            config.minVolume,
-            std::min(config.maxVolume, config.maxVolumePerCycle));
+        volumePlanned = detail::clamp(targetVolume, config.minVolume, config.maxVolume);
 
         telemetry.lastVolumePlanned = volumePlanned;
         volumeDelivered = 0.0;
         waterStartTime = now;
 
-        LOGTV(SCHEDULING, "Starting watering, planned volume: %.1f L", volumePlanned);
-
+        LOGTI(SCHEDULING, "Starting watering, moisture level %.1f%% < %.1f%%, aiming for %.1f%%, planned volume: %.1f L (unclamped plan: %.1f L)",
+            telemetry.moisture, target.low, targetMid, volumePlanned, targetVolume);
         state = State::Watering;
     }
 
@@ -313,9 +310,6 @@ private:
         const bool timeout = (now - waterStartTime) >= config.valveTimeout;
 
         if (reached || timeout) {
-            LOGTD(SCHEDULING, "Watering finished after %.1f L delivered (reason: %s), starting soaking",
-                volumeDelivered,
-                reached ? "volume reached" : "timeout");
             telemetry.totalVolume += volumeDelivered;
             telemetry.totalCycles += 1;
             telemetry.lastVolumeDelivered = volumeDelivered;
@@ -325,6 +319,10 @@ private:
             slopePeak = telemetry.slope;
             sawRise = false;
 
+            LOGTI(SCHEDULING, "Watering finished after %.1f L delivered (reason: %s), moisture level at %.1f%%, starting soaking",
+                volumeDelivered,
+                reached ? "volume reached" : "timeout",
+                telemetry.moisture);
             state = State::Soak;
         } else {
             LOGTV(SCHEDULING, "Watering in progress, %.1f / %.1f L delivered so far", volumeDelivered, volumePlanned);
@@ -344,7 +342,7 @@ private:
         // Wait for rise first
         if (!sawRise) {
             if (telemetry.slope > config.slopeRise) {
-                LOGTD(SCHEDULING, "Rise of %.1f%% detected after %lld s and %.1f L, continuing",
+                LOGTI(SCHEDULING, "Rise of %.1f%% detected after %lld s and %.1f L, continuing",
                     telemetry.slope, duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
                 sawRise = true;
                 slopePeak = std::max(slopePeak, telemetry.slope);
@@ -353,8 +351,8 @@ private:
                     duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered, telemetry.slope, config.slopeRise);
             }
             if (timeSincePulseEnd > config.tau) {
-                LOGTD(SCHEDULING, "Assuming settled after %lld s and %.1f L, updating model",
-                    duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
+                LOGTI(SCHEDULING, "Assuming settled after %lld s and %.1f L, peak slope: %.1f%%/min, updating model",
+                    duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered, slopePeak);
                 state = State::UpdateModel;    // give up waiting
             }
             return;
@@ -362,12 +360,12 @@ private:
 
         // After rise, wait for settle
         if (telemetry.slope < config.slopeSettle) {
-            LOGTD(SCHEDULING, "Settled after %lld s and %.1f L, updating model",
+            LOGTI(SCHEDULING, "Settled after %lld s and %.1f L, updating model",
                 duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
             state = State::UpdateModel;
         } else if (timeSincePulseEnd > config.tau) {
-            LOGTD(SCHEDULING, "Hasn't fully settled after %lld s and %.1f L, updating model",
-                duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
+            LOGTI(SCHEDULING, "Assuming settled after %lld s and %.1f L, peak slope: %.1f%%/min, updating model",
+                duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered, slopePeak);
             state = State::UpdateModel;
         }
     }
@@ -378,16 +376,18 @@ private:
 
         // Update gain if meaningful change
         if (dMoisture > 0.2) {
+            const auto oldGain = telemetry.gain;
             const double observedGain = dMoisture / dVolume;    // % per liter, K_obs
             telemetry.gain = (1.0 - config.betaGain) * telemetry.gain + config.betaGain * observedGain;
+            LOGTI(SCHEDULING, "Updating model, gain changed from %.1f%%/L to %.1f%%/L (%.1f L delivered, observed gain %.1f%%/L)",
+                oldGain, telemetry.gain, volumeDelivered, observedGain);
         }
 
         if (telemetry.totalVolume >= config.maxTotalVolume) {
-            LOGTD(SCHEDULING, "Volume cap reached mid-process");
+            LOGTW(SCHEDULING, "Volume cap reached mid-process");
             state = State::Fault;
         } else {
             // Next tick will re-plan a (likely smaller) pulse if needed
-            LOGTV(SCHEDULING, "Re-planning pulse (%.1f L delivered)", volumeDelivered);
             state = State::Idle;
         }
     }
