@@ -32,7 +32,7 @@ concept Clock = requires(const T& clock) {
 };
 
 // ---------- Settings & Telemetry ----------
-struct Settings {
+struct MoistureBasedSchedulerSettings {
     // Pulse sizing
     Liters minVolume { 0.5 };
     Liters maxVolume { 10.0 };
@@ -62,7 +62,7 @@ struct Settings {
     // Liters noRiseAfterVolume { NAN };
 };
 
-struct Telemetry {
+struct MoistureBasedSchedulerTelemetry {
     Percent rawMoisture { NAN };
     Percent moisture { NAN };    // filtered
     double slope { 0.0 };        // % / min
@@ -138,7 +138,7 @@ struct MoistureTarget {
 template <Clock TClock>
 struct MoistureBasedScheduler : IScheduler {
     MoistureBasedScheduler(
-        Settings settings,
+        MoistureBasedSchedulerSettings settings,
         std::shared_ptr<TClock> clock,
         std::shared_ptr<IFlowMeter> flowMeter,
         std::shared_ptr<ISoilMoistureSensor> moistureSensor)
@@ -153,7 +153,7 @@ struct MoistureBasedScheduler : IScheduler {
         return "moisture";
     }
 
-    [[nodiscard]] const Telemetry& getTelemetry() const noexcept {
+    [[nodiscard]] const MoistureBasedSchedulerTelemetry& getTelemetry() const noexcept {
         return telemetry;
     }
     [[nodiscard]] State getState() const noexcept {
@@ -216,9 +216,9 @@ struct MoistureBasedScheduler : IScheduler {
     }
 
 private:
-    Settings settings;
+    MoistureBasedSchedulerSettings settings;
     std::optional<MoistureTarget> target;
-    Telemetry telemetry {};
+    MoistureBasedSchedulerTelemetry telemetry {};
 
     std::shared_ptr<TClock> clock;
     std::shared_ptr<IFlowMeter> flowMeter;

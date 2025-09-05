@@ -215,7 +215,7 @@ inline FunctionFactory makeFactory() {
                 std::make_shared<OverrideScheduler>(),
                 std::make_shared<TimeBasedScheduler>(),
                 std::make_shared<MoistureBasedScheduler<BootClock>>(
-                    farmhub::utils::scheduling::Settings {
+                    farmhub::utils::scheduling::MoistureBasedSchedulerSettings {
                         .minVolume = moistureBasedSettings->minVolume.get(),
                         .maxVolume = moistureBasedSettings->maxVolume.get(),
                         .minGain = moistureBasedSettings->minGain.get(),

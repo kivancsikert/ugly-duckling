@@ -48,7 +48,7 @@ struct Simulator {
         : Simulator(soilConfig, {}, target, simulationConfig) {
     }
 
-    Simulator(SoilSimulator::Config soilConfig, Settings settings, std::optional<MoistureTarget> target, SimulationConfig simulationConfig)
+    Simulator(SoilSimulator::Config soilConfig, MoistureBasedSchedulerSettings settings, std::optional<MoistureTarget> target, SimulationConfig simulationConfig)
         : clock(std::make_shared<FakeClock>())
         , flowMeter(std::make_shared<FakeFlowMeter>())
         , moistureSensor(std::make_shared<FakeSoilMoistureSensor>())
