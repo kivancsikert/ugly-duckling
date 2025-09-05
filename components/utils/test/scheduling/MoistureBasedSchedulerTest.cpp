@@ -50,11 +50,11 @@ struct SimulationResult {
     }
 };
 
-SimulationResult simulate(SoilSimulator::Config soilConfig, Config config, std::optional<MoistureTarget> target, SimulationConfig simulationConfig) {
+SimulationResult simulate(SoilSimulator::Config soilConfig, Settings settings, std::optional<MoistureTarget> target, SimulationConfig simulationConfig) {
     auto clock = std::make_shared<FakeClock>();
     auto flowMeter = std::make_shared<FakeFlowMeter>();
     auto moistureSensor = std::make_shared<FakeSoilMoistureSensor>();
-    MoistureBasedScheduler scheduler { config, clock, flowMeter, moistureSensor };
+    MoistureBasedScheduler scheduler { settings, clock, flowMeter, moistureSensor };
     scheduler.setTarget(target);
     SoilSimulator soil { soilConfig };
 

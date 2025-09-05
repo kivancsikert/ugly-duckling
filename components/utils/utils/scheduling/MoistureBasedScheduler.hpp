@@ -31,8 +31,8 @@ concept Clock = requires(const T& clock) {
     { clock.now() } -> std::same_as<ms>;
 };
 
-// ---------- Config & Telemetry ----------
-struct Config {
+// ---------- Settings & Telemetry ----------
+struct Settings {
     // Pulse sizing
     Liters minVolume { 0.5 };
     Liters maxVolume { 10.0 };
@@ -57,10 +57,9 @@ struct Config {
     double betaTau { 0.20 };
 
     // Quotas / safety
-    Liters maxTotalVolume { 120.0 };
-
-    // Fault heuristics
-    Liters noRiseAfterVolume { 5.0 };
+    Liters maxTotalVolume { NAN };
+    // TODO Make this work
+    // Liters noRiseAfterVolume { NAN };
 };
 
 struct Telemetry {
@@ -139,11 +138,11 @@ struct MoistureTarget {
 template <Clock TClock>
 struct MoistureBasedScheduler : IScheduler {
     MoistureBasedScheduler(
-        Config config,
+        Settings settings,
         std::shared_ptr<TClock> clock,
         std::shared_ptr<IFlowMeter> flowMeter,
         std::shared_ptr<ISoilMoistureSensor> moistureSensor)
-        : config { config }
+        : settings { settings }
         , clock { std::move(clock) }
         , flowMeter { std::move(flowMeter) }
         , moistureSensor { std::move(moistureSensor) } {
@@ -217,7 +216,7 @@ struct MoistureBasedScheduler : IScheduler {
     }
 
 private:
-    Config config;
+    Settings settings;
     std::optional<MoistureTarget> target;
     Telemetry telemetry {};
 
@@ -251,7 +250,7 @@ private:
         if (std::isnan(telemetry.moisture)) {
             telemetry.moisture = telemetry.rawMoisture;
         }
-        telemetry.moisture = config.alphaMoisture * telemetry.rawMoisture + (1.0 - config.alphaMoisture) * telemetry.moisture;
+        telemetry.moisture = settings.alphaMoisture * telemetry.rawMoisture + (1.0 - settings.alphaMoisture) * telemetry.moisture;
 
         // Slope in % per minute
         const auto dtInMillis = (now - *lastSample).count();
@@ -259,7 +258,7 @@ private:
             const double dtInFractionalMinutes = static_cast<double>(dtInMillis) / 60000.0;
             const double prev = std::isnan(lastMoisture) ? telemetry.moisture : lastMoisture;
             const double slopeInst = (telemetry.moisture - prev) / (dtInFractionalMinutes > 0.0 ? dtInFractionalMinutes : 1.0);
-            telemetry.slope = config.alphaSlope * slopeInst + (1.0 - config.alphaSlope) * telemetry.slope;
+            telemetry.slope = settings.alphaSlope * slopeInst + (1.0 - settings.alphaSlope) * telemetry.slope;
         }
 
         LOGTV(SCHEDULING, "Moisture: %.1f%% (raw: %.1f%%), Slope: %.1f%%/min",
@@ -277,22 +276,22 @@ private:
             return;
         }
 
-        if (telemetry.totalVolume >= config.maxTotalVolume) {
+        if (!std::isnan(settings.maxTotalVolume) && telemetry.totalVolume >= settings.maxTotalVolume) {
             LOGTW(SCHEDULING, "Water cap reached");
             state = State::Fault;
             return;
         }
 
         Percent neededIncrease = detail::clamp(targetMid - telemetry.moisture, 0.0, 100.0);
-        double effectiveGain = std::max(telemetry.gain, config.minGain);
+        double effectiveGain = std::max(telemetry.gain, settings.minGain);
         double targetVolume = neededIncrease / effectiveGain;
 
         // Overshoot protection if slope already positive (rain or prior pulse still rising)
-        if (telemetry.slope > config.slopeRise) {
+        if (telemetry.slope > settings.slopeRise) {
             targetVolume *= 0.5;
         }
 
-        volumePlanned = detail::clamp(targetVolume, config.minVolume, config.maxVolume);
+        volumePlanned = detail::clamp(targetVolume, settings.minVolume, settings.maxVolume);
 
         telemetry.lastVolumePlanned = volumePlanned;
         volumeDelivered = 0.0;
@@ -307,7 +306,7 @@ private:
         volumeDelivered += flowMeter->getVolume();
 
         const bool reached = volumeDelivered + detail::epsilon >= volumePlanned;
-        const bool timeout = (now - waterStartTime) >= config.valveTimeout;
+        const bool timeout = (now - waterStartTime) >= settings.valveTimeout;
 
         if (reached || timeout) {
             telemetry.totalVolume += volumeDelivered;
@@ -332,25 +331,25 @@ private:
     void soak(const ms now) {
         const auto timeSincePulseEnd = now - pulseEndTime;
 
-        if (timeSincePulseEnd < config.deadTime) {
+        if (timeSincePulseEnd < settings.deadTime) {
             LOGTV(SCHEDULING, "Soaking, waiting for dead time (%lld / %lld s elapsed)",
                 duration_cast<seconds>(timeSincePulseEnd).count(),
-                duration_cast<seconds>(config.deadTime).count());
+                duration_cast<seconds>(settings.deadTime).count());
             return;
         }
 
         // Wait for rise first
         if (!sawRise) {
-            if (telemetry.slope > config.slopeRise) {
+            if (telemetry.slope > settings.slopeRise) {
                 LOGTI(SCHEDULING, "Rise of %.1f%% detected after %lld s and %.1f L, continuing",
                     telemetry.slope, duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
                 sawRise = true;
                 slopePeak = std::max(slopePeak, telemetry.slope);
             } else {
                 LOGTV(SCHEDULING, "No rise detected yet after %lld s and %.1f L (%.1f < %.1f)",
-                    duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered, telemetry.slope, config.slopeRise);
+                    duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered, telemetry.slope, settings.slopeRise);
             }
-            if (timeSincePulseEnd > config.tau) {
+            if (timeSincePulseEnd > settings.tau) {
                 LOGTI(SCHEDULING, "Assuming settled after %lld s and %.1f L, peak slope: %.1f%%/min, updating model",
                     duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered, slopePeak);
                 state = State::UpdateModel;    // give up waiting
@@ -359,11 +358,11 @@ private:
         }
 
         // After rise, wait for settle
-        if (telemetry.slope < config.slopeSettle) {
+        if (telemetry.slope < settings.slopeSettle) {
             LOGTI(SCHEDULING, "Settled after %lld s and %.1f L, updating model",
                 duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered);
             state = State::UpdateModel;
-        } else if (timeSincePulseEnd > config.tau) {
+        } else if (timeSincePulseEnd > settings.tau) {
             LOGTI(SCHEDULING, "Assuming settled after %lld s and %.1f L, peak slope: %.1f%%/min, updating model",
                 duration_cast<seconds>(timeSincePulseEnd).count(), volumeDelivered, slopePeak);
             state = State::UpdateModel;
@@ -378,12 +377,12 @@ private:
         if (dMoisture > 0.2) {
             const auto oldGain = telemetry.gain;
             const double observedGain = dMoisture / dVolume;    // % per liter, K_obs
-            telemetry.gain = (1.0 - config.betaGain) * telemetry.gain + config.betaGain * observedGain;
+            telemetry.gain = (1.0 - settings.betaGain) * telemetry.gain + settings.betaGain * observedGain;
             LOGTI(SCHEDULING, "Updating model, gain changed from %.1f%%/L to %.1f%%/L (%.1f L delivered, observed gain %.1f%%/L)",
                 oldGain, telemetry.gain, volumeDelivered, observedGain);
         }
 
-        if (telemetry.totalVolume >= config.maxTotalVolume) {
+        if (!std::isnan(settings.maxTotalVolume) && telemetry.totalVolume >= settings.maxTotalVolume) {
             LOGTW(SCHEDULING, "Volume cap reached mid-process");
             state = State::Fault;
         } else {
