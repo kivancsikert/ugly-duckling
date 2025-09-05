@@ -31,7 +31,7 @@ struct SoilMoistureTarget : ConfigurationSection {
     Property<Percent> high { this, "high", 80.0 };
 };
 
-struct PlotConfig : ConfigurationSection {
+struct PlotControllerConfig : ConfigurationSection {
     ArrayProperty<TimeBasedSchedule> schedule { this, "schedule" };
     NamedConfigurationEntry<SoilMoistureTarget> soilMoistureTarget { this, "soilMoistureTarget" };
     Property<TargetState> overrideState { this, "overrideState" };
@@ -46,7 +46,7 @@ struct BootClock {
 
 class PlotController final
     : public Named,
-      public HasConfig<PlotConfig> {
+      public HasConfig<PlotControllerConfig> {
 public:
     PlotController(
         const std::string& name,
@@ -60,10 +60,10 @@ public:
             name.c_str(),
             valve->getName().c_str());
 
-        auto compositeScheduler = std::make_shared<CompositeScheduler>(std::list<std::shared_ptr<IScheduler>>{
+        auto compositeScheduler = std::make_shared<CompositeScheduler>(std::list<std::shared_ptr<IScheduler>> {
             overrideScheduler,
             timeBasedScheduler,
-            moistureBasedScheduler
+            moistureBasedScheduler,
         });
 
         Task::run(name, 4096, [this, name, valve, compositeScheduler, overrideScheduler, timeBasedScheduler, moistureBasedScheduler, telemetryPublisher](Task& /*task*/) {
@@ -76,15 +76,15 @@ public:
 
                 auto transitionHappened = valve->transitionTo(result.targetState);
                 if (transitionHappened) {
-                    LOGI("Plot controller '%s' transitioned to state %s, will evaluate again after %lld ms",
+                    LOGI("Plot controller '%s' transitioned to state %s, will re-evaluate every %lld s",
                         name.c_str(),
                         farmhub::peripherals::api::toString(result.targetState),
-                        duration_cast<milliseconds>(nextDeadline).count());
+                        duration_cast<seconds>(nextDeadline).count());
                 } else {
-                    LOGD("Plot controller '%s' stayed in state %s, will evaluate again after %lld ms",
+                    LOGD("Plot controller '%s' stayed in state %s, will evaluate again after %lld s",
                         name.c_str(),
                         farmhub::peripherals::api::toString(result.targetState),
-                        duration_cast<milliseconds>(nextDeadline).count());
+                        duration_cast<seconds>(nextDeadline).count());
                 }
                 shouldPublishTelemetry |= transitionHappened;
 
@@ -104,7 +104,7 @@ public:
         });
     }
 
-    void configure(const std::shared_ptr<PlotConfig>& config) override {
+    void configure(const std::shared_ptr<PlotControllerConfig>& config) override {
         auto overrideState = config->overrideState.getIfPresent();
         auto overrideSpec = overrideState.has_value()
             ? std::make_optional<OverrideSchedule>({
@@ -134,16 +134,44 @@ private:
     Queue<ConfigSpec> configQueue { "configQueue", 1 };
 };
 
-class PlotSettings
-    : public ConfigurationSection {
-public:
+struct MoistureBasedSchedulerSettings : ConfigurationSection {
+    // Pulse sizing
+    Property<Liters> minVolume { this, "minVolume", 0.5 };
+    Property<Liters> maxVolume { this, "maxVolume", 25.0 };
+    Property<double> minGain { this, "minGain", 0.05 };    // % per liter
+
+    // Alpha values for EMAs
+    Property<double> alphaMoisture { this, "alphaMoisture", 0.30 };
+    Property<double> alphaSlope { this, "alphaSlope", 0.40 };
+
+    // Slope thresholds in % / min
+    Property<double> slopeRise { this, "slopeRise", 0.05 };
+    Property<double> slopeSettle { this, "slopeSettle", 0.01 };
+
+    // Soak timing
+    Property<seconds> deadTime { this, "deadTime", 5min };    // Td
+    Property<seconds> tau { this, "tau", 30min };
+    Property<seconds> valveTimeout { this, "valveTimeout", 5min };
+
+    // Learning (EWMA)
+    Property<double> betaGain { this, "betaGain", 0.20 };
+
+    // Quotas / safety
+    Property<Liters> maxTotalVolume { this, "maxTotalVolume", NAN };
+};
+
+struct PlotControllerSettings : ConfigurationSection {
     Property<std::string> valve { this, "valve" };
     Property<std::string> flowMeter { this, "flowMeter" };
     Property<std::string> soilMoistureSensor { this, "soilMoistureSensor" };
+
+    NamedConfigurationEntry<MoistureBasedSchedulerSettings> moistureBasedScheduler { this, "moistureBasedScheduler" };
 };
 
 struct NoOpFlowMeter : virtual IFlowMeter, Named {
-    explicit NoOpFlowMeter(const std::string& name) : Named(name) {}
+    explicit NoOpFlowMeter(const std::string& name)
+        : Named(name) {
+    }
 
     Liters getVolume() override {
         return 0;
@@ -155,7 +183,9 @@ struct NoOpFlowMeter : virtual IFlowMeter, Named {
 };
 
 struct NoOpSoilMoistureSensor : virtual ISoilMoistureSensor, Named {
-    explicit NoOpSoilMoistureSensor(const std::string& name) : Named(name) {}
+    explicit NoOpSoilMoistureSensor(const std::string& name)
+        : Named(name) {
+    }
 
     Percent getMoisture() override {
         return 0;
@@ -167,9 +197,9 @@ struct NoOpSoilMoistureSensor : virtual ISoilMoistureSensor, Named {
 };
 
 inline FunctionFactory makeFactory() {
-    return makeFunctionFactory<PlotController, PlotSettings, PlotConfig>(
+    return makeFunctionFactory<PlotController, PlotControllerSettings, PlotControllerConfig>(
         "plot-controller",
-        [](const FunctionInitParameters& params, const std::shared_ptr<PlotSettings>& settings) {
+        [](const FunctionInitParameters& params, const std::shared_ptr<PlotControllerSettings>& settings) {
             auto valve = params.peripheral<IValve>(settings->valve.get());
             auto flowMeter = settings->flowMeter.hasValue()
                 ? params.peripheral<IFlowMeter>(settings->flowMeter.get())
@@ -177,13 +207,32 @@ inline FunctionFactory makeFactory() {
             auto soilMoistureSensor = settings->soilMoistureSensor.hasValue()
                 ? params.peripheral<ISoilMoistureSensor>(settings->soilMoistureSensor.get())
                 : std::make_shared<NoOpSoilMoistureSensor>(params.name + ":soil");
+            auto moistureBasedSettings = settings->moistureBasedScheduler.get();
             return std::make_shared<PlotController>(
                 params.name,
                 valve,
                 std::make_shared<OverrideScheduler>(),
                 std::make_shared<TimeBasedScheduler>(),
                 std::make_shared<MoistureBasedScheduler<BootClock>>(
-                    Config {},
+                    farmhub::utils::scheduling::MoistureBasedSchedulerSettings {
+                        .minVolume = moistureBasedSettings->minVolume.get(),
+                        .maxVolume = moistureBasedSettings->maxVolume.get(),
+                        .minGain = moistureBasedSettings->minGain.get(),
+
+                        .alphaMoisture = moistureBasedSettings->alphaMoisture.get(),
+                        .alphaSlope = moistureBasedSettings->alphaSlope.get(),
+
+                        .slopeRise = moistureBasedSettings->slopeRise.get(),
+                        .slopeSettle = moistureBasedSettings->slopeSettle.get(),
+
+                        .deadTime = moistureBasedSettings->deadTime.get(),
+                        .tau = moistureBasedSettings->tau.get(),
+                        .valveTimeout = moistureBasedSettings->valveTimeout.get(),
+
+                        .betaGain = moistureBasedSettings->betaGain.get(),
+
+                        .maxTotalVolume = moistureBasedSettings->maxTotalVolume.get(),
+                    },
                     std::make_shared<BootClock>(),
                     flowMeter,
                     soilMoistureSensor),
