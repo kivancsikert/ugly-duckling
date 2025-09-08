@@ -132,7 +132,6 @@ public:
         }
     }
 
-protected:
     void createWithFactory(
         const std::string& name,
         const std::string& type,
@@ -153,6 +152,7 @@ protected:
         instances.emplace(name, std::move(instance));
     }
 
+protected:
     const std::string managed;
 
 private:
@@ -176,7 +176,6 @@ public:
         : Manager<FactoryT>(std::move(managed)) {
     }
 
-protected:
     void createFromSettings(
         const std::string& settingsAsString,
         JsonObject initJson,

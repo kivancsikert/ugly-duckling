@@ -54,18 +54,7 @@ struct PeripheralServices {
     const std::shared_ptr<TelemetryPublisher> telemetryPublisher;
 };
 
-struct PeripheralInitParameters {
-    void registerFeature(const std::string& type, std::function<void(JsonObject&)> populate) {
-        telemetryCollector->registerFeature(type, name, std::move(populate));
-        features.add(type);
-    }
-
-    const std::string name;
-    const std::shared_ptr<MqttRoot> mqttRoot;
-    const PeripheralServices& services;
-    const std::shared_ptr<TelemetryCollector> telemetryCollector;
-    const JsonArray features;
-};
+struct PeripheralInitParameters;
 
 using PeripheralCreateFn = std::function<Handle(
     PeripheralInitParameters& params,
@@ -73,6 +62,26 @@ using PeripheralCreateFn = std::function<Handle(
     const std::string& jsonSettings,
     JsonObject& initConfigJson)>;
 using PeripheralFactory = kernel::Factory<PeripheralCreateFn>;
+
+struct PeripheralInitParameters {
+    void registerFeature(const std::string& type, std::function<void(JsonObject&)> populate) {
+        telemetryCollector->registerFeature(type, name, std::move(populate));
+        features.add(type);
+    }
+
+    template <typename T>
+    std::shared_ptr<T> peripheral(const std::string& name) const {
+        return peripherals.getInstance<T>(name);
+    }
+
+    const std::string name;
+    const std::shared_ptr<MqttRoot> mqttRoot;
+    const PeripheralServices& services;
+    const std::shared_ptr<TelemetryCollector> telemetryCollector;
+    const JsonArray features;
+
+    Manager<PeripheralFactory>& peripherals;
+};
 
 // Helper to build a PeripheralFactory while keeping strong types for settings/config
 template <
@@ -135,24 +144,24 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
 
 // Peripheral manager
 
-class PeripheralManager final : public kernel::SettingsBasedManager<PeripheralFactory> {
+class PeripheralManager final {
 public:
     PeripheralManager(
         const std::shared_ptr<FileSystem>& fs,
         const std::shared_ptr<TelemetryCollector>& telemetryCollector,
         PeripheralServices services,
         const std::shared_ptr<MqttRoot>& mqttDeviceRoot)
-        : kernel::SettingsBasedManager<PeripheralFactory>("peripheral")
-        , fs(fs)
+        : fs(fs)
         , telemetryCollector(telemetryCollector)
         , services(std::move(services))
-        , mqttDeviceRoot(mqttDeviceRoot) {
+        , mqttDeviceRoot(mqttDeviceRoot)
+        , manager("peripheral") {
     }
 
     bool createPeripheral(const std::string& peripheralSettings, JsonArray peripheralsInitJson) {
         auto initJson = peripheralsInitJson.add<JsonObject>();
         try {
-            createFromSettings(
+            manager.createFromSettings(
                 peripheralSettings,
                 initJson,
                 [&](const std::string& name, const PeripheralFactory& factory, const std::string& settings) {
@@ -162,6 +171,7 @@ public:
                         .services = services,
                         .telemetryCollector = telemetryCollector,
                         .features = initJson["features"].to<JsonArray>(),
+                        .peripherals = manager,
                     };
                     JsonObject initConfigJson = initJson["config"].to<JsonObject>();
                     return factory.create(params, fs, settings, initConfigJson);
@@ -175,11 +185,26 @@ public:
         }
     }
 
+    void registerFactory(PeripheralFactory factory) {
+        manager.registerFactory(std::move(factory));
+    }
+
+    template <typename T>
+    std::shared_ptr<T> getPeripheral(const std::string& name) const {
+        return manager.getInstance<T>(name);
+    }
+
+    void shutdown() {
+        manager.shutdown();
+    }
+
 private:
     const std::shared_ptr<FileSystem> fs;
     const std::shared_ptr<TelemetryCollector> telemetryCollector;
     const PeripheralServices services;
     const std::shared_ptr<MqttRoot> mqttDeviceRoot;
+
+    SettingsBasedManager<PeripheralFactory> manager;
 };
 
 }    // namespace farmhub::peripherals
