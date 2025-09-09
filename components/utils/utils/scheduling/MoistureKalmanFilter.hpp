@@ -41,17 +41,15 @@ public:
         const double h1 = (temp - tempRef);
 
         // predicted measurement
-        const double moistPred = moistReal + beta * h1;
+        const double moistPred = moistReal + (beta * h1);
         const double innovation = moistObserved - moistPred;
 
         // Innovation covariance: S = H P H^T + R
-        double S = P[0][0] * h0 * h0 + 2.0 * P[0][1] * h0 * h1 + P[1][1] * h1 * h1 + R;
+        double S = (P[0][0] * h0 * h0) + (2.0 * P[0][1] * h0 * h1) + (P[1][1] * h1 * h1) + R;
 
         // Guard against pathological collapse
         const double sFloor = 1e-12;
-        if (S < sFloor) {
-            S = sFloor;
-        }
+        S = std::max(S, sFloor);
 
         // Kalman gain K = P H^T / S
         double K0 = (P[0][0] * h0 + P[0][1] * h1) / S;
@@ -68,38 +66,32 @@ public:
 
         // Update covariance (Joseph form)
         // A = I - K H
-        const double a00 = 1.0 - K0 * h0;
+        const double a00 = 1.0 - (K0 * h0);
         const double a01 = -K0 * h1;
         const double a10 = -K1 * h0;
-        const double a11 = 1.0 - K1 * h1;
+        const double a11 = 1.0 - (K1 * h1);
 
         // A * P
-        double AP00 = a00 * P[0][0] + a01 * P[1][0];
-        double AP01 = a00 * P[0][1] + a01 * P[1][1];
-        double AP10 = a10 * P[0][0] + a11 * P[1][0];
-        double AP11 = a10 * P[0][1] + a11 * P[1][1];
+        double AP00 = (a00 * P[0][0]) + (a01 * P[1][0]);
+        double AP01 = (a00 * P[0][1]) + (a01 * P[1][1]);
+        double AP10 = (a10 * P[0][0]) + (a11 * P[1][0]);
+        double AP11 = (a10 * P[0][1]) + (a11 * P[1][1]);
 
         // P_new = (A P) A^T + K R K^T
-        double Pnew00 = AP00 * a00 + AP01 * a01 + K0 * R * K0;
-        double Pnew01 = AP00 * a10 + AP01 * a11 + K0 * R * K1;
-        double Pnew10 = AP10 * a00 + AP11 * a01 + K1 * R * K0;
-        double Pnew11 = AP10 * a10 + AP11 * a11 + K1 * R * K1;
+        double Pnew00 = (AP00 * a00) + (AP01 * a01) + (K0 * R * K0);
+        double Pnew01 = (AP00 * a10) + (AP01 * a11) + (K0 * R * K1);
+        double Pnew10 = (AP10 * a00) + (AP11 * a01) + (K1 * R * K0);
+        double Pnew11 = (AP10 * a10) + (AP11 * a11) + (K1 * R * K1);
 
         // Enforce symmetry (numerical hygiene)
         const double sym01 = 0.5 * (Pnew01 + Pnew10);
-        P[0][0] = std::max(Pnew00, 0.0);
+        // Tiny floor instead of 0 to avoid singular collapse
+        constexpr double pFloor = 1e-15;
+
+        P[0][0] = std::max(Pnew00, pFloor);
         P[0][1] = sym01;
         P[1][0] = sym01;
-        P[1][1] = std::max(Pnew11, 0.0);
-
-        // Tiny floor to avoid singular collapse
-        constexpr double pFloor = 1e-15;
-        if (P[0][0] < pFloor) {
-            P[0][0] = pFloor;
-        }
-        if (P[1][1] < pFloor) {
-            P[1][1] = pFloor;
-        }
+        P[1][1] = std::max(Pnew11, pFloor);
     }
 
     [[nodiscard]] double getMoistReal() const noexcept {

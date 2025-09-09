@@ -173,6 +173,8 @@ public:
         auto value = tryAnalogRead();
         if (!value) {
             ESP_ERROR_THROW(ESP_ERR_TIMEOUT);
+            // Won't get this far
+            abort();
         }
         return *value;
     }

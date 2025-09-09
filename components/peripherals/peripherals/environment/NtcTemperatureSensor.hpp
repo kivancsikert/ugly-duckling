@@ -33,7 +33,7 @@ public:
 
     Celsius getTemperature() override {
         const auto analogValue = pin.analogRead();
-        double celsius = 1.0 / (std::log(1.0 / (4095.0 / analogValue - 1.0)) / beta + 1.0 / 298.15) - 273.15;
+        double celsius = (1.0 / (std::log(1.0 / (4095.0 / analogValue - 1.0)) / beta + 1.0 / 298.15)) - 273.15;
         LOGTV(NTC_TEMP, "NTC temperature sensor '%s' reading: %.2f °C (raw: %d)",
             getName().c_str(), celsius, analogValue);
         return celsius;
@@ -62,7 +62,7 @@ inline PeripheralFactory makeFactoryForNtcTemperatureSensor() {
                 settings->beta.get());
 
             params.registerFeature("temperature", [sensor](JsonObject& telemetryJson) {
-                telemetryJson["value"] = (double) sensor->getTemperature();
+                telemetryJson["value"] = sensor->getTemperature();
             });
             return sensor;
         });
