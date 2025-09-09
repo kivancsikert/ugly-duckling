@@ -21,6 +21,7 @@
 #include <peripherals/analog_meter/AnalogMeter.hpp>
 #include <peripherals/environment/Ds18B20SoilSensor.hpp>
 #include <peripherals/environment/Environment.hpp>
+#include <peripherals/environment/KalmanFilterSoilSensor.hpp>
 #include <peripherals/environment/Sht2xSensor.hpp>
 #include <peripherals/environment/Sht3xSensor.hpp>
 #include <peripherals/environment/SoilMoistureSensor.hpp>
@@ -64,6 +65,7 @@ public:
 
         peripheralManager->registerFactory(environment::makeFactoryForSoilMoisture());
         peripheralManager->registerFactory(environment::makeFactoryForDs18b20());
+        peripheralManager->registerFactory(environment::makeFactoryForKalmanSoilMoisture());
 
         peripheralManager->registerFactory(fence::makeFactory());
 
