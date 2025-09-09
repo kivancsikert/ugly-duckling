@@ -167,9 +167,20 @@ public:
     }
 
     /**
+     * @brief Read an analog value. Throws when reading fails or times out.
+     */
+    int analogRead() const {
+        auto value = tryAnalogRead();
+        if (!value) {
+            ESP_ERROR_THROW(ESP_ERR_TIMEOUT);
+        }
+        return *value;
+    }
+
+    /**
      * @brief Read an analog value. Returns `std::nullopt` if the read fails.
      */
-    std::optional<int> analogRead() const {
+    std::optional<int> tryAnalogRead() const {
         int value;
         esp_err_t err = adc_oneshot_read(handle, channel, &value);
         switch (err) {

@@ -41,7 +41,7 @@ public:
             pin->getName().c_str());
 
         Task::loop(name, 3072, [this, measurementFrequency, offset, multiplier](Task& task) {
-            auto measurement = this->pin.analogRead();
+            auto measurement = this->pin.tryAnalogRead();
             if (measurement.has_value()) {
                 auto rawValue = *measurement;
                 double value = offset + (rawValue * multiplier);

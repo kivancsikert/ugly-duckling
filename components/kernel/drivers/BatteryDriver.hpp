@@ -75,7 +75,7 @@ public:
 
     int getVoltage() override {
         for (int trial = 0; trial < 5; trial++) {
-            auto batteryLevel = analogPin.analogRead();
+            auto batteryLevel = analogPin.tryAnalogRead();
             if (!batteryLevel.has_value()) {
                 LOGE("Failed to read battery level");
                 continue;
