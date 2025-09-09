@@ -6,6 +6,7 @@
 #include <BootClock.hpp>
 #include <Concurrent.hpp>
 #include <Configuration.hpp>
+#include <Log.hpp>
 #include <MovingAverage.hpp>
 #include <Named.hpp>
 #include <Pin.hpp>
@@ -19,6 +20,8 @@ using namespace farmhub::kernel;
 using namespace farmhub::kernel::mqtt;
 
 namespace farmhub::peripherals::analog_meter {
+
+LOGGING_TAG(ANALOG_METER, "analog-meter")
 
 class AnalogMeter final
     : Peripheral {
@@ -34,15 +37,16 @@ public:
         , pin(pin)
         , value(windowSize) {
 
-        LOGI("Initializing analog meter on pin %s",
+        LOGTI(ANALOG_METER, "Initializing analog meter on pin %s",
             pin->getName().c_str());
 
         Task::loop(name, 3072, [this, measurementFrequency, offset, multiplier](Task& task) {
-            auto measurement = this->pin.analogRead();
+            auto measurement = this->pin.tryAnalogRead();
             if (measurement.has_value()) {
-                double value = offset + (measurement.value() * multiplier);
-                LOGV("Analog value on '%s' measured at %.2f",
-                    this->name.c_str(), value);
+                auto rawValue = *measurement;
+                double value = offset + (rawValue * multiplier);
+                LOGTV(ANALOG_METER, "Analog value on '%s' measured at %.2f (raw: %d)",
+                    this->name.c_str(), value, rawValue);
                 this->value.record(value);
             }
             task.delayUntil(measurementFrequency);

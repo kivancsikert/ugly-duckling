@@ -1,6 +1,17 @@
 {
-  "instance": "test-mk6-xxx",
+  "instance": "test-wokwi",
   "location": "bumblebee",
+  "functions": [
+    {
+      "name": "plot",
+      "type": "plot-controller",
+      "params": {
+        "flowMeter": "flow-meter",
+        "valve": "valve",
+        "soilMoistureSensor": "soil-moisture"
+      }
+    }
+  ],
   "peripherals": [
     {
       "name": "flow-meter",
@@ -18,7 +29,7 @@
     },
     {
       "name": "soil-temperature",
-      "type": "environment:ds18b20",
+      "type": "environment:ntc-temperature-sensor",
       "params": {
         "pin": "A2"
       }
@@ -40,17 +51,5 @@
         "temperatureSensor": "soil-temperature"
       }
     }
-  ],
-  "functions": [
-    {
-      "name": "plot",
-      "type": "plot-controller",
-      "params": {
-        "flowMeter": "flow-meter",
-        "valve": "valve",
-        "soilMoistureSensor": "soil-moisture"
-      }
-    }
-  ],
-  "motorNSleepPin": "LOADEN"
+  ]
 }

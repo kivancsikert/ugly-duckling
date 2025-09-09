@@ -39,7 +39,7 @@ public:
     }
 
     double getMoisture() override {
-        std::optional<uint16_t> soilMoistureValue = pin.analogRead();
+        std::optional<uint16_t> soilMoistureValue = pin.tryAnalogRead();
         if (!soilMoistureValue.has_value()) {
             LOGD("Failed to read soil moisture value");
             return std::numeric_limits<double>::quiet_NaN();

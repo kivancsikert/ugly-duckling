@@ -22,7 +22,7 @@ struct FunctionInitParameters {
 
     template <typename T>
     std::shared_ptr<T> peripheral(const std::string& name) const {
-        return services.peripherals->getInstance<T>(name);
+        return services.peripherals->getPeripheral<T>(name);
     }
 };
 
@@ -91,22 +91,22 @@ FunctionFactory makeFunctionFactory(
     };
 }
 
-class FunctionManager : public kernel::SettingsBasedManager<FunctionFactory> {
+class FunctionManager final {
 public:
     FunctionManager(
         const std::shared_ptr<FileSystem>& fs,
         const FunctionServices& services,
         const std::shared_ptr<MqttRoot>& mqttDeviceRoot)
-        : kernel::SettingsBasedManager<FunctionFactory>("function")
-        , fs(fs)
+        : fs(fs)
         , services(services)
-        , mqttDeviceRoot(mqttDeviceRoot) {
+        , mqttDeviceRoot(mqttDeviceRoot)
+        , manager("function") {
     }
 
     bool createFunction(const std::string& functionSettings, JsonArray functionsInitJson) {
         auto initJson = functionsInitJson.add<JsonObject>();
         try {
-            createFromSettings(
+            manager.createFromSettings(
                 functionSettings,
                 initJson,
                 [&](const std::string& name, const FunctionFactory& factory, const std::string& settings) {
@@ -127,10 +127,20 @@ public:
         }
     }
 
+    void registerFactory(FunctionFactory factory) {
+        manager.registerFactory(std::move(factory));
+    }
+
+    void shutdown() {
+        manager.shutdown();
+    }
+
 private:
     const std::shared_ptr<FileSystem>& fs;
     const FunctionServices services;
     const std::shared_ptr<MqttRoot>& mqttDeviceRoot;
+
+    SettingsBasedManager<FunctionFactory> manager;
 };
 
 }    // namespace farmhub::functions

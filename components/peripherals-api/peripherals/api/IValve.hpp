@@ -77,7 +77,7 @@ struct Converter<TargetState> {
                 dst.set("Open");
                 break;
             default:
-                throw std::invalid_argument("Invalid TargetState");
+                throw std::invalid_argument("Invalid TargetState " + std::to_string(static_cast<int>(src)));
                 break;
         }
     }
@@ -90,7 +90,7 @@ struct Converter<TargetState> {
         if (strcmp(str, "Open") == 0) {
             return farmhub::peripherals::api::TargetState::Open;
         }
-        throw std::invalid_argument("Invalid TargetState");
+        throw std::invalid_argument("Invalid TargetState '" + std::string(str) + "'");
     }
 
     static bool checkJson(JsonVariantConst src) {
