@@ -1,12 +1,16 @@
 #pragma once
 
 #include <memory>
+#include <utility>
 
-#include <Configuration.hpp>
 #include <ds18x20.h>
+
+#include <BootClock.hpp>
+#include <Configuration.hpp>
+
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/SinglePinSettings.hpp>
-#include <utility>
+#include <peripherals/api/ITemperatureSensor.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::mqtt;
@@ -20,7 +24,8 @@ namespace farmhub::peripherals::environment {
  * Note: Needs a 4.7k pull-up resistor between the data and power lines.
  */
 class Ds18B20SoilSensor final
-    : public Peripheral {
+    : public ITemperatureSensor,
+      public Peripheral {
 public:
     explicit Ds18B20SoilSensor(
         const std::string& name,
@@ -31,7 +36,8 @@ public:
         LOGI("Initializing DS18B20 soil temperature sensor '%s' on pin %s",
             name.c_str(), pin->getName().c_str());
 
-        gpio_set_pull_mode(pin->getGpio(), GPIO_PULLUP_ONLY);
+        // We rely on the external resistor for pull-up
+        gpio_set_pull_mode(pin->getGpio(), GPIO_FLOATING);
 
         LOGV("Locating DS18B20 sensors on bus...");
         size_t sensorCount;
@@ -49,19 +55,39 @@ public:
         }
     }
 
-    double getTemperature() {
-        float temperature;
-        ESP_ERROR_THROW(ds18x20_measure_and_read_multi(pin->getGpio(), &sensor, 1, &temperature));
-        return temperature;
+    Celsius getTemperature() override {
+        auto now = boot_clock::now();
+        // Do not query more often than once per second
+        if (now - this->lastMeasurementTime >= 1s) {
+            float temperature;
+            auto err = ds18x20_measure(pin->getGpio(), sensor, false);
+            if (err != ESP_OK) {
+                LOGE("Error measuring DS18B20 temperature: %s", esp_err_to_name(err));
+            } else {
+                // Wait for conversion (12-bit needs 750ms)
+                Task::delay(750ms);
+                err = ds18x20_read_temperature(pin->getGpio(), sensor, &temperature);
+                if (err == ESP_OK) {
+                    lastTemperature = temperature;
+                    lastMeasurementTime = now;
+                } else {
+                    LOGE("Error reading DS18B20 temperature: %s", esp_err_to_name(err));
+                }
+            }
+        }
+        return lastTemperature;
     }
 
 private:
     const InternalPinPtr pin;
     onewire_addr_t sensor {};
+
+    std::chrono::time_point<boot_clock> lastMeasurementTime;
+    Celsius lastTemperature = std::numeric_limits<double>::quiet_NaN();
 };
 
 inline PeripheralFactory makeFactoryForDs18b20() {
-    return makePeripheralFactory<Ds18B20SoilSensor, Ds18B20SoilSensor, SinglePinSettings>(
+    return makePeripheralFactory<ITemperatureSensor, Ds18B20SoilSensor, SinglePinSettings>(
         "environment:ds18b20",
         "environment",
         [](PeripheralInitParameters& params, const std::shared_ptr<SinglePinSettings>& settings) {

@@ -4,5 +4,6 @@ namespace farmhub::peripherals::api {
 
 using Percent = double;    // 0..100
 using Liters = double;
+using Celsius = double;
 
 }    // namespace farmhub::peripherals::api
