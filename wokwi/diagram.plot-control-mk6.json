@@ -47,13 +47,6 @@
       "attrs": { "color": "green", "label": "Flash", "bounce": "0" }
     },
     {
-      "type": "board-ds18b20",
-      "id": "temp1",
-      "top": -49.13,
-      "left": -63.12,
-      "attrs": { "deviceID": "010203040506", "family": "40", "temperature": "25.0" }
-    },
-    {
       "type": "wokwi-slide-potentiometer",
       "id": "soil-moisture",
       "top": 201.8,
@@ -71,9 +64,9 @@
     {
       "type": "wokwi-text",
       "id": "text2",
-      "top": -48,
-      "left": -105.6,
-      "attrs": { "text": "Soil\ntemp" }
+      "top": -153.6,
+      "left": -115.2,
+      "attrs": { "text": "Soil temp" }
     },
     {
       "type": "chip-pwm",
@@ -130,16 +123,23 @@
     },
     { "type": "wokwi-gnd", "id": "gnd2", "top": 288, "left": -307.8, "attrs": {} },
     { "type": "wokwi-vcc", "id": "vcc1", "top": 287.04, "left": -9.4, "rotate": 180, "attrs": {} },
-    { "type": "wokwi-vcc", "id": "vcc2", "top": 18.24, "left": -38.2, "rotate": 180, "attrs": {} },
-    { "type": "wokwi-gnd", "id": "gnd3", "top": 19.2, "left": -77.4, "attrs": {} },
+    { "type": "wokwi-vcc", "id": "vcc2", "top": 27.84, "left": -86.2, "rotate": 180, "attrs": {} },
+    { "type": "wokwi-gnd", "id": "gnd3", "top": 28.8, "left": -77.4, "attrs": {} },
     {
       "type": "chip-scope",
       "id": "scope-flow",
       "top": -210.18,
       "left": -388.8,
+      "attrs": { "sampleTimeUs": "100", "trace0Color": "6" }
+    },
+    {
+      "type": "wokwi-ntc-temperature-sensor",
+      "id": "ntc1",
+      "top": -93.9,
+      "left": -144.5,
+      "rotate": 90,
       "attrs": {
-        "sampleTimeUs": "100",
-        "trace0Color": "6"
+        "temperature": "20"
       }
     }
   ],
@@ -157,7 +157,6 @@
     [ "statusLed2:C", "esp:4", "green", [ "v0" ] ],
     [ "esp:GND.4", "btn1:2.l", "black", [ "h0" ] ],
     [ "esp:0", "btn1:1.l", "green", [ "h0" ] ],
-    [ "esp:15", "temp1:DQ", "green", [ "h0" ] ],
     [ "esp:6", "soil-moisture:SIG", "green", [ "h-28.85", "v162.4" ] ],
     [ "btn2:2.r", "esp:5", "green", [ "h9.8", "v19.4" ] ],
     [ "soil-moisture:VCC", "btn2:1.r", "red", [ "v0" ] ],
@@ -170,12 +169,13 @@
     [ "pwm1:OUT", "and1:A", "green", [ "h28.8", "v-48" ] ],
     [ "soil-moisture:GND", "gnd2:GND", "black", [ "v0", "h-14.8" ] ],
     [ "vcc1:VCC", "soil-moisture:VCC", "red", [ "v0" ] ],
-    [ "vcc2:VCC", "temp1:VCC", "red", [ "v-9.6", "h-9.6" ] ],
-    [ "gnd3:GND", "temp1:GND", "black", [ "v-9.6", "h9.6" ] ],
     [ "and1:OUT", "esp:5", "green", [ "h-9.6", "v-76.8" ] ],
     [ "led-flow:A", "and1:OUT", "green", [ "v19.2", "h9.6", "v76.8" ] ],
     [ "led-flow:C", "r8:1", "green", [ "v0" ] ],
-    [ "and1:OUT", "scope-flow:D0", "green", [ "h-172.8", "v-336" ] ]
+    [ "and1:OUT", "scope-flow:D0", "green", [ "h-172.8", "v-336" ] ],
+    [ "gnd3:GND", "ntc1:GND", "black", [ "v0" ] ],
+    [ "vcc2:VCC", "ntc1:VCC", "red", [ "v0" ] ],
+    [ "ntc1:OUT", "esp:15", "green", [ "v0" ] ]
   ],
   "dependencies": {
     "chip-pwm": "github:Dlloydev/Wokwi-Chip-PWM@1.0.6",
