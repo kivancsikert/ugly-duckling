@@ -22,8 +22,8 @@ public:
     Property<std::string> rawMoistureSensor { this, "rawMoistureSensor" };
     Property<std::string> temperatureSensor { this, "temperatureSensor" };
 
-    Property<Percent> initialMoisture { this, "initialMoisture" };
-    Property<double> initialBeta { this, "initialBeta" };
+    Property<Percent> initialMoisture { this, "initialMoisture", 50.0 };
+    Property<double> initialBeta { this, "initialBeta", 0.0 };
     Property<Celsius> tempRef { this, "tempRef", 20.0 };
 };
 
@@ -42,9 +42,12 @@ public:
         , kalmanFilter(initialMoisture, initialBeta, tempRef)
         , rawMoistureSensor(rawMoistureSensor)
         , tempSensor(tempSensor) {
-        LOGI("Initializing Kalman filter soil moisture sensor '%s' wrapping moisture sensor '%s' "
-             "and temperature sensor '%s', reference: %.1f C",
-            name.c_str(), rawMoistureSensor->getName().c_str(), tempSensor->getName().c_str(), tempRef);
+        LOGI("Initializing Kalman filter soil moisture sensor '%s' "
+            "wrapping moisture sensor '%s' and temperature sensor '%s'; "
+             "initial moisture: %.1f%%, initial beta: %.2f, reference temp.: %.1f C",
+            name.c_str(),
+            rawMoistureSensor->getName().c_str(), tempSensor->getName().c_str(),
+            initialMoisture, initialBeta, tempRef);
     }
 
     Percent getMoisture() override {

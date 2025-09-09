@@ -49,7 +49,7 @@ TEST_CASE("Kalman converges to real beta and moisture in idle", "[kalman][conver
     const double tempRef = 20.0;
 
     // Filter starts a bit off
-    MoistureKalmanFilter filter(/*initMoistReal*/ cfg.moistReal0 - 2.0,
+    MoistureKalmanFilter filter(/*initMoistReal*/ cfg.moistReal0 / 4.0,
         /*initBeta*/ 0.00,
         /*tempRef*/ tempRef);
 
