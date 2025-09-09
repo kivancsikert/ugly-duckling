@@ -9,6 +9,8 @@
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ITemperatureSensor.hpp>
 
+#include <utils/DebouncedMeasurement.hpp>
+
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals::api;
 
@@ -32,16 +34,24 @@ public:
     }
 
     Celsius getTemperature() override {
-        const auto analogValue = pin.analogRead();
-        double celsius = (1.0 / (std::log(1.0 / (4095.0 / analogValue - 1.0)) / beta + 1.0 / 298.15)) - 273.15;
-        LOGTV(NTC_TEMP, "NTC temperature sensor '%s' reading: %.2f °C (raw: %d)",
-            getName().c_str(), celsius, analogValue);
-        return celsius;
+        return measurement.getValue();
     }
 
 private:
     AnalogPin pin;
     double beta;
+
+    utils::DebouncedMeasurement<Celsius> measurement {
+        [this]() {
+            const auto analogValue = pin.analogRead();
+            double celsius = (1.0 / (std::log(1.0 / (4095.0 / analogValue - 1.0)) / beta + 1.0 / 298.15)) - 273.15;
+            LOGTV(NTC_TEMP, "NTC temperature sensor '%s' reading: %.2f °C (raw: %d)",
+                getName().c_str(), celsius, analogValue);
+            return celsius;
+        },
+        1s,
+        std::numeric_limits<double>::quiet_NaN()
+    };
 };
 
 struct NtcTemperatureSensorSettings

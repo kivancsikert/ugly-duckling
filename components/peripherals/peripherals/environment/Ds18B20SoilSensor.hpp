@@ -10,6 +10,7 @@
 
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ITemperatureSensor.hpp>
+#include <utils/DebouncedMeasurement.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::mqtt;
@@ -67,34 +68,33 @@ public:
     }
 
     Celsius getTemperature() override {
-        auto now = boot_clock::now();
-        // Do not query more often than once per second
-        if (now - this->lastMeasurementTime >= 1s) {
-            float temperature;
-            auto err = ds18x20_measure(pin->getGpio(), sensor, false);
-            if (err != ESP_OK) {
-                LOGE("Error measuring DS18B20 temperature: %s", esp_err_to_name(err));
-            } else {
-                // Wait for conversion (12-bit needs 750ms)
-                Task::delay(750ms);
-                err = ds18x20_read_temperature(pin->getGpio(), sensor, &temperature);
-                if (err == ESP_OK) {
-                    lastTemperature = temperature;
-                    lastMeasurementTime = now;
-                } else {
-                    LOGE("Error reading DS18B20 temperature: %s", esp_err_to_name(err));
-                }
-            }
-        }
-        return lastTemperature;
+        return measurement.getValue();
     }
 
 private:
     const InternalPinPtr pin;
     onewire_addr_t sensor {};
 
-    std::chrono::time_point<boot_clock> lastMeasurementTime;
-    Celsius lastTemperature = std::numeric_limits<double>::quiet_NaN();
+    utils::DebouncedMeasurement<Celsius> measurement {
+        [this]() -> std::optional<Celsius> {
+            float temperature;
+            auto err = ds18x20_measure(pin->getGpio(), sensor, false);
+            if (err != ESP_OK) {
+                LOGE("Error measuring DS18B20 temperature: %s", esp_err_to_name(err));
+                return std::nullopt;
+            }
+            // Wait for conversion (12-bit needs 750ms)
+            Task::delay(750ms);
+            err = ds18x20_read_temperature(pin->getGpio(), sensor, &temperature);
+            if (err != ESP_OK) {
+                LOGE("Error reading DS18B20 temperature: %s", esp_err_to_name(err));
+                return std::nullopt;
+            }
+            return temperature;
+        },
+        1s,
+        std::numeric_limits<double>::quiet_NaN()
+    };
 };
 
 inline PeripheralFactory makeFactoryForDs18b20() {
