@@ -6,6 +6,8 @@
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ISoilMoistureSensor.hpp>
 
+#include <utils/DebouncedMeasurement.hpp>
+
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
 
@@ -38,27 +40,35 @@ public:
             name.c_str(), pin->getName().c_str(), airValue, waterValue);
     }
 
-    double getMoisture() override {
-        std::optional<uint16_t> soilMoistureValue = pin.tryAnalogRead();
-        if (!soilMoistureValue.has_value()) {
-            LOGD("Failed to read soil moisture value");
-            return std::numeric_limits<double>::quiet_NaN();
-        }
-        LOGV("Soil moisture value: %d",
-            soilMoistureValue.value());
-
-        const double run = waterValue - airValue;
-        const double rise = 100;
-        const double delta = soilMoistureValue.value() - airValue;
-        double moisture = (delta * rise) / run;
-
-        return moisture;
+    Percent getMoisture() override {
+        return measurement.getValue();
     }
 
 private:
     const int airValue;
     const int waterValue;
     AnalogPin pin;
+
+    utils::DebouncedMeasurement<Percent> measurement {
+        [this]() -> std::optional<Percent> {
+            std::optional<uint16_t> soilMoistureValue = pin.tryAnalogRead();
+            if (!soilMoistureValue.has_value()) {
+                LOGD("Failed to read soil moisture value");
+                return std::nullopt;
+            }
+            LOGV("Soil moisture value: %d",
+                soilMoistureValue.value());
+
+            const double run = waterValue - airValue;
+            const double rise = 100;
+            const double delta = soilMoistureValue.value() - airValue;
+            double moisture = (delta * rise) / run;
+
+            return moisture;
+        },
+            1s,
+            std::numeric_limits<double>::quiet_NaN()
+    };
 };
 
 inline PeripheralFactory makeFactoryForSoilMoisture() {
