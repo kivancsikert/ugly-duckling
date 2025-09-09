@@ -22,6 +22,7 @@
 #include <peripherals/environment/Ds18B20SoilSensor.hpp>
 #include <peripherals/environment/Environment.hpp>
 #include <peripherals/environment/KalmanFilterSoilSensor.hpp>
+#include <peripherals/environment/NtcTemperatureSensor.hpp>
 #include <peripherals/environment/Sht2xSensor.hpp>
 #include <peripherals/environment/Sht3xSensor.hpp>
 #include <peripherals/environment/SoilMoistureSensor.hpp>
@@ -62,6 +63,7 @@ public:
         // TODO Unify these two factories
         peripheralManager->registerFactory(environment::makeFactoryForSht2x("sht2x"));
         peripheralManager->registerFactory(environment::makeFactoryForSht2x("htu2x"));
+        peripheralManager->registerFactory(environment::makeFactoryForNtcTemperatureSensor());
 
         peripheralManager->registerFactory(environment::makeFactoryForSoilMoisture());
         peripheralManager->registerFactory(environment::makeFactoryForDs18b20());
