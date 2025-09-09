@@ -24,12 +24,20 @@
       }
     },
     {
-      "name": "soil-moisture",
+      "name": "raw-soil-moisture",
       "type": "environment:soil-moisture",
       "params": {
         "air": 3017,
         "pin": "A1",
         "water": 1105
+      }
+    },
+    {
+      "name": "soil-moisture",
+      "type": "environment:kalman-soil-moisture",
+      "params": {
+        "rawMoistureSensor": "raw-soil-moisture",
+        "temperatureSensor": "soil-temperature"
       }
     }
   ],
