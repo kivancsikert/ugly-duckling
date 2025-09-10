@@ -1,0 +1,38 @@
+{
+  "commit": "0587cefea6fe3d183b31f5811606d16c1f37527b",
+  "version": "0.32.9-milestone-6-4-g0587cef",
+  "id": "0.32.9-milestone-6-4-g0587cef",
+  "date": "2025-09-10T09:13:23Z",
+  "files": [
+    {
+      "name": "ugly-duckling-mk5-release.bin",
+      "url": "https://kivancsikert.github.io/ugly-duckling/ota/0.32.9-milestone-6-4-g0587cef/ugly-duckling-mk5-release.bin",
+      "sha256": "b16b09cee2bbae7eeeb954483577f45e573667d86309aecab09ec9b96c4b6161"
+    },
+    {
+      "name": "ugly-duckling-mk6-release.bin",
+      "url": "https://kivancsikert.github.io/ugly-duckling/ota/0.32.9-milestone-6-4-g0587cef/ugly-duckling-mk6-release.bin",
+      "sha256": "877a3f73a0ee439a89b3e56e1271e3012a9168115271d1676282d27796bf9c80"
+    },
+    {
+      "name": "ugly-duckling-mk7-release.bin",
+      "url": "https://kivancsikert.github.io/ugly-duckling/ota/0.32.9-milestone-6-4-g0587cef/ugly-duckling-mk7-release.bin",
+      "sha256": "f9fbe470ed1fc6256c79bb08a6e206d328afa5b1d4073b8337dfaf22dbab6594"
+    },
+    {
+      "name": "ugly-duckling-mk8-debug.bin",
+      "url": "https://kivancsikert.github.io/ugly-duckling/ota/0.32.9-milestone-6-4-g0587cef/ugly-duckling-mk8-debug.bin",
+      "sha256": "c64cbe26dfb873bfc2145516a912464bf0408ce99821d604fcb22ab7e40f9685"
+    },
+    {
+      "name": "ugly-duckling-mk8-release.bin",
+      "url": "https://kivancsikert.github.io/ugly-duckling/ota/0.32.9-milestone-6-4-g0587cef/ugly-duckling-mk8-release.bin",
+      "sha256": "de736232235469f61b65afc7c8a93603ad1abb3679cb1fbf54b8aed3207add48"
+    },
+    {
+      "name": "ugly-duckling-mkX-release.bin",
+      "url": "https://kivancsikert.github.io/ugly-duckling/ota/0.32.9-milestone-6-4-g0587cef/ugly-duckling-mkX-release.bin",
+      "sha256": "004537329aa848a1857ee5d97b433b45144c4b1060f09a9fbbb03e5aa656cf92"
+    }
+  ]
+}
