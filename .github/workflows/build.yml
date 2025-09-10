@@ -214,7 +214,6 @@ jobs:
       contents: write
     env:
       RETENTION_DAYS: 30
-      PAGES_BASE: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
       TARGET_DIR: snapshots
 
     steps:
@@ -246,7 +245,7 @@ jobs:
           python3 .github/publish-ota.py \
             --artifacts work/artifacts \
             --site work/site/${{ env.TARGET_DIR }} \
-            --base-url "${{ env.PAGES_BASE }}" \
+            --base-url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/${{ env.TARGET_DIR }}" \
             --retention-days "${{ env.RETENTION_DAYS }}" \
             --repo-root . \
             --commit-sha "${{ github.sha }}"
