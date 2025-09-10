@@ -196,7 +196,7 @@ public:
                 initJson["name"] = name;
                 initJson["type"] = factory.productType;
                 initJson["factory"] = factory.factoryType;
-                settings->params.store(initJson, true);
+                settings->params.store(initJson);
                 return make(name, factory, settings->params.get().get());
             });
         } catch (const std::exception& e) {

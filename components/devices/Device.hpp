@@ -511,7 +511,7 @@ static void startDevice() {
             json["instance"] = settings->instance.get();
             json["mac"] = getMacAddress();
             auto device = json["settings"].to<JsonObject>();
-            settings->store(device, false);
+            settings->store(device);
             // TODO Remove redundant mentions of "ugly-duckling"
             json["app"] = "ugly-duckling";
             json["version"] = farmhubVersion;
