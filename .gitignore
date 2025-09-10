@@ -21,3 +21,6 @@ warnings.txt
 
 __pycache__/
 .pytest_cache/
+
+# GitHub site publishing
+/work/
