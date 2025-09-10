@@ -62,6 +62,10 @@ public:
         return realMoisture;
     }
 
+    double getBeta() {
+        return kalmanFilter.getBeta();
+    }
+
 private:
     MoistureKalmanFilter kalmanFilter;
     std::shared_ptr<api::ISoilMoistureSensor> rawMoistureSensor;
@@ -84,6 +88,9 @@ inline PeripheralFactory makeFactoryForKalmanSoilMoisture() {
                 settings->tempRef.get());
             params.registerFeature("moisture", [sensor](JsonObject& telemetryJson) {
                 telemetryJson["value"] = sensor->getMoisture();
+            });
+            params.registerFeature("kalman-beta", [sensor](JsonObject& telemetryJson) {
+                telemetryJson["value"] = sensor->getBeta();
             });
             return sensor;
         });
