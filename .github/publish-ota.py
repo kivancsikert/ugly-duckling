@@ -297,7 +297,7 @@ def main() -> int:
 
     per_build_manifest = {
         "commit": commit_sha,
-        "describe": raw_describe,
+        "version": raw_describe,
         "id": build_id,
         "date": now_iso,
         "files": files,
