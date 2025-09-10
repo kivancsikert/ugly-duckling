@@ -16,6 +16,8 @@ using namespace farmhub::peripherals;
 
 namespace farmhub::peripherals::environment {
 
+LOGGING_TAG(ENV, "env")
+
 class EnvironmentSensor {
 public:
     virtual ~EnvironmentSensor() = default;

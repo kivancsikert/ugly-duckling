@@ -33,14 +33,22 @@ jobs:
             ud_gen: MK8
             ud_debug: 0
             target: esp32s3
-          - environment: mk8-debug
-            ud_gen: MK8
+
+          # Debug variant
+          - environment: mk6-debug
+            ud_gen: MK6
             ud_debug: 1
             target: esp32s3
+
+          # Future release with ESP32-C6
           - environment: mkX-release
             ud_gen: MKX
             ud_debug: 0
             target: esp32c6
+
+    env:
+      # Enable verbose logging in debug artifacts for farmhub tags
+      FARMHUB_LOG_VERBOSE: env,scheduling
 
     steps:
       - uses: actions/checkout@v5
@@ -63,7 +71,7 @@ jobs:
           extra_docker_args: -v  ${{ env.CCACHE_DIR }}:/root/.ccache
           command: |
             ccache --max-size=${{ env.CCACHE_MAXSIZE }} && \
-            idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }} && \
+            idf.py build -DUD_GEN=${{ matrix.ud_gen }} -DUD_DEBUG=${{ matrix.ud_debug }} -DFARMHUB_LOG_VERBOSE=${{ env.FARMHUB_LOG_VERBOSE }} && \
             ccache -s
 
       - name: clang-tidy

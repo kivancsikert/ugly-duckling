@@ -9,6 +9,8 @@
 
 #include <utils/scheduling/MoistureKalmanFilter.hpp>
 
+#include "Environment.hpp"
+
 using namespace farmhub::utils::scheduling;
 
 namespace farmhub::peripherals::environment {
@@ -43,7 +45,7 @@ public:
         , rawMoistureSensor(rawMoistureSensor)
         , tempSensor(tempSensor) {
         LOGI("Initializing Kalman filter soil moisture sensor '%s' "
-            "wrapping moisture sensor '%s' and temperature sensor '%s'; "
+             "wrapping moisture sensor '%s' and temperature sensor '%s'; "
              "initial moisture: %.1f%%, initial beta: %.2f, reference temp.: %.1f C",
             name.c_str(),
             rawMoistureSensor->getName().c_str(), tempSensor->getName().c_str(),
@@ -54,7 +56,10 @@ public:
         auto rawMoisture = rawMoistureSensor->getMoisture();
         auto temp = tempSensor->getTemperature();
         kalmanFilter.update(rawMoisture, temp);
-        return kalmanFilter.getMoistReal();
+        auto realMoisture = kalmanFilter.getMoistReal();
+        LOGTV(ENV, "Updated Kalman filter with raw moisture: %.1f%%, temperature: %.1f C, real moisture: %.1f C, beta: %.2f %/C",
+            rawMoisture, temp, realMoisture, kalmanFilter.getBeta());
+        return realMoisture;
     }
 
 private:
