@@ -54,7 +54,15 @@ public:
 
     Percent getMoisture() override {
         auto rawMoisture = rawMoistureSensor->getMoisture();
+        if (std::isnan(rawMoisture)) {
+            LOGTW(ENV, "Raw moisture reading is NaN");
+            return NAN;
+        }
         auto temp = tempSensor->getTemperature();
+        if (std::isnan(temp)) {
+            LOGTW(ENV, "Temperature reading is NaN");
+            return NAN;
+        }
         kalmanFilter.update(rawMoisture, temp);
         auto realMoisture = kalmanFilter.getMoistReal();
         LOGTV(ENV, "Updated Kalman filter with raw moisture: %.1f%%, temperature: %.1f C, real moisture: %.1f C, beta: %.2f %/C",
