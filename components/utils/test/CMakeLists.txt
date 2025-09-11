@@ -4,4 +4,6 @@ idf_component_register(SRC_DIRS "." "scheduling"
                         utils
                         catch2
                         unit-test-support
+                    EMBED_FILES
+                        scheduling/idle-moisture-data.csv
                     WHOLE_ARCHIVE)
