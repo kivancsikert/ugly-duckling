@@ -53,7 +53,8 @@ private:
         [this]() -> std::optional<Percent> {
             std::optional<uint16_t> soilMoistureValue = pin.tryAnalogRead();
             if (!soilMoistureValue.has_value()) {
-                LOGD("Failed to read soil moisture value");
+                LOGW("Failed to read soil moisture value from pin %s",
+                    pin.getName().c_str());
                 return std::nullopt;
             }
             LOGV("Soil moisture value: %d",
