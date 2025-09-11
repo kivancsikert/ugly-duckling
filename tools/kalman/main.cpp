@@ -69,7 +69,7 @@ struct Args {
     double tempRef = 20.0;
     double qMoist = 1e-6;
     double qBeta = 1e-6;
-    double R = 1.0;
+    double R = 1e-3;
 };
 
 static void printUsage(const char* prog) {
@@ -139,8 +139,6 @@ static bool parseArgs(int argc, char** argv, Args& out) {
 }
 
 int main(int argc, char** argv) {
-    printf("Hello\n");
-
     Args args;
     if (!parseArgs(argc, argv, args)) {
         printUsage(argv[0]);
@@ -165,7 +163,7 @@ int main(int argc, char** argv) {
 
         MoistureKalmanFilter filter(args.initMoistReal, args.initBeta, args.tempRef);
 
-        std::cout << "time,moisture,temperature,real_moisture,beta\n";
+        std::cout << "time,moisture,temperature,real_moisture,beta,,qMoist,qBeta,R\n";
 
         size_t rows = 0;
         parseCsvStream(*inPtr, [&](const DataPoint& dp) {
@@ -176,7 +174,15 @@ int main(int argc, char** argv) {
                       << dp.moisture << ','
                       << dp.temperature << ','
                       << filter.getMoistReal() << ','
-                      << filter.getBeta() << '\n';
+                      << filter.getBeta();
+            if (rows == 0) {
+                std::cout << ",,"
+                          << std::scientific
+                          << args.qMoist << ','
+                          << args.qBeta << ','
+                          << args.R;
+            }
+            std::cout << '\n';
             ++rows;
         });
 

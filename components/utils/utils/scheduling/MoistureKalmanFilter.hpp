@@ -4,9 +4,20 @@
 #include <cmath>
 
 namespace farmhub::utils::scheduling {
-/// @brief Kalman filter to estimate true soil moisture and temperature sensitivity.
-/// State vector = [moistReal, beta]^T
-/// Measurement model: moistObserved = moistReal + beta * (temp - tempRef) + noise
+/**
+ * @brief Kalman filter to estimate true soil moisture and temperature sensitivity.
+ *
+ * State vector = [moistReal, beta]^T
+ * Measurement model: moistObserved = moistReal + beta * (temp - tempRef) + noise
+ *
+ * Higher Process Noise (Q): The filter adapts more quickly to changes in the measurements,
+ *     as it assumes the system state could be changing significantly. This can make the
+ *     estimated state more responsive but also more susceptible to noisy measurements.
+ *
+ * Higher Measurement Noise (R): The filter smooths the measurements more, as it assumes
+ *     the measurements are unreliable. This results in a smoother estimated state but can
+ *     make the filter slower to react to actual changes in the system state.
+ */
 class MoistureKalmanFilter {
 public:
     explicit MoistureKalmanFilter(double initMoistReal = 0.0,
