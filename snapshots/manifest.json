@@ -1,5 +1,44 @@
 [
   {
+    "commit": "2587cfc47e745f33629f6901b5ebe7c3f9a7ef79",
+    "version": "0.32.9-milestone-6-12-g2587cfc",
+    "id": "0.32.9-milestone-6-12-g2587cfc",
+    "date": "2025-09-11T16:31:44Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-12-g2587cfc/ugly-duckling-mk5-release.bin",
+        "sha256": "88641ca2e20d6379c9c876e2e7a9dbe1e09d1ece8221ec75971b29e733d07f83"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-12-g2587cfc/ugly-duckling-mk6-debug.bin",
+        "sha256": "a86a066d864461478a5a7a71b550f277d039351d23d1a01a91281e606decc759"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-12-g2587cfc/ugly-duckling-mk6-release.bin",
+        "sha256": "31afae33efcc82261e24618a3f90b87fa12152cfc6db1d2bddb2800977ea1951"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-12-g2587cfc/ugly-duckling-mk7-release.bin",
+        "sha256": "646cbe35a034529860d0c2aa5d98fa58440365251fd37412fe2ad670deb0747b"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-12-g2587cfc/ugly-duckling-mk8-release.bin",
+        "sha256": "1edd23f3edfa7542aaf8c768fae94c1264def3cded940d1d8076677dc974746b"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-12-g2587cfc/ugly-duckling-mkX-release.bin",
+        "sha256": "12e63d8d9feba93da09370dfe728608c8e8a457bd52c5a4c914d21cedb22718a"
+      }
+    ],
+    "branch": "plot/fix-kalman-filter"
+  },
+  {
     "commit": "0f0cc77a5ac12aa4964974816d0213e73c43a532",
     "version": "0.32.9-milestone-6-12-g0f0cc77",
     "id": "0.32.9-milestone-6-12-g0f0cc77",
