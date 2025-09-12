@@ -39,8 +39,8 @@ struct MoistureBasedSchedulerSettings {
     double minGain { 0.05 };    // % per liter (floor)
 
     // Filters
-    double alphaSlope { 0.40 };    // EMA for slope
     double alphaGain { 0.20 };     // EMA for gain
+    double alphaSlope { 0.40 };    // EMA for slope
 
     // Slope thresholds in % / min
     double slopeRise { 0.03 };
@@ -145,19 +145,18 @@ struct MoistureBasedScheduler : IScheduler {
         LOGTI(SCHEDULING, "Initializing moisture based scheduler"
                           ", volume: %.1f-%.1f L"
                           ", min. gain: %.2f%%/L"
-                          ", EMA alpha for slope: %.2f"
                           ", EMA alpha for gain: %.2f"
+                          ", EMA alpha for slope: %.2f"
                           ", slope rise: %.2f%%/min, settle: %.2f%%/min"
-                          ", dead time %lld s, tau: %lld s, valve timeout: %lld s"
-                          ", beta gain: %.2f"
+                          ", dead time %lld s"
+                          ", tau: %lld s"
+                          ", valve timeout: %lld s"
                           ", maxTotalVolume: %.1f L",
-            settings.minVolume,
-            settings.maxVolume,
+            settings.minVolume, settings.maxVolume,
             settings.minGain,
-            settings.alphaSlope,
             settings.alphaGain,
-            settings.slopeRise,
-            settings.slopeSettle,
+            settings.alphaSlope,
+            settings.slopeRise, settings.slopeSettle,
             duration_cast<seconds>(settings.deadTime).count(),
             duration_cast<seconds>(settings.tau).count(),
             duration_cast<seconds>(settings.valveTimeout).count(),
@@ -187,28 +186,32 @@ struct MoistureBasedScheduler : IScheduler {
         const auto& target = *this->target;
 
         const auto now = clock->now();
-        sampleAndFilter(now);
-
-        switch (state) {
-            case State::Idle:
-                decideOrStartWatering(now, target);
-                break;
-            case State::Watering:
-                continueWatering(now);
-                break;
-            case State::Soak:
-                soak(now);
-                break;
-            case State::UpdateModel:
-                updateModel(now);
-                break;
-            case State::Fault: /* stay here */
-                break;
+        auto sampleResult = sampleAndFilter(now);
+        std::optional<ms> nextDeadline;
+        if (sampleResult == SampleResult::Valid) {
+            switch (state) {
+                case State::Idle:
+                    decideOrStartWatering(now, target);
+                    break;
+                case State::Watering:
+                    continueWatering(now);
+                    break;
+                case State::Soak:
+                    soak(now);
+                    break;
+                case State::UpdateModel:
+                    updateModel(now);
+                    break;
+                case State::Fault: /* stay here */
+                    break;
+            }
+            nextDeadline = getNextDeadline(state);
+        } else {
+            // Invalid sample, try again soon
+            nextDeadline = 1s;
         }
 
         auto targetState = state == State::Watering ? TargetState::Open : TargetState::Closed;
-        auto nextDeadline = getNextDeadline(state);
-
         LOGTV(SCHEDULING, "Tick done: state=%s, targetState=%s, nextDeadline=%s",
             toString(state),
             toString(targetState),
@@ -254,18 +257,23 @@ private:
     double slopePeak { 0.0 };
     bool sawRise { false };
 
-    void sampleAndFilter(const ms now) {
+    enum class SampleResult : uint8_t {
+        Valid,
+        Invalid,
+    };
+
+    SampleResult sampleAndFilter(const ms now) {
         if (!lastSample.has_value()) {
             lastSample = now;
         }
 
-        telemetry.rawMoisture = moistureSensor->getMoisture();
-
-        // EMA for moisture
-        if (std::isnan(telemetry.moisture)) {
-            telemetry.moisture = telemetry.rawMoisture;
+        auto moisture = moistureSensor->getMoisture();
+        // Discard invalid readings
+        if (std::isnan(moisture)) {
+            LOGTV(SCHEDULING, "Moisture reading is NaN, skipping sample");
+            return SampleResult::Invalid;
         }
-        telemetry.moisture = settings.alphaMoisture * telemetry.rawMoisture + (1.0 - settings.alphaMoisture) * telemetry.moisture;
+        telemetry.moisture = moisture;
 
         // Slope in % per minute
         const auto dtInMillis = (now - *lastSample).count();
@@ -280,9 +288,16 @@ private:
             telemetry.moisture, telemetry.rawMoisture, telemetry.slope);
         lastMoisture = telemetry.moisture;
         lastSample = now;
+
+        return SampleResult::Valid;
     }
 
     void decideOrStartWatering(const ms now, const MoistureTarget& target) {
+        if (std::isnan(telemetry.moisture)) {
+            LOGTW(SCHEDULING, "Moisture reading is NaN, cannot decide on watering");
+            return;
+        }
+
         if (telemetry.moisture >= target.low) {
             LOGTV(SCHEDULING, "Moisture OK (%.1f%% >= %.1f%%), no watering needed",
                 telemetry.moisture, target.low);
@@ -332,7 +347,7 @@ private:
             slopePeak = telemetry.slope;
             sawRise = false;
 
-            LOGTI(SCHEDULING, "Watering finished after %.1f L delivered (reason: %s), moisture level at %.1f%%, starting soaking",
+            LOGTI(SCHEDULING, "Watering finished after %.1f L delivered (%s), moisture level at %.1f%%, starting soaking",
                 volumeDelivered,
                 reached ? "volume reached" : "timeout",
                 telemetry.moisture);

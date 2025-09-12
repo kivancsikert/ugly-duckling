@@ -141,8 +141,8 @@ struct MoistureBasedSchedulerSettings : ConfigurationSection {
     Property<double> minGain { this, "minGain", 0.05 };    // % per liter
 
     // Alpha values for EMAs
-    Property<double> alphaSlope { this, "alphaSlope", 0.40 };
     Property<double> alphaGain { this, "alphaGain", 0.20 };
+    Property<double> alphaSlope { this, "alphaSlope", 0.40 };
 
     // Slope thresholds in % / min
     Property<double> slopeRise { this, "slopeRise", 0.03 };
@@ -216,8 +216,8 @@ inline FunctionFactory makeFactory() {
                         .maxVolume = moistureBasedSettings->maxVolume.get(),
                         .minGain = moistureBasedSettings->minGain.get(),
 
-                        .alphaSlope = moistureBasedSettings->alphaSlope.get(),
                         .alphaGain = moistureBasedSettings->alphaGain.get(),
+                        .alphaSlope = moistureBasedSettings->alphaSlope.get(),
 
                         .slopeRise = moistureBasedSettings->slopeRise.get(),
                         .slopeSettle = moistureBasedSettings->slopeSettle.get(),
