@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include <BootClock.hpp>
 #include <Configuration.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ISoilMoistureSensor.hpp>
@@ -28,9 +29,16 @@ public:
     Property<double> initialBeta { this, "initialBeta", 0.0 };
     Property<Celsius> tempRef { this, "tempRef", 20.0 };
 
+    // Process noise
     Property<double> qMoist { this, "qMoist", 1e-5 };
     Property<double> qBeta { this, "qBeta", 1e-6 };
-    Property<double> R { this, "R", 1e-1 };
+
+    // Measurement noise
+    Property<double> rSensitive { this, "rSensitive", 1e-3 };
+    Property<double> rNormal { this, "rNormal", 1e-1 };
+
+    // Period at start to use sensitive R value to allow quick convergence
+    Property<seconds> sensitivePeriod { this, "sensitivePeriod", 15min };
 };
 
 class KalmanFilterSoilSensor
@@ -46,22 +54,36 @@ public:
         Celsius tempRef,
         double qMoist,
         double qBeta,
-        double R)
+        double rSensitive,
+        double rNormal,
+        seconds sensitivePeriod)
         : Peripheral(name)
         , kalmanFilter(initialMoisture, initialBeta, tempRef)
         , rawMoistureSensor(rawMoistureSensor)
         , tempSensor(tempSensor)
         , qMoist(qMoist)
         , qBeta(qBeta)
-        , R(R) {
+        , rSensitive(rSensitive)
+        , rNormal(rNormal)
+        , sensitivePeriodEnd(boot_clock::now() + sensitivePeriod) {
         LOGI("Initializing Kalman filter soil moisture sensor '%s' "
-             "wrapping moisture sensor '%s' and temperature sensor '%s'; "
-             "initial moisture: %.1f%%, initial beta: %.2f, reference temp.: %.1f C, "
-             "process noise (moisture): %.2e, process noise (beta): %.2e, measurement noise: %.2e",
+             "wrapping moisture sensor '%s'"
+             " and temperature sensor '%s'"
+             "; initial moisture: %.1f%%"
+             ", initial beta: %.2f"
+             ", reference temp.: %.1f C"
+             ", process noise: %.2e (moisture) / %.2e (beta)"
+             ", measurement noise: %.2e (sensitive) / %.2e (normal)"
+             ", sensitive period: %lld s",
             name.c_str(),
-            rawMoistureSensor->getName().c_str(), tempSensor->getName().c_str(),
-            initialMoisture, initialBeta, tempRef,
-            qMoist, qBeta, R);
+            rawMoistureSensor->getName().c_str(),
+            tempSensor->getName().c_str(),
+            initialMoisture,
+            initialBeta,
+            tempRef,
+            qMoist, qBeta,
+            rSensitive, rNormal,
+            duration_cast<seconds>(sensitivePeriod).count());
     }
 
     Percent getMoisture() override {
@@ -75,7 +97,9 @@ public:
             LOGTW(ENV, "Temperature reading is NaN");
             return NAN;
         }
-        kalmanFilter.update(rawMoisture, temp, qMoist, qBeta, R);
+
+        auto r = (boot_clock::now() < sensitivePeriodEnd) ? rSensitive : rNormal;
+        kalmanFilter.update(rawMoisture, temp, qMoist, qBeta, r);
         auto realMoisture = kalmanFilter.getMoistReal();
         LOGTV(ENV, "Updated Kalman filter with raw moisture: %.1f%%, temperature: %.1f C, real moisture: %.1f C, beta: %.2f %/C",
             rawMoisture, temp, realMoisture, kalmanFilter.getBeta());
@@ -93,7 +117,9 @@ private:
 
     double qMoist;
     double qBeta;
-    double R;
+    double rSensitive;
+    double rNormal;
+    std::chrono::time_point<boot_clock> sensitivePeriodEnd;
 };
 
 inline PeripheralFactory makeFactoryForKalmanSoilMoisture() {
@@ -112,7 +138,9 @@ inline PeripheralFactory makeFactoryForKalmanSoilMoisture() {
                 settings->tempRef.get(),
                 settings->qMoist.get(),
                 settings->qBeta.get(),
-                settings->R.get());
+                settings->rSensitive.get(),
+                settings->rNormal.get(),
+                settings->sensitivePeriod.get());
             params.registerFeature("moisture", [sensor](JsonObject& telemetryJson) {
                 telemetryJson["value"] = sensor->getMoisture();
             });
