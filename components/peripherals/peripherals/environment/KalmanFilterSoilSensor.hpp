@@ -66,7 +66,7 @@ public:
         , rSensitive(rSensitive)
         , rNormal(rNormal)
         , sensitivePeriodEnd(boot_clock::now() + sensitivePeriod) {
-        LOGI("Initializing Kalman filter soil moisture sensor '%s' "
+        LOGTI(ENV, "Initializing Kalman filter soil moisture sensor '%s' "
              "wrapping moisture sensor '%s'"
              " and temperature sensor '%s'"
              "; initial moisture: %.1f%%"

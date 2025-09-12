@@ -41,7 +41,7 @@ public:
         , alpha(alpha)
         , pin(pin) {
 
-        LOGI("Initializing soil moisture sensor '%s' on pin %s; air value: %d; water value: %d; EMA alpha: %.2f",
+        LOGTI(ENV, "Initializing soil moisture sensor '%s' on pin %s; air value: %d; water value: %d; EMA alpha: %.2f",
             name.c_str(), pin->getName().c_str(), airValue, waterValue, alpha);
     }
 
@@ -59,11 +59,11 @@ private:
         [this](const utils::DebouncedParams<Percent> params) -> std::optional<Percent> {
             std::optional<uint16_t> soilMoistureValue = pin.tryAnalogRead();
             if (!soilMoistureValue.has_value()) {
-                LOGW("Failed to read soil moisture value from pin %s",
+                LOGTW(ENV, "Failed to read soil moisture value from pin %s",
                     pin.getName().c_str());
                 return std::nullopt;
             }
-            LOGV("Soil moisture value: %d",
+            LOGTV(ENV, "Soil moisture value: %d",
                 soilMoistureValue.value());
 
             const double run = waterValue - airValue;

@@ -16,8 +16,6 @@ using namespace farmhub::peripherals::api;
 
 namespace farmhub::peripherals::environment {
 
-LOGGING_TAG(NTC_TEMP, "ntc-temp")
-
 class NtcTemperatureSensor final
     : virtual public ITemperatureSensor,
       public Peripheral {
@@ -29,7 +27,7 @@ public:
         : Peripheral(name)
         , pin(pin)
         , beta(beta) {
-        LOGTI(NTC_TEMP, "Initializing NTC temperature sensor on pin '%s' with beta = %.1f",
+        LOGTI(ENV, "Initializing NTC temperature sensor on pin '%s' with beta = %.1f",
             pin->getName().c_str(), beta);
     }
 
@@ -45,7 +43,7 @@ private:
         [this](const utils::DebouncedParams<Celsius> /*params*/) {
             const auto analogValue = pin.analogRead();
             double celsius = (1.0 / (std::log(1.0 / (4095.0 / analogValue - 1.0)) / beta + 1.0 / 298.15)) - 273.15;
-            LOGTV(NTC_TEMP, "NTC temperature sensor '%s' reading: %.2f °C (raw: %d)",
+            LOGTV(ENV, "NTC temperature sensor '%s' reading: %.2f °C (raw: %d)",
                 getName().c_str(), celsius, analogValue);
             return celsius;
         },
