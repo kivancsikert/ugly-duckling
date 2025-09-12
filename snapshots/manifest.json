@@ -1,5 +1,44 @@
 [
   {
+    "commit": "f4e1af05e946aafc23b052dab4671ad1bb5f67b9",
+    "version": "0.32.9-milestone-6-19-gf4e1af0",
+    "id": "0.32.9-milestone-6-19-gf4e1af0",
+    "date": "2025-09-12T11:02:01Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk5-release.bin",
+        "sha256": "064bbe148eed4e032211f94372c964773f84f2de2a8e0d54903456eaa922a3a0"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk6-debug.bin",
+        "sha256": "e1735b27c3f5ccf2b181edda4f006775b4013825db3f19582590a6d7aa78abe6"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk6-release.bin",
+        "sha256": "0c8aedf4fc8f3319ea81505a4cef8e662c4bb6a31f3db826e1899263d53cdce7"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk7-release.bin",
+        "sha256": "38ea5299f9e49723ddbbbefb86776efc118a6085022d588969ad02198542992f"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk8-release.bin",
+        "sha256": "9eba235ad51ffb6d77cc42c696634ecc90376a2a73b331f49ea006522f56f93a"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mkX-release.bin",
+        "sha256": "2702e9a3cbc4d541e2f5e52c7a36d6d77cc3a187aabfff9b0f24b3293c13ae07"
+      }
+    ],
+    "branch": "plot/fix-kalman-filter"
+  },
+  {
     "commit": "20495690d8fed2a093753e412f27a2e38e07bb36",
     "version": "0.32.9-milestone-6-20-g2049569",
     "id": "0.32.9-milestone-6-20-g2049569",
@@ -37,45 +76,6 @@
       }
     ],
     "branch": "main"
-  },
-  {
-    "commit": "f4e1af05e946aafc23b052dab4671ad1bb5f67b9",
-    "version": "0.32.9-milestone-6-19-gf4e1af0",
-    "id": "0.32.9-milestone-6-19-gf4e1af0",
-    "date": "2025-09-12T10:47:30Z",
-    "files": [
-      {
-        "name": "ugly-duckling-mk5-release.bin",
-        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk5-release.bin",
-        "sha256": "ff41919b4506d918c7e05ed1bfa8470bb1a7fbdb1ce9273fe547c71dd86b9e12"
-      },
-      {
-        "name": "ugly-duckling-mk6-debug.bin",
-        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk6-debug.bin",
-        "sha256": "5bbd4b0a8e06c20805a5cfd53ea79abfa5344be54961255ae64f5bb9e28e711e"
-      },
-      {
-        "name": "ugly-duckling-mk6-release.bin",
-        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk6-release.bin",
-        "sha256": "170d8eae311ec4f2dbb1399001f2be1c3d6a57742749ed70d6ae158768a8fd5f"
-      },
-      {
-        "name": "ugly-duckling-mk7-release.bin",
-        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk7-release.bin",
-        "sha256": "0841f089f4caf20bf63780c29e5f279e97f423d40854fc87aad53a681f0b34c7"
-      },
-      {
-        "name": "ugly-duckling-mk8-release.bin",
-        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk8-release.bin",
-        "sha256": "c91710ed418e6548cf329badf189c59e365770b28f5def5476ea3a18ab49322a"
-      },
-      {
-        "name": "ugly-duckling-mkX-release.bin",
-        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mkX-release.bin",
-        "sha256": "bdb52afda53f3628553e8aba9d00beaba318189c93f85397d8e48e2b9d279d7e"
-      }
-    ],
-    "branch": "plot/fix-kalman-filter"
   },
   {
     "commit": "dcdab308e021c2934b4f6bac75eaf0a41c3c13a7",

@@ -1,39 +1,39 @@
 {
-  "commit": "20495690d8fed2a093753e412f27a2e38e07bb36",
-  "version": "0.32.9-milestone-6-20-g2049569",
-  "id": "0.32.9-milestone-6-20-g2049569",
-  "date": "2025-09-12T10:47:43Z",
+  "commit": "f4e1af05e946aafc23b052dab4671ad1bb5f67b9",
+  "version": "0.32.9-milestone-6-19-gf4e1af0",
+  "id": "0.32.9-milestone-6-19-gf4e1af0",
+  "date": "2025-09-12T11:02:01Z",
   "files": [
     {
       "name": "ugly-duckling-mk5-release.bin",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-20-g2049569/ugly-duckling-mk5-release.bin",
-      "sha256": "f876be8358f42de85dcdddb5a3bbe4ac913feaec6812c673838ad3121e6594c9"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk5-release.bin",
+      "sha256": "064bbe148eed4e032211f94372c964773f84f2de2a8e0d54903456eaa922a3a0"
     },
     {
       "name": "ugly-duckling-mk6-debug.bin",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-20-g2049569/ugly-duckling-mk6-debug.bin",
-      "sha256": "acce9ebf2fb3dd73dea240cfd44a05c16baad6b88d8a152eb4b2d73bec0a7d03"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk6-debug.bin",
+      "sha256": "e1735b27c3f5ccf2b181edda4f006775b4013825db3f19582590a6d7aa78abe6"
     },
     {
       "name": "ugly-duckling-mk6-release.bin",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-20-g2049569/ugly-duckling-mk6-release.bin",
-      "sha256": "f161036cbe9fc983aebf814497fca8d6f4d6972a7b9656f0f705021234ea186d"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk6-release.bin",
+      "sha256": "0c8aedf4fc8f3319ea81505a4cef8e662c4bb6a31f3db826e1899263d53cdce7"
     },
     {
       "name": "ugly-duckling-mk7-release.bin",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-20-g2049569/ugly-duckling-mk7-release.bin",
-      "sha256": "debf259d53c717c11c645e4e1c33f0e5efaf743df7910c7b8861207d6778b636"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk7-release.bin",
+      "sha256": "38ea5299f9e49723ddbbbefb86776efc118a6085022d588969ad02198542992f"
     },
     {
       "name": "ugly-duckling-mk8-release.bin",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-20-g2049569/ugly-duckling-mk8-release.bin",
-      "sha256": "2fbedfefb0c51a86c627d5d5e4f3f8efd6186df1ec918e37944474ff5c1a8111"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mk8-release.bin",
+      "sha256": "9eba235ad51ffb6d77cc42c696634ecc90376a2a73b331f49ea006522f56f93a"
     },
     {
       "name": "ugly-duckling-mkX-release.bin",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-20-g2049569/ugly-duckling-mkX-release.bin",
-      "sha256": "286af5c8e6251bfcf535d479e39bde0acb520c089dd2f579b1a4d17bddfcf394"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-19-gf4e1af0/ugly-duckling-mkX-release.bin",
+      "sha256": "2702e9a3cbc4d541e2f5e52c7a36d6d77cc3a187aabfff9b0f24b3293c13ae07"
     }
   ],
-  "branch": "main"
+  "branch": "plot/fix-kalman-filter"
 }
