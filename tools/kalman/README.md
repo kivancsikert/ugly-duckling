@@ -4,12 +4,6 @@ A small, cross‑platform command‑line tool to run [`MoistureKalmanFilter`](..
 
 ## Build
 
-Requirements:
-
-- CMake (3.15+)
-- A C++17 compiler
-- Ninja (recommended) or any CMake generator
-
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
