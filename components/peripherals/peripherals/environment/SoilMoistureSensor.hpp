@@ -41,7 +41,7 @@ public:
         , alpha(alpha)
         , pin(pin) {
 
-        LOGI("Initializing soil moisture sensor '%s' on pin %s; air value: %d; water value: %d; EWMA alpha: %.2f",
+        LOGI("Initializing soil moisture sensor '%s' on pin %s; air value: %d; water value: %d; EMA alpha: %.2f",
             name.c_str(), pin->getName().c_str(), airValue, waterValue, alpha);
     }
 

@@ -141,7 +141,7 @@ struct MoistureBasedSchedulerSettings : ConfigurationSection {
     Property<double> minGain { this, "minGain", 0.05 };    // % per liter
 
     // Alpha values for EMAs
-    Property<double> alphaMoisture { this, "alphaMoisture", 0.30 };
+    Property<double> alphaGain { this, "alphaGain", 0.20 };
     Property<double> alphaSlope { this, "alphaSlope", 0.40 };
 
     // Slope thresholds in % / min
@@ -152,9 +152,6 @@ struct MoistureBasedSchedulerSettings : ConfigurationSection {
     Property<seconds> deadTime { this, "deadTime", 5min };    // Td
     Property<seconds> tau { this, "tau", 30min };
     Property<seconds> valveTimeout { this, "valveTimeout", 5min };
-
-    // Learning (EWMA)
-    Property<double> betaGain { this, "betaGain", 0.20 };
 
     // Quotas / safety
     Property<Liters> maxTotalVolume { this, "maxTotalVolume", NAN };
@@ -219,7 +216,7 @@ inline FunctionFactory makeFactory() {
                         .maxVolume = moistureBasedSettings->maxVolume.get(),
                         .minGain = moistureBasedSettings->minGain.get(),
 
-                        .alphaMoisture = moistureBasedSettings->alphaMoisture.get(),
+                        .alphaGain = moistureBasedSettings->alphaGain.get(),
                         .alphaSlope = moistureBasedSettings->alphaSlope.get(),
 
                         .slopeRise = moistureBasedSettings->slopeRise.get(),
@@ -228,8 +225,6 @@ inline FunctionFactory makeFactory() {
                         .deadTime = moistureBasedSettings->deadTime.get(),
                         .tau = moistureBasedSettings->tau.get(),
                         .valveTimeout = moistureBasedSettings->valveTimeout.get(),
-
-                        .betaGain = moistureBasedSettings->betaGain.get(),
 
                         .maxTotalVolume = moistureBasedSettings->maxTotalVolume.get(),
                     },
