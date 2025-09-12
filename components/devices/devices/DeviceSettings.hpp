@@ -32,7 +32,13 @@ public:
     Property<bool> sleepWhenIdle { this, "sleepWhenIdle", true };
 
     Property<seconds> publishInterval { this, "publishInterval", 1min };
-    Property<Level> publishLogs { this, "publishLogs", Level::Info };
+    Property<Level> publishLogs { this, "publishLogs",
+#ifdef FARMHUB_DEBUG
+        Level::Verbose
+#else
+        Level::Info
+#endif
+    };
 
     std::string getHostname() const {
         std::string hostname = instance.get();
