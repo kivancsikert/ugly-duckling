@@ -35,7 +35,7 @@ public:
         // TODO Add configuration for fast / slow measurement
         // TODO Add a separate task to do measurements to unblock telemetry collection?
 
-        LOGI("Initializing %s environment sensor '%s' with %s",
+        LOGTI(ENV, "Initializing %s environment sensor '%s' with %s",
             sensorType.c_str(), name.c_str(), config.toString().c_str());
 
         ESP_ERROR_THROW(sht3x_init_desc(&sensor, config.address, bus->port, bus->sda->getGpio(), bus->scl->getGpio()));
@@ -65,12 +65,12 @@ private:
         float fHumidity;
         esp_err_t res = sht3x_measure(&sensor, &fTemp, &fHumidity);
         if (res == ESP_OK) {
-            LOGV("Measured temperature: %.2f °C, humidity: %.2f %%",
+            LOGTV(ENV, "Measured temperature: %.2f °C, humidity: %.2f %%",
                 fTemp, fHumidity);
             temperature = fTemp;
             humidity = fHumidity;
         } else {
-            LOGD("Could not measure temperature: %s", esp_err_to_name(res));
+            LOGTD(ENV, "Could not measure temperature: %s", esp_err_to_name(res));
             temperature = std::numeric_limits<double>::quiet_NaN();
             humidity = std::numeric_limits<double>::quiet_NaN();
         }

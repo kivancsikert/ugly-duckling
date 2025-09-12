@@ -17,6 +17,8 @@ using farmhub::kernel::PinPtr;
 
 using GpioPair = std::pair<PinPtr, PinPtr>;
 
+LOGGING_TAG(I2C, "i2c")
+
 struct I2CConfig {
 public:
     uint8_t address;
@@ -127,7 +129,7 @@ public:
 
     std::shared_ptr<I2CDevice> createDevice(const std::string& name, const InternalPinPtr& sda, const InternalPinPtr& scl, uint8_t address) {
         auto device = std::make_shared<I2CDevice>(name, getBusFor(sda, scl), address);
-        LOGI("Created I2C device %s at address 0x%02x",
+        LOGTI(I2C, "Created I2C device %s at address 0x%02x",
             name.c_str(), address);
         // Test if communication is possible
         // esp_err_t err = device->probeRead();
@@ -146,14 +148,14 @@ public:
         Lock lock(mutex);
         for (auto bus : buses) {
             if (bus->sda == sda && bus->scl == scl) {
-                LOGV("Using previously registered I2C bus #%d for SDA: %s, SCL: %s",
+                LOGTV(I2C, "Using previously registered I2C bus #%d for SDA: %s, SCL: %s",
                     static_cast<int>(bus->port), sda->getName().c_str(), scl->getName().c_str());
                 return bus;
             }
         }
         auto nextBus = buses.size();
         if (nextBus < I2C_NUM_MAX) {
-            LOGI("Registering I2C bus #%d for SDA: %s, SCL: %s",
+            LOGTI(I2C, "Registering I2C bus #%d for SDA: %s, SCL: %s",
                 nextBus, sda->getName().c_str(), scl->getName().c_str());
             auto bus = std::make_shared<I2CBus>(I2CBus { .port = static_cast<i2c_port_t>(nextBus), .sda = sda, .scl = scl });
             buses.push_back(bus);

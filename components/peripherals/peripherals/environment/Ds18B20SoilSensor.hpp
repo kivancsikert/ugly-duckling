@@ -13,6 +13,8 @@
 #include <peripherals/api/ITemperatureSensor.hpp>
 #include <utils/DebouncedMeasurement.hpp>
 
+#include "Environment.hpp"
+
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
@@ -40,7 +42,7 @@ public:
         : Peripheral(name)
         , pin(pin) {
 
-        LOGI("Initializing DS18B20 soil temperature sensor '%s' on pin %s",
+        LOGTI(ENV, "Initializing DS18B20 soil temperature sensor '%s' on pin %s",
             name.c_str(), pin->getName().c_str());
 
         // We rely on the external resistor for pull-up
@@ -50,7 +52,7 @@ public:
             uint64_t parsedAddress = std::strtoull(address.c_str(), nullptr, 16);
             sensor = std::byteswap(parsedAddress);
         } else {
-            LOGV("Locating DS18B20 sensors on bus...");
+            LOGTV(ENV, "Locating DS18B20 sensors on bus...");
             size_t sensorCount;
             // TODO How many slots do we need here actually?
             int maxSensors = 1;
@@ -65,7 +67,7 @@ public:
             }
         }
 
-        LOGD("Using DS18B20 sensor at address: %016llX", sensor);
+        LOGTD(ENV, "Using DS18B20 sensor at address: %016llX", sensor);
     }
 
     Celsius getTemperature() override {
@@ -80,14 +82,14 @@ private:
             float temperature;
             auto err = ds18x20_measure(pin->getGpio(), sensor, false);
             if (err != ESP_OK) {
-                LOGE("Error measuring DS18B20 temperature: %s", esp_err_to_name(err));
+                LOGTD(ENV, "Error measuring DS18B20 temperature: %s", esp_err_to_name(err));
                 return std::nullopt;
             }
             // Wait for conversion (12-bit needs 750ms)
             Task::delay(750ms);
             err = ds18x20_read_temperature(pin->getGpio(), sensor, &temperature);
             if (err != ESP_OK) {
-                LOGE("Error reading DS18B20 temperature: %s", esp_err_to_name(err));
+                LOGTD(ENV, "Error reading DS18B20 temperature: %s", esp_err_to_name(err));
                 return std::nullopt;
             }
             return temperature;

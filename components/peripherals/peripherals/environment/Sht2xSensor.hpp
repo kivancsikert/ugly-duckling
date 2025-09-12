@@ -36,7 +36,7 @@ public:
         // TODO Add configuration for fast / slow measurement
         // TODO Add a separate task to do measurements to unblock telemetry collection?
 
-        LOGI("Initializing %s environment sensor '%s' with %s",
+        LOGTI(ENV, "Initializing %s environment sensor '%s' with %s",
             sensorType.c_str(), name.c_str(), config.toString().c_str());
 
         ESP_ERROR_THROW(si7021_init_desc(&sensor, bus->port, bus->sda->getGpio(), bus->scl->getGpio()));
@@ -46,7 +46,7 @@ public:
         float value;
         esp_err_t res = si7021_measure_temperature(&sensor, &value);
         if (res != ESP_OK) {
-            LOGD("Could not measure temperature: %s", esp_err_to_name(res));
+            LOGTD(ENV, "Could not measure temperature: %s", esp_err_to_name(res));
             return std::numeric_limits<double>::quiet_NaN();
         }
         return value;
@@ -56,7 +56,7 @@ public:
         float value;
         esp_err_t res = si7021_measure_humidity(&sensor, &value);
         if (res != ESP_OK) {
-            LOGD("Could not measure humidity: %s", esp_err_to_name(res));
+            LOGTD(ENV, "Could not measure humidity: %s", esp_err_to_name(res));
             return std::numeric_limits<double>::quiet_NaN();
         }
         return value;
