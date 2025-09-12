@@ -15,7 +15,7 @@ namespace farmhub::utils {
 template <typename T>
 struct DebouncedParams {
     T& lastValue;
-    std::chrono::time_point<boot_clock> lastMeasurement;
+    std::optional<std::chrono::time_point<boot_clock>> lastMeasurement;
 };
 
 template <typename T>
@@ -33,10 +33,13 @@ public:
     void updateIfNecessary() {
         Lock lock(mutex);
         auto now = boot_clock::now();
-        if (now - lastMeasurement < interval) {
+        if (lastMeasurement && now - *lastMeasurement < interval) {
             return;
         }
-        auto measurement = measure({ value, now });
+        auto measurement = measure({
+            .lastValue = value,
+            .lastMeasurement = lastMeasurement,
+        });
         if (measurement) {
             value = *measurement;
             lastMeasurement = now;
@@ -53,7 +56,7 @@ private:
     std::chrono::milliseconds interval;
 
     T value;
-    std::chrono::time_point<boot_clock> lastMeasurement;
+    std::optional<std::chrono::time_point<boot_clock>> lastMeasurement;
 
     Mutex mutex;
 };
