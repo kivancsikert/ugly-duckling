@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <utility>
 
 #include <ds18x20.h>
@@ -74,9 +75,8 @@ public:
 private:
     const InternalPinPtr pin;
     onewire_addr_t sensor {};
-
     utils::DebouncedMeasurement<Celsius> measurement {
-        [this]() -> std::optional<Celsius> {
+        [this](const utils::DebouncedParams<Celsius> /*params*/) -> std::optional<Celsius> {
             float temperature;
             auto err = ds18x20_measure(pin->getGpio(), sensor, false);
             if (err != ESP_OK) {
@@ -93,7 +93,7 @@ private:
             return temperature;
         },
         1s,
-        std::numeric_limits<double>::quiet_NaN()
+        NAN
     };
 };
 

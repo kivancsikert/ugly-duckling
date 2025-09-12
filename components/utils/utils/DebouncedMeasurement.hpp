@@ -13,10 +13,16 @@ using namespace farmhub::kernel;
 namespace farmhub::utils {
 
 template <typename T>
+struct DebouncedParams {
+    T& lastValue;
+    std::chrono::time_point<boot_clock> lastMeasurement;
+};
+
+template <typename T>
 class DebouncedMeasurement {
 public:
     explicit DebouncedMeasurement(
-        std::move_only_function<std::optional<T>()> measure,
+        std::move_only_function<std::optional<T>(const DebouncedParams<T>)> measure,
         std::chrono::milliseconds interval = 1s,
         const T& defaultValue = {})
         : measure(std::move(measure))
@@ -30,7 +36,7 @@ public:
         if (now - lastMeasurement < interval) {
             return;
         }
-        auto measurement = measure();
+        auto measurement = measure({ value, now });
         if (measurement) {
             value = *measurement;
             lastMeasurement = now;
@@ -43,7 +49,7 @@ public:
     }
 
 private:
-    std::move_only_function<std::optional<T>()> measure;
+    std::move_only_function<std::optional<T>(DebouncedParams<T>)> measure;
     std::chrono::milliseconds interval;
 
     T value;
