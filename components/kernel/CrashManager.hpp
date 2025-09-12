@@ -10,6 +10,8 @@
 
 namespace farmhub::kernel {
 
+LOGGING_TAG(CRASH, "crash")
+
 class CrashManager {
 public:
     static void handleCrashReport(JsonObject& json) {
@@ -40,7 +42,7 @@ private:
         esp_core_dump_summary_t summary {};
         esp_err_t err = esp_core_dump_get_summary(&summary);
         if (err != ESP_OK) {
-            LOGE("Failed to get core dump summary: %s", esp_err_to_name(err));
+            LOGTE(CRASH, "Failed to get core dump summary: %s", esp_err_to_name(err));
         } else {
             auto crashJson = json["crash"].to<JsonObject>();
             crashJson["firmware-version"] = crashedFirmwareVersion;
@@ -58,19 +60,19 @@ private:
         esp_err_t err = esp_core_dump_image_check();
         switch (err) {
             case ESP_OK:
-                LOGV("Found core dump");
+                LOGTV(CRASH, "Found core dump");
                 return CoreDumpStatus::DumpFound;
             case ESP_ERR_NOT_FOUND:
-                LOGV("No core dump found");
+                LOGTV(CRASH, "No core dump found");
                 return CoreDumpStatus::NoDump;
             case ESP_ERR_INVALID_SIZE:
-                LOGD("Invalid core dump size, likely no core dump saved");
+                LOGTD(CRASH, "Invalid core dump size, likely no core dump saved");
                 return CoreDumpStatus::NoDump;
             case ESP_ERR_INVALID_CRC:
-                LOGE("Invalid core dump CRC, likely corrupted");
+                LOGTE(CRASH, "Invalid core dump CRC, likely corrupted");
                 return CoreDumpStatus::DumpInvalid;
             default:
-                LOGE("Failed to check for core dump: %s", esp_err_to_name(err));
+                LOGTE(CRASH, "Failed to check for core dump: %s", esp_err_to_name(err));
                 return CoreDumpStatus::DumpInvalid;
         }
     }
@@ -83,7 +85,7 @@ private:
             summary.ex_info.mcause;
 #endif
 
-        LOGI("Core dump found: task: %s, cause: %" PRIu32,
+        LOGTI(CRASH, "Core dump found: task: %s, cause: %" PRIu32,
             summary.exc_task, excCause);
 
         json["dump-version"] = summary.core_dump_version;
@@ -104,14 +106,14 @@ private:
         esp_err_t panicReasonGetErr = esp_core_dump_get_panic_reason(panicReason, PANIC_REASON_SIZE);
         switch (panicReasonGetErr) {
             case ESP_OK:
-                LOGD("Panic reason: %s", panicReason);
+                LOGTD(CRASH, "Panic reason: %s", panicReason);
                 json["panic-reason"] = std::string(panicReason);
                 break;
             case ESP_ERR_NOT_FOUND:
-                LOGD("No panic reason found");
+                LOGTD(CRASH, "No panic reason found");
                 break;
             default:
-                LOGI("Failed to get panic reason: %s", esp_err_to_name(panicReasonGetErr));
+                LOGTI(CRASH, "Failed to get panic reason: %s", esp_err_to_name(panicReasonGetErr));
                 json["panic-reason-err"] = esp_err_to_name(panicReasonGetErr);
         }
 
@@ -119,7 +121,7 @@ private:
         auto backtraceJson = json["backtrace"].to<JsonObject>();
 
         if (summary.exc_bt_info.corrupted) {
-            LOGD("Backtrace corrupted, depth %" PRIu32, summary.exc_bt_info.depth);
+            LOGTD(CRASH, "Backtrace corrupted, depth %" PRIu32, summary.exc_bt_info.depth);
             backtraceJson["corrupted"] = true;
         }
 
@@ -145,7 +147,7 @@ private:
             encoded.resize(writtenLen);
             json["stackdump"] = encoded;
         } else {
-            LOGE("Failed to encode stackdump: %d", ret);
+            LOGTE(CRASH, "Failed to encode stackdump: %d", ret);
         }
 #endif
     }
