@@ -39,8 +39,8 @@ struct MoistureBasedSchedulerSettings {
     double minGain { 0.05 };    // % per liter (floor)
 
     // Filters
-    double alphaMoisture { 0.30 };    // EMA for moisture
-    double alphaSlope { 0.40 };       // EMA for slope
+    double alphaSlope { 0.40 };    // EMA for slope
+    double alphaGain { 0.20 };     // EMA for gain
 
     // Slope thresholds in % / min
     double slopeRise { 0.03 };
@@ -50,9 +50,6 @@ struct MoistureBasedSchedulerSettings {
     s deadTime { 1min };    // Td
     s tau { 10min };
     s valveTimeout { 5min };
-
-    // Learning (EWMA)
-    double betaGain { 0.20 };
 
     // Quotas / safety
     Liters maxTotalVolume { NAN };
@@ -148,7 +145,8 @@ struct MoistureBasedScheduler : IScheduler {
         LOGTI(SCHEDULING, "Initializing moisture based scheduler"
                           ", volume: %.1f-%.1f L"
                           ", min. gain: %.2f%%/L"
-                          ", alpha moisture: %.2f, alpha slope: %.2f"
+                          ", EMA alpha for slope: %.2f"
+                          ", EMA alpha for gain: %.2f"
                           ", slope rise: %.2f%%/min, settle: %.2f%%/min"
                           ", dead time %lld s, tau: %lld s, valve timeout: %lld s"
                           ", beta gain: %.2f"
@@ -156,14 +154,13 @@ struct MoistureBasedScheduler : IScheduler {
             settings.minVolume,
             settings.maxVolume,
             settings.minGain,
-            settings.alphaMoisture,
             settings.alphaSlope,
+            settings.alphaGain,
             settings.slopeRise,
             settings.slopeSettle,
             duration_cast<seconds>(settings.deadTime).count(),
             duration_cast<seconds>(settings.tau).count(),
             duration_cast<seconds>(settings.valveTimeout).count(),
-            settings.betaGain,
             settings.maxTotalVolume);
     }
 
@@ -286,8 +283,6 @@ private:
     }
 
     void decideOrStartWatering(const ms now, const MoistureTarget& target) {
-        const Percent targetMid = 0.5 * (target.low + target.high);
-
         if (telemetry.moisture >= target.low) {
             LOGTV(SCHEDULING, "Moisture OK (%.1f%% >= %.1f%%), no watering needed",
                 telemetry.moisture, target.low);
@@ -300,6 +295,7 @@ private:
             return;
         }
 
+        const Percent targetMid = 0.5 * (target.low + target.high);
         Percent neededIncrease = detail::clamp(targetMid - telemetry.moisture, 0.0, 100.0);
         double effectiveGain = std::max(telemetry.gain, settings.minGain);
         double targetVolume = neededIncrease / effectiveGain;
@@ -395,7 +391,7 @@ private:
         if (dMoisture > 0.2) {
             const auto oldGain = telemetry.gain;
             const double observedGain = dMoisture / dVolume;    // % per liter, K_obs
-            telemetry.gain = (1.0 - settings.betaGain) * telemetry.gain + settings.betaGain * observedGain;
+            telemetry.gain = (1.0 - settings.alphaGain) * telemetry.gain + settings.alphaGain * observedGain;
             LOGTI(SCHEDULING, "Updating model, gain changed from %.2f%%/L to %.2f%%/L (%.1f L delivered, observed gain %.2f%%/L)",
                 oldGain, telemetry.gain, volumeDelivered, observedGain);
         }
