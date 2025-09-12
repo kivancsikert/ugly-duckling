@@ -344,7 +344,13 @@ static void startDevice() {
 
     auto powerManager = std::make_shared<PowerManager>(settings->sleepWhenIdle.get());
 
-    auto logRecords = std::make_shared<Queue<LogRecord>>("logs", 32);
+    auto logRecords = std::make_shared<Queue<LogRecord>>("logs",
+#ifdef FARMHUB_DEBUG
+        128
+#else
+        32
+#endif
+    );
     ConsoleProvider::init(logRecords, settings->publishLogs.get());
 
     LOGD("   ______                   _    _       _");
