@@ -93,7 +93,7 @@ public:
     }
 
     void registerFactory(FactoryT factory) {
-        LOGD("Registering %s factory: %s", managed.c_str(), factory.factoryType.c_str());
+        LOGV("Registering %s factory: %s", managed.c_str(), factory.factoryType.c_str());
         factories.emplace(factory.factoryType, std::move(factory));
     }
 

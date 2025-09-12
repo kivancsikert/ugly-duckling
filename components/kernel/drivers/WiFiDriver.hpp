@@ -33,7 +33,7 @@ public:
         , networkReady(networkReady)
         , configPortalRunning(configPortalRunning)
         , hostname(hostname) {
-        LOGTD(WIFI, "Registering WiFi handlers");
+        LOGTV(WIFI, "Registering WiFi handlers");
 
         // Initialize TCP/IP adapter and event loop
         ESP_ERROR_CHECK(esp_netif_init());
