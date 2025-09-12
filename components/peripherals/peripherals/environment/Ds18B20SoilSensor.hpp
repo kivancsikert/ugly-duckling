@@ -13,6 +13,8 @@
 #include <peripherals/api/ITemperatureSensor.hpp>
 #include <utils/DebouncedMeasurement.hpp>
 
+#include "Environment.hpp"
+
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
