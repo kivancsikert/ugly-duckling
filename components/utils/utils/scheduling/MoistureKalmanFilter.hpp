@@ -38,9 +38,9 @@ public:
     /// @param R measurement noise variance
     void update(double moistObserved,
         double temp,
-        double qMoist = 1e-5,
-        double qBeta = 1e-6,
-        double R = 1e-3) {
+        double qMoist,
+        double qBeta,
+        double R) {
 
         // Predict step: state does not change (identity transition)
         // Add process noise
