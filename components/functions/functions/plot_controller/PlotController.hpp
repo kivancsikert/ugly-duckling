@@ -26,6 +26,8 @@ using namespace farmhub::utils::scheduling;
 
 namespace farmhub::functions::plot_controller {
 
+LOGGING_TAG(PLOT_CTRL, "plot-ctrl")
+
 struct SoilMoistureTarget : ConfigurationSection {
     Property<Percent> low { this, "low", 60.0 };
     Property<Percent> high { this, "high", 80.0 };
@@ -56,7 +58,7 @@ public:
         std::shared_ptr<MoistureBasedScheduler<BootClock>> moistureBasedScheduler,
         const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
         : Named(name) {
-        LOGD("Creating plot controller '%s' with valve '%s'",
+        LOGTI(PLOT_CTRL, "Initializing plot controller '%s' with valve '%s'",
             name.c_str(),
             valve->getName().c_str());
 
@@ -76,12 +78,12 @@ public:
 
                 auto transitionHappened = valve->transitionTo(result.targetState);
                 if (transitionHappened) {
-                    LOGI("Plot controller '%s' transitioned to state %s, will re-evaluate every %lld s",
+                    LOGTI(PLOT_CTRL, "Plot controller '%s' transitioned to state %s, will re-evaluate every %lld s",
                         name.c_str(),
                         farmhub::peripherals::api::toString(result.targetState),
                         duration_cast<seconds>(nextDeadline).count());
                 } else {
-                    LOGD("Plot controller '%s' stayed in state %s, will evaluate again after %lld s",
+                    LOGTD(PLOT_CTRL, "Plot controller '%s' stayed in state %s, will evaluate again after %lld s",
                         name.c_str(),
                         farmhub::peripherals::api::toString(result.targetState),
                         duration_cast<seconds>(nextDeadline).count());
