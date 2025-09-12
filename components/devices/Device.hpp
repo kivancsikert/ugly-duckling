@@ -353,13 +353,14 @@ static void startDevice() {
     );
     ConsoleProvider::init(logRecords, settings->publishLogs.get());
 
-    LOGD("   ______                   _    _       _");
-    LOGD("  |  ____|                 | |  | |     | |");
-    LOGD("  | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__");
-    LOGD("  |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\");
-    LOGD("  | | | (_| | |  | | | | | | |  | | |_| | |_) |");
-    LOGD("  |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s", farmhubVersion);
-    LOGD("  ");
+    LOGD("\n"
+         "   ______                   _    _       _\n"
+         "  |  ____|                 | |  | |     | |\n"
+         "  | |__ __ _ _ __ _ __ ___ | |__| |_   _| |__\n"
+         "  |  __/ _` | '__| '_ ` _ \\|  __  | | | | '_ \\\n"
+         "  | | | (_| | |  | | | | | | |  | | |_| | |_) |\n"
+         "  |_|  \\__,_|_|  |_| |_| |_|_|  |_|\\__,_|_.__/ %s\n",
+        farmhubVersion);
     LOGI("Initializing FarmHub kernel version %s on %s instance '%s' with hostname '%s' and MAC address %s",
         farmhubVersion,
         settings->model.get().c_str(),
