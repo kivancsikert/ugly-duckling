@@ -235,6 +235,12 @@ def main() -> int:
         help="Source repo root (to read git metadata).",
     )
     ap.add_argument(
+        "--branch",
+        type=str,
+        default=None,
+        help="The branch the artifact was published from",
+    )
+    ap.add_argument(
         "--commit-sha",
         type=str,
         default=None,
@@ -302,6 +308,10 @@ def main() -> int:
         "date": now_iso,
         "files": files,
     }
+
+    if args.branch is not None:
+        per_build_manifest["branch"] = args.branch
+
     write_json(dest / "manifest.json", per_build_manifest)
 
     # latest.json pointer

@@ -70,7 +70,7 @@ FunctionFactory makeFunctionFactory(
                 auto configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/f/" + params.name, config);
                 std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(config);
                 // Store configuration in init message
-                config->store(initConfigJson, false);
+                config->store(initConfigJson);
 
                 // Subscribe for config updates
                 params.mqttRoot->subscribe("config", [name = params.name, configFile, impl](const std::string&, const JsonObject& cfgJson) {

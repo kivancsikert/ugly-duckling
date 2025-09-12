@@ -95,7 +95,7 @@ public:
 
     virtual void load(const JsonObject& json) = 0;
     virtual void reset() = 0;
-    virtual void store(JsonObject& json, bool inlineDefaults) const = 0;
+    virtual void store(JsonObject& json) const = 0;
     virtual bool hasValue() const = 0;
 };
 
@@ -118,9 +118,9 @@ public:
         }
     }
 
-    void store(JsonObject& json, bool inlineDefaults) const override {
+    void store(JsonObject& json) const override {
         for (const auto& entry : entries) {
-            entry.get().store(json, inlineDefaults);
+            entry.get().store(json);
         }
     }
 
@@ -171,10 +171,10 @@ public:
         }
     }
 
-    void store(JsonObject& json, bool inlineDefaults) const override {
-        if (inlineDefaults || hasValue()) {
+    void store(JsonObject& json) const override {
+        if (hasValue()) {
             auto section = json[name].to<JsonObject>();
-            delegate->store(section, inlineDefaults);
+            delegate->store(section);
         }
     }
 
@@ -237,8 +237,8 @@ public:
         value = T();
     }
 
-    void store(JsonObject& json, bool inlineDefaults) const override {
-        if (!configured && !inlineDefaults) {
+    void store(JsonObject& json) const override {
+        if (!configured) {
             return;
         }
         if (secret) {
@@ -287,7 +287,7 @@ public:
         entries.clear();
     }
 
-    void store(JsonObject& json, bool /*inlineDefaults*/) const override {
+    void store(JsonObject& json) const override {
         auto jsonArray = json[name].to<JsonArray>();
         for (auto& entry : entries) {
             jsonArray.add(entry);
@@ -356,18 +356,18 @@ public:
         callbacks.push_back(callback);
     }
 
-    void store(JsonObject& json, bool inlineDefaults) const {
-        config->store(json, inlineDefaults);
+    void store(JsonObject& json) const {
+        config->store(json);
     }
 
     std::shared_ptr<TConfiguration> getConfig() const {
         return config;
     }
 
-    std::string toString(bool includeDefaults = true) {
+    std::string toString() {
         JsonDocument json;
         auto root = json.to<JsonObject>();
-        store(root, includeDefaults);
+        store(root);
         std::string jsonString;
         serializeJson(json, jsonString);
         return jsonString;
