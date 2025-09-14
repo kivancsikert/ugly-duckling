@@ -61,16 +61,24 @@ FunctionFactory makeFunctionFactory(
                 settingsTuple);
             settings->loadFromString(jsonSettings);
 
+            constexpr bool hasConfig = std::is_base_of_v<HasConfig<TConfig>, Impl>;
+
+            // We load configuration up front to ensure that we always store it in the init message, even
+            // when the instantiation of the function fails later.
+            auto config = std::make_shared<TConfig>();
+            std::shared_ptr<ConfigurationFile<TConfig>> configFile;
+            if constexpr (hasConfig) {
+                configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/f/" + params.name, config);
+                // Store configuration in init message
+                config->store(initConfigJson);
+            }
+
             // Create concrete implementation via user-provided callable
             auto impl = makeImpl(params, settings);
 
             // Configuration lifecycle, mirroring the templated factory behavior
-            if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
-                auto config = std::make_shared<TConfig>();
-                auto configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/f/" + params.name, config);
+            if constexpr (hasConfig) {
                 std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(config);
-                // Store configuration in init message
-                config->store(initConfigJson);
 
                 // Subscribe for config updates
                 params.mqttRoot->subscribe("config", [name = params.name, configFile, impl](const std::string&, const JsonObject& cfgJson) {
