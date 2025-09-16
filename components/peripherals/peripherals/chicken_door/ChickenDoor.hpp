@@ -237,7 +237,7 @@ private:
             if (currentState != targetState) {
                 if (currentState != lastState) {
                     LOGV("Going from state %d to %d (light level %.2f)",
-                        static_cast<int>(currentState), static_cast<int>(targetState), lightSensor->getCurrentLevel());
+                        static_cast<int>(currentState), static_cast<int>(targetState), lightSensor->getLightLevel());
                     watchdog.restart();
                 }
                 switch (targetState) {
@@ -254,7 +254,7 @@ private:
             } else {
                 if (currentState != lastState) {
                     LOGV("Reached state %d (light level %.2f)",
-                        static_cast<int>(currentState), lightSensor->getCurrentLevel());
+                        static_cast<int>(currentState), lightSensor->getLightLevel());
                     watchdog.cancel();
                     motor->stop();
                     mqttRoot->publish("events/state", [=](JsonObject& json) { json["state"] = currentState; }, Retention::NoRetain, QoS::AtLeastOnce);
@@ -365,7 +365,7 @@ private:
             overrideUntil = time_point<system_clock>::min();
         }
 
-        auto lightLevel = lightSensor->getCurrentLevel();
+        auto lightLevel = lightSensor->getLightLevel();
         if (lightLevel >= openLevel) {
             return DoorState::Open;
         }
@@ -492,7 +492,7 @@ inline PeripheralFactory makeFactory(const std::map<std::string, std::shared_ptr
 
             // Telemetry features
             params.registerFeature("light", [lightSensor](JsonObject& telemetryJson) {
-                telemetryJson["value"] = lightSensor->getCurrentLevel();
+                telemetryJson["value"] = lightSensor->getLightLevel();
             });
             params.registerFeature("door", [door](JsonObject& telemetryJson) {
                 door->populateTelemetry(telemetryJson);

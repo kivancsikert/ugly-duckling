@@ -159,8 +159,8 @@ private:
 
             if (currentState != targetState) {
                 if (currentState != lastState) {
-                    LOGTV(DOOR, "Going from state %d to %d (light level %.2f)",
-                        static_cast<int>(currentState), static_cast<int>(targetState), lightSensor->getCurrentLevel());
+                    LOGTV(DOOR, "Going from state %d to %d",
+                        static_cast<int>(currentState), static_cast<int>(targetState));
                     watchdog.restart();
                 }
                 switch (targetState) {
@@ -176,8 +176,8 @@ private:
                 }
             } else {
                 if (currentState != lastState) {
-                    LOGTV(DOOR, "Reached state %d (light level %.2f)",
-                        static_cast<int>(currentState), lightSensor->getCurrentLevel());
+                    LOGTV(DOOR, "Reached state %d",
+                        static_cast<int>(currentState));
                     watchdog.cancel();
                     motor->stop();
                     mqttRoot->publish("events/state", [=](JsonObject& json) { json["state"] = currentState; }, Retention::NoRetain, QoS::AtLeastOnce);
@@ -263,7 +263,6 @@ private:
 
     const std::shared_ptr<MqttRoot> mqttRoot;
     const std::shared_ptr<PwmMotorDriver> motor;
-    const std::shared_ptr<LightSensor> lightSensor;
 
     const std::shared_ptr<Switch> openSwitch;
     const std::shared_ptr<Switch> closedSwitch;

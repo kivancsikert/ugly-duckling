@@ -87,7 +87,7 @@ inline PeripheralFactory makeFactoryForTsl2591() {
                 settings->measurementFrequency.get(),
                 settings->latencyInterval.get());
             params.registerFeature("light", [sensor](JsonObject& telemetryJson) {
-                telemetryJson["value"] = sensor->getCurrentLevel();
+                telemetryJson["value"] = sensor->getLightLevel();
             });
             return sensor;
         });
