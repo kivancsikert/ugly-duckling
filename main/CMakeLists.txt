@@ -13,6 +13,8 @@ component_compile_options(-Wunused)
 component_compile_options(-Wreturn-local-addr)
 component_compile_options(-Werror)
 
+component_compile_options(-mtext-section-literals) # To fix 'literal target out of range' errors
+
 if(NOT DEFINED WOKWI)
     set(WOKWI "$ENV{WOKWI}")
 endif()

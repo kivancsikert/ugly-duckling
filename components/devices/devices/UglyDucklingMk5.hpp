@@ -7,6 +7,7 @@
 #include <drivers/LedDriver.hpp>
 
 #include <peripherals/chicken_door/ChickenDoor.hpp>
+#include <peripherals/door/Door.hpp>
 #include <peripherals/flow_meter/FlowMeter.hpp>
 #include <peripherals/valve/ValveFactory.hpp>
 
@@ -98,6 +99,7 @@ protected:
 
         peripheralManager->registerFactory(valve::makeFactory(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(flow_meter::makeFactory());
+        peripheralManager->registerFactory(door::makeFactory(motors));
         peripheralManager->registerFactory(chicken_door::makeFactory(motors));
     }
 };
