@@ -19,30 +19,18 @@
 
 #include <peripherals/Motors.hpp>
 #include <peripherals/Peripheral.hpp>
+#include <peripherals/api/IDoor.hpp>
 
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
 using namespace farmhub::peripherals;
+using namespace farmhub::peripherals::api;
 using namespace std::chrono;
 using namespace std::chrono_literals;
 
 namespace farmhub::peripherals::door {
 
 LOGGING_TAG(DOOR, "door")
-
-enum class DoorState : int8_t {
-    Initialized = -2,
-    Closed = -1,
-    None = 0,
-    Open = 1
-};
-
-bool convertToJson(const DoorState& src, JsonVariant dst) {
-    return dst.set(static_cast<int>(src));
-}
-void convertFromJson(JsonVariantConst src, DoorState& dst) {
-    dst = static_cast<DoorState>(src.as<int>());
-}
 
 enum class OperationState : uint8_t {
     Running,
@@ -87,7 +75,8 @@ public:
 };
 
 class Door final
-    : public Peripheral,
+    : public api::IDoor,
+      public Peripheral,
       public HasShutdown {
 public:
     Door(
@@ -130,18 +119,18 @@ public:
         });
     }
 
-    void setTarget(DoorState target) {
+    void setTarget(DoorState target) override {
         updateQueue.put(ConfigureSpec { .targetState = target });
     }
 
-    DoorState getState() {
-        Lock lock(stateMutex);
-        return lastState;
-    }
-
-    DoorState getTargetState() {
+    DoorState getTarget() override {
         Lock lock(stateMutex);
         return targetState;
+    }
+
+    DoorState getState() override {
+        Lock lock(stateMutex);
+        return lastState;
     }
 
     void populateTelemetry(JsonObject& telemetry) {
