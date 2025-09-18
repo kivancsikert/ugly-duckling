@@ -59,7 +59,6 @@ struct PeripheralInitParameters;
 
 using PeripheralCreateFn = std::function<Handle(
     PeripheralInitParameters& params,
-    const std::shared_ptr<FileSystem>& fs,
     const std::string& jsonSettings)>;
 using PeripheralFactory = kernel::Factory<PeripheralCreateFn>;
 
@@ -101,7 +100,6 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
         .productType = std::move(effectiveType),
         .create = [settingsTuple, makeImpl = std::move(makeImpl)](
                       PeripheralInitParameters& params,
-                      const std::shared_ptr<FileSystem>& fs,
                       const std::string& jsonSettings) -> Handle {
             // Construct and load settings
             auto settings = std::apply([](auto&&... a) {
@@ -122,11 +120,9 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
 class PeripheralManager final {
 public:
     PeripheralManager(
-        const std::shared_ptr<FileSystem>& fs,
         const std::shared_ptr<TelemetryCollector>& telemetryCollector,
         PeripheralServices services)
-        : fs(fs)
-        , telemetryCollector(telemetryCollector)
+        : telemetryCollector(telemetryCollector)
         , services(std::move(services))
         , manager("peripheral") {
     }
@@ -145,7 +141,7 @@ public:
                         .features = initJson["features"].to<JsonArray>(),
                         .peripherals = manager,
                     };
-                    return factory.create(params, fs, settings);
+                    return factory.create(params, settings);
                 });
             return true;
         } catch (const std::exception& e) {
@@ -170,7 +166,6 @@ public:
     }
 
 private:
-    const std::shared_ptr<FileSystem> fs;
     const std::shared_ptr<TelemetryCollector> telemetryCollector;
     const PeripheralServices services;
 
