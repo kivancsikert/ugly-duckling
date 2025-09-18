@@ -1,5 +1,44 @@
 [
   {
+    "commit": "d2fb3b574a10e1fe6672aa11259ebd9f96f30e48",
+    "version": "0.32.9-milestone-6-43-gd2fb3b5",
+    "id": "0.32.9-milestone-6-43-gd2fb3b5",
+    "date": "2025-09-18T18:17:56Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-43-gd2fb3b5/ugly-duckling-mk5-release.bin",
+        "sha256": "eabea19e12be1c0e334788b6728517d1b8845602087fa9e1db978e493dec2025"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-43-gd2fb3b5/ugly-duckling-mk6-debug.bin",
+        "sha256": "e80f26fac42c0d7dd0e57fa3abb05062ffc1039732e99ad09e8c29308eecd3f6"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-43-gd2fb3b5/ugly-duckling-mk6-release.bin",
+        "sha256": "a8c8eb1dfb401d1e12a92ee148791bc542bbb111e4e43db26956f99d81a825b0"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-43-gd2fb3b5/ugly-duckling-mk7-release.bin",
+        "sha256": "287eee5547ddcf0a5190d229b66cd3598640b9272135e17286f9aec2f1a96040"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-43-gd2fb3b5/ugly-duckling-mk8-release.bin",
+        "sha256": "84a221910ba921ccfa39c76b9a9073d390d81c266871aec15a964fc1fd1f04fb"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-43-gd2fb3b5/ugly-duckling-mkX-release.bin",
+        "sha256": "aa50662b1d67f4e997e3747dc8588aa4091ee5ab565d0cdd73248e248d51d758"
+      }
+    ],
+    "branch": "chicken-door/make-into-function"
+  },
+  {
     "commit": "eae39e79e0b731d5f596361348069ec69f73efa2",
     "version": "0.32.9-milestone-6-40-geae39e7",
     "id": "0.32.9-milestone-6-40-geae39e7",
