@@ -10,15 +10,13 @@
 #include <drivers/LedDriver.hpp>
 
 #include <peripherals/Peripheral.hpp>
-#include <peripherals/chicken_door/ChickenDoor.hpp>
-#include <peripherals/flow_meter/FlowMeter.hpp>
+#include <peripherals/door/Door.hpp>
 #include <peripherals/valve/ValveFactory.hpp>
 
 #include <devices/DeviceDefinition.hpp>
 
 using namespace farmhub::kernel;
-using namespace farmhub::peripherals::chicken_door;
-using namespace farmhub::peripherals::flow_meter;
+using namespace farmhub::peripherals::door;
 using namespace farmhub::peripherals::valve;
 
 namespace farmhub::devices {
@@ -120,8 +118,7 @@ protected:
         std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorDriver->getMotorA() }, { "b", motorDriver->getMotorB() } };
 
         peripheralManager->registerFactory(valve::makeFactory(motors, ValveControlStrategyType::Latching));
-        peripheralManager->registerFactory(flow_meter::makeFactory());
-        peripheralManager->registerFactory(chicken_door::makeFactory(motors));
+        peripheralManager->registerFactory(door::makeFactory(motors));
     }
 };
 

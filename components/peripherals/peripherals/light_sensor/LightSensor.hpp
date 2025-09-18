@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <memory>
+#include <utility>
 
 #include <Configuration.hpp>
 #include <I2CManager.hpp>
@@ -10,18 +11,20 @@
 
 #include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>
-#include <utility>
+#include <peripherals/api/ILightSensor.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
 
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
+using namespace farmhub::peripherals::api;
 
 namespace farmhub::peripherals::light_sensor {
 
 class LightSensor
-    : public Peripheral {
+    : public api::ILightSensor,
+      public Peripheral {
 public:
     LightSensor(
         const std::string& name,
@@ -32,7 +35,7 @@ public:
         , level(latencyInterval.count() / measurementFrequency.count()) {
     }
 
-    double getCurrentLevel() {
+    Lux getLightLevel() override {
         Lock lock(updateAverageMutex);
         return level.getAverage();
     }

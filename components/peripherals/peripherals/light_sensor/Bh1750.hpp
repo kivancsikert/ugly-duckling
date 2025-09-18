@@ -66,7 +66,7 @@ private:
 };
 
 inline PeripheralFactory makeFactoryForBh1750() {
-    return makePeripheralFactory<Bh1750, Bh1750, Bh1750Settings>(
+    return makePeripheralFactory<ILightSensor, Bh1750, Bh1750Settings>(
         "light-sensor:bh1750",
         "light-sensor",
         [](PeripheralInitParameters& params, const std::shared_ptr<Bh1750Settings>& settings) {
@@ -78,7 +78,7 @@ inline PeripheralFactory makeFactoryForBh1750() {
                 settings->measurementFrequency.get(),
                 settings->latencyInterval.get());
             params.registerFeature("light", [sensor](JsonObject& telemetryJson) {
-                telemetryJson["value"] = sensor->getCurrentLevel();
+                telemetryJson["value"] = sensor->getLightLevel();
             });
             return sensor;
         });

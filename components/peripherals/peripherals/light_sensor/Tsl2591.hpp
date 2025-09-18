@@ -75,7 +75,7 @@ private:
 };
 
 inline PeripheralFactory makeFactoryForTsl2591() {
-    return makePeripheralFactory<Tsl2591, Tsl2591, Tsl2591Settings>(
+    return makePeripheralFactory<ILightSensor, Tsl2591, Tsl2591Settings>(
         "light-sensor:tsl2591",
         "light-sensor",
         [](PeripheralInitParameters& params, const std::shared_ptr<Tsl2591Settings>& settings) {
@@ -87,7 +87,7 @@ inline PeripheralFactory makeFactoryForTsl2591() {
                 settings->measurementFrequency.get(),
                 settings->latencyInterval.get());
             params.registerFeature("light", [sensor](JsonObject& telemetryJson) {
-                telemetryJson["value"] = sensor->getCurrentLevel();
+                telemetryJson["value"] = sensor->getLightLevel();
             });
             return sensor;
         });

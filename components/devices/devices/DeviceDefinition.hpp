@@ -16,6 +16,7 @@
 #include <drivers/BatteryDriver.hpp>
 #include <drivers/LedDriver.hpp>
 
+#include <functions/chicken_door/ChickenDoor.hpp>
 #include <functions/plot_controller/PlotController.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/analog_meter/AnalogMeter.hpp>
@@ -27,6 +28,7 @@
 #include <peripherals/environment/Sht3xSensor.hpp>
 #include <peripherals/environment/SoilMoistureSensor.hpp>
 #include <peripherals/fence/ElectricFenceMonitor.hpp>
+#include <peripherals/flow_meter/FlowMeter.hpp>
 #include <peripherals/light_sensor/Bh1750.hpp>
 #include <peripherals/light_sensor/Tsl2591.hpp>
 #include <peripherals/multiplexer/Xl9535.hpp>
@@ -77,12 +79,14 @@ public:
         peripheralManager->registerFactory(multiplexer::makeFactoryForXl9535());
 
         peripheralManager->registerFactory(analog_meter::makeFactory());
+        peripheralManager->registerFactory(flow_meter::makeFactory());
 
         registerDeviceSpecificPeripheralFactories(peripheralManager, services, settings);
     }
 
     void registerFunctionFactories(const std::shared_ptr<FunctionManager>& functionManager) {
         functionManager->registerFactory(plot_controller::makeFactory());
+        functionManager->registerFactory(chicken_door::makeFactory());
     }
 
     /**

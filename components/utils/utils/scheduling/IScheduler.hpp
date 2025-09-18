@@ -6,7 +6,7 @@
 
 #include <ArduinoJson.h>
 
-#include <peripherals/api/IValve.hpp>
+#include <peripherals/api/TargetState.hpp>
 
 namespace farmhub::utils::scheduling {
 
