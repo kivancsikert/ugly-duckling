@@ -60,8 +60,7 @@ struct PeripheralInitParameters;
 using PeripheralCreateFn = std::function<Handle(
     PeripheralInitParameters& params,
     const std::shared_ptr<FileSystem>& fs,
-    const std::string& jsonSettings,
-    JsonObject& initConfigJson)>;
+    const std::string& jsonSettings)>;
 using PeripheralFactory = kernel::Factory<PeripheralCreateFn>;
 
 struct PeripheralInitParameters {
@@ -76,7 +75,6 @@ struct PeripheralInitParameters {
     }
 
     const std::string name;
-    const std::shared_ptr<MqttRoot> mqttRoot;
     const PeripheralServices& services;
     const std::shared_ptr<TelemetryCollector> telemetryCollector;
     const JsonArray features;
@@ -89,7 +87,6 @@ template <
     typename Type,
     std::derived_from<Type> Impl,
     std::derived_from<ConfigurationSection> TSettings,
-    std::derived_from<ConfigurationSection> TConfig = EmptyConfiguration,
     typename... TSettingsArgs>
 PeripheralFactory makePeripheralFactory(const std::string& factoryType,
     const std::string& peripheralType,
@@ -105,8 +102,7 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
         .create = [settingsTuple, makeImpl = std::move(makeImpl)](
                       PeripheralInitParameters& params,
                       const std::shared_ptr<FileSystem>& fs,
-                      const std::string& jsonSettings,
-                      JsonObject& initConfigJson) -> Handle {
+                      const std::string& jsonSettings) -> Handle {
             // Construct and load settings
             auto settings = std::apply([](auto&&... a) {
                 return std::make_shared<TSettings>(std::forward<decltype(a)>(a)...);
@@ -116,28 +112,6 @@ PeripheralFactory makePeripheralFactory(const std::string& factoryType,
 
             // Create concrete implementation via user-provided callable
             auto impl = makeImpl(params, settings);
-
-            // Configuration lifecycle, mirroring the templated factory behavior
-            if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
-                auto config = std::make_shared<TConfig>();
-                auto configFile = std::make_shared<ConfigurationFile<TConfig>>(fs, "/p/" + params.name, config);
-                std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(config);
-                // Store configuration in init message
-                config->store(initConfigJson);
-
-                // Subscribe for config updates
-                params.mqttRoot->subscribe("config", [name = params.name, configFile, impl](const std::string&, const JsonObject& cfgJson) {
-                    LOGD("Received configuration update for peripheral: %s", name.c_str());
-                    try {
-                        configFile->update(cfgJson);
-                        if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
-                            std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(configFile->getConfig());
-                        }
-                    } catch (const std::exception& e) {
-                        LOGE("Failed to update configuration for peripheral '%s' because %s", name.c_str(), e.what());
-                    }
-                });
-            }
             return Handle::wrap(std::move(std::static_pointer_cast<Type>(impl)));
         },
     };
@@ -150,12 +124,10 @@ public:
     PeripheralManager(
         const std::shared_ptr<FileSystem>& fs,
         const std::shared_ptr<TelemetryCollector>& telemetryCollector,
-        PeripheralServices services,
-        const std::shared_ptr<MqttRoot>& mqttDeviceRoot)
+        PeripheralServices services)
         : fs(fs)
         , telemetryCollector(telemetryCollector)
         , services(std::move(services))
-        , mqttDeviceRoot(mqttDeviceRoot)
         , manager("peripheral") {
     }
 
@@ -168,14 +140,12 @@ public:
                 [&](const std::string& name, const PeripheralFactory& factory, const std::string& settings) {
                     PeripheralInitParameters params = {
                         .name = name,
-                        .mqttRoot = mqttDeviceRoot->forSuffix("peripherals/" + factory.productType + "/" + name),
                         .services = services,
                         .telemetryCollector = telemetryCollector,
                         .features = initJson["features"].to<JsonArray>(),
                         .peripherals = manager,
                     };
-                    JsonObject initConfigJson = initJson["config"].to<JsonObject>();
-                    return factory.create(params, fs, settings, initConfigJson);
+                    return factory.create(params, fs, settings);
                 });
             return true;
         } catch (const std::exception& e) {
@@ -203,7 +173,6 @@ private:
     const std::shared_ptr<FileSystem> fs;
     const std::shared_ptr<TelemetryCollector> telemetryCollector;
     const PeripheralServices services;
-    const std::shared_ptr<MqttRoot> mqttDeviceRoot;
 
     SettingsBasedManager<PeripheralFactory> manager;
 };

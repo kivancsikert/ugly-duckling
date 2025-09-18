@@ -442,7 +442,7 @@ static void startDevice() {
         .switches = switches,
         .telemetryPublisher = telemetryPublisher,
     };
-    auto peripheralManager = std::make_shared<PeripheralManager>(fs, telemetryCollector, peripheralServices, mqttRoot);
+    auto peripheralManager = std::make_shared<PeripheralManager>(fs, telemetryCollector, peripheralServices);
     shutdownManager->registerShutdownListener([peripheralManager]() {
         peripheralManager->shutdown();
     });
