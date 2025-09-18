@@ -163,7 +163,7 @@ private:
                 }
             } else if (targetState) {
                 LOGTD(DOOR, "Door moving towards target state %s (current state %d)",
-                    toString(*targetState), static_cast<int>(currentState));
+                    toString(targetState), static_cast<int>(currentState));
                 switch (*targetState) {
                     case TargetState::Open:
                         motor->drive(MotorPhase::Forward, 1);

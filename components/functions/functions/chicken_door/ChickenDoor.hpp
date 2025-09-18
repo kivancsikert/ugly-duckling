@@ -49,7 +49,7 @@ struct LightSensorSchedule {
 };
 
 struct LightSensorScheduler : IScheduler {
-    LightSensorScheduler(const std::shared_ptr<ILightSensor> lightSensor)
+    explicit LightSensorScheduler(const std::shared_ptr<ILightSensor>& lightSensor)
         : lightSensor(lightSensor) {
     }
 
@@ -189,7 +189,7 @@ struct NoOpLightSensor : virtual ILightSensor, Named {
         : Named(name) {
     }
 
-    Lux getLightLevel() {
+    Lux getLightLevel() override {
         return -999;
     }
 
