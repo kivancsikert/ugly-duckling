@@ -64,7 +64,7 @@ public:
     Property<InternalPinPtr> closedPin { this, "closedPin" };
 
     /**
-     * @brief By default, open/close pins are high-active; set this to true to invert the logic.
+     * @brief By default, open/closed pins are high-active; set this to true to invert the logic.
      */
     Property<bool> invertSwitches { this, "invertSwitches", false };
 
@@ -108,7 +108,7 @@ public:
         })
         , telemetryPublisher(telemetryPublisher) {
 
-        LOGTI(DOOR, "Initializing door %s, open switch %s, close switch %s%s",
+        LOGTI(DOOR, "Initializing door %s, open switch %s, closed switch %s%s",
             name.c_str(), openSwitch->getPin()->getName().c_str(), closedSwitch->getPin()->getName().c_str(),
             invertSwitches ? " (switches are inverted)" : "");
 
@@ -119,13 +119,13 @@ public:
         });
     }
 
-    void setTarget(DoorState target) override {
-        updateQueue.put(ConfigureSpec { .targetState = target });
-    }
-
-    DoorState getTarget() override {
+    bool transitionTo(std::optional<TargetState> target) override {
         Lock lock(stateMutex);
-        return targetState;
+        if (this->targetState == target) {
+            return false;
+        }
+        updateQueue.put(ConfigureSpec { .targetState = target });
+        return true;
     }
 
     DoorState getState() override {
@@ -136,7 +136,9 @@ public:
     void populateTelemetry(JsonObject& telemetry) {
         Lock lock(stateMutex);
         telemetry["state"] = lastState;
-        telemetry["targetState"] = targetState;
+        if (targetState) {
+            telemetry["targetState"] = *targetState;
+        }
         telemetry["operationState"] = operationState;
     }
 
@@ -151,61 +153,62 @@ private:
         bool shouldPublishTelemetry = true;
         while (operationState == OperationState::Running) {
             DoorState currentState = determineCurrentState();
-            if (currentState == DoorState::None && targetState == lastState) {
-                // We have previously reached the target state, but we have lost the signal from the switches.
-                // We assume the door is still in the target state to prevent it from moving when it shouldn't.
-                currentState = lastState;
-            }
-
-            if (currentState != targetState) {
+            if (atTargetState(targetState, currentState)) {
                 if (currentState != lastState) {
-                    LOGTV(DOOR, "Going from state %d to %d",
-                        static_cast<int>(currentState), static_cast<int>(targetState));
-                    watchdog.restart();
-                }
-                switch (targetState) {
-                    case DoorState::Open:
-                        motor->drive(MotorPhase::Forward, 1);
-                        break;
-                    case DoorState::Closed:
-                        motor->drive(MotorPhase::Reverse, 1);
-                        break;
-                    default:
-                        motor->stop();
-                        break;
-                }
-            } else {
-                if (currentState != lastState) {
-                    LOGTV(DOOR, "Reached state %d",
+                    LOGTD(DOOR, "Door reached target state %d",
                         static_cast<int>(currentState));
                     watchdog.cancel();
                     motor->stop();
-                    mqttRoot->publish("events/state", [=](JsonObject& json) { json["state"] = currentState; }, Retention::NoRetain, QoS::AtLeastOnce);
-                }
-            }
-
-            {
-                Lock lock(stateMutex);
-                if (lastState != currentState) {
-                    lastState = currentState;
                     shouldPublishTelemetry = true;
                 }
+            } else if (targetState) {
+                LOGTD(DOOR, "Door moving towards target state %s (current state %d)",
+                    toString(*targetState), static_cast<int>(currentState));
+                switch (*targetState) {
+                    case TargetState::Open:
+                        motor->drive(MotorPhase::Forward, 1);
+                        break;
+                    case TargetState::Closed:
+                        motor->drive(MotorPhase::Reverse, 1);
+                        break;
+                }
+                watchdog.restart();
+                shouldPublishTelemetry = true;
+            } else {
+                LOGTD(DOOR, "Door has no target state, stopping motor (current state %d)",
+                    static_cast<int>(currentState));
+                watchdog.cancel();
+                motor->stop();
+                shouldPublishTelemetry = true;
             }
+
+            if (currentState != lastState) {
+                Lock lock(stateMutex);
+                lastState = currentState;
+                shouldPublishTelemetry = true;
+            }
+
             if (shouldPublishTelemetry) {
                 telemetryPublisher->requestTelemetryPublishing();
                 shouldPublishTelemetry = false;
             }
 
-            updateQueue.take([this, &shouldPublishTelemetry](auto& change) {
+            updateQueue.take([&](auto& change) {
                 std::visit(
-                    [this, &shouldPublishTelemetry](auto&& arg) {
+                    [&](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
                         if constexpr (std::is_same_v<T, StateUpdated>) {
-                            // State update received
+                            LOGTV(DOOR, "Status update received");
                         } else if constexpr (std::is_same_v<T, ConfigureSpec>) {
                             Lock lock(stateMutex);
-                            targetState = arg.targetState;
-                            shouldPublishTelemetry = true;
+                            TargetState newTargetState = calculateEffectiveTargetState(arg.targetState, currentState);
+
+                            if (!targetState || *targetState != newTargetState) {
+                                LOGTI(DOOR, "Setting target state to %s (current state %d)",
+                                    toString(newTargetState), static_cast<int>(currentState));
+                                targetState = newTargetState;
+                                shouldPublishTelemetry = true;
+                            }
                         } else if constexpr (std::is_same_v<T, WatchdogTimeout>) {
                             LOGTE(DOOR, "Watchdog timed out, stopping operation");
                             operationState = OperationState::WatchdogTimeout;
@@ -219,6 +222,39 @@ private:
                     },
                     change);
             });
+        }
+        LOGTW(DOOR, "Door '%s' exited run loop",
+            name.c_str());
+    }
+
+    static bool
+    atTargetState(std::optional<TargetState> targetState, DoorState state) {
+        if (!targetState) {
+            return false;
+        }
+        switch (*targetState) {
+            case TargetState::Open:
+                return state == DoorState::Open;
+            case TargetState::Closed:
+                return state == DoorState::Closed;
+            default:
+                throw std::invalid_argument("Unknown target state");
+        }
+    }
+
+    static TargetState calculateEffectiveTargetState(std::optional<TargetState> newTargetState, DoorState currentState) {
+        if (newTargetState) {
+            return *newTargetState;
+        }
+        switch (currentState) {
+            case DoorState::None:
+                return TargetState::Closed;
+            case DoorState::Open:
+                return TargetState::Open;
+            case DoorState::Closed:
+                return TargetState::Closed;
+            default:
+                throw std::invalid_argument("Unknown door state");
         }
     }
 
@@ -246,18 +282,26 @@ private:
 
     DoorState determineCurrentState() {
         bool open = openSwitch->isEngaged() ^ invertSwitches;
-        bool close = closedSwitch->isEngaged() ^ invertSwitches;
-        if (open && close) {
+        bool closed = closedSwitch->isEngaged() ^ invertSwitches;
+
+        if (open && closed) {
             // TODO Handle this as a failure?
-            LOGTW(DOOR, "Both open and close switches are engaged");
+            LOGTW(DOOR, "Both open and closed switches are engaged, should the switches be inverted?");
             return DoorState::None;
         }
         if (open) {
             return DoorState::Open;
         }
-        if (close) {
+        if (closed) {
             return DoorState::Closed;
         }
+
+        if (atTargetState(targetState, lastState)) {
+            // We have previously reached the target state, but we have likely lost the signal from the switches.
+            // We assume the door is still in the target state to prevent it from moving when it shouldn't.
+            return lastState;
+        }
+
         return DoorState::None;
     }
 
@@ -275,7 +319,7 @@ private:
     struct StateUpdated { };
 
     struct ConfigureSpec {
-        DoorState targetState;
+        std::optional<TargetState> targetState;
     };
 
     struct WatchdogTimeout { };
@@ -287,15 +331,15 @@ private:
     OperationState operationState = OperationState::Running;
 
     Mutex stateMutex;
-    DoorState targetState = DoorState::Initialized;
-    DoorState lastState = DoorState::Initialized;
+    std::optional<TargetState> targetState;
+    DoorState lastState = DoorState::None;
 
     std::optional<PowerManagementLockGuard> sleepLock;
 };
 
 inline PeripheralFactory makeFactory(const std::map<std::string, std::shared_ptr<PwmMotorDriver>>& motors) {
 
-    return makePeripheralFactory<Door, Door, DoorSettings, EmptyConfiguration>(
+    return makePeripheralFactory<IDoor, Door, DoorSettings, EmptyConfiguration>(
         "door",
         "door",
         [motors](PeripheralInitParameters& params, const std::shared_ptr<DoorSettings>& settings) {

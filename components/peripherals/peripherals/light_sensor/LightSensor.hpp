@@ -23,7 +23,7 @@ using namespace farmhub::peripherals::api;
 namespace farmhub::peripherals::light_sensor {
 
 class LightSensor
-    : api::ILightSensor,
+    : public api::ILightSensor,
       public Peripheral {
 public:
     LightSensor(

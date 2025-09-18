@@ -14,6 +14,7 @@
 #include <EspException.hpp>
 #include <I2CManager.hpp>
 #include <Manager.hpp>
+#include <Named.hpp>
 #include <PcntManager.hpp>
 #include <PulseCounter.hpp>
 #include <PwmManager.hpp>

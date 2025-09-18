@@ -3,11 +3,11 @@
 #include <ArduinoJson.h>
 
 #include "IPeripheral.hpp"
+#include "TargetState.hpp"
 
 namespace farmhub::peripherals::api {
 
 enum class DoorState : int8_t {
-    Initialized = -2,
     Closed = -1,
     None = 0,
     Open = 1
@@ -21,8 +21,18 @@ void convertFromJson(JsonVariantConst src, DoorState& dst) {
 }
 
 struct IDoor : virtual IPeripheral {
-    virtual void setTarget(DoorState target) = 0;
-    virtual DoorState getTarget() = 0;
+    /**
+     * @brief Transition the door to a new state.
+     *
+     * @param target The target state to transition to. When unspecified, it stays in its current state.
+     *                When current state is unspecified (`None`), transitions to `Closed`.
+     * @return true if the state was changed, false if it was already in the target state.
+     */
+    virtual bool transitionTo(std::optional<TargetState> target) = 0;
+
+    /**
+     * @brief Get the current state of the door.
+     */
     virtual DoorState getState() = 0;
 };
 
