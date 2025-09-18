@@ -305,7 +305,6 @@ private:
         return DoorState::None;
     }
 
-    const std::shared_ptr<MqttRoot> mqttRoot;
     const std::shared_ptr<PwmMotorDriver> motor;
 
     const std::shared_ptr<Switch> openSwitch;
