@@ -514,7 +514,6 @@ static void startDevice() {
             // TODO Remove redundant mentions of "ugly-duckling"
             json["type"] = "ugly-duckling";
             json["model"] = settings->model.get();
-            json["id"] = settings->id.get();
             json["instance"] = settings->instance.get();
             json["mac"] = getMacAddress();
             auto device = json["settings"].to<JsonObject>();

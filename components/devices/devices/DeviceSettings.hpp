@@ -20,7 +20,6 @@ public:
     }
 
     Property<std::string> model;
-    Property<std::string> id { this, "id", "UNIDENTIFIED" };
     Property<std::string> instance;
     Property<std::string> location { this, "location" };
 
