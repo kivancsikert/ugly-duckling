@@ -73,6 +73,7 @@ struct ConfigWithDefaults : public ConfigurationSection {
     Property<int> intValue { this, "intValue", 42 };
     Property<std::string> stringValue { this, "stringValue", "default" };
     Property<bool> boolValue { this, "boolValue", true };
+    // TODO Add some nested configuration with defaults
 };
 
 TEST_CASE("configuration with default values loaded from empty JSON has default values") {
@@ -97,3 +98,7 @@ TEST_CASE("configuration with default values loaded from non-empty JSON has actu
     REQUIRE(config.boolValue.hasValue());
     REQUIRE(config.boolValue.get() == false);
 }
+
+// TODO Add some tests for invalid JSON handling
+// TODO Add some tests for null values
+// TODO Add some tests for properties not defined in the configuration type
