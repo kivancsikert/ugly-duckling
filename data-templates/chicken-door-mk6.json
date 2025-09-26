@@ -1,18 +1,32 @@
 {
   "instance": "test-mk6-xxx",
   "location": "bumblebee",
+  "functions": [
+    {
+      "name": "chicken-door",
+      "type": "chicken-door",
+      "params": {
+        "door": "door",
+        "lightSensor": "light-sensor"
+      }
+    }
+  ],
   "peripherals": [
     {
-      "name": "chicken-door-a",
-      "type": "chicken-door",
+      "name": "door",
+      "type": "door",
       "params": {
         "motor": "b",
         "openPin": "A2",
-        "closedPin": "A1",
-        "lightSensor": {
-          "sda": "C2",
-          "scl": "C3"
-        }
+        "closedPin": "A1"
+      }
+    },
+    {
+      "name": "light-sensor",
+      "type": "light-sensor:bh1750",
+      "params": {
+        "scl": "C3",
+        "sda": "C2"
       }
     }
   ],
