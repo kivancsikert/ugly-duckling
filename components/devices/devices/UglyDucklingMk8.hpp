@@ -92,6 +92,11 @@ public:
     Mk8Settings()
         : DeviceSettings("mk8") {
     }
+
+    /**
+     * @brief Disable the built-in current sensor for faulty revision 1 units.
+     */
+    Property<bool> disableIna219 { this, "disableIna219", false };
 };
 
 class UglyDucklingMk8 : public DeviceDefinition<Mk8Settings> {
@@ -117,7 +122,7 @@ public:
     }
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk8Settings>& /*settings*/) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk8Settings>& settings) override {
         auto motorDriver = Drv8848Driver::create(
             services.pwmManager,
             pins::DAIN1,
@@ -129,31 +134,33 @@ protected:
 
         std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorDriver->getMotorA() }, { "b", motorDriver->getMotorB() } };
 
-        ina219 = std::make_shared<Ina219Driver>(
-            services.i2c,
-            I2CConfig {
-                .address = Ina219Driver::DEFAULT_ADDRESS,
-                .sda = pins::SDA,
-                .scl = pins::SCL,
-            },
-            Ina219Parameters {
-                .uRange = INA219_BUS_RANGE_16V,
-                .gain = INA219_GAIN_0_125,
-                .uResolution = INA219_RES_12BIT_1S,
-                .iResolution = INA219_RES_12BIT_1S,
-                .mode = INA219_MODE_CONT_SHUNT_BUS,
-                .shuntMilliOhm = 50,
-            });
+        if (!settings->disableIna219.get()) {
+            ina219 = std::make_shared<Ina219Driver>(
+                services.i2c,
+                I2CConfig {
+                    .address = Ina219Driver::DEFAULT_ADDRESS,
+                    .sda = pins::SDA,
+                    .scl = pins::SCL,
+                },
+                Ina219Parameters {
+                    .uRange = INA219_BUS_RANGE_16V,
+                    .gain = INA219_GAIN_0_125,
+                    .uResolution = INA219_RES_12BIT_1S,
+                    .iResolution = INA219_RES_12BIT_1S,
+                    .mode = INA219_MODE_CONT_SHUNT_BUS,
+                    .shuntMilliOhm = 50,
+                });
 
-        // ina219->setEnabled(true);
-        // Task::loop("power", 4096, [this](Task& task) {
-        //     LOGD("INA219 readings: %f V (BUS), %f V (shunt), %f A, %f W",
-        //         ina219->getBusVoltage(),
-        //         ina219->getShuntVoltage(),
-        //         ina219->getCurrent(),
-        //         ina219->getPower());
-        //     Task::delay(1s);
-        // });
+            // ina219->setEnabled(true);
+            // Task::loop("power", 4096, [this](Task& task) {
+            //     LOGD("INA219 readings: %f V (BUS), %f V (shunt), %f A, %f W",
+            //         ina219->getBusVoltage(),
+            //         ina219->getShuntVoltage(),
+            //         ina219->getCurrent(),
+            //         ina219->getPower());
+            //     Task::delay(1s);
+            // });
+        }
 
         peripheralManager->registerFactory(valve::makeFactory(motors, ValveControlStrategyType::Latching));
         peripheralManager->registerFactory(door::makeFactory(motors));

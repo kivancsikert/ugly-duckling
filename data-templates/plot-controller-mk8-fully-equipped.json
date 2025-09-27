@@ -1,0 +1,55 @@
+{
+  "instance": "test-mk8-xxx",
+  "location": "bumblebee",
+  "peripherals": [
+    {
+      "name": "flow-meter",
+      "type": "flow-meter",
+      "params": {
+        "pin": "B1"
+      }
+    },
+    {
+      "name": "valve",
+      "type": "valve",
+      "params": {
+        "motor": "b"
+      }
+    },
+    {
+      "name": "soil-temperature",
+      "type": "environment:ds18b20",
+      "params": {
+        "pin": "A2"
+      }
+    },
+    {
+      "name": "raw-soil-moisture",
+      "type": "environment:soil-moisture",
+      "params": {
+        "air": 3017,
+        "pin": "A1",
+        "water": 1105
+      }
+    },
+    {
+      "name": "soil-moisture",
+      "type": "environment:kalman-soil-moisture",
+      "params": {
+        "rawMoistureSensor": "raw-soil-moisture",
+        "temperatureSensor": "soil-temperature"
+      }
+    }
+  ],
+  "functions": [
+    {
+      "name": "plot",
+      "type": "plot-controller",
+      "params": {
+        "flowMeter": "flow-meter",
+        "valve": "valve",
+        "soilMoistureSensor": "soil-moisture"
+      }
+    }
+  ]
+}
