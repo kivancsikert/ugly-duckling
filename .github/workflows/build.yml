@@ -110,6 +110,7 @@ jobs:
 
   unit-test:
     runs-on: ubuntu-latest
+    if: false # Temporarily disable until Wokwi licensing is fixed
 
     steps:
       - uses: actions/checkout@v5
@@ -161,6 +162,7 @@ jobs:
 
   integ-test:
     runs-on: ubuntu-latest
+    if: false # Temporarily disable until Wokwi licensing is fixed
 
     env:
       HOSTNAME: ""
@@ -274,8 +276,9 @@ jobs:
   release:
     needs:
       - build
-      - unit-test
-      - integ-test
+      # Temporarily disabled until Wokwi licensing is fixed
+      # - unit-test
+      # - integ-test
     if: github.event_name == 'release' && github.event.action == 'published'
     runs-on: ubuntu-latest
     steps:
