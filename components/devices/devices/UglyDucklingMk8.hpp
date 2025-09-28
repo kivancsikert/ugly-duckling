@@ -120,13 +120,13 @@ public:
                 .shutdownThreshold = 3300,
             });
 
-        Task::loop("battery-display", 4096, [batteryDriver](Task& task) {
-            LOGD("Battery: %d mV, %d%%, %.1f mA",
-                batteryDriver->getVoltage(),
-                batteryDriver->getPercentage(),
-                batteryDriver->getCurrent().value_or(0.0));
-            Task::delay(1s);
-        });
+        // Task::loop("battery-display", 4096, [batteryDriver](Task& task) {
+        //     LOGD("Battery: %d mV, %d%%, %.1f mA",
+        //         batteryDriver->getVoltage(),
+        //         batteryDriver->getPercentage(),
+        //         batteryDriver->getCurrent().value_or(0.0));
+        //     Task::delay(1s);
+        // });
 
         return batteryDriver;
     }
