@@ -39,7 +39,7 @@ public:
         ESP_ERROR_THROW(device->probeRead());
 
         // Get the bus handle
-        auto bus = device->getBus()->lookupHandle();
+        auto* bus = device->getBus()->lookupHandle();
 
         // Initialize BQ27220 on existing bus
         // TODO Synchronize speed with other devices on the same bus?
@@ -100,7 +100,7 @@ public:
 
 private:
     std::shared_ptr<I2CDevice> device;
-    bq27220_handle_t gauge;
+    bq27220_handle_t gauge = nullptr;
 };
 
 }    // namespace farmhub::kernel::drivers
