@@ -110,7 +110,7 @@ public:
     }
 
     static std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& i2c) {
-        return std::make_shared<Bq27220Driver>(
+        auto batteryDriver = std::make_shared<Bq27220Driver>(
             i2c,
             pins::SDA,
             pins::SCL,
@@ -119,6 +119,16 @@ public:
                 .bootThreshold = 3500,
                 .shutdownThreshold = 3300,
             });
+
+        Task::loop("battery-display", 4096, [batteryDriver](Task& task) {
+            LOGD("Battery: %d mV, %d%%, %.1f mA",
+                batteryDriver->getVoltage(),
+                batteryDriver->getPercentage(),
+                batteryDriver->getCurrent().value_or(0.0));
+            Task::delay(1s);
+        });
+
+        return batteryDriver;
     }
 
 protected:

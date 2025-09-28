@@ -43,7 +43,7 @@ public:
      */
     virtual int getVoltage() = 0;
 
-    double getPercentage() {
+    virtual double getPercentage() {
         int voltage = getVoltage();
         if (voltage < 0) {
             return -1.0;
@@ -57,6 +57,20 @@ public:
             return 100.0;
         }
         return percentage;
+    }
+
+    /**
+     * @brief Get the current, if supported.
+     *
+     * @return Consumed current in mA, or std::nullopt if not supported.
+     * @note The current is positive when discharging, negative when charging.
+     */
+    virtual std::optional<double> getCurrent() {
+        return std::nullopt;
+    }
+
+    virtual std::optional<seconds> getTimeToEmpty() {
+        return std::nullopt;
     }
 
     const BatteryParameters parameters;

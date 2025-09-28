@@ -3,6 +3,8 @@
 #include <exception>
 #include <memory>
 
+#include <driver/i2c_master.h>
+
 #include <i2cdev.h>
 
 #include <Concurrent.hpp>
@@ -30,8 +32,14 @@ public:
     }
 };
 
-class I2CBus {
-public:
+struct I2CBus {
+    /** Lookup the I2C bus handle if already allocated by i2c_bus_create() */
+    i2c_master_bus_handle_t lookupHandle() const {
+        i2c_master_bus_handle_t bus;
+        ESP_ERROR_THROW(i2c_master_get_bus_handle(port, &bus));
+        return bus;
+    }
+
     const i2c_port_t port;
     const InternalPinPtr sda;
     const InternalPinPtr scl;
@@ -75,7 +83,7 @@ public:
     }
 
     esp_err_t probeRead() {
-        return i2c_dev_probe(&device, I2C_DEV_READ);
+        return i2c_dev_check_present(&device);
     }
 
     uint8_t readRegByte(uint8_t reg) {
@@ -104,6 +112,14 @@ public:
 
     void writeReg(uint8_t reg, uint8_t* buffer, size_t length) {
         ESP_ERROR_THROW(i2c_dev_write(&device, &reg, 1, buffer, length));
+    }
+
+    std::shared_ptr<I2CBus> getBus() const {
+        return bus;
+    }
+
+    uint8_t getAddress() const {
+        return device.addr;
     }
 
 private:

@@ -54,6 +54,14 @@ public:
         return battery->getPercentage();
     }
 
+    std::optional<double> getCurrent() {
+        return battery->getCurrent();
+    }
+
+    std::optional<seconds> getTimeToEmpty() {
+        return battery->getTimeToEmpty();
+    }
+
 private:
     void checkBatteryVoltage(Task& task) {
                 auto currentVoltage = battery->getVoltage();
