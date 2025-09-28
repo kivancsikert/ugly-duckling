@@ -1,5 +1,44 @@
 [
   {
+    "commit": "196f5d28020dbaad6ba6d3f5bf00be1e217576d9",
+    "version": "0.32.9-milestone-6-59-g196f5d2",
+    "id": "0.32.9-milestone-6-59-g196f5d2",
+    "date": "2025-09-28T19:31:44Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-59-g196f5d2/ugly-duckling-mk5-release.bin",
+        "sha256": "1834c8d0fb7c16e1dcb8958b16a98905cc615fe3165bcccf21fbe0014b7d2c1a"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-59-g196f5d2/ugly-duckling-mk6-debug.bin",
+        "sha256": "fe42718b950ec0b4ab2f674439bafe66320d736792a159833f84b00d53821829"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-59-g196f5d2/ugly-duckling-mk6-release.bin",
+        "sha256": "72139fe2eb877f551615ffdd31af02b5c01cbc06ef04767ed7c8e307d48e01ae"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-59-g196f5d2/ugly-duckling-mk7-release.bin",
+        "sha256": "54892122f6641c6c39c1a5b9d695d8a75c95d03408acb056981313f54c3ddf4a"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-59-g196f5d2/ugly-duckling-mk8-release.bin",
+        "sha256": "18776df6ee6a4f25ac7b3b7516601d5832f969e28a5f9d72c3b22c27536884c8"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-59-g196f5d2/ugly-duckling-mkX-release.bin",
+        "sha256": "ebbfb91fb4d3c09e136c95019e0c9ebb7ca3e5845088db6c25baac57fd879f2a"
+      }
+    ],
+    "branch": "battery/measure-charge-discharge-on-mk8"
+  },
+  {
     "commit": "cc1ce6071612d65ad5f7abcd4d051b5389544a73",
     "version": "0.32.9-milestone-6-55-gcc1ce60",
     "id": "0.32.9-milestone-6-55-gcc1ce60",
