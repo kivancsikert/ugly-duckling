@@ -283,6 +283,14 @@ void initTelemetryPublishTask(
                 auto battery = telemetry["battery"].to<JsonObject>();
                 battery["voltage"] = static_cast<double>(batteryManager->getVoltage()) / 1000.0; // Convert to volts
                 battery["percentage"] = batteryManager->getPercentage();
+                auto current = batteryManager->getCurrent();
+                if (current.has_value()) {
+                    battery["current"] = *current;
+                }
+                auto timeToEmpty = batteryManager->getTimeToEmpty();
+                if (timeToEmpty.has_value()) {
+                    battery["time-to-empty"] = timeToEmpty->count();
+                }
             }
 
             auto wifiData = telemetry["wifi"].to<JsonObject>();

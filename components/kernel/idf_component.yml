@@ -5,9 +5,10 @@ dependencies:
   espressif/catch2: "3.7.0"
   espressif/mdns: "1.8.2"
   bblanchon/arduinojson: "7.4.1"
-  esp-idf-lib/bh1750: '^1.1.7'
-  esp-idf-lib/ds18x20: '^1.2.8'
-  esp-idf-lib/ina219: '^1.0.7'
-  esp-idf-lib/sht3x: '^1.0.8'
-  esp-idf-lib/si7021: '^1.0.8'
-  esp-idf-lib/tsl2591: '^1.0.7'
+  esp-idf-lib/bh1750: "^1.1.7"
+  esp-idf-lib/ds18x20: "^1.2.8"
+  esp-idf-lib/ina219: "^1.0.7"
+  esp-idf-lib/sht3x: "^1.0.8"
+  esp-idf-lib/si7021: "^1.0.8"
+  esp-idf-lib/tsl2591: "^1.0.7"
+  kodediy/kode_bq27220: "1.0.0"

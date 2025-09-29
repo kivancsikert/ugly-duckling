@@ -1,63 +1,63 @@
-Checks: >
-  bugprone-*,
-  -bugprone-easily-swappable-parameters,
-  cert-*,
-  -cert-err58-cpp,
-  -cert-dcl58-cpp,
-  clang-analyzer-*,
-  concurrency-*,
-  cppcoreguidelines-*,
-  -cppcoreguidelines-avoid-c-arrays,
-  -cppcoreguidelines-avoid-const-or-ref-data-members,
-  -cppcoreguidelines-avoid-magic-numbers,
-  -cppcoreguidelines-init-variables,
-  -cppcoreguidelines-macro-usage,
-  -cppcoreguidelines-non-private-member-variables-in-classes,
-  -cppcoreguidelines-owning-memory,
-  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
-  -cppcoreguidelines-pro-bounds-constant-array-index,
-  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
-  -cppcoreguidelines-pro-type-reinterpret-cast,
-  -cppcoreguidelines-pro-type-union-access,
-  -cppcoreguidelines-pro-type-vararg,
-  -cppcoreguidelines-special-member-functions,
-  google-*,
-  -google-build-using-namespace,
-  -google-global-names-in-headers,
-  -google-objc-*,
-  -google-readability-todo,
-  hicpp-*,
-  -hicpp-avoid-c-arrays,
-  -hicpp-avoid-goto,
-  -hicpp-member-init,
-  -hicpp-no-array-decay,
-  -hicpp-signed-bitwise,
-  -hicpp-special-member-functions,
-  -hicpp-vararg,
-  llvm-*,
-  -llvm-header-guard,
-  misc-*,
-  -misc-const-correctness,
-  -misc-definitions-in-headers,
-  -misc-non-private-member-variables-in-classes,
-  modernize-*,
-  -modernize-avoid-c-arrays,
-  -modernize-pass-by-value,
-  -modernize-use-nodiscard,
-  -modernize-use-std-print,
-  -modernize-use-trailing-return-type,
-  performance-*,
-  portability-*,
-  readability-*,
-  -readability-identifier-length,
-  -readability-magic-numbers,
-  -readability-use-anyofallof,
+Checks:
+  - bugprone-*
+  - -bugprone-easily-swappable-parameters
+  - cert-*
+  - -cert-err58-cpp
+  - -cert-dcl58-cpp
+  - clang-analyzer-*
+  - concurrency-*
+  - cppcoreguidelines-*
+  - -cppcoreguidelines-avoid-c-arrays
+  - -cppcoreguidelines-avoid-const-or-ref-data-members
+  - -cppcoreguidelines-avoid-magic-numbers
+  - -cppcoreguidelines-init-variables
+  - -cppcoreguidelines-macro-usage
+  - -cppcoreguidelines-non-private-member-variables-in-classes
+  - -cppcoreguidelines-owning-memory
+  - -cppcoreguidelines-pro-bounds-array-to-pointer-decay
+  - -cppcoreguidelines-pro-bounds-constant-array-index
+  - -cppcoreguidelines-pro-bounds-pointer-arithmetic
+  - -cppcoreguidelines-pro-type-reinterpret-cast
+  - -cppcoreguidelines-pro-type-union-access
+  - -cppcoreguidelines-pro-type-vararg
+  - -cppcoreguidelines-special-member-functions
+  - google-*
+  - -google-build-using-namespace
+  - -google-global-names-in-headers
+  - -google-objc-*
+  - -google-readability-todo
+  - hicpp-*
+  - -hicpp-avoid-c-arrays
+  - -hicpp-avoid-goto
+  - -hicpp-member-init
+  - -hicpp-no-array-decay
+  - -hicpp-signed-bitwise
+  - -hicpp-special-member-functions
+  - -hicpp-vararg
+  - llvm-*
+  - -llvm-header-guard
+  - misc-*
+  - -misc-const-correctness
+  - -misc-definitions-in-headers
+  - -misc-non-private-member-variables-in-classes
+  - modernize-*
+  - -modernize-avoid-c-arrays
+  - -modernize-pass-by-value
+  - -modernize-use-nodiscard
+  - -modernize-use-std-print
+  - -modernize-use-trailing-return-type
+  - performance-*
+  - portability-*
+  - readability-*
+  - -readability-identifier-length
+  - -readability-magic-numbers
+  - -readability-use-anyofallof
 
 CheckOptions:
   readability-function-cognitive-complexity.Threshold: 300
   cppcoreguidelines-avoid-do-while.IgnoreMacros: true
   hicpp-signed-bitwise.IgnorePositiveIntegerLiterals: true
 
-HeaderFilterRegex: '/ugly-duckling/(main|components)/'
+HeaderFilterRegex: "/ugly-duckling/(main|components)/"
 
-WarningsAsErrors: '*'
+WarningsAsErrors: "*"

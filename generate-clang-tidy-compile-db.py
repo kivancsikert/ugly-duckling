@@ -21,8 +21,9 @@ UNSUPPORTED_FLAGS = [
     "-nostartfiles",
 ]
 
-# ✅ Extra args appended to each compile command
+# Extra args appended to each compile command
 EXTRA_ARGS = [
+    "-Wno-extern-c-compat",
 ]
 
 def run(cmd):
