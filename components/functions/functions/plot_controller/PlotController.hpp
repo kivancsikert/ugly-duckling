@@ -9,6 +9,7 @@
 #include <Log.hpp>
 #include <Named.hpp>
 #include <functions/Function.hpp>
+#include <functions/ScheduledTransitionLoop.hpp>
 #include <mqtt/MqttDriver.hpp>
 #include <peripherals/api/IFlowMeter.hpp>
 #include <peripherals/api/ISoilMoistureSensor.hpp>
@@ -53,9 +54,9 @@ public:
     PlotController(
         const std::string& name,
         const std::shared_ptr<IValve>& valve,
-        std::shared_ptr<OverrideScheduler> overrideScheduler,
-        std::shared_ptr<TimeBasedScheduler> timeBasedScheduler,
-        std::shared_ptr<MoistureBasedScheduler<BootClock>> moistureBasedScheduler,
+        const std::shared_ptr<OverrideScheduler>& overrideScheduler,
+        const std::shared_ptr<TimeBasedScheduler>& timeBasedScheduler,
+        const std::shared_ptr<MoistureBasedScheduler<BootClock>>& moistureBasedScheduler,
         const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
         : Named(name) {
         LOGTI(PLOT_CTRL, "Initializing plot controller '%s' with valve '%s'",
@@ -68,45 +69,18 @@ public:
             moistureBasedScheduler,
         });
 
-        Task::run(name, 4096, [this, name, valve, compositeScheduler, overrideScheduler, timeBasedScheduler, moistureBasedScheduler, telemetryPublisher](Task& /*task*/) {
-            auto shouldPublishTelemetry = true;
-            while (true) {
-                ScheduleResult result = compositeScheduler->tick();
-                shouldPublishTelemetry |= result.shouldPublishTelemetry;
-
-                auto nextDeadline = clampTicks(result.nextDeadline.value_or(ms::max()));
-
-                // Default to Closed when no value is decided
-                auto targetState = result.targetState.value_or(TargetState::Closed);
-
-                auto transitionHappened = valve->transitionTo(targetState);
-                if (transitionHappened) {
-                    LOGTI(PLOT_CTRL, "Plot controller '%s' transitioned to state %s, will re-evaluate every %lld s",
-                        name.c_str(),
-                        farmhub::peripherals::api::toString(targetState),
-                        duration_cast<seconds>(nextDeadline).count());
-                } else {
-                    LOGTD(PLOT_CTRL, "Plot controller '%s' stayed in state %s, will evaluate again after %lld s",
-                        name.c_str(),
-                        farmhub::peripherals::api::toString(targetState),
-                        duration_cast<seconds>(nextDeadline).count());
-                }
-                shouldPublishTelemetry |= transitionHappened;
-
-                if (shouldPublishTelemetry) {
-                    telemetryPublisher->requestTelemetryPublishing();
-                    shouldPublishTelemetry = false;
-                }
-
-                // TODO Account for time spent in transitionTo()
-                configQueue.pollIn(nextDeadline, [&](const ConfigSpec& config) {
-                    overrideScheduler->setOverride(config.overrideSpec);
-                    timeBasedScheduler->setSchedules(config.scheduleSpec);
-                    moistureBasedScheduler->setTarget(config.soilMoistureTargetSpec);
-                    shouldPublishTelemetry = true;
-                });
-            }
-        });
+        runScheduledTransitionLoop<IValve, ConfigSpec>(
+            name,
+            PLOT_CTRL,
+            valve,
+            compositeScheduler,
+            telemetryPublisher,
+            configQueue,
+            [overrideScheduler, timeBasedScheduler, moistureBasedScheduler](const ConfigSpec& config) {
+                overrideScheduler->setOverride(config.overrideSpec);
+                timeBasedScheduler->setSchedules(config.scheduleSpec);
+                moistureBasedScheduler->setTarget(config.soilMoistureTargetSpec);
+            });
     }
 
     void configure(const std::shared_ptr<PlotControllerConfig>& config) override {
