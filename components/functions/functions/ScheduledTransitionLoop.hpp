@@ -23,10 +23,10 @@ namespace farmhub::functions {
 
 /**
  * @brief Common run loop for scheduled transitions of peripherals.
- * 
+ *
  * This template function encapsulates the common pattern used in PlotController and ChickenDoor
  * for managing scheduled state transitions of peripherals (valves, doors, etc).
- * 
+ *
  * @tparam TPeripheral The peripheral type that must have a transitionTo(TargetState) method
  * @tparam TConfigSpec The configuration specification type
  * @param name The name of the function instance for logging
