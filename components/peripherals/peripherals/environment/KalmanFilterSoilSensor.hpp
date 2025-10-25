@@ -101,7 +101,7 @@ public:
         auto r = (boot_clock::now() < sensitivePeriodEnd) ? rSensitive : rNormal;
         kalmanFilter.update(rawMoisture, temp, qMoist, qBeta, r);
         auto realMoisture = kalmanFilter.getMoistReal();
-        LOGTV(ENV, "Updated Kalman filter with raw moisture: %.1f%%, temperature: %.1f C, real moisture: %.1f C, beta: %.2f %/C",
+        LOGTV(ENV, "Updated Kalman filter with raw moisture: %.1f%%, temperature: %.1f C, real moisture: %.1f%%, beta: %.2f %%/C",
             rawMoisture, temp, realMoisture, kalmanFilter.getBeta());
         return realMoisture;
     }
