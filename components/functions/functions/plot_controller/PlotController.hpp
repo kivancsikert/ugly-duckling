@@ -54,9 +54,9 @@ public:
     PlotController(
         const std::string& name,
         const std::shared_ptr<IValve>& valve,
-        std::shared_ptr<OverrideScheduler> overrideScheduler,
-        std::shared_ptr<TimeBasedScheduler> timeBasedScheduler,
-        std::shared_ptr<MoistureBasedScheduler<BootClock>> moistureBasedScheduler,
+        const std::shared_ptr<OverrideScheduler>& overrideScheduler,
+        const std::shared_ptr<TimeBasedScheduler>& timeBasedScheduler,
+        const std::shared_ptr<MoistureBasedScheduler<BootClock>>& moistureBasedScheduler,
         const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
         : Named(name) {
         LOGTI(PLOT_CTRL, "Initializing plot controller '%s' with valve '%s'",

@@ -102,8 +102,8 @@ public:
     ChickenDoor(
         const std::string& name,
         const std::shared_ptr<IDoor>& door,
-        std::shared_ptr<OverrideScheduler> overrideScheduler,
-        std::shared_ptr<LightSensorScheduler> lightSensorScheduler,
+        const std::shared_ptr<OverrideScheduler>& overrideScheduler,
+        const std::shared_ptr<LightSensorScheduler>& lightSensorScheduler,
         const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
         : Named(name) {
         LOGTI(CHICKEN_DOOR, "Initializing chicken-door '%s' with door '%s'",
