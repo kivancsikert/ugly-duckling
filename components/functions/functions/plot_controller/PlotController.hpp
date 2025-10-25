@@ -76,16 +76,19 @@ public:
 
                 auto nextDeadline = clampTicks(result.nextDeadline.value_or(ms::max()));
 
-                auto transitionHappened = valve->transitionTo(result.targetState);
+                // Default to Closed when no value is decided
+                auto targetState = result.targetState.value_or(TargetState::Closed);
+
+                auto transitionHappened = valve->transitionTo(targetState);
                 if (transitionHappened) {
                     LOGTI(PLOT_CTRL, "Plot controller '%s' transitioned to state %s, will re-evaluate every %lld s",
                         name.c_str(),
-                        farmhub::peripherals::api::toString(result.targetState),
+                        farmhub::peripherals::api::toString(targetState),
                         duration_cast<seconds>(nextDeadline).count());
                 } else {
                     LOGTD(PLOT_CTRL, "Plot controller '%s' stayed in state %s, will evaluate again after %lld s",
                         name.c_str(),
-                        farmhub::peripherals::api::toString(result.targetState),
+                        farmhub::peripherals::api::toString(targetState),
                         duration_cast<seconds>(nextDeadline).count());
                 }
                 shouldPublishTelemetry |= transitionHappened;
