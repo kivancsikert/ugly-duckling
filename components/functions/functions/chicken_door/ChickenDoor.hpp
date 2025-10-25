@@ -7,6 +7,7 @@
 #include <Configuration.hpp>
 #include <Named.hpp>
 #include <functions/Function.hpp>
+#include <functions/ScheduledTransitionLoop.hpp>
 
 #include <peripherals/api/IDoor.hpp>
 #include <peripherals/api/ILightSensor.hpp>
@@ -114,44 +115,17 @@ public:
             lightSensorScheduler,
         });
 
-        Task::run(name, 4096, [this, name, door, compositeScheduler, overrideScheduler, lightSensorScheduler, telemetryPublisher](Task& /*task*/) {
-            auto shouldPublishTelemetry = true;
-            while (true) {
-                ScheduleResult result = compositeScheduler->tick();
-                shouldPublishTelemetry |= result.shouldPublishTelemetry;
-
-                auto nextDeadline = clampTicks(result.nextDeadline.value_or(ms::max()));
-
-                // Default to Closed when no value is decided
-                auto targetState = result.targetState.value_or(TargetState::Closed);
-
-                auto transitionHappened = door->transitionTo(targetState);
-                if (transitionHappened) {
-                    LOGTI(CHICKEN_DOOR, "Door '%s' transitioned to state %s, will re-evaluate every %lld s",
-                        name.c_str(),
-                        toString(targetState),
-                        duration_cast<seconds>(nextDeadline).count());
-                } else {
-                    LOGTD(CHICKEN_DOOR, "Door '%s' stayed in state %s, will evaluate again after %lld s",
-                        name.c_str(),
-                        toString(targetState),
-                        duration_cast<seconds>(nextDeadline).count());
-                }
-                shouldPublishTelemetry |= transitionHappened;
-
-                if (shouldPublishTelemetry) {
-                    telemetryPublisher->requestTelemetryPublishing();
-                    shouldPublishTelemetry = false;
-                }
-
-                // TODO Account for time spent in transitionTo()
-                configQueue.pollIn(nextDeadline, [&](const ConfigSpec& config) {
-                    overrideScheduler->setOverride(config.overrideSpec);
-                    lightSensorScheduler->setTarget(config.lightTarget);
-                    shouldPublishTelemetry = true;
-                });
-            }
-        });
+        runScheduledTransitionLoop<IDoor, ConfigSpec>(
+            name,
+            CHICKEN_DOOR,
+            door,
+            compositeScheduler,
+            telemetryPublisher,
+            configQueue,
+            [overrideScheduler, lightSensorScheduler](const ConfigSpec& config) {
+                overrideScheduler->setOverride(config.overrideSpec);
+                lightSensorScheduler->setTarget(config.lightTarget);
+            });
     }
 
     void configure(const std::shared_ptr<ChickenDoorConfig>& config) override {
