@@ -1,5 +1,44 @@
 [
   {
+    "commit": "9bf37a418a1b9efe563937c589a1c0bce2324b0a",
+    "version": "0.32.9-milestone-6-70-g9bf37a4",
+    "id": "0.32.9-milestone-6-70-g9bf37a4",
+    "date": "2025-10-25T23:03:52Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-70-g9bf37a4/ugly-duckling-mk5-release.bin",
+        "sha256": "437e64c475b598bfb3cabc75f65d1fd2ad7783ccbc30c4e4b866624a993bbe8e"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-70-g9bf37a4/ugly-duckling-mk6-debug.bin",
+        "sha256": "f1ab5711c535ebd4b78cc74390ab7a4289f91efc2bdfaeac8500ac6a63aa1bf6"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-70-g9bf37a4/ugly-duckling-mk6-release.bin",
+        "sha256": "9fe4808cd235b94e76376c8f9c3acca25aa2adafaae974174f69fd09acbd3f73"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-70-g9bf37a4/ugly-duckling-mk7-release.bin",
+        "sha256": "17d46ab00d5ff7c0a51fcfc684e954d6bce45c796765fb3d5199fc51751a9c1e"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-70-g9bf37a4/ugly-duckling-mk8-release.bin",
+        "sha256": "57f94bc8688764b62180ab9e1b628750b0418d663c864bf58d7ad11bccd5c4ee"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-70-g9bf37a4/ugly-duckling-mkX-release.bin",
+        "sha256": "b54c9fd533ba9eb093fc0fd302e97607b862ed934debd994fbc09538f894cebe"
+      }
+    ],
+    "branch": "copilot/extract-common-code-plot-chicken"
+  },
+  {
     "commit": "c36929b4fd907d9be63fc2347901af0993474ee1",
     "version": "0.32.9-milestone-6-64-gc36929b",
     "id": "0.32.9-milestone-6-64-gc36929b",
