@@ -1,5 +1,44 @@
 [
   {
+    "commit": "c36929b4fd907d9be63fc2347901af0993474ee1",
+    "version": "0.32.9-milestone-6-64-gc36929b",
+    "id": "0.32.9-milestone-6-64-gc36929b",
+    "date": "2025-10-25T19:37:19Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-64-gc36929b/ugly-duckling-mk5-release.bin",
+        "sha256": "e9528b9bc8dbf88725da510a61d13629ea9b800500201df99ebc5058086b6a56"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-64-gc36929b/ugly-duckling-mk6-debug.bin",
+        "sha256": "52b9505b50c88caee4ef062d631089de5f618addef273b127ea4acedd6f82a60"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-64-gc36929b/ugly-duckling-mk6-release.bin",
+        "sha256": "f857551a74f01086e14409c763000785b2de4c4829225fad23bb67eba3a7548f"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-64-gc36929b/ugly-duckling-mk7-release.bin",
+        "sha256": "b94fcdbe87561d8566c93081eeb2aa571fe8e8ef2cd68336aed0388730e30a70"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-64-gc36929b/ugly-duckling-mk8-release.bin",
+        "sha256": "13616520d0aa7e83ec777b29202ff070b7d56361a93deff455499ad77f36141e"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-milestone-6-64-gc36929b/ugly-duckling-mkX-release.bin",
+        "sha256": "08370b2f16d33a568c0aae0e2a15311c3f904c769c8796086025d2cadfd33975"
+      }
+    ],
+    "branch": "main"
+  },
+  {
     "commit": "fa5913ee9934e90209ec12fba1a4b48a365363e2",
     "version": "0.32.9-milestone-6-63-gfa5913e",
     "id": "0.32.9-milestone-6-63-gfa5913e",
