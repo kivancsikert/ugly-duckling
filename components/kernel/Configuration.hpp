@@ -163,7 +163,7 @@ public:
     }
 
     void load(const JsonObject& json) override {
-        if (!json[name].isNull() && json[name].is<JsonObject>()) {
+        if (json[name].is<JsonObject>()) {
             namePresentAtLoad = true;
             delegate->load(json[name]);
         } else {
@@ -220,7 +220,7 @@ public:
     }
 
     void load(const JsonObject& json) override {
-        if (!json[name].isNull() && json[name].is<T>()) {
+        if (json[name].is<T>()) {
             value = json[name].as<T>();
             configured = true;
         } else {
