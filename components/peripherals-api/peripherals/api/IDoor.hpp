@@ -19,6 +19,9 @@ bool convertToJson(const DoorState& src, JsonVariant dst) {
 void convertFromJson(JsonVariantConst src, DoorState& dst) {
     dst = static_cast<DoorState>(src.as<int>());
 }
+bool canConvertFromJson(JsonVariantConst src, const DoorState&) {
+  return src.is<int>();
+}
 
 struct IDoor : virtual IPeripheral {
     /**

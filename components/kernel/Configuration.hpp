@@ -77,6 +77,10 @@ bool convertFromJson(JsonVariantConst src, JsonAsString& dst) {
     return true;
 }
 
+bool canConvertFromJson(JsonVariantConst src, const JsonAsString&) {
+  return src.is<std::string>();
+}
+
 class ConfigurationEntry {
 public:
     virtual ~ConfigurationEntry() = default;

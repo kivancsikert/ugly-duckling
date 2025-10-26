@@ -111,4 +111,8 @@ void convertFromJson(JsonVariantConst src, ValveControlStrategyType& dst) {
     }
 }
 
+bool canConvertFromJson(JsonVariantConst src, const ValveControlStrategyType&) {
+  return src.is<std::string>();
+}
+
 }    // namespace farmhub::peripherals::valve

@@ -13,4 +13,8 @@ void convertFromJson(JsonVariantConst src, Level& dst) {
     dst = static_cast<Level>(src.as<int>());
 }
 
+bool canConvertFromJson(JsonVariantConst src, const Level&) {
+  return src.is<int>();
+}
+
 }    // namespace farmhub::kernel

@@ -37,6 +37,9 @@ void convertFromJson(JsonVariantConst src, FencePinConfig& dst) {
     dst.pin = src["pin"];
     dst.voltage = src["voltage"];
 }
+bool canConvertFromJson(JsonVariantConst src, const FencePinConfig&) {
+  return src.is<JsonObjectConst>();
+}
 
 class ElectricFenceMonitor final
     : public Peripheral {

@@ -193,4 +193,8 @@ void convertFromJson(JsonVariantConst src, MdnsRecord& dst) {
     }
 }
 
+bool canConvertFromJson(JsonVariantConst src, const MdnsRecord&) {
+  return src.is<JsonObjectConst>();
+}
+
 }    // namespace farmhub::kernel::drivers

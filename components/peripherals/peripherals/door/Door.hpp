@@ -44,6 +44,9 @@ bool convertToJson(const OperationState& src, JsonVariant dst) {
 void convertFromJson(JsonVariantConst src, OperationState& dst) {
     dst = static_cast<OperationState>(src.as<int>());
 }
+bool canConvertFromJson(JsonVariantConst src, const OperationState&) {
+  return src.is<int>();
+}
 
 class DoorSettings final
     : public ConfigurationSection {
