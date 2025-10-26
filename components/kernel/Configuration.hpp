@@ -399,4 +399,9 @@ void convertFromJson(JsonVariantConst src, D& dst) {
     dst = D { src.as<uint64_t>() };
 }
 
+template <Duration D>
+bool canConvertFromJson(JsonVariantConst src, const D&) {
+  return src.is<int64_t>();
+}
+
 }    // namespace std::chrono
