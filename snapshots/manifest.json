@@ -1,5 +1,44 @@
 [
   {
+    "commit": "f9ba3c0fa2ce392d0eb1231a65898e488940cf61",
+    "version": "0.32.9-19-gf9ba3c0",
+    "id": "0.32.9-19-gf9ba3c0",
+    "date": "2025-10-26T23:34:20Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-19-gf9ba3c0/ugly-duckling-mk5-release.bin",
+        "sha256": "00160c8a114d0127271542af67d6c64c30c5d9da0cef41ad0a8f8ad98ed9537b"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-19-gf9ba3c0/ugly-duckling-mk6-debug.bin",
+        "sha256": "7907a32d1716e471789697a7c12d3e96a1fbe01160ca9f1d8a609da5720829eb"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-19-gf9ba3c0/ugly-duckling-mk6-release.bin",
+        "sha256": "ff7137f458d9c79b8c0f6823c5647de31336f4e9ca4e751cf153c51a3aa236b5"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-19-gf9ba3c0/ugly-duckling-mk7-release.bin",
+        "sha256": "b8d5dcfd415bdab3f0a6565b873ab33c2bfd15e90ab46c8a4af1d4bb8878e22c"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-19-gf9ba3c0/ugly-duckling-mk8-release.bin",
+        "sha256": "52d352fe56d6791710288caacdbdb5d4bb57bcdf8ff8365ef19ef4a624a54111"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-19-gf9ba3c0/ugly-duckling-mkX-release.bin",
+        "sha256": "a58a89703d816d55834aa86cb9b14c2bcd28998655fbc474369f477452073464"
+      }
+    ],
+    "branch": "main"
+  },
+  {
     "commit": "340f47b23adbd3233655c6060293f14583cb9f67",
     "version": "0.32.9-18-g340f47b",
     "id": "0.32.9-18-g340f47b",
