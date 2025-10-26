@@ -20,6 +20,16 @@
       "MIMode": "gdb",
       "miDebuggerPath": "${command:espIdf.getToolchainGdb}",
       "miDebuggerServerAddress": "localhost:3333"
+    },
+    {
+      "name": "Wokwi GDB integ-test",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/test/integ-tests/build/ugly-duckling-integ-tests.elf",
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "${command:espIdf.getToolchainGdb}",
+      "miDebuggerServerAddress": "localhost:3333"
     }
   ]
 }
