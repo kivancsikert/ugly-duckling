@@ -1,5 +1,44 @@
 [
   {
+    "commit": "c9e8751d73f2ff937ecdec75ca1f4684ce0fd1c0",
+    "version": "0.32.9-13-gc9e8751",
+    "id": "0.32.9-13-gc9e8751",
+    "date": "2025-10-26T16:17:51Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-13-gc9e8751/ugly-duckling-mk5-release.bin",
+        "sha256": "75c409c95698c5f5fa0440a4ff6c3ec2dea6bb5111355250335fa52d5e47d4eb"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-13-gc9e8751/ugly-duckling-mk6-debug.bin",
+        "sha256": "ec6570082a10ef86176c4cc8cacf9757ee05a4ad0c71925b9ba0f3346b4666ad"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-13-gc9e8751/ugly-duckling-mk6-release.bin",
+        "sha256": "f29452959347c6a83a64f92f681b3c38b2a9025fee19839327fe597c5a6fe470"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-13-gc9e8751/ugly-duckling-mk7-release.bin",
+        "sha256": "8d670cfe4d6f20119059aa759dff69c2005e6abddd34379e3c1b262acac7860a"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-13-gc9e8751/ugly-duckling-mk8-release.bin",
+        "sha256": "7f5f772d11cded051031d11afb4eedebe76671100a9c66afae48013378b21f67"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-13-gc9e8751/ugly-duckling-mkX-release.bin",
+        "sha256": "bb262e91a41f3f42c64986d9c0e57242543e40c434356787ba91fd84994e453a"
+      }
+    ],
+    "branch": "config/add-some-tests"
+  },
+  {
     "commit": "8278abb162fcbd3aa74f60794761ac2913b8dd52",
     "version": "0.32.9-13-g8278abb",
     "id": "0.32.9-13-g8278abb",
