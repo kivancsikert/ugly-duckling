@@ -78,7 +78,7 @@ bool convertFromJson(JsonVariantConst src, JsonAsString& dst) {
 }
 
 bool canConvertFromJson(JsonVariantConst src, const JsonAsString&) {
-  return src.is<std::string>();
+    return src.is<std::string>();
 }
 
 class ConfigurationEntry {
@@ -385,7 +385,7 @@ private:
 
 }    // namespace farmhub::kernel
 
-namespace std::chrono {
+namespace ArduinoJson {
 
 using namespace std::chrono;
 
@@ -394,18 +394,18 @@ concept Duration = requires { typename T::rep; typename T::period; }
     && std::is_same_v<T, std::chrono::duration<typename T::rep, typename T::period>>;
 
 template <Duration D>
-bool convertToJson(const D& src, JsonVariant dst) {
-    return dst.set(src.count());
-}
+struct Converter<D> {
+    static bool toJson(const D& src, JsonVariant dst) {
+        return dst.set(static_cast<int64_t>(src.count()));
+    }
 
-template <Duration D>
-void convertFromJson(JsonVariantConst src, D& dst) {
-    dst = D { src.as<uint64_t>() };
-}
+    static D fromJson(JsonVariantConst src) {
+        return D { src.as<int64_t>() };
+    }
 
-template <Duration D>
-bool canConvertFromJson(JsonVariantConst src, const D&) {
-  return src.is<int64_t>();
-}
+    static bool checkJson(JsonVariantConst src) {
+        return src.is<int64_t>();
+    }
+};
 
-}    // namespace std::chrono
+}    // namespace ArduinoJson
