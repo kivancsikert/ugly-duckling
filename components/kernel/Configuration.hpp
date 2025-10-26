@@ -6,11 +6,11 @@
 #include <list>
 #include <memory>
 #include <type_traits>
+#include <utility>
 
 #include <ArduinoJson.h>
 
 #include <FileSystem.hpp>
-#include <utility>
 
 using std::list;
 using std::ref;
@@ -410,7 +410,7 @@ struct Converter<JsonAsString> {
     }
 
     static bool checkJson(JsonVariantConst src) {
-        return src.is<std::string>();
+        return true;
     }
 };
 
