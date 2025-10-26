@@ -1,5 +1,44 @@
 [
   {
+    "commit": "8a7e7ed73c3f91a224ed5ede3dc87ecb0695531b",
+    "version": "0.32.9-6-g8a7e7ed",
+    "id": "0.32.9-6-g8a7e7ed",
+    "date": "2025-10-26T12:18:33Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-6-g8a7e7ed/ugly-duckling-mk5-release.bin",
+        "sha256": "0d23e17600946fc7dc2a5cdbbba83cb7105f081820fb1fbd9d243160d960958a"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-6-g8a7e7ed/ugly-duckling-mk6-debug.bin",
+        "sha256": "cb38ea9beb3c5039dafce4b8aa0edb8e07a3a55a080ebafe7b9583c9c3e482a7"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-6-g8a7e7ed/ugly-duckling-mk6-release.bin",
+        "sha256": "52548114a5059cbe26e9d3546cd996d9b4650bfca82adbfff3574fdb7b2b07c5"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-6-g8a7e7ed/ugly-duckling-mk7-release.bin",
+        "sha256": "822c845bd54b0aec920703de8f671e0eba09ee89920c2b7a587174c0d16a2d1c"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-6-g8a7e7ed/ugly-duckling-mk8-release.bin",
+        "sha256": "1037f92600ebf6b937dd45cd07baf6c5315ed31fb74757ac8b8e287431d5f6c1"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-6-g8a7e7ed/ugly-duckling-mkX-release.bin",
+        "sha256": "cc43e80e13accd891375fa068c44429027912641ba715ec8aecb216948670495"
+      }
+    ],
+    "branch": "config/add-some-tests"
+  },
+  {
     "commit": "a200fb3b95a7d25778ff9e498d38aef7561d6e4e",
     "version": "0.32.9-5-ga200fb3",
     "id": "0.32.9-5-ga200fb3",
