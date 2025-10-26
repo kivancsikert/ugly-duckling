@@ -57,30 +57,6 @@ private:
     std::string value;
 };
 
-bool convertToJson(const JsonAsString& src, JsonVariant dst) {
-    const std::string& stringValue = src.get();
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, stringValue);
-
-    if (error) {
-        // Handle the error, if JSON parsing fails
-        return false;
-    }
-
-    dst.set(doc.as<JsonObject>());
-    return true;
-}
-bool convertFromJson(JsonVariantConst src, JsonAsString& dst) {
-    std::string value;
-    serializeJson(src, value);
-    dst.set(value);
-    return true;
-}
-
-bool canConvertFromJson(JsonVariantConst src, const JsonAsString&) {
-    return src.is<std::string>();
-}
-
 class ConfigurationEntry {
 public:
     virtual ~ConfigurationEntry() = default;
@@ -405,6 +381,35 @@ struct Converter<D> {
 
     static bool checkJson(JsonVariantConst src) {
         return src.is<int64_t>();
+    }
+};
+
+using farmhub::kernel::JsonAsString;
+
+template <>
+struct Converter<JsonAsString> {
+    static bool toJson(const JsonAsString& src, JsonVariant dst) {
+        const std::string& stringValue = src.get();
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, stringValue);
+
+        if (error) {
+            // Handle the error, if JSON parsing fails
+            return false;
+        }
+
+        dst.set(doc.as<JsonObject>());
+        return true;
+    }
+
+    static JsonAsString fromJson(JsonVariantConst src) {
+        std::string value;
+        serializeJson(src, value);
+        return JsonAsString(value);
+    }
+
+    static bool checkJson(JsonVariantConst src) {
+        return src.is<std::string>();
     }
 };
 

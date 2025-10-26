@@ -28,19 +28,6 @@ public:
     Property<seconds> measurementFrequency { this, "measurementFrequency", 10s };
 };
 
-bool convertToJson(const FencePinConfig& src, JsonVariant dst) {
-    dst["pin"] = src.pin;
-    dst["voltage"] = src.voltage;
-    return true;
-}
-void convertFromJson(JsonVariantConst src, FencePinConfig& dst) {
-    dst.pin = src["pin"];
-    dst.voltage = src["voltage"];
-}
-bool canConvertFromJson(JsonVariantConst src, const FencePinConfig&) {
-  return src.is<JsonObjectConst>();
-}
-
 class ElectricFenceMonitor final
     : public Peripheral {
 public:
@@ -115,3 +102,29 @@ inline PeripheralFactory makeFactory() {
 }
 
 }    // namespace farmhub::peripherals::fence
+
+namespace ArduinoJson {
+
+using farmhub::peripherals::fence::FencePinConfig;
+
+template <>
+struct Converter<FencePinConfig> {
+    static bool toJson(const FencePinConfig& src, JsonVariant dst) {
+        dst["pin"] = src.pin;
+        dst["voltage"] = src.voltage;
+        return true;
+    }
+
+    static FencePinConfig fromJson(JsonVariantConst src) {
+        FencePinConfig dst;
+        dst.pin = src["pin"];
+        dst.voltage = src["voltage"];
+        return dst;
+    }
+
+    static bool checkJson(JsonVariantConst src) {
+        return src.is<JsonObjectConst>();
+    }
+};
+
+}    // namespace ArduinoJson
