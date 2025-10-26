@@ -13,13 +13,6 @@ enum class DoorState : int8_t {
     Open = 1
 };
 
-bool convertToJson(const DoorState& src, JsonVariant dst) {
-    return dst.set(static_cast<int>(src));
-}
-void convertFromJson(JsonVariantConst src, DoorState& dst) {
-    dst = static_cast<DoorState>(src.as<int>());
-}
-
 struct IDoor : virtual IPeripheral {
     /**
      * @brief Transition the door to a new state.
@@ -37,3 +30,24 @@ struct IDoor : virtual IPeripheral {
 };
 
 }    // namespace farmhub::peripherals::api
+
+namespace ArduinoJson {
+
+using farmhub::peripherals::api::DoorState;
+
+template <>
+struct Converter<DoorState> {
+    static bool toJson(const DoorState src, JsonVariant dst) {
+        return dst.set(static_cast<int>(src));
+    }
+
+    static DoorState fromJson(JsonVariantConst src) {
+        return static_cast<DoorState>(src.as<int>());
+    }
+
+    static bool checkJson(JsonVariantConst src) {
+        return src.is<int>();
+    }
+};
+
+}    // namespace ArduinoJson

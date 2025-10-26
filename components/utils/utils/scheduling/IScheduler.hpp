@@ -43,7 +43,7 @@ using namespace std::chrono;
 
 template <>
 struct Converter<system_clock::time_point> {
-    static void toJson(system_clock::time_point src, JsonVariant dst) {
+    static void toJson(const system_clock::time_point src, JsonVariant dst) {
         if (src == system_clock::time_point {}) {
             dst.set(nullptr);
             return;

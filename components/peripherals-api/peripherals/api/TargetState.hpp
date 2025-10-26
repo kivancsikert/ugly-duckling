@@ -33,7 +33,7 @@ using farmhub::peripherals::api::TargetState;
 
 template <>
 struct Converter<TargetState> {
-    static void toJson(TargetState src, JsonVariant dst) {
+    static void toJson(const TargetState src, JsonVariant dst) {
         switch (src) {
             case TargetState::Closed:
                 dst.set("Closed");

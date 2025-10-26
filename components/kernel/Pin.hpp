@@ -248,7 +248,7 @@ struct Converter<PinPtr> {
         if (src.is<const char*>()) {
             return Pin::byName(src.as<const char*>());
         }
-        throw std::runtime_error(std::string("Invalid pin name: " + src.as<std::string>()).c_str());
+        throw std::runtime_error("Invalid pin name: " + src.as<std::string>());
     }
 
     static bool checkJson(JsonVariantConst src) {

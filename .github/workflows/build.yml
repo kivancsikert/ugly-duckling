@@ -143,6 +143,8 @@ jobs:
             -v ./artifacts/pytest-logs:/logs \
             -w /project/test/unit-tests \
             -e HOME=/tmp \
+            --add-host=host.docker.internal:host-gateway \
+            -e WOKWI_CLI_SERVER=ws://host.docker.internal:9177 \
             -e WOKWI_CLI_TOKEN=${{ secrets.WOKWI_CLI_TOKEN }} \
             lptr/pytest-embedded:latest \
             pytest \

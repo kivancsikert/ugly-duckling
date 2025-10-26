@@ -6,11 +6,11 @@
 #include <list>
 #include <memory>
 #include <type_traits>
+#include <utility>
 
 #include <ArduinoJson.h>
 
 #include <FileSystem.hpp>
-#include <utility>
 
 using std::list;
 using std::ref;
@@ -57,26 +57,6 @@ private:
     std::string value;
 };
 
-bool convertToJson(const JsonAsString& src, JsonVariant dst) {
-    const std::string& stringValue = src.get();
-    JsonDocument doc;
-    DeserializationError error = deserializeJson(doc, stringValue);
-
-    if (error) {
-        // Handle the error, if JSON parsing fails
-        return false;
-    }
-
-    dst.set(doc.as<JsonObject>());
-    return true;
-}
-bool convertFromJson(JsonVariantConst src, JsonAsString& dst) {
-    std::string value;
-    serializeJson(src, value);
-    dst.set(value);
-    return true;
-}
-
 class ConfigurationEntry {
 public:
     virtual ~ConfigurationEntry() = default;
@@ -88,7 +68,7 @@ public:
             return;
         }
         if (error) {
-            throw ConfigurationException("Cannot parse JSON configuration: " + std::string(error.c_str()) + json);
+            throw ConfigurationException("Cannot parse JSON configuration: " + std::string(error.c_str()) + ": " + json);
         }
         load(jsonDocument.as<JsonObject>());
     }
@@ -163,7 +143,7 @@ public:
     }
 
     void load(const JsonObject& json) override {
-        if (json[name].is<JsonVariant>()) {
+        if (json[name].is<JsonObject>()) {
             namePresentAtLoad = true;
             delegate->load(json[name]);
         } else {
@@ -220,7 +200,7 @@ public:
     }
 
     void load(const JsonObject& json) override {
-        if (!json[name].isNull() && json[name].is<JsonVariant>()) {
+        if (json[name].is<T>()) {
             value = json[name].as<T>();
             configured = true;
         } else {
@@ -381,22 +361,57 @@ private:
 
 }    // namespace farmhub::kernel
 
-namespace std::chrono {
+namespace ArduinoJson {
 
 using namespace std::chrono;
 
 template <typename T>
 concept Duration = requires { typename T::rep; typename T::period; }
-    && std::is_same_v<T, std::chrono::duration<typename T::rep, typename T::period>>;
+    && std::is_same_v<T, std::chrono::duration<typename T::rep, typename T::period>>
+    && std::is_integral_v<typename T::rep>;
 
 template <Duration D>
-bool convertToJson(const D& src, JsonVariant dst) {
-    return dst.set(src.count());
-}
+struct Converter<D> {
+    static bool toJson(const D& src, JsonVariant dst) {
+        return dst.set(static_cast<int64_t>(src.count()));
+    }
 
-template <Duration D>
-void convertFromJson(JsonVariantConst src, D& dst) {
-    dst = D { src.as<uint64_t>() };
-}
+    static D fromJson(JsonVariantConst src) {
+        return D { src.as<int64_t>() };
+    }
 
-}    // namespace std::chrono
+    static bool checkJson(JsonVariantConst src) {
+        return src.is<int64_t>();
+    }
+};
+
+using farmhub::kernel::JsonAsString;
+
+template <>
+struct Converter<JsonAsString> {
+    static bool toJson(const JsonAsString& src, JsonVariant dst) {
+        const std::string& stringValue = src.get();
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, stringValue);
+
+        if (error) {
+            // Handle the error, if JSON parsing fails
+            return false;
+        }
+
+        dst.set(doc.as<JsonObject>());
+        return true;
+    }
+
+    static JsonAsString fromJson(JsonVariantConst src) {
+        std::string value;
+        serializeJson(src, value);
+        return JsonAsString(value);
+    }
+
+    static bool checkJson(JsonVariantConst /* src */) {
+        return true;
+    }
+};
+
+}    // namespace ArduinoJson

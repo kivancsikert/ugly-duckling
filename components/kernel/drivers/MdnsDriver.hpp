@@ -160,37 +160,47 @@ private:
     NvsStore nvs { "mdns" };
 };
 
-bool convertToJson(const MdnsRecord& src, JsonVariant dst) {
-    auto jsonRecord = dst.to<JsonObject>();
-    if (src.hasHostname()) {
-        jsonRecord["hostname"] = src.hostname;
-    }
-    if (src.hasIp()) {
-        jsonRecord["ip"] = src.ipAsString();
-    }
-    if (src.hasPort()) {
-        jsonRecord["port"] = src.port;
-    }
-    return true;
-}
-void convertFromJson(JsonVariantConst src, MdnsRecord& dst) {
-    auto jsonRecord = src.as<JsonObjectConst>();
-    if (jsonRecord["hostname"].is<std::string>()) {
-        dst.hostname = jsonRecord["hostname"].as<std::string>();
-    } else {
-        dst.hostname = "";
-    }
-    if (jsonRecord["ip"].is<std::string>()) {
-        const char* ipStr = jsonRecord["ip"].as<const char*>();
-        dst.ip.addr = esp_ip4addr_aton(ipStr);
-    } else {
-        dst.ip.addr = 0;
-    }
-    if (jsonRecord["port"].is<int>()) {
-        dst.port = jsonRecord["port"].as<int>();
-    } else {
-        dst.port = 0;
-    }
-}
-
 }    // namespace farmhub::kernel::drivers
+
+namespace ArduinoJson {
+
+using MdnsRecord = farmhub::kernel::drivers::MdnsRecord;
+
+template <>
+struct Converter<MdnsRecord> {
+    static bool toJson(const MdnsRecord& src, JsonVariant dst) {
+        auto jsonRecord = dst.to<JsonObject>();
+        if (src.hasHostname()) {
+            jsonRecord["hostname"] = src.hostname;
+        }
+        if (src.hasIp()) {
+            jsonRecord["ip"] = src.ipAsString();
+        }
+        if (src.hasPort()) {
+            jsonRecord["port"] = src.port;
+        }
+        return true;
+    }
+
+    static MdnsRecord fromJson(JsonVariantConst src) {
+        MdnsRecord dst;
+        auto jsonRecord = src.as<JsonObjectConst>();
+        if (jsonRecord["hostname"].is<std::string>()) {
+            dst.hostname = jsonRecord["hostname"].as<std::string>();
+        }
+        if (jsonRecord["ip"].is<std::string>()) {
+            const char* ipStr = jsonRecord["ip"].as<const char*>();
+            dst.ip.addr = esp_ip4addr_aton(ipStr);
+        }
+        if (jsonRecord["port"].is<int>()) {
+            dst.port = jsonRecord["port"].as<int>();
+        }
+        return dst;
+    }
+
+    static bool checkJson(JsonVariantConst src) {
+        return src.is<JsonObjectConst>();
+    }
+};
+
+}    // namespace ArduinoJson

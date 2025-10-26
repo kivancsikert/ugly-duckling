@@ -38,13 +38,6 @@ enum class OperationState : uint8_t {
     WatchdogTimeout,
 };
 
-bool convertToJson(const OperationState& src, JsonVariant dst) {
-    return dst.set(static_cast<int>(src));
-}
-void convertFromJson(JsonVariantConst src, OperationState& dst) {
-    dst = static_cast<OperationState>(src.as<int>());
-}
-
 class DoorSettings final
     : public ConfigurationSection {
 public:
@@ -363,3 +356,24 @@ inline PeripheralFactory makeFactory(const std::map<std::string, std::shared_ptr
 }
 
 }    // namespace farmhub::peripherals::door
+
+namespace ArduinoJson {
+
+using farmhub::peripherals::door::OperationState;
+
+template <>
+struct Converter<OperationState> {
+    static bool toJson(const OperationState& src, JsonVariant dst) {
+        return dst.set(static_cast<int>(src));
+    }
+
+    static OperationState fromJson(JsonVariantConst src) {
+        return static_cast<OperationState>(src.as<int>());
+    }
+
+    static bool checkJson(JsonVariantConst src) {
+        return src.is<int>();
+    }
+};
+
+}    // namespace ArduinoJson

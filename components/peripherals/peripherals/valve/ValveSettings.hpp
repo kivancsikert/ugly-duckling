@@ -80,35 +80,46 @@ public:
     }
 };
 
-// JSON: ValveControlStrategyType
-
-bool convertToJson(const ValveControlStrategyType& src, JsonVariant dst) {
-    switch (src) {
-        case ValveControlStrategyType::NormallyOpen:
-            return dst.set("NO");
-        case ValveControlStrategyType::NormallyClosed:
-            return dst.set("NC");
-        case ValveControlStrategyType::Latching:
-            return dst.set("latching");
-        default:
-            LOGE("Unknown strategy: %d",
-                static_cast<int>(src));
-            return dst.set("NC");
-    }
-}
-void convertFromJson(JsonVariantConst src, ValveControlStrategyType& dst) {
-    auto strategy = src.as<std::string>();
-    if (strategy == "NO") {
-        dst = ValveControlStrategyType::NormallyOpen;
-    } else if (strategy == "NC") {
-        dst = ValveControlStrategyType::NormallyClosed;
-    } else if (strategy == "latching") {
-        dst = ValveControlStrategyType::Latching;
-    } else {
-        LOGE("Unknown strategy: %s",
-            strategy.c_str());
-        dst = ValveControlStrategyType::NormallyClosed;
-    }
-}
-
 }    // namespace farmhub::peripherals::valve
+
+namespace ArduinoJson {
+
+using farmhub::peripherals::valve::ValveControlStrategyType;
+
+template <>
+struct Converter<ValveControlStrategyType> {
+    static bool toJson(const ValveControlStrategyType& src, JsonVariant dst) {
+        switch (src) {
+            case ValveControlStrategyType::NormallyOpen:
+                return dst.set("NO");
+            case ValveControlStrategyType::NormallyClosed:
+                return dst.set("NC");
+            case ValveControlStrategyType::Latching:
+                return dst.set("latching");
+            default:
+                LOGE("Unknown strategy: %d", static_cast<int>(src));
+                return dst.set("NC");
+        }
+    }
+
+    static ValveControlStrategyType fromJson(JsonVariantConst src) {
+        auto strategy = src.as<std::string>();
+        if (strategy == "NO") {
+            return ValveControlStrategyType::NormallyOpen;
+        }
+        if (strategy == "NC") {
+            return ValveControlStrategyType::NormallyClosed;
+        }
+        if (strategy == "latching") {
+            return ValveControlStrategyType::Latching;
+        }
+        LOGE("Unknown strategy: %s", strategy.c_str());
+        return ValveControlStrategyType::NormallyClosed;
+    }
+
+    static bool checkJson(JsonVariantConst src) {
+        return src.is<std::string>();
+    }
+};
+
+}    // namespace ArduinoJson
