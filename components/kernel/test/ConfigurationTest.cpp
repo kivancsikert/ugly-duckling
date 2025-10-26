@@ -1,4 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
+#include <catch2/matchers/catch_matchers_exception.hpp>
 
 #include <string>
 
@@ -53,7 +55,6 @@ TEST_CASE("empty configuration can be loaded from empty JSON") {
     REQUIRE(!config.nested.get()->intValue.hasValue());
     REQUIRE(config.nested.get()->intValue.get() == 0);
 }
-
 
 TEST_CASE("empty configuration can be loaded from JSON with null values") {
     TestConfig config;
@@ -124,5 +125,10 @@ TEST_CASE("configuration with default values loaded from non-empty JSON has actu
     REQUIRE(config.nested.get()->intValue.get() == 200);
 }
 
-// TODO Add some tests for invalid JSON handling
-// TODO Add some tests for properties not defined in the configuration type
+TEST_CASE("throws on invalid JSON") {
+    TestConfig config;
+    REQUIRE_THROWS_MATCHES(
+        config.loadFromString("NOT JSON"),
+        ConfigurationException,
+        Catch::Matchers::Message("ConfigurationException: Cannot parse JSON configuration: InvalidInput: NOT JSON"));
+}

@@ -88,7 +88,7 @@ public:
             return;
         }
         if (error) {
-            throw ConfigurationException("Cannot parse JSON configuration: " + std::string(error.c_str()) + json);
+            throw ConfigurationException("Cannot parse JSON configuration: " + std::string(error.c_str()) + ": " + json);
         }
         load(jsonDocument.as<JsonObject>());
     }
