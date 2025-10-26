@@ -54,6 +54,21 @@ TEST_CASE("empty configuration can be loaded from empty JSON") {
     REQUIRE(config.nested.get()->intValue.get() == 0);
 }
 
+
+TEST_CASE("empty configuration can be loaded from JSON with null values") {
+    TestConfig config;
+    config.loadFromString(R"({"intValue":null,"stringValue":null,"boolValue":null,"nested":null})");
+    REQUIRE(!config.intValue.hasValue());
+    REQUIRE(config.intValue.get() == 0);
+    REQUIRE(!config.stringValue.hasValue());
+    REQUIRE(config.stringValue.get() == "");
+    REQUIRE(!config.boolValue.hasValue());
+    REQUIRE(config.boolValue.get() == false);
+    REQUIRE(!config.nested.hasValue());
+    REQUIRE(!config.nested.get()->intValue.hasValue());
+    REQUIRE(config.nested.get()->intValue.get() == 0);
+}
+
 TEST_CASE("configuration with values is loaded from JSON and is stored as JSON") {
     TestConfig config;
     config.loadFromString(R"({"intValue":42,"stringValue":"hello","boolValue":true,"nested":{"intValue":7}})");
@@ -110,5 +125,4 @@ TEST_CASE("configuration with default values loaded from non-empty JSON has actu
 }
 
 // TODO Add some tests for invalid JSON handling
-// TODO Add some tests for null values
 // TODO Add some tests for properties not defined in the configuration type
