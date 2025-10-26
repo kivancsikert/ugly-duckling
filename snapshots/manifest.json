@@ -1,5 +1,44 @@
 [
   {
+    "commit": "a200fb3b95a7d25778ff9e498d38aef7561d6e4e",
+    "version": "0.32.9-5-ga200fb3",
+    "id": "0.32.9-5-ga200fb3",
+    "date": "2025-10-26T11:51:06Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-5-ga200fb3/ugly-duckling-mk5-release.bin",
+        "sha256": "2464e14afa58a439857d9a2a755c900f32d7c879ac362a2c105cd50f7f6c0acf"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-5-ga200fb3/ugly-duckling-mk6-debug.bin",
+        "sha256": "ce3b3a4ebd5e278342741cb996804d9a2087ad8e970d03c987c7702465c56186"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-5-ga200fb3/ugly-duckling-mk6-release.bin",
+        "sha256": "f2d117c685d7a748f6053f7ee005267f32c7f91b3ffb3c079629ca937a47f284"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-5-ga200fb3/ugly-duckling-mk7-release.bin",
+        "sha256": "6f500ec4481d4b6e4991e1e848d823484ea5c087e2310c3f36339a24f58c44c9"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-5-ga200fb3/ugly-duckling-mk8-release.bin",
+        "sha256": "5b31dbae4c90afe575f98a9fea6c2de825b95e14315dfd22e4af17b82a24168d"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-5-ga200fb3/ugly-duckling-mkX-release.bin",
+        "sha256": "0c0bf81ec2f6cc350a4db3d71bf4851ab1e03789ba442486723a938799719342"
+      }
+    ],
+    "branch": "config/add-some-tests"
+  },
+  {
     "commit": "ce626a319e9db880c1a0a9ab370082719dca12cd",
     "version": "0.32.9-1-gce626a3",
     "id": "0.32.9-1-gce626a3",
