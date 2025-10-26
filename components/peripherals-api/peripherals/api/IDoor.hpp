@@ -37,7 +37,7 @@ using farmhub::peripherals::api::DoorState;
 
 template <>
 struct Converter<DoorState> {
-    static bool toJson(DoorState src, JsonVariant dst) {
+    static bool toJson(const DoorState src, JsonVariant dst) {
         return dst.set(static_cast<int>(src));
     }
 

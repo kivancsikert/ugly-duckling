@@ -367,7 +367,8 @@ using namespace std::chrono;
 
 template <typename T>
 concept Duration = requires { typename T::rep; typename T::period; }
-    && std::is_same_v<T, std::chrono::duration<typename T::rep, typename T::period>>;
+    && std::is_same_v<T, std::chrono::duration<typename T::rep, typename T::period>>
+    && std::is_integral_v<typename T::rep>;
 
 template <Duration D>
 struct Converter<D> {

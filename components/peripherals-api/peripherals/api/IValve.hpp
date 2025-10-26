@@ -50,7 +50,7 @@ using farmhub::peripherals::api::ValveState;
 
 template <>
 struct Converter<ValveState> {
-    static void toJson(ValveState src, JsonVariant dst) {
+    static void toJson(const ValveState src, JsonVariant dst) {
         switch (src) {
             case ValveState::Closed:
                 dst.set("Closed");
