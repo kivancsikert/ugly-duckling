@@ -1,5 +1,44 @@
 [
   {
+    "commit": "5ed9985192be6442e40b7a64bf6a8ed7789261a7",
+    "version": "0.32.9-23-g5ed9985",
+    "id": "0.32.9-23-g5ed9985",
+    "date": "2025-11-08T16:41:42Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-23-g5ed9985/ugly-duckling-mk5-release.bin",
+        "sha256": "85c66e983ad0ee214b460dab769d0e34e11e3e4ad6e4ecfc132034f70ad01df9"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-23-g5ed9985/ugly-duckling-mk6-debug.bin",
+        "sha256": "3cb511788142ab8c5f96436f48f6a0a08a8efebb0b2c7c5b217b7e82e6668d2f"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-23-g5ed9985/ugly-duckling-mk6-release.bin",
+        "sha256": "774a51dff2f07917af8fa1094b317d96ba5abdbd18149f4eef80911a090d49ad"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-23-g5ed9985/ugly-duckling-mk7-release.bin",
+        "sha256": "3a28bb7aeb67158c52a18ce45275075123c40bff5b00f7ecf3dff9ec5873e775"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-23-g5ed9985/ugly-duckling-mk8-release.bin",
+        "sha256": "e0ba0baaa20e03ee98d750b81b7028a926fef8d245b721ca674529263abd5cc4"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-23-g5ed9985/ugly-duckling-mkX-release.bin",
+        "sha256": "dc61da6b07dc0d871e547af7530a4738c41994934cee8ea857fef598047dad94"
+      }
+    ],
+    "branch": "chicken-door/debug-opening-problem"
+  },
+  {
     "commit": "7c2dfe654172bc0aac3547c98a920d943d58e886",
     "version": "0.32.9-22-g7c2dfe6",
     "id": "0.32.9-22-g7c2dfe6",
