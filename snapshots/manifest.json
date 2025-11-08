@@ -1,5 +1,44 @@
 [
   {
+    "commit": "fbcfe112b59c364537d145f292bfd55e3fe25ffb",
+    "version": "0.32.9-21-gfbcfe11",
+    "id": "0.32.9-21-gfbcfe11",
+    "date": "2025-11-08T10:40:18Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-21-gfbcfe11/ugly-duckling-mk5-release.bin",
+        "sha256": "05a2ffb4b1e7802260e7e084b65ab9afb4fc9b2301a58886f8e70bf876740e2f"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-21-gfbcfe11/ugly-duckling-mk6-debug.bin",
+        "sha256": "67eb1f82c3a7e60b5869d46908e85746e6c7370abb1be9e60de48130018ec00f"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-21-gfbcfe11/ugly-duckling-mk6-release.bin",
+        "sha256": "ea2eae7e7e6fcd23292be5c5237dd551f172085a0d5e7811872666403740aeea"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-21-gfbcfe11/ugly-duckling-mk7-release.bin",
+        "sha256": "82539a85efbb9c5eed3bac5173a54d7c3be9792f2514c2351e43d3c5d42a1193"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-21-gfbcfe11/ugly-duckling-mk8-release.bin",
+        "sha256": "f911e2060d0e3cfcc7d0f35154523c473ad994aed9608a70a0c161ff1fd0d8e6"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-21-gfbcfe11/ugly-duckling-mkX-release.bin",
+        "sha256": "2c9c2bc03726f70b3d88a5b1acdb8dc4d9063d0b3606bcff3d346c60ab4f3e46"
+      }
+    ],
+    "branch": "main"
+  },
+  {
     "commit": "2c403672b2e5f86cf036ef35b9053fa4fef6a338",
     "version": "0.32.9-20-g2c40367",
     "id": "0.32.9-20-g2c40367",
