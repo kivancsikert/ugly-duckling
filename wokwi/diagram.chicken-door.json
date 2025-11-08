@@ -50,15 +50,15 @@
       "type": "wokwi-led",
       "id": "led-flow",
       "top": 226.8,
-      "left": -159.4,
-      "attrs": { "color": "red", "label": "PIN 8", "flip": "" }
+      "left": -274.6,
+      "attrs": { "color": "red", "label": "PIN 18", "flip": "" }
     },
-    { "type": "wokwi-gnd", "id": "gnd1", "top": 250.1, "left": -249.3, "rotate": 90, "attrs": {} },
+    { "type": "wokwi-gnd", "id": "gnd1", "top": 250.1, "left": -364.5, "rotate": 90, "attrs": {} },
     {
       "type": "wokwi-resistor",
       "id": "r8",
       "top": 263.45,
-      "left": -212.6,
+      "left": -327.8,
       "rotate": 180,
       "attrs": { "value": "1000" }
     },
@@ -73,15 +73,15 @@
       "type": "wokwi-led",
       "id": "led-flow1",
       "top": 159.6,
-      "left": -159.4,
-      "attrs": { "color": "green", "label": "PIN 18" }
+      "left": -274.6,
+      "attrs": { "color": "green", "label": "PIN 8" }
     },
-    { "type": "wokwi-gnd", "id": "gnd2", "top": 189.9, "left": -251.5, "rotate": 90, "attrs": {} },
+    { "type": "wokwi-gnd", "id": "gnd2", "top": 189.9, "left": -366.7, "rotate": 90, "attrs": {} },
     {
       "type": "wokwi-resistor",
       "id": "r2",
       "top": 203.25,
-      "left": -214.8,
+      "left": -330,
       "rotate": 180,
       "attrs": { "value": "1000" }
     },
@@ -108,7 +108,7 @@
       "type": "wokwi-slide-switch",
       "id": "sw1",
       "top": 107.4,
-      "left": -157.3,
+      "left": -272.5,
       "rotate": 270,
       "attrs": {}
     },
@@ -116,7 +116,7 @@
       "type": "wokwi-slide-switch",
       "id": "sw2",
       "top": 49.8,
-      "left": -157.3,
+      "left": -272.5,
       "rotate": 270,
       "attrs": {}
     },
@@ -125,16 +125,16 @@
     {
       "type": "wokwi-led",
       "id": "led-flow2",
-      "top": 294,
-      "left": -159.4,
+      "top": 284.4,
+      "left": -63.4,
       "attrs": { "color": "white", "label": "PIN 10", "flip": "" }
     },
-    { "type": "wokwi-gnd", "id": "gnd7", "top": 317.3, "left": -249.3, "rotate": 90, "attrs": {} },
+    { "type": "wokwi-gnd", "id": "gnd7", "top": 307.7, "left": -153.3, "rotate": 90, "attrs": {} },
     {
       "type": "wokwi-resistor",
       "id": "r3",
-      "top": 330.65,
-      "left": -212.6,
+      "top": 321.05,
+      "left": -116.6,
       "rotate": 180,
       "attrs": { "value": "1000" }
     },
@@ -142,36 +142,52 @@
       "type": "wokwi-text",
       "id": "text1",
       "top": 115.2,
-      "left": -230.4,
+      "left": -374.4,
       "attrs": { "text": "CLOSED" }
     },
     {
       "type": "wokwi-text",
       "id": "text2",
       "top": 57.6,
-      "left": -230.4,
+      "left": -374.4,
       "attrs": { "text": "OPEN" }
     },
     {
       "type": "wokwi-text",
       "id": "text3",
       "top": 172.8,
-      "left": -259.2,
+      "left": -374.4,
       "attrs": { "text": "OPENING" }
     },
     {
       "type": "wokwi-text",
       "id": "text4",
       "top": 230.4,
-      "left": -259.2,
+      "left": -374.4,
       "attrs": { "text": "CLOSING" }
     },
     {
       "type": "wokwi-text",
       "id": "text6",
-      "top": 297.6,
-      "left": -259.2,
-      "attrs": { "text": "MOTOR LOAD" }
+      "top": 288,
+      "left": -105.6,
+      "attrs": { "text": "LOAD" }
+    },
+    {
+      "type": "wokwi-gate-and-2",
+      "id": "and1",
+      "top": 250,
+      "left": -192,
+      "rotate": 180,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-gate-and-2",
+      "id": "and2",
+      "top": 182.8,
+      "left": -192,
+      "rotate": 180,
+      "attrs": {}
     }
   ],
   "connections": [
@@ -201,11 +217,15 @@
     [ "esp:14", "ldr1:AO", "green", [ "h95.95", "v-19.2" ] ],
     [ "gnd7:GND", "r3:2", "black", [ "v0" ] ],
     [ "r3:1", "led-flow2:C", "green", [ "h0" ] ],
-    [ "led-flow2:A", "esp:10", "green", [ "v0", "h105.6", "v-163.2" ] ],
+    [ "led-flow2:A", "esp:10", "green", [ "h48", "v-220.8" ] ],
     [ "esp:6", "sw1:3", "green", [ "h-76.85", "v38.6" ] ],
     [ "esp:15", "sw2:3", "green", [ "h-57.65", "v-38.2" ] ],
-    [ "esp:8", "led-flow1:A", "green", [ "h-57.65", "v67.2" ] ],
-    [ "esp:18", "led-flow:A", "green", [ "h-76.85", "v9.6" ] ]
+    [ "esp:8", "and2:B", "green", [ "h-57.65", "v76.8" ] ],
+    [ "esp:10", "and2:A", "green", [ "h-48.05", "v67.2" ] ],
+    [ "and2:OUT", "led-flow1:A", "green", [ "v0" ] ],
+    [ "led-flow:A", "and1:OUT", "green", [ "v0" ] ],
+    [ "esp:18", "and1:A", "green", [ "h-76.85", "v153.6", "h-28.8" ] ],
+    [ "esp:10", "and1:B", "green", [ "h-48.05", "v86.4" ] ]
   ],
   "dependencies": {
     "chip-pwm": "github:Dlloydev/Wokwi-Chip-PWM@1.0.6",
