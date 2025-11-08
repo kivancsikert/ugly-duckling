@@ -1,5 +1,44 @@
 [
   {
+    "commit": "7c2dfe654172bc0aac3547c98a920d943d58e886",
+    "version": "0.32.9-22-g7c2dfe6",
+    "id": "0.32.9-22-g7c2dfe6",
+    "date": "2025-11-08T16:27:45Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-22-g7c2dfe6/ugly-duckling-mk5-release.bin",
+        "sha256": "9084fc2d6dadfd1627528aae6e1e4865d35aeee3a00758b42a4af79ca1bd2a37"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-22-g7c2dfe6/ugly-duckling-mk6-debug.bin",
+        "sha256": "7ce1274eb3440e1d88206d4f39013a53010849e3fb68ec473137080c1fe07d6a"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-22-g7c2dfe6/ugly-duckling-mk6-release.bin",
+        "sha256": "4c90370bd9669d974127ee8574774c1b6b8ed3b71809c853217301c8b79df521"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-22-g7c2dfe6/ugly-duckling-mk7-release.bin",
+        "sha256": "3d9910f1fac8c8bb7854c188cfd331d2c72c7d193e7500ef1dc0a06ec1f521b5"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-22-g7c2dfe6/ugly-duckling-mk8-release.bin",
+        "sha256": "c82467304556ae5f651109c3ecb6171c8602d07a92bd250a8cbd88a95ddbc051"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-22-g7c2dfe6/ugly-duckling-mkX-release.bin",
+        "sha256": "44dc81d005716ebc1f02d4f385d4379aecd5369e4ffec2e90975ef8002a780bf"
+      }
+    ],
+    "branch": "chicken-door/debug-opening-problem"
+  },
+  {
     "commit": "fbcfe112b59c364537d145f292bfd55e3fe25ffb",
     "version": "0.32.9-21-gfbcfe11",
     "id": "0.32.9-21-gfbcfe11",
