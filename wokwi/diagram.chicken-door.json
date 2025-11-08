@@ -1,0 +1,214 @@
+{
+  "version": 1,
+  "author": "Lóránt Pintér",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-s3-devkitc-1", "id": "esp", "top": -0.18, "left": 4.57, "attrs": {} },
+    {
+      "type": "wokwi-led",
+      "id": "statusLed",
+      "top": -32.4,
+      "left": 186.2,
+      "attrs": { "color": "white", "label": "Status" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 32.75,
+      "left": 163.2,
+      "attrs": { "value": "22" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "statusLed2",
+      "top": -32.4,
+      "left": 253.4,
+      "attrs": { "color": "white", "label": "Status-2" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r7",
+      "top": 32.75,
+      "left": 230.4,
+      "attrs": { "value": "22" }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "battery",
+      "top": -106.9,
+      "left": 9.4,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn1",
+      "top": 246.2,
+      "left": 134.4,
+      "attrs": { "color": "green", "label": "Flash", "bounce": "0" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led-flow",
+      "top": 226.8,
+      "left": -159.4,
+      "attrs": { "color": "red", "label": "PIN 8", "flip": "" }
+    },
+    { "type": "wokwi-gnd", "id": "gnd1", "top": 250.1, "left": -249.3, "rotate": 90, "attrs": {} },
+    {
+      "type": "wokwi-resistor",
+      "id": "r8",
+      "top": 263.45,
+      "left": -212.6,
+      "rotate": 180,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text5",
+      "top": -134.4,
+      "left": 9.6,
+      "attrs": { "text": "Batery" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led-flow1",
+      "top": 159.6,
+      "left": -159.4,
+      "attrs": { "color": "green", "label": "PIN 18" }
+    },
+    { "type": "wokwi-gnd", "id": "gnd2", "top": 189.9, "left": -251.5, "rotate": 90, "attrs": {} },
+    {
+      "type": "wokwi-resistor",
+      "id": "r2",
+      "top": 203.25,
+      "left": -214.8,
+      "rotate": 180,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-photoresistor-sensor",
+      "id": "ldr1",
+      "top": 175.8,
+      "left": 295.6,
+      "rotate": 180,
+      "attrs": {}
+    },
+    { "type": "wokwi-gnd", "id": "gnd3", "top": 221.3, "left": 259.5, "attrs": {} },
+    { "type": "wokwi-gnd", "id": "gnd4", "top": -19.2, "left": -19.8, "attrs": {} },
+    { "type": "wokwi-vcc", "id": "vcc1", "top": -20.16, "left": 86.6, "rotate": 180, "attrs": {} },
+    {
+      "type": "wokwi-vcc",
+      "id": "vcc2",
+      "top": 239.04,
+      "left": 278.6,
+      "rotate": 180,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-slide-switch",
+      "id": "sw1",
+      "top": 107.4,
+      "left": -157.3,
+      "rotate": 270,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-slide-switch",
+      "id": "sw2",
+      "top": 49.8,
+      "left": -157.3,
+      "rotate": 270,
+      "attrs": {}
+    },
+    { "type": "wokwi-gnd", "id": "gnd5", "top": 67.2, "left": -96.6, "attrs": {} },
+    { "type": "wokwi-gnd", "id": "gnd6", "top": 124.8, "left": -96.6, "attrs": {} },
+    {
+      "type": "wokwi-led",
+      "id": "led-flow2",
+      "top": 294,
+      "left": -159.4,
+      "attrs": { "color": "white", "label": "PIN 10", "flip": "" }
+    },
+    { "type": "wokwi-gnd", "id": "gnd7", "top": 317.3, "left": -249.3, "rotate": 90, "attrs": {} },
+    {
+      "type": "wokwi-resistor",
+      "id": "r3",
+      "top": 330.65,
+      "left": -212.6,
+      "rotate": 180,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text1",
+      "top": 115.2,
+      "left": -230.4,
+      "attrs": { "text": "CLOSED" }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text2",
+      "top": 57.6,
+      "left": -230.4,
+      "attrs": { "text": "OPEN" }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text3",
+      "top": 172.8,
+      "left": -259.2,
+      "attrs": { "text": "OPENING" }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text4",
+      "top": 230.4,
+      "left": -259.2,
+      "attrs": { "text": "CLOSING" }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text6",
+      "top": 297.6,
+      "left": -259.2,
+      "attrs": { "text": "MOTOR LOAD" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "statusLed:C", "esp:2", "black", [] ],
+    [ "statusLed:A", "r1:2", "green", [] ],
+    [ "r1:1", "esp:3V3.2", "green", [ "v0" ] ],
+    [ "battery:SIG", "esp:1", "green", [ "v0" ] ],
+    [ "statusLed2:A", "r7:2", "green", [] ],
+    [ "r7:1", "esp:3V3.2", "green", [ "v0" ] ],
+    [ "statusLed2:C", "esp:4", "green", [ "v0" ] ],
+    [ "esp:GND.4", "btn1:2.l", "black", [ "h19.2", "v47.8" ] ],
+    [ "esp:0", "btn1:1.l", "green", [ "h28.8", "v105.6" ] ],
+    [ "btn2:2.r", "esp:5", "green", [ "h9.8", "v19.4" ] ],
+    [ "led1:C", "r8:1", "green", [ "h0" ] ],
+    [ "gnd1:GND", "r8:2", "black", [ "v0" ] ],
+    [ "gnd2:GND", "r2:2", "black", [ "v0" ] ],
+    [ "led-flow1:C", "r2:1", "green", [ "v0" ] ],
+    [ "r8:1", "led-flow:C", "green", [ "h0" ] ],
+    [ "ldr1:GND", "gnd3:GND", "black", [ "h0" ] ],
+    [ "gnd4:GND", "battery:GND", "black", [ "v-9.6", "h76.8" ] ],
+    [ "vcc1:VCC", "battery:VCC", "red", [ "v-9.6", "h-57.6" ] ],
+    [ "vcc2:VCC", "ldr1:VCC", "red", [ "v0" ] ],
+    [ "sw2:2", "gnd5:GND", "green", [ "h0" ] ],
+    [ "sw1:2", "gnd6:GND", "green", [ "h0" ] ],
+    [ "esp:14", "ldr1:AO", "green", [ "h95.95", "v-19.2" ] ],
+    [ "gnd7:GND", "r3:2", "black", [ "v0" ] ],
+    [ "r3:1", "led-flow2:C", "green", [ "h0" ] ],
+    [ "led-flow2:A", "esp:10", "green", [ "v0", "h105.6", "v-163.2" ] ],
+    [ "esp:6", "sw1:3", "green", [ "h-76.85", "v38.6" ] ],
+    [ "esp:15", "sw2:3", "green", [ "h-57.65", "v-38.2" ] ],
+    [ "esp:8", "led-flow1:A", "green", [ "h-57.65", "v67.2" ] ],
+    [ "esp:18", "led-flow:A", "green", [ "h-76.85", "v9.6" ] ]
+  ],
+  "dependencies": {
+    "chip-pwm": "github:Dlloydev/Wokwi-Chip-PWM@1.0.6",
+    "chip-scope": "github:Dlloydev/Wokwi-Chip-scope@1.0.7"
+  }
+}
