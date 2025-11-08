@@ -30,7 +30,7 @@ public:
 
     Property<bool> sleepWhenIdle { this, "sleepWhenIdle", true };
 
-    Property<seconds> publishInterval { this, "publishInterval", 1min };
+    Property<seconds> publishInterval { this, "publishInterval", 5min };
     Property<Level> publishLogs { this, "publishLogs",
 #ifdef FARMHUB_DEBUG
         Level::Verbose
