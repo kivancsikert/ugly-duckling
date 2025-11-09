@@ -148,6 +148,8 @@ private:
 
 class AnalogPin {
 public:
+    static constexpr double MAX_ANALOG_VALUE = 4096.0;
+
     explicit AnalogPin(const InternalPinPtr& pin)
         : pin(pin) {
         adc_unit_t unit;
@@ -177,6 +179,13 @@ public:
             abort();
         }
         return *value;
+    }
+
+    /**
+     * @brief Read an analog value as a double. Throws when reading fails or times out.
+     */
+    double analogReadAsDouble() {
+        return analogRead() / MAX_ANALOG_VALUE;
     }
 
     /**

@@ -26,6 +26,8 @@ class AnalogLightSensorSettings
     : public I2CSettings {
 public:
     Property<InternalPinPtr> pin { this, "pin" };
+    Property<double> gamma { this, "gamma", 0.7 };
+    Property<double> rl10 { this, "rl10", 50.0 };
     Property<seconds> measurementFrequency { this, "measurementFrequency", 1s };
     Property<seconds> latencyInterval { this, "latencyInterval", 5s };
 };
@@ -36,10 +38,14 @@ public:
     AnalogLightSensor(
         const std::string& name,
         const InternalPinPtr& pin,
+        double gamma,
+        double rl10,
         seconds measurementFrequency,
         seconds latencyInterval)
         : LightSensor(name, measurementFrequency, latencyInterval)
-        , pin(pin) {
+        , pin(pin)
+        , gamma(gamma)
+        , rl10(rl10) {
 
         LOGI("Initializing analog light sensor on pin %s",
             pin->getName().c_str());
@@ -49,21 +55,21 @@ public:
 
 protected:
     double readLightLevel() override {
-        // These constants should match the photo-resistor's "gamma" and "rl10" attributes
-        const double GAMMA = 0.7;
-        const double RL10 = 50;
-
         // Convert the analog value into lux value:
-        auto analogValue = pin.analogRead();
-        auto voltage = analogValue / 4096.0 * 5;
-        auto resistance = 2000 * voltage / (1 - voltage / 5);
-        auto lux = pow(RL10 * 1e3 * pow(10, GAMMA) / resistance, (1 / GAMMA));
+        auto analogValue = pin.analogReadAsDouble();
+        auto voltage = analogValue * REFERENCE_VOLTAGE;
+        auto resistance = 2000 * voltage / (1 - voltage / REFERENCE_VOLTAGE);
+        auto lux = pow(rl10 * 1e3 * pow(10, gamma) / resistance, (1 / gamma));
 
         return lux;
     }
 
 private:
     AnalogPin pin;
+    const double gamma;
+    const double rl10;
+
+    static constexpr double REFERENCE_VOLTAGE = 5.0;
 };
 
 inline PeripheralFactory makeFactoryForAnalogLightSensor() {
@@ -74,6 +80,8 @@ inline PeripheralFactory makeFactoryForAnalogLightSensor() {
             auto sensor = std::make_shared<AnalogLightSensor>(
                 params.name,
                 settings->pin.get(),
+                settings->gamma.get(),
+                settings->rl10.get(),
                 settings->measurementFrequency.get(),
                 settings->latencyInterval.get());
             params.registerFeature("light", [sensor](JsonObject& telemetryJson) {
