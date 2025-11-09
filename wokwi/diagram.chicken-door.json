@@ -188,6 +188,38 @@
       "left": -192,
       "rotate": 180,
       "attrs": {}
+    },
+    {
+      "type": "wokwi-vcc",
+      "id": "vcc3",
+      "top": 75.84,
+      "left": -124.6,
+      "rotate": 180,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-vcc",
+      "id": "vcc4",
+      "top": 133.44,
+      "left": -124.6,
+      "rotate": 180,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r4",
+      "top": 129.05,
+      "left": -203,
+      "rotate": 180,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r5",
+      "top": 71.45,
+      "left": -203,
+      "rotate": 180,
+      "attrs": { "value": "1000" }
     }
   ],
   "connections": [
@@ -225,7 +257,11 @@
     [ "and2:OUT", "led-flow1:A", "green", [ "v0" ] ],
     [ "led-flow:A", "and1:OUT", "green", [ "v0" ] ],
     [ "esp:18", "and1:A", "green", [ "h-76.85", "v153.6", "h-28.8" ] ],
-    [ "esp:10", "and1:B", "green", [ "h-48.05", "v86.4" ] ]
+    [ "esp:10", "and1:B", "green", [ "h-48.05", "v86.4" ] ],
+    [ "r4:2", "sw1:1", "green", [ "v0" ] ],
+    [ "vcc4:VCC", "r4:1", "red", [ "v0" ] ],
+    [ "r5:2", "sw2:1", "green", [ "v0" ] ],
+    [ "vcc3:VCC", "r5:1", "red", [ "v0" ] ]
   ],
   "dependencies": {
     "chip-pwm": "github:Dlloydev/Wokwi-Chip-PWM@1.0.6",
