@@ -2,14 +2,15 @@
 
 #include <chrono>
 #include <functional>
+#include <utility>
 
 #include <driver/gpio.h>
 #include <hal/gpio_types.h>
 
+#include <BootClock.hpp>
 #include <Concurrent.hpp>
 #include <Pin.hpp>
 #include <Task.hpp>
-#include <utility>
 
 using namespace std::chrono;
 
@@ -36,6 +37,7 @@ public:
 struct SwitchStateChange {
     gpio_num_t gpio;
     bool engaged;
+    milliseconds timeSinceLastChange;
 };
 
 static void handleSwitchInterrupt(void* arg);
@@ -68,18 +70,8 @@ public:
                 state = it->second;
             }
 
-            // Software debounce: ignore state changes that happen too quickly
-            auto now = system_clock::now();
             auto engaged = stateChange.engaged;
-            auto timeSinceLastChange = duration_cast<milliseconds>(now - state->lastChangeTime);
-            if (timeSinceLastChange < state->debounceTime) {
-                LOGTV(SWITCH, "Switch %s: debouncing, ignoring state of '%s' (time since last: %lld ms)",
-                    state->name.c_str(),
-                    engaged ? "engaged" : "released",
-                    timeSinceLastChange.count());
-                return;
-            }
-            state->lastChangeTime = now;
+            auto timeSinceLastChange = stateChange.timeSinceLastChange;
 
             LOGTD(SWITCH, "Switch %s is %s",
                 state->name.c_str(), engaged ? "engaged" : "released");
@@ -88,9 +80,8 @@ public:
                     state->engagementHandler(state);
                 }
             } else {
-                auto duration = duration_cast<milliseconds>(now - state->lastChangeTime);
                 if (state->releaseHandler) {
-                    state->releaseHandler(state, duration);
+                    state->releaseHandler(state, timeSinceLastChange);
                 }
             }
         });
@@ -140,7 +131,8 @@ private:
             , engagementHandler(std::move(engagementHandler))
             , releaseHandler(std::move(releaseHandler))
             , debounceTime(debounceTime)
-            , lastChangeTime(system_clock::now()) {
+            , lastChangeTime(boot_clock::now())
+            , lastReportedState(isEngaged()) {
         }
 
         const std::string& getName() const override {
@@ -165,7 +157,8 @@ private:
         SwitchReleaseHandler releaseHandler;
 
         milliseconds debounceTime;
-        time_point<system_clock> lastChangeTime;
+        time_point<boot_clock> lastChangeTime;
+        bool lastReportedState;
 
         friend class SwitchManager;
         friend void handleSwitchInterrupt(void* arg);
@@ -181,16 +174,33 @@ private:
 // ISR handler for GPIO interrupt
 static void IRAM_ATTR handleSwitchInterrupt(void* arg) {
     auto* state = static_cast<SwitchManager::SwitchState*>(arg);
+
     // Must use gpio_get_level() to read the pin state instead of pin->digitalRead()
     // because we cannot call virtual methods from an ISR
     auto gpio = state->pin->getGpio();
     bool engaged = gpio_get_level(gpio) == (state->mode == SwitchMode::PullUp ? 0 : 1);
 
+    // Ignore if the state hasn't actually changed from what we last reported
+    if (engaged == state->lastReportedState) {
+        return;
+    }
+
+    // Software debounce: ignore state changes that happen too quickly
+    auto now = boot_clock::now();
+    auto timeSinceLastChange = duration_cast<milliseconds>(now - state->lastChangeTime);
+    if (timeSinceLastChange < state->debounceTime) {
+        return;
+    }
+
+    // Update state tracking
+    state->lastChangeTime = now;
+    state->lastReportedState = engaged;
+
     // Use overwriteFromISR to ensure we never lose the latest state change
-    // even if the queue is full. This is critical for limit switches.
     state->manager->switchStateInterrupts.overwriteFromISR(SwitchStateChange {
         .gpio = gpio,
         .engaged = engaged,
+        .timeSinceLastChange = timeSinceLastChange,
     });
 }
 
