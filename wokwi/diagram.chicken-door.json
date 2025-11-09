@@ -67,7 +67,7 @@
       "id": "text5",
       "top": -134.4,
       "left": 9.6,
-      "attrs": { "text": "Batery" }
+      "attrs": { "text": "Battery" }
     },
     {
       "type": "wokwi-led",
