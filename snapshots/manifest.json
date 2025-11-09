@@ -1,5 +1,44 @@
 [
   {
+    "commit": "7f873099fbde851572729717eefcd902695871c6",
+    "version": "0.32.9-27-g7f87309",
+    "id": "0.32.9-27-g7f87309",
+    "date": "2025-11-09T09:13:39Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-27-g7f87309/ugly-duckling-mk5-release.bin",
+        "sha256": "776b018ed8284a7249b207e7ebf1c22c7ebbc966d9f2ba77b93b10b772cc0de1"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-27-g7f87309/ugly-duckling-mk6-debug.bin",
+        "sha256": "77895b07e1b86652e391c33b6c54a5b518638c6c2d1c40446e94fe7db7990e29"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-27-g7f87309/ugly-duckling-mk6-release.bin",
+        "sha256": "c232f98635c9564d14cd09c9534429e5a20606f12d49d6f94d09cf76e27c2086"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-27-g7f87309/ugly-duckling-mk7-release.bin",
+        "sha256": "43cf8481d1685c1a118824c2a3f25d2ed6c3c0950d1550fa4ab32cf4cf572729"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-27-g7f87309/ugly-duckling-mk8-release.bin",
+        "sha256": "a7096b360ffd1d9821339376eb36dc1c62f3eb5e1108723ce5663efc93959191"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-27-g7f87309/ugly-duckling-mkX-release.bin",
+        "sha256": "2e7b298022cf8898f1f97c64f3cee1057d9e08bd639f2d86086e8d57fd5176b4"
+      }
+    ],
+    "branch": "chicken-door/debug-opening-problem"
+  },
+  {
     "commit": "5ed9985192be6442e40b7a64bf6a8ed7789261a7",
     "version": "0.32.9-23-g5ed9985",
     "id": "0.32.9-23-g5ed9985",
