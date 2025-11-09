@@ -99,6 +99,9 @@ public:
         // gpio_set_direction(pin, GPIO_MODE_INPUT);
         // gpio_set_pull_mode(pin, mode == SwitchMode::PullUp ? GPIO_PULLUP_ONLY : GPIO_PULLDOWN_ONLY);
 
+        // Enable hardware glitch filter to remove very short pulses (~80ns)
+        pin->enableGlitchFilter();
+
         auto switchState = std::make_shared<SwitchState>(name, pin, mode, this, std::move(engagementHandler), std::move(releaseHandler));
         {
             Lock lock(switchStatesMutex);
