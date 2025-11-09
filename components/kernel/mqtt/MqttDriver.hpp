@@ -235,16 +235,16 @@ private:
     struct Disconnected { };
 
     PublishStatus publish(const std::string& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = MQTT_NETWORK_TIMEOUT, LogPublish log = LogPublish::Log) {
+        std::string payload;
+        serializeJson(json, payload);
         if (log == LogPublish::Log) {
 #ifdef DUMP_MQTT
-            std::string serializedJson;
-            serializeJsonPretty(json, serializedJson);
             LOGTD(MQTT, "Queuing topic '%s'%s (qos = %d, timeout = %lld ms): %s",
                 topic.c_str(),
                 (retain == Retention::Retain ? " (retain)" : ""),
                 static_cast<int>(qos),
                 duration_cast<milliseconds>(timeout).count(),
-                serializedJson.c_str());
+                payload.c_str());
 #else
             LOGTV(MQTT, "Queuing topic '%s'%s (qos = %d, timeout = %lld ms)",
                 topic.c_str(),
@@ -253,8 +253,6 @@ private:
                 duration_cast<milliseconds>(timeout).count());
 #endif
         }
-        std::string payload;
-        serializeJson(json, payload);
         return publishAndWait(topic, payload, retain, qos, timeout);
     }
 
