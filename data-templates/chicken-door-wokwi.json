@@ -25,7 +25,7 @@
       "name": "light-sensor",
       "type": "light-sensor:analog",
       "params": {
-        "pin": "C3"
+        "pin": "C4"
       }
     }
   ],
