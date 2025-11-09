@@ -40,8 +40,7 @@ static void handleSwitchInterrupt(void* arg);
 
 class SwitchManager final {
 public:
-    SwitchManager(milliseconds debounceTime = 50ms)
-        : debounceTime(debounceTime) {
+    explicit SwitchManager(milliseconds debounceTime = 50ms) {
         Task::loop("switch-manager", 3072, [this, debounceTime](Task& /*task*/) {
             SwitchStateChange stateChange = switchStateInterrupts.take();
             std::shared_ptr<SwitchState> state;
@@ -156,7 +155,6 @@ private:
         friend void handleSwitchInterrupt(void* arg);
     };
 
-    const milliseconds debounceTime;
     Mutex switchStatesMutex;
     std::unordered_map<gpio_num_t, std::shared_ptr<SwitchState>> switchStates;
 
