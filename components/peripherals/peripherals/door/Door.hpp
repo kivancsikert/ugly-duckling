@@ -83,19 +83,20 @@ public:
         const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
         : Peripheral(name)
         , motor(motor)
-        , openSwitch(switches->registerHandler(
-              name + ":open",
-              openPin,
-              SwitchMode::PullUp,
-              [this](const std::shared_ptr<Switch>&) { updateState(); },
-              [this](const std::shared_ptr<Switch>&, milliseconds) { updateState(); }))
-        , closedSwitch(switches->registerHandler(
-              name + ":closed",
-              closedPin,
-              SwitchMode::PullUp,
-              [this](const std::shared_ptr<Switch>&) { updateState(); },
-              [this](const std::shared_ptr<Switch>&, milliseconds) { updateState(); }))
-        , invertSwitches(invertSwitches)
+        , openSwitch(switches->registerSwitch({
+              .name = name + ":open",
+              .pin = openPin,
+              .mode = invertSwitches ? SwitchMode::PullDown : SwitchMode::PullUp,
+              .onEngaged = [this](const std::shared_ptr<Switch>&) { updateState(); },
+              .onReleased = [this](const std::shared_ptr<Switch>&, milliseconds) { updateState(); },
+          }))
+        , closedSwitch(switches->registerSwitch({
+              .name = name + ":closed",
+              .pin = closedPin,
+              .mode = invertSwitches ? SwitchMode::PullDown : SwitchMode::PullUp,
+              .onEngaged = [this](const std::shared_ptr<Switch>&) { updateState(); },
+              .onReleased = [this](const std::shared_ptr<Switch>&, milliseconds) { updateState(); },
+          }))
         , watchdog(name + ":watchdog", movementTimeout, false, [this](WatchdogState state) {
             handleWatchdogEvent(state);
         })
@@ -274,8 +275,8 @@ private:
     }
 
     DoorState determineCurrentState() {
-        bool open = openSwitch->isEngaged() ^ invertSwitches;
-        bool closed = closedSwitch->isEngaged() ^ invertSwitches;
+        bool open = openSwitch->isEngaged();
+        bool closed = closedSwitch->isEngaged();
 
         if (open && closed) {
             // TODO Handle this as a failure?
@@ -302,7 +303,6 @@ private:
 
     const std::shared_ptr<Switch> openSwitch;
     const std::shared_ptr<Switch> closedSwitch;
-    const bool invertSwitches;
 
     Watchdog watchdog;
 

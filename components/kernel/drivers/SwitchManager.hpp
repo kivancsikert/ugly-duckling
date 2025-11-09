@@ -17,6 +17,8 @@ using farmhub::kernel::PinPtr;
 
 namespace farmhub::kernel::drivers {
 
+LOGGING_TAG(SWITCH, "switch")
+
 enum class SwitchMode : uint8_t {
     PullUp,
     PullDown
@@ -40,15 +42,27 @@ static void handleSwitchInterrupt(void* arg);
 
 class SwitchManager final {
 public:
-    explicit SwitchManager(milliseconds debounceTime = 50ms) {
-        Task::loop("switch-manager", 3072, [this, debounceTime](Task& /*task*/) {
+    using SwitchEngagementHandler = std::function<void(const std::shared_ptr<Switch>&)>;
+    using SwitchReleaseHandler = std::function<void(const std::shared_ptr<Switch>&, milliseconds)>;
+
+    struct SwitchConfig {
+        std::string name;
+        InternalPinPtr pin;
+        SwitchMode mode;
+        SwitchEngagementHandler onEngaged = nullptr;
+        SwitchReleaseHandler onReleased = nullptr;
+        milliseconds debounceTime = 50ms;
+    };
+
+    SwitchManager() {
+        Task::loop("switch-manager", 3072, [this](Task& /*task*/) {
             SwitchStateChange stateChange = switchStateInterrupts.take();
             std::shared_ptr<SwitchState> state;
             {
                 Lock lock(switchStatesMutex);
                 auto it = switchStates.find(stateChange.gpio);
                 if (it == switchStates.end()) {
-                    LOGE("Switch state change for unknown GPIO %d", stateChange.gpio);
+                    LOGTE(SWITCH, "Switch state change for unknown GPIO %d", stateChange.gpio);
                     return;
                 }
                 state = it->second;
@@ -56,61 +70,60 @@ public:
 
             // Software debounce: ignore state changes that happen too quickly
             auto now = system_clock::now();
+            auto engaged = stateChange.engaged;
             auto timeSinceLastChange = duration_cast<milliseconds>(now - state->lastChangeTime);
-            if (timeSinceLastChange < debounceTime) {
-                LOGV("Switch %s: debouncing, ignoring change (time since last: %lld ms)",
-                    state->name.c_str(), timeSinceLastChange.count());
+            if (timeSinceLastChange < state->debounceTime) {
+                LOGTV(SWITCH, "Switch %s: debouncing, ignoring state of '%s' (time since last: %lld ms)",
+                    state->name.c_str(),
+                    engaged ? "engaged" : "released",
+                    timeSinceLastChange.count());
                 return;
             }
             state->lastChangeTime = now;
 
-            auto engaged = stateChange.engaged;
-            LOGD("Switch %s is %s",
+            LOGTD(SWITCH, "Switch %s is %s",
                 state->name.c_str(), engaged ? "engaged" : "released");
             if (engaged) {
-                state->engagementStarted = now;
-                state->engagementHandler(state);
-            } else if (state->engagementStarted.time_since_epoch().count() > 0) {
-                auto duration = duration_cast<milliseconds>(now - state->engagementStarted);
-                state->releaseHandler(state, duration);
+                if (state->engagementHandler) {
+                    state->engagementHandler(state);
+                }
+            } else {
+                auto duration = duration_cast<milliseconds>(now - state->lastChangeTime);
+                if (state->releaseHandler) {
+                    state->releaseHandler(state, duration);
+                }
             }
         });
     }
 
-    using SwitchEngagementHandler = std::function<void(const std::shared_ptr<Switch>&)>;
-    using SwitchReleaseHandler = std::function<void(const std::shared_ptr<Switch>&, milliseconds)>;
-
-    std::shared_ptr<Switch> onEngaged(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchEngagementHandler engagementHandler) {
-        return registerHandler(
-            name, pin, mode, std::move(engagementHandler), [](const std::shared_ptr<Switch>&, milliseconds) { });
-    }
-
-    std::shared_ptr<Switch> onReleased(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchReleaseHandler releaseHandler) {
-        return registerHandler(
-            name, pin, mode, [](const std::shared_ptr<Switch>&) { }, std::move(releaseHandler));
-    }
-
-    std::shared_ptr<Switch> registerHandler(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler) {
-        LOGI("Registering switch %s on pin %s, mode %s",
-            name.c_str(), pin->getName().c_str(), mode == SwitchMode::PullUp ? "pull-up" : "pull-down");
+    std::shared_ptr<Switch> registerSwitch(const SwitchConfig& config) {
+        LOGTI(SWITCH, "Registering switch %s on pin %s, mode %s, debounce %lld ms",
+            config.name.c_str(), config.pin->getName().c_str(),
+            config.mode == SwitchMode::PullUp ? "pull-up" : "pull-down",
+            config.debounceTime.count());
 
         // Configure PIN_INPUT as input
-        pin->pinMode(mode == SwitchMode::PullUp ? Pin::Mode::InputPullUp : Pin::Mode::InputPullDown);
-        // gpio_set_direction(pin, GPIO_MODE_INPUT);
-        // gpio_set_pull_mode(pin, mode == SwitchMode::PullUp ? GPIO_PULLUP_ONLY : GPIO_PULLDOWN_ONLY);
+        config.pin->pinMode(config.mode == SwitchMode::PullUp ? Pin::Mode::InputPullUp : Pin::Mode::InputPullDown);
 
-        // Enable hardware glitch filter to remove very short pulses (~80ns)
-        pin->enableGlitchFilter();
+        // Enable hardware glitch filter to remove very short pulses (~25ns)
+        // config.pin->enableGlitchFilter();
 
-        auto switchState = std::make_shared<SwitchState>(name, pin, mode, this, std::move(engagementHandler), std::move(releaseHandler));
+        auto switchState = std::make_shared<SwitchState>(
+            config.name,
+            config.pin,
+            config.mode,
+            this,
+            config.onEngaged,
+            config.onReleased,
+            config.debounceTime);
         {
             Lock lock(switchStatesMutex);
-            switchStates.emplace(pin->getGpio(), switchState);
+            switchStates.emplace(config.pin->getGpio(), switchState);
         }
 
         // Install GPIO ISR
-        ESP_ERROR_THROW(gpio_set_intr_type(pin->getGpio(), GPIO_INTR_ANYEDGE));
-        ESP_ERROR_THROW(gpio_isr_handler_add(pin->getGpio(), handleSwitchInterrupt, switchState.get()));
+        ESP_ERROR_THROW(gpio_set_intr_type(config.pin->getGpio(), GPIO_INTR_ANYEDGE));
+        ESP_ERROR_THROW(gpio_isr_handler_add(config.pin->getGpio(), handleSwitchInterrupt, switchState.get()));
 
         return switchState;
     }
@@ -119,15 +132,15 @@ private:
     struct SwitchState final : public Switch {
     public:
         SwitchState(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchManager* manager,
-            SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler)
+            SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler, milliseconds debounceTime)
             : name(name)
             , pin(pin)
             , mode(mode)
             , manager(manager)
             , engagementHandler(std::move(engagementHandler))
-            , releaseHandler(std::move(releaseHandler)) {
-            // Initialize engagementStarted to an invalid time point
-            engagementStarted = system_clock::time_point();
+            , releaseHandler(std::move(releaseHandler))
+            , debounceTime(debounceTime)
+            , lastChangeTime(system_clock::now()) {
         }
 
         const std::string& getName() const override {
@@ -151,7 +164,7 @@ private:
         SwitchEngagementHandler engagementHandler;
         SwitchReleaseHandler releaseHandler;
 
-        time_point<system_clock> engagementStarted;
+        milliseconds debounceTime;
         time_point<system_clock> lastChangeTime;
 
         friend class SwitchManager;
