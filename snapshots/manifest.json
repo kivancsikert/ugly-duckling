@@ -1,5 +1,44 @@
 [
   {
+    "commit": "c17b71fd4644c60cd575c6545ed32b442472455a",
+    "version": "0.32.9-28-gc17b71f",
+    "id": "0.32.9-28-gc17b71f",
+    "date": "2025-11-09T09:15:03Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-28-gc17b71f/ugly-duckling-mk5-release.bin",
+        "sha256": "41725bed8c2305982b782bc572ce76172a3319eec3fd3371dd5ef0bae59d77bf"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-28-gc17b71f/ugly-duckling-mk6-debug.bin",
+        "sha256": "7b15f9ac5726e4b328b2609e18e84a9ebaeac3c400c297453cd5398d0d4b361c"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-28-gc17b71f/ugly-duckling-mk6-release.bin",
+        "sha256": "aa78f9dc38e46c878beab269d50eb61373a4b1feaf562e547866a4f2fd31b1d8"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-28-gc17b71f/ugly-duckling-mk7-release.bin",
+        "sha256": "e2ddf332477a8a61a3bccb3644738d7677a7656bb20808646c9addf2aa3a91ed"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-28-gc17b71f/ugly-duckling-mk8-release.bin",
+        "sha256": "401e3f1133b935e1890801f9f7fe19d192e21c514df8af201075501ae2f8a0d6"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-28-gc17b71f/ugly-duckling-mkX-release.bin",
+        "sha256": "dc3d57f6b76c82e741b33e2f01a8a53b6cd0d472ed0336e4645cdfede69d69d0"
+      }
+    ],
+    "branch": "chicken-door/debug-opening-problem"
+  },
+  {
     "commit": "7f873099fbde851572729717eefcd902695871c6",
     "version": "0.32.9-27-g7f87309",
     "id": "0.32.9-27-g7f87309",
