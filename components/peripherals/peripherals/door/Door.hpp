@@ -145,15 +145,17 @@ public:
 private:
     void runLoop() {
         bool shouldPublishTelemetry = true;
+        bool moving = false;
         while (operationState == OperationState::Running) {
             DoorState currentState = determineCurrentState();
             if (atTargetState(targetState, currentState)) {
-                if (currentState != lastState) {
+                if (moving) {
                     LOGTD(DOOR, "Door reached target state %s",
                         toString(currentState));
                     watchdog.cancel();
                     motor->stop();
                     shouldPublishTelemetry = true;
+                    moving = false;
                 }
             } else if (targetState) {
                 LOGTD(DOOR, "Door moving towards target state %s (current state %s)",
@@ -168,12 +170,14 @@ private:
                 }
                 watchdog.restart();
                 shouldPublishTelemetry = true;
+                moving = true;
             } else {
                 LOGTD(DOOR, "Door has no target state, stopping motor (current state %s)",
                     toString(currentState));
                 watchdog.cancel();
                 motor->stop();
                 shouldPublishTelemetry = true;
+                moving = false;
             }
 
             if (currentState != lastState) {
@@ -207,11 +211,13 @@ private:
                             LOGTE(DOOR, "Watchdog timed out, stopping operation");
                             operationState = OperationState::WatchdogTimeout;
                             motor->stop();
+                            moving = false;
                         } else if constexpr (std::is_same_v<T, ShutdownSpec>) {
                             LOGTI(DOOR, "Shutting down door operation");
                             operationState = OperationState::Stopped;
                             motor->stop();
                             watchdog.cancel();
+                            moving = false;
                         }
                     },
                     change);
