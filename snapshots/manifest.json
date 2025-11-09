@@ -1,5 +1,44 @@
 [
   {
+    "commit": "04b2d5958576b28ce27e50fad37aa87f95ed4784",
+    "version": "0.32.9-42-g04b2d59",
+    "id": "0.32.9-42-g04b2d59",
+    "date": "2025-11-09T17:07:58Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-42-g04b2d59/ugly-duckling-mk5-release.bin",
+        "sha256": "aec841d76726a60f05470e15239df315d9dc6d355a98328cf3a914b908a86d44"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-42-g04b2d59/ugly-duckling-mk6-debug.bin",
+        "sha256": "4bf336e96337f3cadaccfd6b69ff8fd149cdf05b3aceac94edc688dd9b9720a4"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-42-g04b2d59/ugly-duckling-mk6-release.bin",
+        "sha256": "d3d810273c46c141050e7e74d38ef3061ad59b5e9dadb6e73f0cbf7b6a62d5f1"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-42-g04b2d59/ugly-duckling-mk7-release.bin",
+        "sha256": "9b68fd1f638062686c9f04cf3a69e98cf02cf75ededa4542611f0a450d3b52b6"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-42-g04b2d59/ugly-duckling-mk8-release.bin",
+        "sha256": "809a8c3d56e155f43965b82095bbc5006307be06dceac3e1b49715d76b7a3641"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-42-g04b2d59/ugly-duckling-mkX-release.bin",
+        "sha256": "b57a961a51913e3d56f2ee8f653601b80f1a55fc4743c2e21e53ddee0377e223"
+      }
+    ],
+    "branch": "chicken-door/debug-opening-problem"
+  },
+  {
     "commit": "727653296f9ce9441b4d5076954d24356e732dcc",
     "version": "0.32.9-41-g7276532",
     "id": "0.32.9-41-g7276532",
