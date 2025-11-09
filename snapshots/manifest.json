@@ -1,5 +1,44 @@
 [
   {
+    "commit": "7a1b615174dab4de4b40fab20a2765d4d828a258",
+    "version": "0.32.9-38-g7a1b615",
+    "id": "0.32.9-38-g7a1b615",
+    "date": "2025-11-09T16:06:50Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-38-g7a1b615/ugly-duckling-mk5-release.bin",
+        "sha256": "b8ce8163dee962b6221038540b4c9f9c1bc5c919bed2c76b17bab38deb30c3e8"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-38-g7a1b615/ugly-duckling-mk6-debug.bin",
+        "sha256": "709f1c7ae1a062f3c60696df47a665d1e65ba0e6e598c04aca62832ab2dc4683"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-38-g7a1b615/ugly-duckling-mk6-release.bin",
+        "sha256": "1dc05507a0c4699020700a49fb957a86e25f4e61df64824e6dea529d9b6bc3fe"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-38-g7a1b615/ugly-duckling-mk7-release.bin",
+        "sha256": "a57c24327ce48db59cfebedca9c2d0b51907473de09652bbe26b516bc92e6efa"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-38-g7a1b615/ugly-duckling-mk8-release.bin",
+        "sha256": "3fb2bdb9929add7e03cbe54b5135e1427f96eae726e78a4b8a14f932fad01702"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-38-g7a1b615/ugly-duckling-mkX-release.bin",
+        "sha256": "4bb40143ca72f8d73cd094b3ce6968a29d6ab8108083de70dd7c0953ddb382f5"
+      }
+    ],
+    "branch": "chicken-door/debug-opening-problem"
+  },
+  {
     "commit": "bb1cefb1f707eb894fbd83d564715426f6a73865",
     "version": "0.32.9-37-gbb1cefb",
     "id": "0.32.9-37-gbb1cefb",
