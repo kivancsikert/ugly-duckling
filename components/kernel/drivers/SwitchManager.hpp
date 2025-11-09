@@ -109,9 +109,6 @@ public:
         // Configure PIN_INPUT as input
         config.pin->pinMode(config.mode == SwitchMode::PullUp ? Pin::Mode::InputPullUp : Pin::Mode::InputPullDown);
 
-        // Enable hardware glitch filter to remove very short pulses (~25ns)
-        // config.pin->enableGlitchFilter();
-
         auto switchState = std::make_shared<SwitchState>(
             config.name,
             config.pin,

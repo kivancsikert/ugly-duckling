@@ -396,7 +396,6 @@ static void startDevice() {
         .name = "factory-reset",
         .pin = deviceDefinition->bootPin,
         .mode = SwitchMode::PullUp,
-        .onEngaged = nullptr,
         .onDisengaged = [statusLed, telemetryPublisher](const SwitchEvent& event) {
             auto duration = event.timeSinceLastChange;
             if (duration >= 15s) {
