@@ -1,5 +1,44 @@
 [
   {
+    "commit": "e6e862ac4a10feb350f675475889047b38621dfd",
+    "version": "0.32.9-40-ge6e862a",
+    "id": "0.32.9-40-ge6e862a",
+    "date": "2025-11-09T16:26:04Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-40-ge6e862a/ugly-duckling-mk5-release.bin",
+        "sha256": "39a4a3e2186b744fdd9f9cd754f88c2dd483c35b4c69277a7d4cf2fa49209ced"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-40-ge6e862a/ugly-duckling-mk6-debug.bin",
+        "sha256": "b9468e8a06ab827699c4837380c444ba7ccb59e40d31e44b795e7a2dbc36c91a"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-40-ge6e862a/ugly-duckling-mk6-release.bin",
+        "sha256": "b60e673fc0e78e9189e829daca91cef976f0433655f5f474505d2fa25106ee32"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-40-ge6e862a/ugly-duckling-mk7-release.bin",
+        "sha256": "dcb1a73c60822b95679bdb163f76e9f44fd90b8c19438017cb5249ef6769472d"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-40-ge6e862a/ugly-duckling-mk8-release.bin",
+        "sha256": "ea8850471f9c3277d4621552efd3ebf9390aa2ba7125ef02ce1eeea792faf83f"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-40-ge6e862a/ugly-duckling-mkX-release.bin",
+        "sha256": "57496dd238254075e2b1fad502c2c1ff74b342efeb79f86a524254b7529951fd"
+      }
+    ],
+    "branch": "chicken-door/debug-opening-problem"
+  },
+  {
     "commit": "7a1b615174dab4de4b40fab20a2765d4d828a258",
     "version": "0.32.9-38-g7a1b615",
     "id": "0.32.9-38-g7a1b615",
