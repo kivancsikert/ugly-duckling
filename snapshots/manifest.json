@@ -1,5 +1,44 @@
 [
   {
+    "commit": "727653296f9ce9441b4d5076954d24356e732dcc",
+    "version": "0.32.9-41-g7276532",
+    "id": "0.32.9-41-g7276532",
+    "date": "2025-11-09T16:49:00Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-41-g7276532/ugly-duckling-mk5-release.bin",
+        "sha256": "92caa4f56fd1fc1ac29326fd8026109b0c5879b705d989a78b8b90b2555e5bd9"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-41-g7276532/ugly-duckling-mk6-debug.bin",
+        "sha256": "93a91084941400f2ac3403ed7146d1888649ede891e505e7a404206e581ce076"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-41-g7276532/ugly-duckling-mk6-release.bin",
+        "sha256": "55f538e0ba57c1ccf933ac8dee13d93983d08b0bf12f9913a5b30575d525db22"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-41-g7276532/ugly-duckling-mk7-release.bin",
+        "sha256": "019a7e8386d32ac342771967e39f6eaf85b816e2eebb783ee3036a93317792f5"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-41-g7276532/ugly-duckling-mk8-release.bin",
+        "sha256": "733a30bcca9ffee2ca3fe603f978764259335b328632d2d84ca53704ba801302"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-41-g7276532/ugly-duckling-mkX-release.bin",
+        "sha256": "0dd686a8984efeadf42fe55af175d7c64434a6c843e15c4a7bffe785e382ad42"
+      }
+    ],
+    "branch": "chicken-door/debug-opening-problem"
+  },
+  {
     "commit": "e6e862ac4a10feb350f675475889047b38621dfd",
     "version": "0.32.9-40-ge6e862a",
     "id": "0.32.9-40-ge6e862a",
