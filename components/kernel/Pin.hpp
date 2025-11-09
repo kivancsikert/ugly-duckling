@@ -154,6 +154,7 @@ public:
         }
 
         gpio_pin_glitch_filter_config_t filter_config = {
+            .clk_src = GLITCH_FILTER_CLK_SRC_DEFAULT,
             .gpio_num = gpio,
         };
 
@@ -235,7 +236,7 @@ public:
     /**
      * @brief Read an analog value as a double. Throws when reading fails or times out.
      */
-    double analogReadAsDouble() {
+    double analogReadAsDouble() const {
         return analogRead() / MAX_ANALOG_VALUE;
     }
 
