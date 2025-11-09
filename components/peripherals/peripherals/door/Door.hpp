@@ -122,15 +122,15 @@ public:
               .name = name + ":open",
               .pin = openPin,
               .mode = invertSwitches ? SwitchMode::PullDown : SwitchMode::PullUp,
-              .onEngaged = [this](const std::shared_ptr<Switch>&) { updateState(); },
-              .onReleased = [this](const std::shared_ptr<Switch>&, milliseconds) { updateState(); },
+              .onEngaged = [this](const SwitchEvent&) { updateState(); },
+              .onDisengaged = [this](const SwitchEvent&) { updateState(); },
           }))
         , closedSwitch(switches->registerSwitch({
               .name = name + ":closed",
               .pin = closedPin,
               .mode = invertSwitches ? SwitchMode::PullDown : SwitchMode::PullUp,
-              .onEngaged = [this](const std::shared_ptr<Switch>&) { updateState(); },
-              .onReleased = [this](const std::shared_ptr<Switch>&, milliseconds) { updateState(); },
+              .onEngaged = [this](const SwitchEvent&) { updateState(); },
+              .onDisengaged = [this](const SwitchEvent&) { updateState(); },
           }))
         , watchdog(name + ":watchdog", movementTimeout, false, [this](WatchdogState state) {
             handleWatchdogEvent(state);

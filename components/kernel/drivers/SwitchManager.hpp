@@ -40,19 +40,24 @@ struct SwitchStateChange {
     milliseconds timeSinceLastChange;
 };
 
+struct SwitchEvent {
+    std::shared_ptr<Switch> switchState;
+    bool engaged;
+    milliseconds timeSinceLastChange;
+};
+
 static void handleSwitchInterrupt(void* arg);
 
 class SwitchManager final {
 public:
-    using SwitchEngagementHandler = std::function<void(const std::shared_ptr<Switch>&)>;
-    using SwitchReleaseHandler = std::function<void(const std::shared_ptr<Switch>&, milliseconds)>;
+    using SwitchEventHandler = std::function<void(const SwitchEvent&)>;
 
     struct SwitchConfig {
         std::string name;
         InternalPinPtr pin;
         SwitchMode mode;
-        SwitchEngagementHandler onEngaged = nullptr;
-        SwitchReleaseHandler onReleased = nullptr;
+        SwitchEventHandler onEngaged = nullptr;
+        SwitchEventHandler onDisengaged = nullptr;
         milliseconds debounceTime = 50ms;
     };
 
@@ -74,14 +79,22 @@ public:
             auto timeSinceLastChange = stateChange.timeSinceLastChange;
 
             LOGTD(SWITCH, "Switch %s is %s",
-                state->name.c_str(), engaged ? "engaged" : "released");
+                state->name.c_str(), engaged ? "engaged" : "disengaged");
             if (engaged) {
-                if (state->engagementHandler) {
-                    state->engagementHandler(state);
+                if (state->engageHandler) {
+                    state->engageHandler(SwitchEvent {
+                        .switchState = state,
+                        .engaged = engaged,
+                        .timeSinceLastChange = timeSinceLastChange,
+                    });
                 }
             } else {
-                if (state->releaseHandler) {
-                    state->releaseHandler(state, timeSinceLastChange);
+                if (state->disengageHandler) {
+                    state->disengageHandler(SwitchEvent {
+                        .switchState = state,
+                        .engaged = engaged,
+                        .timeSinceLastChange = timeSinceLastChange,
+                    });
                 }
             }
         });
@@ -105,7 +118,7 @@ public:
             config.mode,
             this,
             config.onEngaged,
-            config.onReleased,
+            config.onDisengaged,
             config.debounceTime);
         {
             Lock lock(switchStatesMutex);
@@ -123,13 +136,13 @@ private:
     struct SwitchState final : public Switch {
     public:
         SwitchState(const std::string& name, const InternalPinPtr& pin, SwitchMode mode, SwitchManager* manager,
-            SwitchEngagementHandler engagementHandler, SwitchReleaseHandler releaseHandler, milliseconds debounceTime)
+            SwitchEventHandler engageHandler, SwitchEventHandler disengageHandler, milliseconds debounceTime)
             : name(name)
             , pin(pin)
             , mode(mode)
             , manager(manager)
-            , engagementHandler(std::move(engagementHandler))
-            , releaseHandler(std::move(releaseHandler))
+            , engageHandler(std::move(engageHandler))
+            , disengageHandler(std::move(disengageHandler))
             , debounceTime(debounceTime)
             , lastChangeTime(boot_clock::now())
             , lastReportedState(isEngaged()) {
@@ -153,8 +166,8 @@ private:
         SwitchMode mode;
         SwitchManager* manager;
 
-        SwitchEngagementHandler engagementHandler;
-        SwitchReleaseHandler releaseHandler;
+        SwitchEventHandler engageHandler;
+        SwitchEventHandler disengageHandler;
 
         milliseconds debounceTime;
         time_point<boot_clock> lastChangeTime;

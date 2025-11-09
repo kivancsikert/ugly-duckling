@@ -397,7 +397,8 @@ static void startDevice() {
         .pin = deviceDefinition->bootPin,
         .mode = SwitchMode::PullUp,
         .onEngaged = nullptr,
-        .onReleased = [statusLed, telemetryPublisher](const std::shared_ptr<Switch>&, milliseconds duration) {
+        .onDisengaged = [statusLed, telemetryPublisher](const SwitchEvent& event) {
+            auto duration = event.timeSinceLastChange;
             if (duration >= 15s) {
                 LOGI("Factory reset triggered after %lld ms", duration.count());
                 performFactoryReset(statusLed, true);
