@@ -1,5 +1,44 @@
 [
   {
+    "commit": "5dbc646e3cd27d7fe8df5effba11a2c0ce02ede4",
+    "version": "0.32.9-43-g5dbc646",
+    "id": "0.32.9-43-g5dbc646",
+    "date": "2025-11-09T17:14:32Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-43-g5dbc646/ugly-duckling-mk5-release.bin",
+        "sha256": "b0201ed2b31bafbf73e74ebe62afc4f281dc260566b7dd65d96356f572ba1612"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-43-g5dbc646/ugly-duckling-mk6-debug.bin",
+        "sha256": "b88dabf43b68218a28b1f31d65cb69ddd96f023559c4b0cee5e5cffdaae2b56a"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-43-g5dbc646/ugly-duckling-mk6-release.bin",
+        "sha256": "56d4b1c7049570e031506ef76539928c786b6601aa3ef44d45caf6611eb17adf"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-43-g5dbc646/ugly-duckling-mk7-release.bin",
+        "sha256": "4d0466ab416158c1b05d0a918e69fcc1084d4999f046bf36c952931f4cbd6b30"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-43-g5dbc646/ugly-duckling-mk8-release.bin",
+        "sha256": "b6b57ccbcd1a4ebfab368dc7e4a828f5afc95eeacd26753c65545671ec38ac69"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-43-g5dbc646/ugly-duckling-mkX-release.bin",
+        "sha256": "0a2d12f1be461acba53912855427fd17342db16df6a72d70f1581553135ce0ab"
+      }
+    ],
+    "branch": "main"
+  },
+  {
     "commit": "04b2d5958576b28ce27e50fad37aa87f95ed4784",
     "version": "0.32.9-42-g04b2d59",
     "id": "0.32.9-42-g04b2d59",
