@@ -65,7 +65,7 @@ public:
             state->lastChangeTime = now;
 
             auto engaged = stateChange.engaged;
-            LOGV("Switch %s is %s",
+            LOGD("Switch %s is %s",
                 state->name.c_str(), engaged ? "engaged" : "released");
             if (engaged) {
                 state->engagementStarted = now;
