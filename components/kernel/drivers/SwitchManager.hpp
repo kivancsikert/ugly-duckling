@@ -4,6 +4,7 @@
 #include <functional>
 
 #include <driver/gpio.h>
+#include <hal/gpio_types.h>
 
 #include <Concurrent.hpp>
 #include <Pin.hpp>
@@ -39,8 +40,9 @@ static void handleSwitchInterrupt(void* arg);
 
 class SwitchManager final {
 public:
-    SwitchManager() {
-        Task::loop("switch-manager", 3072, [this](Task& /*task*/) {
+    SwitchManager(milliseconds debounceTime = 50ms)
+        : debounceTime(debounceTime) {
+        Task::loop("switch-manager", 3072, [this, debounceTime](Task& /*task*/) {
             SwitchStateChange stateChange = switchStateInterrupts.take();
             std::shared_ptr<SwitchState> state;
             {
@@ -52,14 +54,25 @@ public:
                 }
                 state = it->second;
             }
+
+            // Software debounce: ignore state changes that happen too quickly
+            auto now = system_clock::now();
+            auto timeSinceLastChange = duration_cast<milliseconds>(now - state->lastChangeTime);
+            if (timeSinceLastChange < debounceTime) {
+                LOGV("Switch %s: debouncing, ignoring change (time since last: %lld ms)",
+                    state->name.c_str(), timeSinceLastChange.count());
+                return;
+            }
+            state->lastChangeTime = now;
+
             auto engaged = stateChange.engaged;
             LOGV("Switch %s is %s",
                 state->name.c_str(), engaged ? "engaged" : "released");
             if (engaged) {
-                state->engagementStarted = system_clock::now();
+                state->engagementStarted = now;
                 state->engagementHandler(state);
             } else if (state->engagementStarted.time_since_epoch().count() > 0) {
-                auto duration = duration_cast<milliseconds>(system_clock::now() - state->engagementStarted);
+                auto duration = duration_cast<milliseconds>(now - state->engagementStarted);
                 state->releaseHandler(state, duration);
             }
         });
@@ -137,11 +150,13 @@ private:
         SwitchReleaseHandler releaseHandler;
 
         time_point<system_clock> engagementStarted;
+        time_point<system_clock> lastChangeTime;
 
         friend class SwitchManager;
         friend void handleSwitchInterrupt(void* arg);
     };
 
+    const milliseconds debounceTime;
     Mutex switchStatesMutex;
     std::unordered_map<gpio_num_t, std::shared_ptr<SwitchState>> switchStates;
 
