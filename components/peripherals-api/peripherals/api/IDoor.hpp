@@ -13,6 +13,17 @@ enum class DoorState : int8_t {
     Open = 1
 };
 
+inline static const char* toString(DoorState state) {
+    switch (state) {
+        case DoorState::Closed:
+            return "Closed";
+        case DoorState::Open:
+            return "Open";
+        default:
+            return "INVALID";
+    }
+}
+
 struct IDoor : virtual IPeripheral {
     /**
      * @brief Transition the door to a new state.

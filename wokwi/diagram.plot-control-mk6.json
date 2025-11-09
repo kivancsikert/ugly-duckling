@@ -105,7 +105,7 @@
       "id": "text5",
       "top": -134.4,
       "left": 9.6,
-      "attrs": { "text": "Batery" }
+      "attrs": { "text": "Battery" }
     },
     { "type": "wokwi-gnd", "id": "gnd2", "top": 115.2, "left": -317.4, "attrs": {} },
     {

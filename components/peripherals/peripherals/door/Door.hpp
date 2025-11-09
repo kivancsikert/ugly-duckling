@@ -38,6 +38,41 @@ enum class OperationState : uint8_t {
     WatchdogTimeout,
 };
 
+/**
+ * @brief Manages the motor, watchdog, and movement state for a door.
+ * Ensures atomic operations on these three related pieces of state.
+ */
+class DoorMotorController {
+public:
+    DoorMotorController(
+        const std::shared_ptr<PwmMotorDriver>& motor,
+        Watchdog& watchdog)
+        : motor(motor)
+        , watchdog(watchdog) {
+    }
+
+    void drive(MotorPhase phase) {
+        motor->drive(phase, 1);
+        watchdog.restart();
+        moving = true;
+    }
+
+    void stop() {
+        motor->stop();
+        watchdog.cancel();
+        moving = false;
+    }
+
+    bool isMoving() const {
+        return moving;
+    }
+
+private:
+    const std::shared_ptr<PwmMotorDriver> motor;
+    Watchdog& watchdog;
+    bool moving = false;
+};
+
 class DoorSettings final
     : public ConfigurationSection {
 public:
@@ -83,29 +118,31 @@ public:
         const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
         : Peripheral(name)
         , motor(motor)
-        , openSwitch(switches->registerHandler(
-              name + ":open",
-              openPin,
-              SwitchMode::PullUp,
-              [this](const std::shared_ptr<Switch>&) { updateState(); },
-              [this](const std::shared_ptr<Switch>&, milliseconds) { updateState(); }))
-        , closedSwitch(switches->registerHandler(
-              name + ":closed",
-              closedPin,
-              SwitchMode::PullUp,
-              [this](const std::shared_ptr<Switch>&) { updateState(); },
-              [this](const std::shared_ptr<Switch>&, milliseconds) { updateState(); }))
-        , invertSwitches(invertSwitches)
+        , openSwitch(switches->registerSwitch({
+              .name = name + ":open",
+              .pin = openPin,
+              .mode = invertSwitches ? SwitchMode::PullDown : SwitchMode::PullUp,
+              .onEngaged = [this](const SwitchEvent&) { updateState(); },
+              .onDisengaged = [this](const SwitchEvent&) { updateState(); },
+          }))
+        , closedSwitch(switches->registerSwitch({
+              .name = name + ":closed",
+              .pin = closedPin,
+              .mode = invertSwitches ? SwitchMode::PullDown : SwitchMode::PullUp,
+              .onEngaged = [this](const SwitchEvent&) { updateState(); },
+              .onDisengaged = [this](const SwitchEvent&) { updateState(); },
+          }))
         , watchdog(name + ":watchdog", movementTimeout, false, [this](WatchdogState state) {
             handleWatchdogEvent(state);
         })
+        , motorController(motor, watchdog)
         , telemetryPublisher(telemetryPublisher) {
 
         LOGTI(DOOR, "Initializing door %s, open switch %s, closed switch %s%s",
             name.c_str(), openSwitch->getPin()->getName().c_str(), closedSwitch->getPin()->getName().c_str(),
             invertSwitches ? " (switches are inverted)" : "");
 
-        motor->stop();
+        motorController.stop();
 
         Task::run(name, 4096, 2, [this](Task& /*task*/) {
             runLoop();
@@ -147,31 +184,28 @@ private:
         while (operationState == OperationState::Running) {
             DoorState currentState = determineCurrentState();
             if (atTargetState(targetState, currentState)) {
-                if (currentState != lastState) {
-                    LOGTD(DOOR, "Door reached target state %d",
-                        static_cast<int>(currentState));
-                    watchdog.cancel();
-                    motor->stop();
+                if (motorController.isMoving()) {
+                    LOGTD(DOOR, "Door reached target state %s",
+                        toString(currentState));
+                    motorController.stop();
                     shouldPublishTelemetry = true;
                 }
             } else if (targetState) {
-                LOGTD(DOOR, "Door moving towards target state %s (current state %d)",
-                    toString(targetState), static_cast<int>(currentState));
+                LOGTD(DOOR, "Door moving towards target state %s (current state %s)",
+                    toString(targetState), toString(currentState));
                 switch (*targetState) {
                     case TargetState::Open:
-                        motor->drive(MotorPhase::Forward, 1);
+                        motorController.drive(MotorPhase::Forward);
                         break;
                     case TargetState::Closed:
-                        motor->drive(MotorPhase::Reverse, 1);
+                        motorController.drive(MotorPhase::Reverse);
                         break;
                 }
-                watchdog.restart();
                 shouldPublishTelemetry = true;
             } else {
-                LOGTD(DOOR, "Door has no target state, stopping motor (current state %d)",
-                    static_cast<int>(currentState));
-                watchdog.cancel();
-                motor->stop();
+                LOGTD(DOOR, "Door has no target state, stopping motor (current state %s)",
+                    toString(currentState));
+                motorController.stop();
                 shouldPublishTelemetry = true;
             }
 
@@ -197,20 +231,19 @@ private:
                             TargetState newTargetState = calculateEffectiveTargetState(arg.targetState, currentState);
 
                             if (!targetState || *targetState != newTargetState) {
-                                LOGTI(DOOR, "Setting target state to %s (current state %d)",
-                                    toString(newTargetState), static_cast<int>(currentState));
+                                LOGTI(DOOR, "Setting target state to %s (current state: %s, last state: %s)",
+                                    toString(newTargetState), toString(currentState), toString(lastState));
                                 targetState = newTargetState;
                                 shouldPublishTelemetry = true;
                             }
                         } else if constexpr (std::is_same_v<T, WatchdogTimeout>) {
                             LOGTE(DOOR, "Watchdog timed out, stopping operation");
                             operationState = OperationState::WatchdogTimeout;
-                            motor->stop();
+                            motorController.stop();
                         } else if constexpr (std::is_same_v<T, ShutdownSpec>) {
                             LOGTI(DOOR, "Shutting down door operation");
                             operationState = OperationState::Stopped;
-                            motor->stop();
-                            watchdog.cancel();
+                            motorController.stop();
                         }
                     },
                     change);
@@ -274,8 +307,8 @@ private:
     }
 
     DoorState determineCurrentState() {
-        bool open = openSwitch->isEngaged() ^ invertSwitches;
-        bool closed = closedSwitch->isEngaged() ^ invertSwitches;
+        bool open = openSwitch->isEngaged();
+        bool closed = closedSwitch->isEngaged();
 
         if (open && closed) {
             // TODO Handle this as a failure?
@@ -302,9 +335,9 @@ private:
 
     const std::shared_ptr<Switch> openSwitch;
     const std::shared_ptr<Switch> closedSwitch;
-    const bool invertSwitches;
 
     Watchdog watchdog;
+    DoorMotorController motorController;
 
     const std::shared_ptr<TelemetryPublisher> telemetryPublisher;
 

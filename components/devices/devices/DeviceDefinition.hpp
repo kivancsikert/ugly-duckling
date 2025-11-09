@@ -29,6 +29,7 @@
 #include <peripherals/environment/SoilMoistureSensor.hpp>
 #include <peripherals/fence/ElectricFenceMonitor.hpp>
 #include <peripherals/flow_meter/FlowMeter.hpp>
+#include <peripherals/light_sensor/AnalogLightSensor.hpp>
 #include <peripherals/light_sensor/Bh1750.hpp>
 #include <peripherals/light_sensor/Tsl2591.hpp>
 #include <peripherals/multiplexer/Xl9535.hpp>
@@ -73,6 +74,7 @@ public:
 
         peripheralManager->registerFactory(fence::makeFactory());
 
+        peripheralManager->registerFactory(light_sensor::makeFactoryForAnalogLightSensor());
         peripheralManager->registerFactory(light_sensor::makeFactoryForBh1750());
         peripheralManager->registerFactory(light_sensor::makeFactoryForTsl2591());
 

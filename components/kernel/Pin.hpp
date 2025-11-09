@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <driver/gpio.h>
+#include <driver/gpio_filter.h>
 #include <esp_adc/adc_oneshot.h>
 #include <hal/adc_types.h>
 
@@ -140,14 +141,67 @@ public:
         return gpio;
     }
 
+    /**
+     * @brief Enable hardware glitch filter on this pin.
+     * Filters out pulses shorter than two IO-MUX clock cycles.
+     *
+     * @throws EspException if the filter cannot be created or enabled
+     */
+    void enableGlitchFilter() {
+        if (glitchFilter != nullptr) {
+            // Already enabled
+            return;
+        }
+
+        gpio_pin_glitch_filter_config_t filter_config = {
+            .clk_src = GLITCH_FILTER_CLK_SRC_DEFAULT,
+            .gpio_num = gpio,
+        };
+
+        ESP_ERROR_THROW(gpio_new_pin_glitch_filter(&filter_config, &glitchFilter));
+
+        try {
+            ESP_ERROR_THROW(gpio_glitch_filter_enable(glitchFilter));
+        } catch (...) {
+            // Clean up the filter if enable fails
+            gpio_del_glitch_filter(glitchFilter);
+            glitchFilter = nullptr;
+            throw;
+        }
+
+        LOGD("Enabled glitch filter for pin %s", name.c_str());
+    }
+
+    /**
+     * @brief Disable and remove hardware glitch filter from this pin.
+     * Multiple calls are safe - will only delete if filter exists.
+     *
+     * @throws EspException if the filter cannot be disabled or deleted
+     */
+    void disableGlitchFilter() {
+        if (glitchFilter == nullptr) {
+            // Already disabled
+            return;
+        }
+
+        ESP_ERROR_THROW(gpio_glitch_filter_disable(glitchFilter));
+        ESP_ERROR_THROW(gpio_del_glitch_filter(glitchFilter));
+
+        glitchFilter = nullptr;
+        LOGD("Disabled glitch filter for pin %s", name.c_str());
+    }
+
 private:
     const gpio_num_t gpio;
+    gpio_glitch_filter_handle_t glitchFilter = nullptr;
     static std::map<std::string, InternalPinPtr> INTERNAL_BY_NAME;
     static std::map<gpio_num_t, InternalPinPtr> INTERNAL_BY_GPIO;
 };
 
 class AnalogPin {
 public:
+    static constexpr double MAX_ANALOG_VALUE = 4096.0;
+
     explicit AnalogPin(const InternalPinPtr& pin)
         : pin(pin) {
         adc_unit_t unit;
@@ -177,6 +231,13 @@ public:
             abort();
         }
         return *value;
+    }
+
+    /**
+     * @brief Read an analog value as a double. Throws when reading fails or times out.
+     */
+    double analogReadAsDouble() const {
+        return analogRead() / MAX_ANALOG_VALUE;
     }
 
     /**

@@ -1,0 +1,33 @@
+{
+  "instance": "test-mk6-xxx",
+  "location": "bumblebee",
+  "functions": [
+    {
+      "name": "chicken-door",
+      "type": "chicken-door",
+      "params": {
+        "door": "door",
+        "lightSensor": "light-sensor"
+      }
+    }
+  ],
+  "peripherals": [
+    {
+      "name": "door",
+      "type": "door",
+      "params": {
+        "motor": "b",
+        "openPin": "A2",
+        "closedPin": "A1"
+      }
+    },
+    {
+      "name": "light-sensor",
+      "type": "light-sensor:analog",
+      "params": {
+        "pin": "C4"
+      }
+    }
+  ],
+  "motorNSleepPin": "LOADEN"
+}
