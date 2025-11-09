@@ -149,15 +149,15 @@ private:
             DoorState currentState = determineCurrentState();
             if (atTargetState(targetState, currentState)) {
                 if (currentState != lastState) {
-                    LOGTD(DOOR, "Door reached target state %d",
-                        static_cast<int>(currentState));
+                    LOGTD(DOOR, "Door reached target state %s",
+                        toString(currentState));
                     watchdog.cancel();
                     motor->stop();
                     shouldPublishTelemetry = true;
                 }
             } else if (targetState) {
-                LOGTD(DOOR, "Door moving towards target state %s (current state %d)",
-                    toString(targetState), static_cast<int>(currentState));
+                LOGTD(DOOR, "Door moving towards target state %s (current state %s)",
+                    toString(targetState), toString(currentState));
                 switch (*targetState) {
                     case TargetState::Open:
                         motor->drive(MotorPhase::Forward, 1);
@@ -169,8 +169,8 @@ private:
                 watchdog.restart();
                 shouldPublishTelemetry = true;
             } else {
-                LOGTD(DOOR, "Door has no target state, stopping motor (current state %d)",
-                    static_cast<int>(currentState));
+                LOGTD(DOOR, "Door has no target state, stopping motor (current state %s)",
+                    toString(currentState));
                 watchdog.cancel();
                 motor->stop();
                 shouldPublishTelemetry = true;
@@ -198,8 +198,8 @@ private:
                             TargetState newTargetState = calculateEffectiveTargetState(arg.targetState, currentState);
 
                             if (!targetState || *targetState != newTargetState) {
-                                LOGTI(DOOR, "Setting target state to %s (current state %d)",
-                                    toString(newTargetState), static_cast<int>(currentState));
+                                LOGTI(DOOR, "Setting target state to %s (current state: %s, last state: %s)",
+                                    toString(newTargetState), toString(currentState), toString(lastState));
                                 targetState = newTargetState;
                                 shouldPublishTelemetry = true;
                             }
