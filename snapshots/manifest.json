@@ -1,5 +1,44 @@
 [
   {
+    "commit": "5ed49810ed92b218c63a8236406297034b9694d8",
+    "version": "0.32.9-44-g5ed4981",
+    "id": "0.32.9-44-g5ed4981",
+    "date": "2025-11-10T06:03:27Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-44-g5ed4981/ugly-duckling-mk5-release.bin",
+        "sha256": "876584c50083e2cc91c006c487abd6b31968790cf5c9f38659d17049eaf230cf"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-44-g5ed4981/ugly-duckling-mk6-debug.bin",
+        "sha256": "ba1ee00a18858ec8a789b48810d50a8942ea275ac2c5f96a3ae8b45288667e78"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-44-g5ed4981/ugly-duckling-mk6-release.bin",
+        "sha256": "a715f792c7d846708c9de34cfb250cfb85fdae7935224fcd24ef88f5e020ac73"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-44-g5ed4981/ugly-duckling-mk7-release.bin",
+        "sha256": "b54e247f00e009ac5b194120028b87a4d45636453afaf7b66c632c8adbecc447"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-44-g5ed4981/ugly-duckling-mk8-release.bin",
+        "sha256": "227c77086988408b70aabfa9bf6563ce7e96c4f594e70df3600c51fb1a592c49"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-44-g5ed4981/ugly-duckling-mkX-release.bin",
+        "sha256": "a1433244f2bfb3ba3b2682ba8ca384d8a98145c43f74cfb8292812e51720e75a"
+      }
+    ],
+    "branch": "pulse-counter/de-glitch"
+  },
+  {
     "commit": "5dbc646e3cd27d7fe8df5effba11a2c0ce02ede4",
     "version": "0.32.9-43-g5dbc646",
     "id": "0.32.9-43-g5dbc646",
