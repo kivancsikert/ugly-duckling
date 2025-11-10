@@ -47,7 +47,10 @@ public:
         LOGI("Initializing electric fence with pins %s", pinsDescription.c_str());
 
         for (const auto& pinConfig : settings->pins.get()) {
-            auto unit = pulseCounterManager->create(pinConfig.pin);
+            auto unit = pulseCounterManager->create({
+                .pin = pinConfig.pin,
+                .glitchFilter = false,
+             });
             pins.emplace_back(pinConfig.voltage, unit);
         }
 

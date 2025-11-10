@@ -21,6 +21,11 @@ LOGGING_TAG(PULSE, "pulse")
 class PulseCounterManager;
 static void handlePulseCounterInterrupt(void* arg);
 
+struct PulseCounterConfig {
+    InternalPinPtr pin;
+    bool glitchFilter = true;
+};
+
 /**
  * @brief Counts pulses on a GPIO pin using interrupts.
  *
@@ -32,7 +37,7 @@ static void handlePulseCounterInterrupt(void* arg);
  */
 class PulseCounter {
 public:
-    explicit PulseCounter(const InternalPinPtr& pin)
+    PulseCounter(const InternalPinPtr& pin, bool glitchFilter)
         : pin(pin)
         , lastEdge(pin->digitalRead()) {
         auto gpio = pin->getGpio();
@@ -52,6 +57,11 @@ public:
 
         // TODO Where should this be called?
         ESP_ERROR_THROW(esp_sleep_enable_gpio_wakeup());
+
+        // Enable glitch filter to remove very short pulses (~25ns)
+        if (glitchFilter) {
+            pin->enableGlitchFilter();
+        }
 
         LOGTD(PULSE, "Registered interrupt-based pulse counter unit on pin %s",
             pin->getName().c_str());
@@ -115,7 +125,7 @@ static void IRAM_ATTR handlePulseCounterInterrupt(void* arg) {
 
 class PulseCounterManager {
 public:
-    std::shared_ptr<PulseCounter> create(const InternalPinPtr& pin) {
+    std::shared_ptr<PulseCounter> create(const PulseCounterConfig& config) {
         if (!initialized) {
             initialized = true;
 
@@ -141,10 +151,10 @@ public:
             ESP_ERROR_THROW(esp_pm_light_sleep_register_cbs(&sleepCallbackConfig));
         }
 
-        auto counter = std::make_shared<PulseCounter>(pin);
+        auto counter = std::make_shared<PulseCounter>(config.pin, config.glitchFilter);
 
         // Attach the ISR handler to the GPIO pin
-        ESP_ERROR_THROW(gpio_isr_handler_add(pin->getGpio(), handlePulseCounterInterrupt, counter.get()));
+        ESP_ERROR_THROW(gpio_isr_handler_add(config.pin->getGpio(), handlePulseCounterInterrupt, counter.get()));
 
         // Keep the counter alive in the manager
         counters.push_back(counter);

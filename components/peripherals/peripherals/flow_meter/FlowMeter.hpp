@@ -45,7 +45,10 @@ public:
         LOGI("Initializing flow meter on pin %s with Q = %.2f",
             pin->getName().c_str(), qFactor);
 
-        counter = pulseCounterManager->create(pin);
+        counter = pulseCounterManager->create({
+            .pin = pin,
+            .glitchFilter = true,
+        });
 
         auto now = boot_clock::now();
         lastMeasurement = now;
