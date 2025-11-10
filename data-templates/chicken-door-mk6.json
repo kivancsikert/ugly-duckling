@@ -30,5 +30,5 @@
       }
     }
   ],
-  "motorNSleepPin": "C4"
+  "motorNSleepPin": "LOADEN"
 }
