@@ -22,13 +22,13 @@ public:
 
     I2CConfig parse(uint8_t defaultAddress = 0xFF, const InternalPinPtr& defaultSda = nullptr, const InternalPinPtr& defaultScl = nullptr) const {
         return {
-            .address = address.get().empty()
+            .address = !address.hasValue()
                 ? defaultAddress
                 : static_cast<uint8_t>(strtol(address.get().c_str(), nullptr, 0)),
-            .sda = sda.get() == nullptr
+            .sda = !sda.hasValue()
                 ? defaultSda
                 : sda.get(),
-            .scl = scl.get() == nullptr
+            .scl = !scl.hasValue()
                 ? defaultScl
                 : scl.get()
         };
