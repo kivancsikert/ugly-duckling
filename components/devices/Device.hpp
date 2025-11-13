@@ -153,8 +153,8 @@ void initNvsFlash() {
     ESP_ERROR_CHECK(err);
 }
 
-std::shared_ptr<Watchdog> initWatchdog() {
-    return std::make_shared<Watchdog>("watchdog", 5min, true, [](WatchdogState state) {
+std::shared_ptr<Watchdog> initWatchdog(seconds timeout) {
+    return std::make_shared<Watchdog>("watchdog", timeout, true, [](WatchdogState state) {
         if (state == WatchdogState::TimedOut) {
             LOGE("Watchdog timed out");
             esp_system_abort("Watchdog timed out");
@@ -342,13 +342,13 @@ static void startDevice() {
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
 
-    auto watchdog = initWatchdog();
-
     auto deviceDefinition = std::make_shared<TDeviceDefinition>();
 
     auto fs = std::make_shared<FileSystem>();
 
     auto settings = loadConfig<TDeviceSettings>(fs, "/device-config.json");
+
+    auto watchdog = initWatchdog(settings->watchdogTimeout.get());
 
     auto powerManager = std::make_shared<PowerManager>(settings->sleepWhenIdle.get());
 
