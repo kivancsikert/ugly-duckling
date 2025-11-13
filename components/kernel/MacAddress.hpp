@@ -7,9 +7,11 @@
 
 namespace farmhub::kernel {
 
-static std::array<uint8_t, 6> getRawMacAddress() {
+constexpr size_t MAC_ADDRESS_LENGTH = 6;
+
+static std::array<uint8_t, MAC_ADDRESS_LENGTH> getRawMacAddress() {
     static bool queried;
-    static std::array<uint8_t, 6> mac {};
+    static std::array<uint8_t, MAC_ADDRESS_LENGTH> mac {};
     if (!queried) {
         ESP_ERROR_THROW(esp_read_mac(mac.data(), ESP_MAC_WIFI_STA));
         queried = true;
@@ -21,7 +23,7 @@ static const std::string& getMacAddress() {
     static std::string macAddress;
     if (macAddress.empty()) {
         auto rawMac = getRawMacAddress();
-        char mac[24];
+        char mac[4 * MAC_ADDRESS_LENGTH];    // "xx:xx:xx:xx:xx:xx" + null terminator
         (void) sprintf(mac, "%02x:%02x:%02x:%02x:%02x:%02x",
             rawMac[0], rawMac[1], rawMac[2], rawMac[3],
             rawMac[4], rawMac[5]);
@@ -30,15 +32,12 @@ static const std::string& getMacAddress() {
     return macAddress;
 }
 
+template <size_t L>
+    requires(L <= MAC_ADDRESS_LENGTH)
 [[maybe_unused]]
-static bool macAddressStartsWith(const std::vector<uint8_t>& prefix) {
-    auto rawMac = getRawMacAddress();
-    for (size_t i = 0; i < prefix.size(); i++) {
-        if (rawMac[i] != prefix[i]) {
-            return false;
-        }
-    }
-    return true;
+static bool macAddressStartsWith(const std::array<uint8_t, L>& prefix) {
+    const auto mac = getRawMacAddress();
+    return std::equal(prefix.begin(), prefix.end(), mac.begin());
 }
 
 }    // namespace farmhub::kernel

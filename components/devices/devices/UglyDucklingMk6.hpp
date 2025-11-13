@@ -4,6 +4,7 @@
 #include <memory>
 
 #include <FileSystem.hpp>
+#include <MacAddress.hpp>
 #include <Pin.hpp>
 #include <drivers/BatteryDriver.hpp>
 #include <drivers/Drv8833Driver.hpp>
@@ -77,9 +78,10 @@ public:
 
     /**
      * @brief The built-in motor driver's nSLEEP pin can be manually set by a jumper,
-     * but can be connected to a GPIO pin, too. Defaults to C2.
+     * but can be connected to a GPIO pin, too. Defaults to C2 on Rev1 and Rev2,
+     * and to LOADEN on Rev3+.
      */
-    Property<PinPtr> motorNSleepPin { this, "motorNSleepPin", pins::IOC2 };
+    Property<PinPtr> motorNSleepPin { this, "motorNSleepPin" };
 };
 
 class UglyDucklingMk6 : public DeviceDefinition<Mk6Settings> {
@@ -105,6 +107,14 @@ public:
 
 protected:
     void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<Mk6Settings>& settings) override {
+        auto isRev1 = macAddressStartsWith(std::array<uint8_t, 4> { 0x34, 0x85, 0x18, 0x50 });
+        auto isRev2 = macAddressStartsWith(std::array<uint8_t, 4> { 0xec, 0xda, 0x3b, 0x5b });
+
+        // LOADEN was introduced on Rev3, so we default to C2 on earlier revisions
+        auto motorNSleepPin = settings->motorNSleepPin.getOrDefault((isRev1 || isRev2)
+                ? pins::IOC2
+                : pins::LOADEN);
+
         auto motorDriver = Drv8833Driver::create(
             services.pwmManager,
             pins::AIN1,
@@ -112,7 +122,7 @@ protected:
             pins::BIN1,
             pins::BIN2,
             pins::NFault,
-            settings->motorNSleepPin.get(),
+            motorNSleepPin,
             true);
 
         std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorDriver->getMotorA() }, { "b", motorDriver->getMotorB() } };

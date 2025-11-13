@@ -28,6 +28,5 @@
         "pin": "C4"
       }
     }
-  ],
-  "motorNSleepPin": "LOADEN"
+  ]
 }

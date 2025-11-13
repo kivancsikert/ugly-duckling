@@ -29,6 +29,5 @@
         "sda": "C2"
       }
     }
-  ],
-  "motorNSleepPin": "LOADEN"
+  ]
 }
