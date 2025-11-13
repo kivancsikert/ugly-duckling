@@ -189,6 +189,10 @@ public:
     }
 
     T get() const {
+        return getOrDefault(defaultValue);
+    }
+
+    T getOrDefault(const T& defaultValue) const {
         return configured ? value : defaultValue;
     }
 

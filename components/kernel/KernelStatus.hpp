@@ -12,7 +12,7 @@
 #include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle)
 
 #include <I2CManager.hpp>
-#include <NetworkUtil.hpp>
+#include <MacAddress.hpp>
 #include <PowerManager.hpp>
 #include <StateManager.hpp>
 #include <drivers/LedDriver.hpp>
