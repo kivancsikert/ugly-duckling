@@ -2,7 +2,7 @@
 """
 Publish OTA binaries to a GitHub Pages worktree, prune old builds, and rebuild manifests.
 
-- Copies *.bin from an artifacts/ directory (recursively) to: site/ota/<build-id>/...
+- Copies *.bin and *.elf from an artifacts/ directory (recursively) to: site/ota/<build-id>/...
 - <build-id> comes from `git describe --tags --always --dirty` (slugified, unless --allow-slashes).
 - Writes per-build manifest.json (with sha256), updates latest.json, and rebuilds a global manifest.json.
 - When specified, prunes builds older than --retention-days using (in order): manifest date, git commit time for the dir, or mtime.
@@ -114,8 +114,9 @@ def sha256_file(p: Path) -> str:
     return h.hexdigest()
 
 
-def find_bins(artifacts_dir: Path) -> List[Path]:
-    return [Path(p) for p in glob(str(artifacts_dir / "**" / "*.bin"), recursive=True)]
+def find_files_by_extension(artifacts_dir: Path, extension: str) -> List[Path]:
+    """Find all files with the given extension (e.g., '*.bin') recursively."""
+    return [Path(p) for p in glob(str(artifacts_dir / "**" / extension), recursive=True)]
 
 
 def now_utc_iso() -> str:
@@ -279,27 +280,33 @@ def main() -> int:
     dest = args.site / "ota" / build_id
     dest.mkdir(parents=True, exist_ok=True)
 
-    # Collect .bin files
-    bins = find_bins(args.artifacts)
-    if not bins:
-        print(f"ERROR: No .bin files found under {args.artifacts}", file=sys.stderr)
+    # Collect .bin and .elf files
+    extensions = ["*.bin", "*.elf"]
+    all_files = []
+    for ext in extensions:
+        all_files.extend(find_files_by_extension(args.artifacts, ext))
+
+    if not all_files:
+        print(f"ERROR: No .bin or .elf files found under {args.artifacts}", file=sys.stderr)
         return 1
 
-    for b in bins:
-        tgt = dest / b.name
-        shutil.copy2(b, tgt)
-        print(f"Copied {b} -> {tgt}")
+    # Copy files to destination
+    for f in all_files:
+        tgt = dest / f.name
+        shutil.copy2(f, tgt)
+        print(f"Copied {f} -> {tgt}")
 
     # Per-build manifest (with sha256)
     files = []
-    for b in sorted(dest.glob("*.bin")):
-        files.append(
-            {
-                "name": b.name,
-                "url": safe_url_join(args.base_url, "ota", build_id, b.name),
-                "sha256": sha256_file(b),
-            }
-        )
+    for ext in extensions:
+        for f in sorted(dest.glob(ext)):
+            files.append(
+                {
+                    "name": f.name,
+                    "url": safe_url_join(args.base_url, "ota", build_id, f.name),
+                    "sha256": sha256_file(f),
+                }
+            )
 
     per_build_manifest = {
         "commit": commit_sha,
