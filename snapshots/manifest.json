@@ -1,5 +1,44 @@
 [
   {
+    "commit": "6045a3f2d7d4aaef04d2eff2f87cb9057c77a1dc",
+    "version": "0.32.9-52-g6045a3f",
+    "id": "0.32.9-52-g6045a3f",
+    "date": "2025-11-13T16:31:20Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-52-g6045a3f/ugly-duckling-mk5-release.bin",
+        "sha256": "d106282818a7866937eeda87227a48b302d95491bdefd6d45d91e50ce73bd402"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-52-g6045a3f/ugly-duckling-mk6-debug.bin",
+        "sha256": "d43f325af0574de0cf79de1d7937899c88343693f0531a62d98c79937288bc79"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-52-g6045a3f/ugly-duckling-mk6-release.bin",
+        "sha256": "0f32ba6d1fd1686a63bb35580f132b8f73e88252ae3087907c6751f62af47476"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-52-g6045a3f/ugly-duckling-mk7-release.bin",
+        "sha256": "174e017ba69be88758c4fd0f1558230cec45b5897bc4e4581960074a2a841476"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-52-g6045a3f/ugly-duckling-mk8-release.bin",
+        "sha256": "26c2add29b142ea8487c404216ddbf93d43ec20d6d457498a8e2b470b16af190"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-52-g6045a3f/ugly-duckling-mkX-release.bin",
+        "sha256": "843c0e367e21705e182455cb9af960c64ee429be9b640c071ace816de17f98bc"
+      }
+    ],
+    "branch": "main"
+  },
+  {
     "commit": "a3ce3761e877dcb917fbf4a2cc86997bbeb06fe6",
     "version": "0.32.9-51-ga3ce376",
     "id": "0.32.9-51-ga3ce376",
