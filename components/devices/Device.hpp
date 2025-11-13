@@ -154,7 +154,7 @@ void initNvsFlash() {
 }
 
 std::shared_ptr<Watchdog> initWatchdog() {
-    return std::make_shared<Watchdog>("watchdog", 5min, true, [](WatchdogState state) {
+    return std::make_shared<Watchdog>("watchdog", 15min, true, [](WatchdogState state) {
         if (state == WatchdogState::TimedOut) {
             LOGE("Watchdog timed out");
             esp_system_abort("Watchdog timed out");
