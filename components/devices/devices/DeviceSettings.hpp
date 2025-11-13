@@ -4,7 +4,7 @@
 #include <string>
 
 #include <Configuration.hpp>
-#include <NetworkUtil.hpp>
+#include <MacAddress.hpp>
 #include <drivers/RtcDriver.hpp>
 
 using namespace farmhub::kernel;

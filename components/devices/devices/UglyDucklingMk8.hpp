@@ -96,7 +96,7 @@ public:
     /**
      * @brief Disable the built-in current sensor for faulty revision 1 units.
      */
-    Property<bool> disableIna219 { this, "disableIna219", false };
+    Property<bool> disableIna219 { this, "disableIna219" };
 };
 
 class UglyDucklingMk8 : public DeviceDefinition<Mk8Settings> {
@@ -144,7 +144,10 @@ protected:
 
         std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorDriver->getMotorA() }, { "b", motorDriver->getMotorB() } };
 
-        if (!settings->disableIna219.get()) {
+        // Disable INA219 on MK8 Revision 1 units by default because of a hardware fault
+        // Most units have been fixed manually, but it's better to err on the side of caution by default
+        bool disableIna219ByDefault = macAddressStartsWith({ 0x98, 0xa3, 0x16, 0x1a });
+        if (!settings->disableIna219.getOrDefault(disableIna219ByDefault)) {
             ina219 = std::make_shared<Ina219Driver>(
                 services.i2c,
                 I2CConfig {
