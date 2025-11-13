@@ -2,6 +2,10 @@ idf_component_register(
     SRC_DIRS ${CMAKE_CURRENT_LIST_DIR}
     INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}
     EMBED_TXTFILES "${CMAKE_SOURCE_DIR}/partitions.csv"
+    PRIV_REQUIRES
+        spiffs
+        functions
+        devices
 )
 
 # Do not fail on warnings in ESP-IDF
@@ -46,4 +50,9 @@ if(UD_DEBUG)
     component_compile_definitions(FARMHUB_DEBUG)
     component_compile_definitions(FARMHUB_LOG_VERBOSE="${FARMHUB_LOG_VERBOSE}")
     component_compile_definitions(DUMP_MQTT)
+endif()
+
+# Use `idf.py -DFSUPLOAD=1 flash` to upload the data partition
+if(DEFINED FSUPLOAD AND FSUPLOAD)
+    spiffs_create_partition_image(data ${CMAKE_SOURCE_DIR}/data FLASH_IN_PROJECT)
 endif()
