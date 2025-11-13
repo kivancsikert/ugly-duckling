@@ -1,5 +1,44 @@
 [
   {
+    "commit": "cbc5cdeabd5ed6ef88f064dcef6d0796d243d005",
+    "version": "0.32.9-49-gcbc5cde",
+    "id": "0.32.9-49-gcbc5cde",
+    "date": "2025-11-13T15:43:51Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-49-gcbc5cde/ugly-duckling-mk5-release.bin",
+        "sha256": "7c61c96610e55627f6e45a49f2e483c926f792c3cb3d9586539e75be611eac86"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-49-gcbc5cde/ugly-duckling-mk6-debug.bin",
+        "sha256": "9f5f07afb1894ff75f6bf493f36e71bc73e89777dc920e553164c5bc28bdc98f"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-49-gcbc5cde/ugly-duckling-mk6-release.bin",
+        "sha256": "28be318eb422d5920faa839996f9967d766d7d19867734574664f7f67debed05"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-49-gcbc5cde/ugly-duckling-mk7-release.bin",
+        "sha256": "a4a0383ab588ae7042a323cdf5a24637bb3a896da51e80543b8d2acc54f0ad32"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-49-gcbc5cde/ugly-duckling-mk8-release.bin",
+        "sha256": "5b216169a1e6e452cd640ed2f352cdca2fe180fe555869b851e074d8632f7d40"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-49-gcbc5cde/ugly-duckling-mkX-release.bin",
+        "sha256": "980d037e0d048963b6989f019eca20cc6b676538a0693c8a61753d41789be56f"
+      }
+    ],
+    "branch": "main"
+  },
+  {
     "commit": "a792afd4251f397ddd9ed3081e53038ff475aec4",
     "version": "0.32.9-48-ga792afd",
     "id": "0.32.9-48-ga792afd",
