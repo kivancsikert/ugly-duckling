@@ -1,0 +1,14 @@
+{
+  "instance": "test-mk8-xxx",
+  "location": "bumblebee",
+  "peripherals": [
+    {
+      "name": "external-environment",
+      "type": "environment:htu2x",
+      "params": {
+        "sda": "A2",
+        "scl": "A1"
+      }
+    }
+  ]
+}

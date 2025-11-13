@@ -51,6 +51,5 @@
         "soilMoistureSensor": "soil-moisture"
       }
     }
-  ],
-  "motorNSleepPin": "LOADEN"
+  ]
 }

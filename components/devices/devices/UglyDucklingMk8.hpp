@@ -1,6 +1,9 @@
 #pragma once
 
+#include <vector>
+
 #include <FileSystem.hpp>
+#include <MacAddress.hpp>
 #include <Pin.hpp>
 #include <drivers/Bq27220Driver.hpp>
 #include <drivers/Drv8848Driver.hpp>
@@ -94,7 +97,7 @@ public:
     }
 
     /**
-     * @brief Disable the built-in current sensor for faulty revision 1 units.
+     * @brief Disable the built-in current sensor (useful for faulty revision 1 units).
      */
     Property<bool> disableIna219 { this, "disableIna219" };
 };
@@ -146,7 +149,7 @@ protected:
 
         // Disable INA219 on MK8 Revision 1 units by default because of a hardware fault
         // Most units have been fixed manually, but it's better to err on the side of caution by default
-        bool disableIna219ByDefault = macAddressStartsWith({ 0x98, 0xa3, 0x16, 0x1a });
+        auto disableIna219ByDefault = macAddressStartsWith(std::array<uint8_t, 4> { 0x98, 0xa3, 0x16, 0x1a });
         if (!settings->disableIna219.getOrDefault(disableIna219ByDefault)) {
             ina219 = std::make_shared<Ina219Driver>(
                 services.i2c,
