@@ -89,6 +89,7 @@ jobs:
       - name: Rename firmware artifact
         run: |
           cp build/ugly-duckling.bin ugly-duckling-${{ matrix.environment }}.bin
+          cp build/ugly-duckling.elf ugly-duckling-${{ matrix.environment }}.elf
 
       - name: Create debug artifact
         run: |
@@ -105,6 +106,7 @@ jobs:
           name: ugly-duckling-${{ matrix.environment }}
           path: |
             ugly-duckling-${{ matrix.environment }}.bin
+            ugly-duckling-${{ matrix.environment }}.elf
             debug-${{ matrix.environment }}.zip
           if-no-files-found: error
 
