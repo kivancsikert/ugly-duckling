@@ -1,5 +1,44 @@
 [
   {
+    "commit": "cddd5d8221a639e3f7a3b6cb2411b990ac4c7162",
+    "version": "0.32.9-46-gcddd5d8",
+    "id": "0.32.9-46-gcddd5d8",
+    "date": "2025-11-13T14:15:09Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-46-gcddd5d8/ugly-duckling-mk5-release.bin",
+        "sha256": "5fb3b49aa81c1f5e6035588ea4a23f8ed051ce1fc1b959964df56092530047e5"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-46-gcddd5d8/ugly-duckling-mk6-debug.bin",
+        "sha256": "4e135b982ca555e3410559441a422817dd61405d10c23e1f8241adfc82b193ce"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-46-gcddd5d8/ugly-duckling-mk6-release.bin",
+        "sha256": "82a986e19241ecbfc149dcae066f162f07ff2f3ca69085f93e6900417ac90d50"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-46-gcddd5d8/ugly-duckling-mk7-release.bin",
+        "sha256": "1f2eda1c15ca23dc3950329b98480760653775d1c2ad9a2e777529c5724078e9"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-46-gcddd5d8/ugly-duckling-mk8-release.bin",
+        "sha256": "b11c80c347c2b3aa38328b77e0f93214700ae851d84bf7c96fcaf783a2f20711"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-46-gcddd5d8/ugly-duckling-mkX-release.bin",
+        "sha256": "90b2369cd3543f14ffa0403a1d4cf4af2e710a49b4ee70bd159d1478c9b5ff94"
+      }
+    ],
+    "branch": "mk8/disable-ina219-by-default"
+  },
+  {
     "commit": "2179c130d35f96e1962dae6042bd0bbed6fb0041",
     "version": "0.32.9-45-g2179c13",
     "id": "0.32.9-45-g2179c13",
