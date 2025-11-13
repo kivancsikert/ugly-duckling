@@ -1,5 +1,44 @@
 [
   {
+    "commit": "a792afd4251f397ddd9ed3081e53038ff475aec4",
+    "version": "0.32.9-48-ga792afd",
+    "id": "0.32.9-48-ga792afd",
+    "date": "2025-11-13T15:38:30Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-48-ga792afd/ugly-duckling-mk5-release.bin",
+        "sha256": "1e5b2280a26343c56f553d355f1d0589eaca462b3ae0d41cb9b3b1532fbbb069"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-48-ga792afd/ugly-duckling-mk6-debug.bin",
+        "sha256": "09b9a0ee9c7cb365e968cd533ad008379431c80384dd9159cad353336c1348cd"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-48-ga792afd/ugly-duckling-mk6-release.bin",
+        "sha256": "09041f145dfa82a384abf1fe0da5110b7d2ccb6f513807576e37059154b74ced"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-48-ga792afd/ugly-duckling-mk7-release.bin",
+        "sha256": "f8bcf328829fe12fde1bacbf338d8ee3f7dc2bd40a7b5d203c621415a184106d"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-48-ga792afd/ugly-duckling-mk8-release.bin",
+        "sha256": "c5a41cbe81eaed5f718ba6caca227c43c49db7b4b4fb98e1be3b853d98e8fb22"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-48-ga792afd/ugly-duckling-mkX-release.bin",
+        "sha256": "a9304288b02c81c87f1c35883ef1332f67073fb0ee4f7d4beab6e3465ad7c144"
+      }
+    ],
+    "branch": "mk6/use-right-sleep-pin-by-default"
+  },
+  {
     "commit": "05046b87bd47522ba75c1bb1577b45364b96df51",
     "version": "0.32.9-48-g05046b8",
     "id": "0.32.9-48-g05046b8",
