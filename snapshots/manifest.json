@@ -1,5 +1,44 @@
 [
   {
+    "commit": "9905137ad493d1719629d7026076d995b99a0d88",
+    "version": "0.32.9-50-g9905137",
+    "id": "0.32.9-50-g9905137",
+    "date": "2025-11-13T16:10:52Z",
+    "files": [
+      {
+        "name": "ugly-duckling-mk5-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-50-g9905137/ugly-duckling-mk5-release.bin",
+        "sha256": "b110c2dfa7176d5120da57bb2560936ea458e7421fa46c79126d12062a67fa6a"
+      },
+      {
+        "name": "ugly-duckling-mk6-debug.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-50-g9905137/ugly-duckling-mk6-debug.bin",
+        "sha256": "214a78e72a540f9e17583c7cbc28ed83d22ef4c160219d586d1afdf7567f934b"
+      },
+      {
+        "name": "ugly-duckling-mk6-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-50-g9905137/ugly-duckling-mk6-release.bin",
+        "sha256": "72d14a3e40a19a293190b208f345795b0810ef0fc10521abac879401e284ab2d"
+      },
+      {
+        "name": "ugly-duckling-mk7-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-50-g9905137/ugly-duckling-mk7-release.bin",
+        "sha256": "cfcdbe74af074d60f8645200c00faa7a16402ea03b641e182b470ba78f53344b"
+      },
+      {
+        "name": "ugly-duckling-mk8-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-50-g9905137/ugly-duckling-mk8-release.bin",
+        "sha256": "abdb59d8e35a0803a7f1bae3abd310aeb83c6cab0e53e4790bc55ad5d5b38df2"
+      },
+      {
+        "name": "ugly-duckling-mkX-release.bin",
+        "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-50-g9905137/ugly-duckling-mkX-release.bin",
+        "sha256": "599fc90ecd08bb5ba99a8e6ed72c45e1305f9acbd179bef60152923412519c11"
+      }
+    ],
+    "branch": "build/minimal-build"
+  },
+  {
     "commit": "cbc5cdeabd5ed6ef88f064dcef6d0796d243d005",
     "version": "0.32.9-49-gcbc5cde",
     "id": "0.32.9-49-gcbc5cde",
