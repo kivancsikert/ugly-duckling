@@ -334,6 +334,7 @@ private:
             return lastState;
         }
 
+        LOGTD(DOOR, "Neither open nor closed switches are engaged");
         return DoorState::None;
     }
 

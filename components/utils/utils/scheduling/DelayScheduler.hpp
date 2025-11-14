@@ -14,7 +14,7 @@ namespace farmhub::utils::scheduling {
 
 LOGGING_TAG(DELAY_SCHEDULER, "delay-scheduler")
 
-struct DelaySchedulerConfig {
+struct DelaySchedule {
     seconds delayOpen;
     seconds delayClose;
 };
@@ -43,8 +43,8 @@ public:
         : innerScheduler(innerScheduler) {
     }
 
-    void setConfig(const DelaySchedulerConfig& config) {
-        this->config = config;
+    void setTarget(const DelaySchedule& target) {
+        this->target = target;
     }
 
     const char* getName() const override {
@@ -101,7 +101,7 @@ public:
         }
 
         // Determine which delay to use
-        auto delay = (*desiredState == TargetState::Open) ? config.delayOpen : config.delayClose;
+        auto delay = (*desiredState == TargetState::Open) ? target.delayOpen : target.delayClose;
         auto elapsed = duration_cast<seconds>(now - *transitionStartTime);
 
         // Check if delay has elapsed
@@ -138,7 +138,7 @@ private:
     }
 
     std::shared_ptr<IScheduler> innerScheduler;
-    DelaySchedulerConfig config { .delayOpen = 0s, .delayClose = 0s };
+    DelaySchedule target { .delayOpen = 0s, .delayClose = 0s };
 
     std::optional<TargetState> committedState;
     std::optional<TargetState> pendingState;

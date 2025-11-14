@@ -11,6 +11,7 @@
 
 #include <peripherals/api/IDoor.hpp>
 #include <utils/scheduling/CompositeScheduler.hpp>
+#include <utils/scheduling/DelayScheduler.hpp>
 #include <utils/scheduling/LightSensorScheduler.hpp>
 #include <utils/scheduling/OverrideScheduler.hpp>
 
@@ -34,6 +35,16 @@ public:
     Property<Lux> closeLevel { this, "closeLevel", 10 };
 
     /**
+     * @brief Delay before opening the door after the open condition is met.
+     */
+    Property<seconds> delayOpen { this, "delayOpen", 0s };
+
+    /**
+     * @brief Delay before closing the door after the close condition is met.
+     */
+    Property<seconds> delayClose { this, "delayClose", 0s };
+
+    /**
      * @brief The state to override the schedule with.
      */
     Property<TargetState> overrideState { this, "overrideState" };
@@ -51,17 +62,20 @@ public:
     ChickenDoor(
         const std::string& name,
         const std::shared_ptr<IDoor>& door,
-        const std::shared_ptr<OverrideScheduler>& overrideScheduler,
-        const std::shared_ptr<LightSensorScheduler>& lightSensorScheduler,
+        const std::shared_ptr<ILightSensor>& lightSensor,
         const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
         : Named(name) {
         LOGTI(CHICKEN_DOOR, "Initializing chicken-door '%s' with door '%s'",
             name.c_str(),
             door->getName().c_str());
 
+        auto overrideScheduler = std::make_shared<OverrideScheduler>();
+        auto lightSensorScheduler = std::make_shared<LightSensorScheduler>(lightSensor);
+        auto delayScheduler = std::make_shared<DelayScheduler>(lightSensorScheduler);
+
         auto compositeScheduler = std::make_shared<CompositeScheduler>(std::list<std::shared_ptr<IScheduler>> {
             overrideScheduler,
-            lightSensorScheduler,
+            delayScheduler,
         });
 
         runScheduledTransitionLoop<IDoor, ConfigSpec>(
@@ -71,33 +85,39 @@ public:
             compositeScheduler,
             telemetryPublisher,
             configQueue,
-            [overrideScheduler, lightSensorScheduler](const ConfigSpec& config) {
-                overrideScheduler->setOverride(config.overrideSpec);
+            [overrideScheduler, lightSensorScheduler, delayScheduler](const ConfigSpec& config) {
+                overrideScheduler->setOverride(config.overrideTarget);
                 lightSensorScheduler->setTarget(config.lightTarget);
+                delayScheduler->setTarget(config.delayTarget);
             });
     }
 
     void configure(const std::shared_ptr<ChickenDoorConfig>& config) override {
         auto overrideState = config->overrideState.getIfPresent();
-        auto overrideSpec = overrideState.has_value()
+        auto overrideTarget = overrideState.has_value()
             ? std::make_optional<OverrideSchedule>({
                   .state = *overrideState,
                   .until = config->overrideUntil.get(),
               })
             : std::nullopt;
         configQueue.put(ConfigSpec {
-            .overrideSpec = overrideSpec,
+            .overrideTarget = overrideTarget,
             .lightTarget = {
                 .openLevel = config->openLevel.get(),
                 .closeLevel = config->closeLevel.get(),
+            },
+            .delayTarget = {
+                .delayOpen = config->delayOpen.get(),
+                .delayClose = config->delayClose.get(),
             },
         });
     }
 
 private:
     struct ConfigSpec {
-        std::optional<OverrideSchedule> overrideSpec;
+        std::optional<OverrideSchedule> overrideTarget;
         LightSensorSchedule lightTarget;
+        DelaySchedule delayTarget;
     };
     Queue<ConfigSpec> configQueue { "configQueue", 1 };
 };
@@ -132,8 +152,7 @@ inline FunctionFactory makeFactory() {
             return std::make_shared<ChickenDoor>(
                 params.name,
                 door,
-                std::make_shared<OverrideScheduler>(),
-                std::make_shared<LightSensorScheduler>(lightSensor),
+                lightSensor,
                 params.services.telemetryPublisher);
         });
 }
