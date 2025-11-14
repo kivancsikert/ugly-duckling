@@ -1,14 +1,12 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "TestHelpers.hpp"
+
 #include <chrono>
 #include <cstdio>
 #include <ctime>
 #include <iomanip>
-#include <iostream>
-#include <sstream>
 #include <time.h>
-
-#include <FakeLog.hpp>
 
 #include <peripherals/api/IValve.hpp>
 #include <utils/scheduling/TimeBasedScheduler.hpp>
@@ -39,24 +37,6 @@ struct StringMaker<TimeBasedSchedule> {
         oss << "TimeBasedSchedule{start=" << timeBuf
             << ", period=" << s.period.count() << "s"
             << ", duration=" << s.duration.count() << "s}";
-        return oss.str();
-    }
-};
-
-template <>
-struct StringMaker<ScheduleResult> {
-    static std::string convert(ScheduleResult const& r) {
-        using farmhub::peripherals::api::toString;
-        std::ostringstream oss;
-        oss << "ScheduleResult{";
-        oss << "target=" << toString(r.targetState) << ", ";
-        oss << "next=";
-        if (r.nextDeadline.has_value()) {
-            oss << r.nextDeadline->count() << "ms";
-        } else {
-            oss << "None";
-        }
-        oss << ", publish=" << (r.shouldPublishTelemetry ? "true" : "false") << "}";
         return oss.str();
     }
 };

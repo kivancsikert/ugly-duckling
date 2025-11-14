@@ -7,7 +7,6 @@
 #include <driver/gpio.h>
 #include <hal/gpio_types.h>
 
-#include <BootClock.hpp>
 #include <Concurrent.hpp>
 #include <Pin.hpp>
 #include <Task.hpp>
@@ -141,7 +140,7 @@ private:
             , engageHandler(std::move(engageHandler))
             , disengageHandler(std::move(disengageHandler))
             , debounceTime(debounceTime)
-            , lastChangeTime(boot_clock::now())
+            , lastChangeTime(steady_clock::now())
             , lastReportedState(isEngaged()) {
         }
 
@@ -167,7 +166,7 @@ private:
         SwitchEventHandler disengageHandler;
 
         milliseconds debounceTime;
-        time_point<boot_clock> lastChangeTime;
+        steady_clock::time_point lastChangeTime;
         bool lastReportedState;
 
         friend class SwitchManager;
@@ -196,7 +195,7 @@ static void IRAM_ATTR handleSwitchInterrupt(void* arg) {
     }
 
     // Software debounce: ignore state changes that happen too quickly
-    auto now = boot_clock::now();
+    auto now = steady_clock::now();
     auto timeSinceLastChange = duration_cast<milliseconds>(now - state->lastChangeTime);
     if (timeSinceLastChange < state->debounceTime) {
         return;

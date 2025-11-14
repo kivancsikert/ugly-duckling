@@ -1,11 +1,15 @@
 #pragma once
 
+#include <chrono>
+
 #include <esp_private/esp_clk.h>
 
 #include <BatteryManager.hpp>
 #include <Strings.hpp>
 #include <drivers/RtcDriver.hpp>
 #include <drivers/WiFiDriver.hpp>
+
+using namespace std::chrono;
 
 using namespace farmhub::kernel::drivers;
 
@@ -28,7 +32,7 @@ private:
     void printStatus() {
         static const char* spinner = "|/-\\";
         static const size_t spinnerLength = strlen(spinner);
-        auto uptime = duration_cast<milliseconds>(boot_clock::now().time_since_epoch());
+        auto uptime = duration_cast<milliseconds>(steady_clock::now().time_since_epoch());
 
         counter = (counter + 1) % spinnerLength;
         status.clear();

@@ -4,9 +4,9 @@
 #include <functional>
 #include <optional>
 
-#include <BootClock.hpp>
 #include <Concurrent.hpp>
 
+using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace farmhub::kernel;
 
@@ -15,7 +15,7 @@ namespace farmhub::utils {
 template <typename T>
 struct DebouncedParams {
     T& lastValue;
-    std::optional<std::chrono::time_point<boot_clock>> lastMeasurement;
+    std::optional<std::chrono::steady_clock::time_point> lastMeasurement;
 };
 
 template <typename T>
@@ -32,7 +32,7 @@ public:
 
     void updateIfNecessary() {
         Lock lock(mutex);
-        auto now = boot_clock::now();
+        auto now = steady_clock::now();
         if (lastMeasurement && now - *lastMeasurement < interval) {
             return;
         }
@@ -56,7 +56,7 @@ private:
     std::chrono::milliseconds interval;
 
     T value;
-    std::optional<std::chrono::time_point<boot_clock>> lastMeasurement;
+    std::optional<std::chrono::steady_clock::time_point> lastMeasurement;
 
     Mutex mutex;
 };

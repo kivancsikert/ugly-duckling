@@ -17,6 +17,8 @@ inline static const char* toString(DoorState state) {
     switch (state) {
         case DoorState::Closed:
             return "Closed";
+        case DoorState::None:
+            return "None";
         case DoorState::Open:
             return "Open";
         default:

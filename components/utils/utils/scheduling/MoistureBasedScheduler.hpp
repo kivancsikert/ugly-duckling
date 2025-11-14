@@ -225,6 +225,12 @@ struct MoistureBasedScheduler : IScheduler {
     }
 
     void setTarget(std::optional<MoistureTarget> target) {
+        if (target) {
+            LOGTD(SCHEDULING, "MoistureBasedScheduler: Setting target: low=%.1f%%, high=%.1f%%",
+                target->low, target->high);
+        } else {
+            LOGTD(SCHEDULING, "MoistureBasedScheduler: Clearing target");
+        }
         this->target = target;
     }
 

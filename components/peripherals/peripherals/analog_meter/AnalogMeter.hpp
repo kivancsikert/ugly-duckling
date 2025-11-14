@@ -3,7 +3,6 @@
 #include <chrono>
 #include <utility>
 
-#include <BootClock.hpp>
 #include <Concurrent.hpp>
 #include <Configuration.hpp>
 #include <Log.hpp>

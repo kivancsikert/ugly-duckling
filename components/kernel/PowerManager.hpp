@@ -1,8 +1,9 @@
 #pragma once
 
+#include <chrono>
+
 #include <esp_pm.h>
 
-#include <BootClock.hpp>
 #include <Concurrent.hpp>
 #include <EspException.hpp>
 #include <Telemetry.hpp>
@@ -15,6 +16,8 @@
 #else
 #error "Target not supported " CONFIG_IDF_TARGET
 #endif
+
+using namespace std::chrono;
 
 namespace farmhub::kernel {
 
@@ -109,8 +112,8 @@ public:
 
     void populateTelemetry(JsonObject& json) {
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
-        auto now = boot_clock::now();
-        microseconds duration = now - sleepTimeLastReported;
+        auto now = steady_clock::now();
+        auto duration = duration_cast<microseconds>(now - sleepTimeLastReported);
         if (duration.count() > 0) {
             double currentLightSleepRatio = static_cast<double>(lightSleepTime.count()) / static_cast<double>(duration.count());
             auto currentLightSleepCount = lightSleepCount;
@@ -152,7 +155,7 @@ private:
     }
 
 #ifdef CONFIG_PM_LIGHT_SLEEP_CALLBACKS
-    time_point<boot_clock> sleepTimeLastReported = boot_clock::now();
+    steady_clock::time_point sleepTimeLastReported = steady_clock::now();
     microseconds lightSleepTime = microseconds::zero();
     int lightSleepCount = 0;
 #endif

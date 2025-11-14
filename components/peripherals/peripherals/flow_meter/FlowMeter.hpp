@@ -4,7 +4,6 @@
 
 #include <ArduinoJson.h>
 
-#include <BootClock.hpp>
 #include <Concurrent.hpp>
 #include <PulseCounter.hpp>
 #include <Task.hpp>
@@ -15,6 +14,7 @@
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/IFlowMeter.hpp>
 
+using namespace std::chrono;
 using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals::api;
 
@@ -50,13 +50,13 @@ public:
             .debounceTime = 1ms,
         });
 
-        auto now = boot_clock::now();
+        auto now = steady_clock::now();
         lastMeasurement = now;
         lastSeenFlow = now;
         lastPublished = now;
 
         Task::loop(name, 3072, [this, measurementFrequency](Task& task) {
-            auto now = boot_clock::now();
+            auto now = steady_clock::now();
             milliseconds elapsed = duration_cast<milliseconds>(now - lastMeasurement);
             if (elapsed.count() > 0) {
                 lastMeasurement = now;
@@ -112,9 +112,9 @@ private:
     std::shared_ptr<PulseCounter> counter;
     const double qFactor;
 
-    time_point<boot_clock> lastMeasurement;
-    time_point<boot_clock> lastSeenFlow;
-    time_point<boot_clock> lastPublished;
+    steady_clock::time_point lastMeasurement;
+    steady_clock::time_point lastSeenFlow;
+    steady_clock::time_point lastPublished;
     double volume = 0.0;
     double unpublishedVolume = 0.0;
 

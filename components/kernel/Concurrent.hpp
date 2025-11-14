@@ -7,7 +7,6 @@
 
 #include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle)
 
-#include <BootClock.hpp>
 #include <Time.hpp>
 #include <utility>
 
