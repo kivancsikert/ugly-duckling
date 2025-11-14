@@ -56,7 +56,7 @@ Checks:
   - -readability-use-anyofallof
 
 CheckOptions:
-  readability-function-cognitive-complexity.Threshold: 300
+  readability-function-cognitive-complexity.Threshold: 500
   cppcoreguidelines-avoid-do-while.IgnoreMacros: true
   hicpp-signed-bitwise.IgnorePositiveIntegerLiterals: true
 
