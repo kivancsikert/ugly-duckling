@@ -45,7 +45,7 @@ private:
 
 class TelemetryPublisher {
 public:
-    explicit TelemetryPublisher(const std::shared_ptr<CopyQueue<bool>>& telemetryPublishQueue)
+    TelemetryPublisher(const std::shared_ptr<CopyQueue<bool>>& telemetryPublishQueue)
         : telemetryPublishQueue(telemetryPublishQueue) {}
 
     void requestTelemetryPublishing() {

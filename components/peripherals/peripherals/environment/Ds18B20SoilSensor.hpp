@@ -35,7 +35,7 @@ class Ds18B20SoilSensor final
     : public ITemperatureSensor,
       public Peripheral {
 public:
-    explicit Ds18B20SoilSensor(
+    Ds18B20SoilSensor(
         const std::string& name,
         const InternalPinPtr& pin,
         const std::string& address)

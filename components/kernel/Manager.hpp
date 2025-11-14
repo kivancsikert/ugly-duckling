@@ -19,7 +19,7 @@ struct ShutdownParameters {
     // Placeholder for future parameters
 };
 
-// Explicit shutdown capability for implementations that support graceful shutdown
+// shutdown capability for implementations that support graceful shutdown
 class HasShutdown {
 public:
     virtual ~HasShutdown() = default;
@@ -88,7 +88,7 @@ struct Factory {
 template <typename FactoryT>
 class Manager {
 public:
-    explicit Manager(std::string managed)
+    Manager(std::string managed)
         : managed(std::move(managed)) {
     }
 
@@ -172,7 +172,7 @@ template <typename FactoryT>
 class SettingsBasedManager
     : public Manager<FactoryT> {
 public:
-    explicit SettingsBasedManager(std::string managed)
+    SettingsBasedManager(std::string managed)
         : Manager<FactoryT>(std::move(managed)) {
     }
 

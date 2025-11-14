@@ -44,7 +44,7 @@ private:
 
 class PowerManagementLockGuard {
 public:
-    explicit PowerManagementLockGuard(PowerManagementLock& lock)
+    PowerManagementLockGuard(PowerManagementLock& lock)
         : lock(lock) {
         ESP_ERROR_THROW(esp_pm_lock_acquire(lock.lock));
     }
@@ -65,7 +65,7 @@ private:
 
 class PowerManager final {
 public:
-    explicit PowerManager(bool requestedSleepWhenIdle)
+    PowerManager(bool requestedSleepWhenIdle)
         : sleepWhenIdle(shouldSleepWhenIdle(requestedSleepWhenIdle)) {
 
         LOGTV(PM, "Configuring power management, CPU max/min at %d/%d MHz, light sleep is %s",

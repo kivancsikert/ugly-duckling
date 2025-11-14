@@ -63,7 +63,7 @@ public:
     virtual ~Pin() = default;
 
 protected:
-    explicit Pin(const std::string& name)
+    Pin(const std::string& name)
         : name(name) {
     }
 
@@ -202,7 +202,7 @@ class AnalogPin {
 public:
     static constexpr double MAX_ANALOG_VALUE = 4096.0;
 
-    explicit AnalogPin(const InternalPinPtr& pin)
+    AnalogPin(const InternalPinPtr& pin)
         : pin(pin) {
         adc_unit_t unit;
         ESP_ERROR_THROW(adc_oneshot_io_to_channel(pin->getGpio(), &unit, &channel));

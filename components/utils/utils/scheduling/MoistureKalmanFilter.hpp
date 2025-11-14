@@ -20,7 +20,7 @@ namespace farmhub::utils::scheduling {
  */
 class MoistureKalmanFilter {
 public:
-    explicit MoistureKalmanFilter(double initMoistReal = 0.0,
+    MoistureKalmanFilter(double initMoistReal = 0.0,
         double initBeta = 0.0,
         double tempRef = 20.0)
         : moistReal(initMoistReal)

@@ -27,7 +27,7 @@ public:
 
 class UglyDucklingMkX : public DeviceDefinition<MkXSettings> {
 public:
-    explicit UglyDucklingMkX()
+    UglyDucklingMkX()
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
     }
 

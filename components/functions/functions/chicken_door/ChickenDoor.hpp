@@ -50,7 +50,7 @@ struct LightSensorSchedule {
 };
 
 struct LightSensorScheduler : IScheduler {
-    explicit LightSensorScheduler(const std::shared_ptr<ILightSensor>& lightSensor)
+    LightSensorScheduler(const std::shared_ptr<ILightSensor>& lightSensor)
         : lightSensor(lightSensor) {
     }
 
@@ -159,7 +159,7 @@ struct ChickenDoorSettings : ConfigurationSection {
 };
 
 struct NoOpLightSensor : virtual ILightSensor, Named {
-    explicit NoOpLightSensor(const std::string& name)
+    NoOpLightSensor(const std::string& name)
         : Named(name) {
     }
 

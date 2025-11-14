@@ -8,7 +8,7 @@ template <typename M, typename T = M>
 requires std::is_arithmetic_v<M> && std::is_arithmetic_v<T>
 class MovingAverage {
 public:
-    explicit MovingAverage(std::size_t maxMeasurements)
+    MovingAverage(std::size_t maxMeasurements)
         : maxMeasurements(maxMeasurements)
         , measurements(maxMeasurements, M(0))
         , sum(0)

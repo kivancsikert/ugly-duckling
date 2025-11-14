@@ -21,7 +21,7 @@ struct DebouncedParams {
 template <typename T>
 class DebouncedMeasurement {
 public:
-    explicit DebouncedMeasurement(
+    DebouncedMeasurement(
         std::move_only_function<std::optional<T>(const DebouncedParams<T>)> measure,
         std::chrono::milliseconds interval = 1s,
         const T& defaultValue = {})

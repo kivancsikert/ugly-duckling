@@ -23,12 +23,14 @@ Checks:
   - -cppcoreguidelines-special-member-functions
   - google-*
   - -google-build-using-namespace
+  - -google-explicit-constructor
   - -google-global-names-in-headers
   - -google-objc-*
   - -google-readability-todo
   - hicpp-*
   - -hicpp-avoid-c-arrays
   - -hicpp-avoid-goto
+  - -hicpp-explicit-conversions
   - -hicpp-member-init
   - -hicpp-no-array-decay
   - -hicpp-signed-bitwise
