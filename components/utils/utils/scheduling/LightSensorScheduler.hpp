@@ -12,6 +12,8 @@
 using namespace std::chrono;
 using namespace std::chrono_literals;
 
+using namespace farmhub::peripherals::api;
+
 namespace farmhub::utils::scheduling {
 
 struct LightSensorSchedule {
