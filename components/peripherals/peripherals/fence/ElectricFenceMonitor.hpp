@@ -49,8 +49,7 @@ public:
         for (const auto& pinConfig : settings->pins.get()) {
             auto unit = pulseCounterManager->create({
                 .pin = pinConfig.pin,
-                .glitchFilter = false,
-             });
+            });
             pins.emplace_back(pinConfig.voltage, unit);
         }
 

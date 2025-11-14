@@ -23,7 +23,6 @@ static void handlePulseCounterInterrupt(void* arg);
 
 struct PulseCounterConfig {
     InternalPinPtr pin;
-    bool glitchFilter = true;
 };
 
 /**
@@ -37,7 +36,7 @@ struct PulseCounterConfig {
  */
 class PulseCounter {
 public:
-    PulseCounter(const InternalPinPtr& pin, bool glitchFilter)
+    PulseCounter(const InternalPinPtr& pin)
         : pin(pin)
         , lastEdge(pin->digitalRead()) {
         auto gpio = pin->getGpio();
@@ -57,11 +56,6 @@ public:
 
         // TODO Where should this be called?
         ESP_ERROR_THROW(esp_sleep_enable_gpio_wakeup());
-
-        // Enable glitch filter to remove very short pulses (~25ns)
-        if (glitchFilter) {
-            pin->enableGlitchFilter();
-        }
 
         LOGTD(PULSE, "Registered interrupt-based pulse counter unit on pin %s",
             pin->getName().c_str());
@@ -151,7 +145,7 @@ public:
             ESP_ERROR_THROW(esp_pm_light_sleep_register_cbs(&sleepCallbackConfig));
         }
 
-        auto counter = std::make_shared<PulseCounter>(config.pin, config.glitchFilter);
+        auto counter = std::make_shared<PulseCounter>(config.pin);
 
         // Attach the ISR handler to the GPIO pin
         ESP_ERROR_THROW(gpio_isr_handler_add(config.pin->getGpio(), handlePulseCounterInterrupt, counter.get()));
