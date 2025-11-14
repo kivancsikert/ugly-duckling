@@ -1,0 +1,69 @@
+{
+  "commit": "2b1e9f7662c75ac03479d01973b2f24c9ad7135a",
+  "version": "0.32.9-61-g2b1e9f7",
+  "id": "0.32.9-61-g2b1e9f7",
+  "date": "2025-11-14T08:44:12Z",
+  "files": [
+    {
+      "name": "ugly-duckling-mk5-release.bin",
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-61-g2b1e9f7/ugly-duckling-mk5-release.bin",
+      "sha256": "9b2eea14b6cc882472ed6a57517536b52f015239944179a82194650e0036e146"
+    },
+    {
+      "name": "ugly-duckling-mk6-debug.bin",
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-61-g2b1e9f7/ugly-duckling-mk6-debug.bin",
+      "sha256": "269972aff7bedcad5b3fc306ff4f70742677880a8eab45593897ed6484cb4296"
+    },
+    {
+      "name": "ugly-duckling-mk6-release.bin",
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-61-g2b1e9f7/ugly-duckling-mk6-release.bin",
+      "sha256": "01705631c7250c6fca906da6416475bb1f751e61c21baabeab2fc8c830263a1b"
+    },
+    {
+      "name": "ugly-duckling-mk7-release.bin",
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-61-g2b1e9f7/ugly-duckling-mk7-release.bin",
+      "sha256": "aed958acc468919b45363d30c58e769902a2004b05f52569a8bd39037565be27"
+    },
+    {
+      "name": "ugly-duckling-mk8-release.bin",
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-61-g2b1e9f7/ugly-duckling-mk8-release.bin",
+      "sha256": "457425be276496ebade14fe56e860d55197e90af1612e5ed6cac9887ccbb2e5e"
+    },
+    {
+      "name": "ugly-duckling-mkX-release.bin",
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-61-g2b1e9f7/ugly-duckling-mkX-release.bin",
+      "sha256": "76c23cdd6cd049215c19f3efda34c932e8ce1353af35da5fa654eda3a5cb3769"
+    },
+    {
+      "name": "ugly-duckling-mk5-release.elf",
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-61-g2b1e9f7/ugly-duckling-mk5-release.elf",
+      "sha256": "4e5ceb6af2def4e24cd2c226c640503daede92e0eaf747fa5667c242df83e12e"
+    },
+    {
+      "name": "ugly-duckling-mk6-debug.elf",
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-61-g2b1e9f7/ugly-duckling-mk6-debug.elf",
+      "sha256": "4a825beeb641147a79fb021cf58c1832cc8912c69646f783f3bec320fc6192d1"
+    },
+    {
+      "name": "ugly-duckling-mk6-release.elf",
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-61-g2b1e9f7/ugly-duckling-mk6-release.elf",
+      "sha256": "39dbcff21b15bf0eba60a3840541c7365de54d4f1746975b9d9f4f408a262ba3"
+    },
+    {
+      "name": "ugly-duckling-mk7-release.elf",
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-61-g2b1e9f7/ugly-duckling-mk7-release.elf",
+      "sha256": "d202a476cf50624eed41eb742bddea374988c89f3fe8f452a0fda47d17a2beef"
+    },
+    {
+      "name": "ugly-duckling-mk8-release.elf",
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-61-g2b1e9f7/ugly-duckling-mk8-release.elf",
+      "sha256": "880ee9fcadd6cf262b561018bad12df3764753f88417ac2452b9e310350a83f8"
+    },
+    {
+      "name": "ugly-duckling-mkX-release.elf",
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-61-g2b1e9f7/ugly-duckling-mkX-release.elf",
+      "sha256": "4767bc3b0f9f87c51c6a7954c19c35a66611bcdabec1452672530c62499411d5"
+    }
+  ],
+  "branch": "pcnt/software-debounce"
+}
