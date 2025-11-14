@@ -122,15 +122,15 @@ public:
               .name = name + ":open",
               .pin = openPin,
               .mode = invertSwitches ? SwitchMode::PullDown : SwitchMode::PullUp,
-              .onEngaged = [this](const SwitchEvent& event) { handleSwitchEvent(event); },
-              .onDisengaged = [this](const SwitchEvent& event) { handleSwitchEvent(event); },
+              .onEngaged = [this](const SwitchEvent& event) { enqueueSwitchEvent(event); },
+              .onDisengaged = [this](const SwitchEvent& event) { enqueueSwitchEvent(event); },
           }))
         , closedSwitch(switches->registerSwitch({
               .name = name + ":closed",
               .pin = closedPin,
               .mode = invertSwitches ? SwitchMode::PullDown : SwitchMode::PullUp,
-              .onEngaged = [this](const SwitchEvent& event) { handleSwitchEvent(event); },
-              .onDisengaged = [this](const SwitchEvent& event) { handleSwitchEvent(event); },
+              .onEngaged = [this](const SwitchEvent& event) { enqueueSwitchEvent(event); },
+              .onDisengaged = [this](const SwitchEvent& event) { enqueueSwitchEvent(event); },
           }))
         , watchdog(name + ":watchdog", movementTimeout, false, [this](WatchdogState state) {
             handleWatchdogEvent(state);
@@ -226,15 +226,14 @@ private:
                 std::visit(
                     [&](auto&& arg) {
                         using T = std::decay_t<decltype(arg)>;
-                        if constexpr (std::is_same_v<T, StateUpdated>) {
-                            LOGTV(DOOR, "Status update received: open=%s, closed=%s",
-                                arg.openSwitchEngaged.has_value() ? (arg.openSwitchEngaged.value() ? "true" : "false") : "n/a",
-                                arg.closedSwitchEngaged.has_value() ? (arg.closedSwitchEngaged.value() ? "true" : "false") : "n/a");
-                            if (arg.openSwitchEngaged) {
-                                openSwitchEngaged = *arg.openSwitchEngaged;
-                            }
-                            if (arg.closedSwitchEngaged) {
-                                closedSwitchEngaged = *arg.closedSwitchEngaged;
+                        if constexpr (std::is_same_v<T, SwitchEvent>) {
+                            LOGTV(DOOR, "Status update received: switch=%s, engaged=%s",
+                                arg.switchState->getName().c_str(),
+                                arg.engaged ? "true" : "false");
+                            if (arg.switchState == openSwitch) {
+                                openSwitchEngaged = arg.engaged;
+                            } else if (arg.switchState == closedSwitch) {
+                                closedSwitchEngaged = arg.engaged;
                             }
                         } else if constexpr (std::is_same_v<T, ConfigureSpec>) {
                             Lock lock(stateMutex);
@@ -307,23 +306,13 @@ private:
             case WatchdogState::TimedOut:
                 LOGTV(DOOR, "Watchdog timed out");
                 sleepLock.reset();
-                updateQueue.offer(WatchdogTimeout {});
+                updateQueue.put(WatchdogTimeout {});
                 break;
         }
     }
 
-    inline void handleSwitchEvent(const SwitchEvent& event) {
-        if (event.switchState == openSwitch) {
-            updateQueue.offer(StateUpdated {
-                .openSwitchEngaged = event.engaged,
-                .closedSwitchEngaged = std::nullopt,
-            });
-        } else if (event.switchState == closedSwitch) {
-            updateQueue.offer(StateUpdated {
-                .openSwitchEngaged = std::nullopt,
-                .closedSwitchEngaged = event.engaged,
-            });
-        }
+    void enqueueSwitchEvent(const SwitchEvent& event) {
+        updateQueue.put(event);
     }
 
     DoorState determineCurrentState(bool open, bool closed) {
@@ -358,11 +347,6 @@ private:
 
     const std::shared_ptr<TelemetryPublisher> telemetryPublisher;
 
-    struct StateUpdated {
-        std::optional<bool> openSwitchEngaged;
-        std::optional<bool> closedSwitchEngaged;
-    };
-
     struct ConfigureSpec {
         std::optional<TargetState> targetState;
     };
@@ -371,7 +355,7 @@ private:
 
     struct ShutdownSpec { };
 
-    Queue<std::variant<StateUpdated, ConfigureSpec, WatchdogTimeout, ShutdownSpec>> updateQueue { "door-status", 8 };
+    Queue<std::variant<SwitchEvent, ConfigureSpec, WatchdogTimeout, ShutdownSpec>> updateQueue { "door-status", 8 };
 
     OperationState operationState = OperationState::Running;
 
