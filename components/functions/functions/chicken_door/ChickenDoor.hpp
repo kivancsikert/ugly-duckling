@@ -22,27 +22,37 @@ namespace farmhub::functions::chicken_door {
 
 LOGGING_TAG(CHICKEN_DOOR, "chicken-door")
 
-class ChickenDoorConfig : public ConfigurationSection {
-public:
+struct LightTarget : ConfigurationSection {
     /**
-     * @brief Light level above which the door should be open.
+     * @brief Light level above which the door should be opened.
      */
-    Property<Lux> openLevel { this, "openLevel", 250 };
+    Property<Lux> open { this, "open", 250 };
 
     /**
      * @brief Light level below which the door should be closed.
      */
-    Property<Lux> closeLevel { this, "closeLevel", 10 };
+    Property<Lux> close { this, "close", 10 };
+};
 
-    /**
-     * @brief Delay before opening the door after the open condition is met.
-     */
-    Property<seconds> delayOpen { this, "delayOpen", 0s };
+struct DelayTarget : ConfigurationSection {
+    Property<seconds> open { this, "open", 0s };
 
     /**
      * @brief Delay before closing the door after the close condition is met.
      */
-    Property<seconds> delayClose { this, "delayClose", 0s };
+    Property<seconds> close { this, "close", 0s };
+};
+
+struct ChickenDoorConfig : ConfigurationSection {
+    /**
+     * @brief Light levels to open or close the door at.
+     */
+    NamedConfigurationEntry<LightTarget> lightTarget { this, "lightTarget" };
+
+    /**
+     * @brief Delays after opening or closing the door.
+     */
+    NamedConfigurationEntry<DelayTarget> delayTarget { this, "delayTarget" };
 
     /**
      * @brief The state to override the schedule with.
@@ -103,12 +113,12 @@ public:
         configQueue.put(ConfigSpec {
             .overrideTarget = overrideTarget,
             .lightTarget = {
-                .openLevel = config->openLevel.get(),
-                .closeLevel = config->closeLevel.get(),
+                .openLevel = config->lightTarget.get()->open.get(),
+                .closeLevel = config->lightTarget.get()->close.get(),
             },
             .delayTarget = {
-                .delayOpen = config->delayOpen.get(),
-                .delayClose = config->delayClose.get(),
+                .delayOpen = config->delayTarget.get()->open.get(),
+                .delayClose = config->delayTarget.get()->close.get(),
             },
         });
     }
