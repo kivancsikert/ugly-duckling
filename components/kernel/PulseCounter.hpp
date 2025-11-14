@@ -14,6 +14,8 @@
 #include <Pin.hpp>
 #include <PowerManager.hpp>
 
+using namespace std::chrono;
+
 namespace farmhub::kernel {
 
 LOGGING_TAG(PULSE, "pulse")
@@ -23,6 +25,10 @@ static void handlePulseCounterInterrupt(void* arg);
 
 struct PulseCounterConfig {
     InternalPinPtr pin;
+    /**
+     * @brief Ignore any pulses that happen within this time after the previous pulse.
+     */
+    microseconds debounceTime = 0us;
 };
 
 /**
@@ -36,9 +42,11 @@ struct PulseCounterConfig {
  */
 class PulseCounter {
 public:
-    PulseCounter(const InternalPinPtr& pin)
+    PulseCounter(const InternalPinPtr& pin, microseconds debounceTime)
         : pin(pin)
-        , lastEdge(pin->digitalRead()) {
+        , debounceTime(debounceTime)
+        , lastEdge(pin->digitalRead())
+        , lastCountedEdgeTime(boot_clock::now()) {
         auto gpio = pin->getGpio();
 
         // Configure the GPIO pin as an input
@@ -99,8 +107,10 @@ private:
     }
 
     const InternalPinPtr pin;
+    const microseconds debounceTime;
     std::atomic<uint32_t> edgeCount { 0 };
     int lastEdge;
+    time_point<boot_clock> lastCountedEdgeTime;
 
     friend void handlePulseCounterInterrupt(void* arg);
     friend class PulseCounterManager;
@@ -111,6 +121,17 @@ static void IRAM_ATTR handlePulseCounterInterrupt(void* arg) {
     auto currentState = counter->pin->digitalReadFromISR();
     if (currentState != counter->lastEdge) {
         counter->lastEdge = currentState;
+
+        // Software debounce: ignore edges that happen too quickly
+        if (counter->debounceTime > 0us) {
+            auto now = boot_clock::now();
+            auto timeSinceLastEdge = duration_cast<microseconds>(now - counter->lastCountedEdgeTime);
+            if (timeSinceLastEdge < counter->debounceTime) {
+                return;
+            }
+            counter->lastCountedEdgeTime = now;
+        }
+
         if (currentState == 0) {
             counter->edgeCount++;
         }
@@ -145,7 +166,7 @@ public:
             ESP_ERROR_THROW(esp_pm_light_sleep_register_cbs(&sleepCallbackConfig));
         }
 
-        auto counter = std::make_shared<PulseCounter>(config.pin);
+        auto counter = std::make_shared<PulseCounter>(config.pin, config.debounceTime);
 
         // Attach the ISR handler to the GPIO pin
         ESP_ERROR_THROW(gpio_isr_handler_add(config.pin->getGpio(), handlePulseCounterInterrupt, counter.get()));
