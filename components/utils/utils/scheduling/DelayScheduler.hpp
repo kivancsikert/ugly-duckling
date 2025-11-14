@@ -12,8 +12,6 @@ using namespace std::chrono_literals;
 
 namespace farmhub::utils::scheduling {
 
-LOGGING_TAG(DELAY_SCHEDULER, "delay-scheduler")
-
 struct DelaySchedule {
     seconds delayOpen;
     seconds delayClose;
@@ -71,7 +69,7 @@ public:
 
         // If we haven't committed to a state yet, do so immediately
         if (!committedState) {
-            LOGTD(DELAY_SCHEDULER, "Initial commit to state %s", toString(desiredState));
+            LOGTD(SCHEDULING, "Initial commit to state %s", toString(desiredState));
             committedState = desiredState;
             resetTransition();
             return {
@@ -93,7 +91,7 @@ public:
 
         // Start a new transition
         if (!transitionStartTime || pendingState != desiredState) {
-            LOGTD(DELAY_SCHEDULER, "Starting transition from %s to %s",
+            LOGTD(SCHEDULING, "Starting transition from %s to %s",
                 toString(committedState),
                 toString(desiredState));
             transitionStartTime = now;
@@ -106,7 +104,7 @@ public:
 
         // Check if delay has elapsed
         if (elapsed >= delay) {
-            LOGTD(DELAY_SCHEDULER, "Committing to state %s after %lld s delay",
+            LOGTD(SCHEDULING, "Committing to state %s after %lld s delay",
                 toString(desiredState),
                 elapsed.count());
             committedState = desiredState;
@@ -120,7 +118,7 @@ public:
 
         // Still waiting for delay to elapse
         auto remaining = delay - elapsed;
-        LOGTV(DELAY_SCHEDULER, "Waiting %lld more seconds before transitioning to %s",
+        LOGTV(SCHEDULING, "Waiting %lld more seconds before transitioning to %s",
             duration_cast<seconds>(remaining).count(),
             toString(desiredState));
 
