@@ -145,7 +145,7 @@ struct PlotControllerSettings : ConfigurationSection {
 };
 
 struct NoOpFlowMeter : virtual IFlowMeter, Named {
-    explicit NoOpFlowMeter(const std::string& name)
+    NoOpFlowMeter(const std::string& name)
         : Named(name) {
     }
 
@@ -159,7 +159,7 @@ struct NoOpFlowMeter : virtual IFlowMeter, Named {
 };
 
 struct NoOpSoilMoistureSensor : virtual ISoilMoistureSensor, Named {
-    explicit NoOpSoilMoistureSensor(const std::string& name)
+    NoOpSoilMoistureSensor(const std::string& name)
         : Named(name) {
     }
 

@@ -47,7 +47,7 @@ private:
 template <typename TMessage>
 class Queue : public BaseQueue {
 public:
-    explicit Queue(const std::string& name, size_t capacity = 16)
+    Queue(const std::string& name, size_t capacity = 16)
         : BaseQueue(name, sizeof(TMessage*), capacity) {
     }
 
@@ -163,7 +163,7 @@ public:
 template <typename TMessage>
 class CopyQueue : public BaseQueue {
 public:
-    explicit CopyQueue(const std::string& name, size_t capacity = 16)
+    CopyQueue(const std::string& name, size_t capacity = 16)
         : BaseQueue(name, sizeof(TMessage), capacity) {
     }
 
@@ -290,7 +290,7 @@ private:
 
 class Lock {
 public:
-    explicit Lock(MutexBase& mutex)
+    Lock(MutexBase& mutex)
         : mutex(mutex) {
         mutex.lock();
     }

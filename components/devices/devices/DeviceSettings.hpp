@@ -13,7 +13,7 @@ using namespace farmhub::kernel::drivers;
 namespace farmhub::devices {
 
 struct DeviceSettings : ConfigurationSection {
-    explicit DeviceSettings(const std::string& defaultModel)
+    DeviceSettings(const std::string& defaultModel)
         : model(this, "model", defaultModel)
         , instance(this, "instance", getMacAddress()) {
     }

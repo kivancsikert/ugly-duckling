@@ -47,7 +47,6 @@ public:
 
         counter = pulseCounterManager->create({
             .pin = pin,
-            .glitchFilter = true,
         });
 
         auto now = boot_clock::now();

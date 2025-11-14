@@ -22,7 +22,7 @@ using TaskFunction = std::function<void(Task&)>;
 
 class TaskHandle {
 public:
-    explicit TaskHandle(TaskHandle_t handle)
+    TaskHandle(TaskHandle_t handle)
         : handle(handle) {
     }
 

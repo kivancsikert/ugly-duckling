@@ -8,7 +8,7 @@ namespace farmhub::kernel {
 class EspException
     : public std::runtime_error {
 public:
-    explicit EspException(esp_err_t err)
+    EspException(esp_err_t err)
         : std::runtime_error(esp_err_to_name(err)) {
     }
 };

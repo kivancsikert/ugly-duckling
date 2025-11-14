@@ -35,7 +35,7 @@ class Peripheral
     : public virtual IPeripheral,
       public Named {
 public:
-    explicit Peripheral(const std::string& name)
+    Peripheral(const std::string& name)
         : Named(name) {
     }
 

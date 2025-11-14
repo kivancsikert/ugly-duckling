@@ -19,7 +19,7 @@ namespace farmhub::peripherals::valve {
 class ValveSettings
     : public ConfigurationSection {
 public:
-    explicit ValveSettings(ValveControlStrategyType defaultStrategy)
+    ValveSettings(ValveControlStrategyType defaultStrategy)
         : strategy(this, "strategy", defaultStrategy) {
     }
 

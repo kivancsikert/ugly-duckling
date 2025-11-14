@@ -86,7 +86,7 @@ public:
 
 class UglyDucklingMk6 : public DeviceDefinition<Mk6Settings> {
 public:
-    explicit UglyDucklingMk6()
+    UglyDucklingMk6()
         : DeviceDefinition(pins::STATUS, pins::BOOT) {
         // Switch off strapping pin
         // TODO(lptr): Add a LED driver instead

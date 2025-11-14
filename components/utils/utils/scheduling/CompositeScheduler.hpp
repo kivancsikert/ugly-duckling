@@ -9,7 +9,7 @@
 namespace farmhub::utils::scheduling {
 
 struct CompositeScheduler : IScheduler {
-    explicit CompositeScheduler(std::list<std::shared_ptr<IScheduler>> schedulers)
+    CompositeScheduler(std::list<std::shared_ptr<IScheduler>> schedulers)
         : schedulers(std::move(schedulers)) {
     }
 

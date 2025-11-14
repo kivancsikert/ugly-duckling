@@ -34,7 +34,7 @@ public:
 class MotorValveControlStrategy
     : public ValveControlStrategy {
 public:
-    explicit MotorValveControlStrategy(const std::shared_ptr<PwmMotorDriver>& controller)
+    MotorValveControlStrategy(const std::shared_ptr<PwmMotorDriver>& controller)
         : controller(controller) {
     }
 
@@ -163,7 +163,7 @@ private:
 class LatchingPinValveControlStrategy
     : public ValveControlStrategy {
 public:
-    explicit LatchingPinValveControlStrategy(const PinPtr& pin)
+    LatchingPinValveControlStrategy(const PinPtr& pin)
         : pin(pin) {
         pin->pinMode(Pin::Mode::Output);
     }

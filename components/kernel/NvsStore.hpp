@@ -17,7 +17,7 @@ LOGGING_TAG(NVS, "nvs")
  */
 class NvsStore {
 public:
-    explicit NvsStore(const std::string& name)
+    NvsStore(const std::string& name)
         : name(name) {
     }
 

@@ -21,7 +21,7 @@ namespace farmhub::kernel {
 class ConfigurationException
     : public std::exception {
 public:
-    explicit ConfigurationException(const std::string& message)
+    ConfigurationException(const std::string& message)
         : message("ConfigurationException: " + message) {
     }
 
@@ -36,7 +36,7 @@ class JsonAsString {
 public:
     JsonAsString() = default;
 
-    explicit JsonAsString(const std::string& value)
+    JsonAsString(const std::string& value)
         : value(value) {
     }
 
@@ -410,7 +410,7 @@ struct Converter<JsonAsString> {
     static JsonAsString fromJson(JsonVariantConst src) {
         std::string value;
         serializeJson(src, value);
-        return JsonAsString(value);
+        return { value };
     }
 
     static bool checkJson(JsonVariantConst /* src */) {

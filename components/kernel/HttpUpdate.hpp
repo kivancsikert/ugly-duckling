@@ -70,7 +70,7 @@ public:
     static constexpr const char* UPDATE_FILE = "/update.json";
 
 private:
-    explicit HttpUpdater(std::shared_ptr<Watchdog> watchdog)
+    HttpUpdater(std::shared_ptr<Watchdog> watchdog)
         : watchdog(std::move(watchdog)) {
     }
 

@@ -4,7 +4,7 @@ namespace farmhub::kernel {
 
 class Named {
 protected:
-    explicit Named(const std::string& name)
+    Named(const std::string& name)
         : name(name) {
     }
 
