@@ -1,11 +1,11 @@
 #pragma once
 
+#include <chrono>
 #include <limits>
 #include <utility>
 
 #include <sht3x.h>
 
-#include <BootClock.hpp>
 #include <Concurrent.hpp>
 #include <I2CManager.hpp>
 
@@ -14,6 +14,7 @@
 
 #include "Environment.hpp"
 
+using namespace std::chrono;
 using namespace farmhub::kernel;
 using namespace farmhub::peripherals;
 
@@ -56,7 +57,7 @@ public:
 
 private:
     void updateMeasurement() {
-        auto now = boot_clock::now();
+        auto now = steady_clock::now();
         if (now - this->lastMeasurementTime < 1s) {
             // Do not measure more often than once per second
             return;
@@ -81,7 +82,7 @@ private:
     sht3x_t sensor {};
 
     Mutex mutex;
-    std::chrono::time_point<boot_clock> lastMeasurementTime;
+    std::chrono::steady_clock::time_point lastMeasurementTime;
     double temperature = std::numeric_limits<double>::quiet_NaN();
     double humidity = std::numeric_limits<double>::quiet_NaN();
 };

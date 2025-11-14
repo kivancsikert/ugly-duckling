@@ -6,7 +6,6 @@
 
 #include <ds18x20.h>
 
-#include <BootClock.hpp>
 #include <Configuration.hpp>
 
 #include <peripherals/Peripheral.hpp>

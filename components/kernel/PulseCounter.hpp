@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
 #include <list>
 #include <memory>
 
@@ -8,7 +9,6 @@
 #include <driver/rtc_io.h>
 #include <esp_sleep.h>
 
-#include <BootClock.hpp>
 #include <Concurrent.hpp>
 #include <Log.hpp>
 #include <Pin.hpp>
@@ -46,7 +46,7 @@ public:
         : pin(pin)
         , debounceTime(debounceTime)
         , lastEdge(pin->digitalRead())
-        , lastCountedEdgeTime(boot_clock::now()) {
+        , lastCountedEdgeTime(steady_clock::now()) {
         auto gpio = pin->getGpio();
 
         // Configure the GPIO pin as an input
@@ -110,7 +110,7 @@ private:
     const microseconds debounceTime;
     std::atomic<uint32_t> edgeCount { 0 };
     int lastEdge;
-    time_point<boot_clock> lastCountedEdgeTime;
+    steady_clock::time_point lastCountedEdgeTime;
 
     friend void handlePulseCounterInterrupt(void* arg);
     friend class PulseCounterManager;
@@ -124,7 +124,7 @@ static void IRAM_ATTR handlePulseCounterInterrupt(void* arg) {
 
         // Software debounce: ignore edges that happen too quickly
         if (counter->debounceTime > 0us) {
-            auto now = boot_clock::now();
+            auto now = steady_clock::now();
             auto timeSinceLastEdge = duration_cast<microseconds>(now - counter->lastCountedEdgeTime);
             if (timeSinceLastEdge < counter->debounceTime) {
                 return;

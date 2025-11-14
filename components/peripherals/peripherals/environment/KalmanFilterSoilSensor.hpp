@@ -1,8 +1,8 @@
 #pragma once
 
+#include <chrono>
 #include <memory>
 
-#include <BootClock.hpp>
 #include <Configuration.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ISoilMoistureSensor.hpp>
@@ -12,6 +12,7 @@
 
 #include "Environment.hpp"
 
+using namespace std::chrono;
 using namespace farmhub::utils::scheduling;
 
 namespace farmhub::peripherals::environment {
@@ -65,7 +66,7 @@ public:
         , qBeta(qBeta)
         , rSensitive(rSensitive)
         , rNormal(rNormal)
-        , sensitivePeriodEnd(boot_clock::now() + sensitivePeriod) {
+        , sensitivePeriodEnd(steady_clock::now() + sensitivePeriod) {
         LOGTI(ENV, "Initializing Kalman filter soil moisture sensor '%s' "
              "wrapping moisture sensor '%s'"
              " and temperature sensor '%s'"
@@ -98,7 +99,7 @@ public:
             return NAN;
         }
 
-        auto r = (boot_clock::now() < sensitivePeriodEnd) ? rSensitive : rNormal;
+        auto r = (steady_clock::now() < sensitivePeriodEnd) ? rSensitive : rNormal;
         kalmanFilter.update(rawMoisture, temp, qMoist, qBeta, r);
         auto realMoisture = kalmanFilter.getMoistReal();
         LOGTV(ENV, "Updated Kalman filter with raw moisture: %.1f%%, temperature: %.1f C, real moisture: %.1f%%, beta: %.2f %%/C",
@@ -119,7 +120,7 @@ private:
     double qBeta;
     double rSensitive;
     double rNormal;
-    std::chrono::time_point<boot_clock> sensitivePeriodEnd;
+    std::chrono::steady_clock::time_point sensitivePeriodEnd;
 };
 
 inline PeripheralFactory makeFactoryForKalmanSoilMoisture() {

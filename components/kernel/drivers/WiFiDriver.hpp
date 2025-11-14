@@ -8,13 +8,13 @@
 #include <wifi_provisioning/manager.h>
 #include <wifi_provisioning/scheme_softap.h>
 
-#include <BootClock.hpp>
 #include <Concurrent.hpp>
 #include <State.hpp>
 #include <StateManager.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>
 
+using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace farmhub::kernel;
 
@@ -231,7 +231,7 @@ private:
     // NOLINTBEGIN(cppcoreguidelines-avoid-goto)
     void runLoop() {
         bool connected = false;
-        time_point<boot_clock> connectingSince;
+        steady_clock::time_point connectingSince;
         while (true) {
             if (!connected) {
                 if (configPortalRunning.isSet()) {
@@ -240,7 +240,7 @@ private:
                     goto handleEvents;
                 }
                 if (networkConnecting.isSet()) {
-                    if (boot_clock::now() - connectingSince < WIFI_CONNECTION_TIMEOUT) {
+                    if (steady_clock::now() - connectingSince < WIFI_CONNECTION_TIMEOUT) {
                         LOGTV(WIFI, "Already connecting");
                         goto handleEvents;
                     }
@@ -249,7 +249,7 @@ private:
                     networkConnecting.clear();
                     ensureWifiStopped();
                 }
-                connectingSince = boot_clock::now();
+                connectingSince = steady_clock::now();
                 connect();
             }
 

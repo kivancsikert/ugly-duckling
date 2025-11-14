@@ -4,7 +4,6 @@
 #include <memory>
 #include <utility>
 
-#include <BootClock.hpp>
 #include <Configuration.hpp>
 #include <Log.hpp>
 #include <Named.hpp>
@@ -20,6 +19,7 @@
 #include <utils/scheduling/OverrideScheduler.hpp>
 #include <utils/scheduling/TimeBasedScheduler.hpp>
 
+using namespace std::chrono;
 using namespace farmhub::kernel::mqtt;
 using namespace farmhub::peripherals;
 using namespace farmhub::peripherals::api;
@@ -41,9 +41,9 @@ struct PlotControllerConfig : ConfigurationSection {
     Property<time_point<system_clock>> overrideUntil { this, "overrideUntil" };
 };
 
-struct BootClock {
-    static ms now() {
-        return duration_cast<ms>(boot_clock::now().time_since_epoch());
+struct SteadyClock {
+    static milliseconds now() {
+        return duration_cast<milliseconds>(steady_clock::now().time_since_epoch());
     }
 };
 
@@ -56,7 +56,7 @@ public:
         const std::shared_ptr<IValve>& valve,
         const std::shared_ptr<OverrideScheduler>& overrideScheduler,
         const std::shared_ptr<TimeBasedScheduler>& timeBasedScheduler,
-        const std::shared_ptr<MoistureBasedScheduler<BootClock>>& moistureBasedScheduler,
+        const std::shared_ptr<MoistureBasedScheduler<SteadyClock>>& moistureBasedScheduler,
         const std::shared_ptr<TelemetryPublisher>& telemetryPublisher)
         : Named(name) {
         LOGTI(PLOT_CTRL, "Initializing plot controller '%s' with valve '%s'",
@@ -189,7 +189,7 @@ inline FunctionFactory makeFactory() {
                 valve,
                 std::make_shared<OverrideScheduler>(),
                 std::make_shared<TimeBasedScheduler>(),
-                std::make_shared<MoistureBasedScheduler<BootClock>>(
+                std::make_shared<MoistureBasedScheduler<SteadyClock>>(
                     farmhub::utils::scheduling::MoistureBasedSchedulerSettings {
                         .minVolume = moistureBasedSettings->minVolume.get(),
                         .maxVolume = moistureBasedSettings->maxVolume.get(),
@@ -207,7 +207,7 @@ inline FunctionFactory makeFactory() {
 
                         .maxTotalVolume = moistureBasedSettings->maxTotalVolume.get(),
                     },
-                    std::make_shared<BootClock>(),
+                    std::make_shared<SteadyClock>(),
                     flowMeter,
                     soilMoistureSensor),
                 params.services.telemetryPublisher);

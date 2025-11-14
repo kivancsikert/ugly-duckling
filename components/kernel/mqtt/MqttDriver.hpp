@@ -19,6 +19,7 @@
 #include <drivers/MdnsDriver.hpp>
 #include <mqtt/PendingMessages.hpp>
 
+using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace farmhub::kernel;
 using namespace farmhub::kernel::drivers;
@@ -196,7 +197,7 @@ private:
 
     struct PendingSubscription {
         const int messageId;
-        const time_point<boot_clock> subscribedAt;
+        const steady_clock::time_point subscribedAt;
     };
 
     struct OutgoingMessage {
@@ -329,7 +330,7 @@ private:
     void runEventLoop(Task& /*task*/) {
         // We are not yet connected
         auto state = MqttState::Disconnected;
-        auto connectionStarted = boot_clock::zero();
+        auto connectionStarted = steady_clock::time_point();
 
         // The first session is always clean
         auto nextSessionShouldBeClean = true;
@@ -338,7 +339,7 @@ private:
         std::list<PendingSubscription> pendingSubscriptions;
 
         while (true) {
-            auto now = boot_clock::now();
+            auto now = steady_clock::now();
 
             // Cull pending subscriptions
             // TODO Do this with deleted messages?
@@ -609,7 +610,7 @@ private:
                 topics.size(), messageId);
             if (messageId > 0) {
                 // Record pending task
-                pendingSubscriptions.emplace_back(messageId, boot_clock::now());
+                pendingSubscriptions.emplace_back(messageId, steady_clock::now());
             }
         }
     }

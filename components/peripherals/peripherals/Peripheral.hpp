@@ -9,7 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include <BootClock.hpp>
 #include <Configuration.hpp>
 #include <EspException.hpp>
 #include <I2CManager.hpp>

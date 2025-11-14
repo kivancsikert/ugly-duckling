@@ -30,6 +30,7 @@ static const char* const farmhubVersion = reinterpret_cast<const char*>(esp_app_
 #include <functions/Function.hpp>
 #include <peripherals/Peripheral.hpp>
 
+using namespace std::chrono;
 using namespace farmhub::devices;
 using namespace farmhub::functions;
 using namespace farmhub::kernel;
@@ -264,7 +265,7 @@ void registerHttpUpdateCommand(const std::shared_ptr<MqttRoot>& mqttRoot, const 
 }
 
 void initTelemetryPublishTask(
-    std::chrono::milliseconds publishInterval,
+    milliseconds publishInterval,
     const std::shared_ptr<Watchdog>& watchdog,
     const std::shared_ptr<MqttRoot>& mqttRoot,
     const std::shared_ptr<BatteryManager>& batteryManager,
@@ -276,7 +277,7 @@ void initTelemetryPublishTask(
         task.markWakeTime();
 
         mqttRoot->publish("telemetry", [batteryManager, powerManager, wifi, telemetryCollector](JsonObject& telemetry) {
-            telemetry["uptime"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
+            telemetry["uptime"] = duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
             telemetry["timestamp"] = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 
             if (batteryManager != nullptr) {
@@ -476,7 +477,7 @@ static void startDevice() {
     // Init telemetry
     mqttRoot->registerCommand("ping", [telemetryPublisher](const JsonObject&, JsonObject& response) {
         telemetryPublisher->requestTelemetryPublishing();
-        response["pong"] = duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count();
+        response["pong"] = duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
     });
 
     // We want RTC to be in sync before we start setting up peripherals
@@ -551,7 +552,7 @@ static void startDevice() {
     states->kernelReady.set();
 
     LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
-        duration_cast<milliseconds>(boot_clock::now().time_since_epoch()).count() / 1000.0,
+        duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count() / 1000.0,
         farmhubVersion,
         settings->model.get().c_str(),
         settings->instance.get().c_str(),
