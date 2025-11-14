@@ -47,6 +47,7 @@ public:
 
         counter = pulseCounterManager->create({
             .pin = pin,
+            .debounceTime = 1ms,
         });
 
         auto now = boot_clock::now();
