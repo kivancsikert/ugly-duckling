@@ -52,7 +52,7 @@ static const auto T0 = steady_clock::time_point();
 TEST_CASE("DelayScheduler: transitions immediately with zero delay") {
     auto mockScheduler = std::make_shared<MockScheduler>();
     DelayScheduler delayScheduler(mockScheduler);
-    delayScheduler.setTarget({ .delayOpen = 0s, .delayClose = 0s });
+    delayScheduler.setTarget({ .open = 0s, .close = 0s });
 
     mockScheduler->setTarget(TargetState::Open);
     REQUIRE(delayScheduler.tick(T0) == ScheduleResult { .targetState = TargetState::Open, .shouldPublishTelemetry = true });
@@ -67,7 +67,7 @@ TEST_CASE("DelayScheduler: transitions immediately with zero delay") {
 TEST_CASE("DelayScheduler: commits immediately with no previous commitment") {
     auto mockScheduler = std::make_shared<MockScheduler>();
     DelayScheduler delayScheduler(mockScheduler);
-    delayScheduler.setTarget({ .delayOpen = 10s, .delayClose = 10s });
+    delayScheduler.setTarget({ .open = 10s, .close = 10s });
 
     // Start with open (commits immediately)
     mockScheduler->setTarget(TargetState::Open);
@@ -81,7 +81,7 @@ TEST_CASE("DelayScheduler: commits immediately with no previous commitment") {
 TEST_CASE("DelayScheduler: returns none when inner scheduler has no opinion") {
     auto mockScheduler = std::make_shared<MockScheduler>();
     DelayScheduler delayScheduler(mockScheduler);
-    delayScheduler.setTarget({ .delayOpen = 10s, .delayClose = 10s });
+    delayScheduler.setTarget({ .open = 10s, .close = 10s });
 
     mockScheduler->setTarget(std::nullopt);
     REQUIRE(delayScheduler.tick(T0) == ScheduleResult { .targetState = std::nullopt });
@@ -90,7 +90,7 @@ TEST_CASE("DelayScheduler: returns none when inner scheduler has no opinion") {
 TEST_CASE("DelayScheduler: returns committed state when inner scheduler has no opinion") {
     auto mockScheduler = std::make_shared<MockScheduler>();
     DelayScheduler delayScheduler(mockScheduler);
-    delayScheduler.setTarget({ .delayOpen = 10s, .delayClose = 10s });
+    delayScheduler.setTarget({ .open = 10s, .close = 10s });
 
     // Start with open
     mockScheduler->setTarget(TargetState::Open);
@@ -104,7 +104,7 @@ TEST_CASE("DelayScheduler: returns committed state when inner scheduler has no o
 TEST_CASE("DelayScheduler: delays opening") {
     auto mockScheduler = std::make_shared<MockScheduler>();
     DelayScheduler delayScheduler(mockScheduler);
-    delayScheduler.setTarget({ .delayOpen = 10s, .delayClose = 5s });
+    delayScheduler.setTarget({ .open = 10s, .close = 5s });
 
     // Start with closed
     mockScheduler->setTarget(TargetState::Closed);
@@ -127,7 +127,7 @@ TEST_CASE("DelayScheduler: delays opening") {
 TEST_CASE("DelayScheduler: delays closing") {
     auto mockScheduler = std::make_shared<MockScheduler>();
     DelayScheduler delayScheduler(mockScheduler);
-    delayScheduler.setTarget({ .delayOpen = 5s, .delayClose = 10s });
+    delayScheduler.setTarget({ .open = 5s, .close = 10s });
 
     // Start with open
     mockScheduler->setTarget(TargetState::Open);
@@ -146,7 +146,7 @@ TEST_CASE("DelayScheduler: delays closing") {
 TEST_CASE("DelayScheduler: resets timer on state change") {
     auto mockScheduler = std::make_shared<MockScheduler>();
     DelayScheduler delayScheduler(mockScheduler);
-    delayScheduler.setTarget({ .delayOpen = 5s, .delayClose = 5s });
+    delayScheduler.setTarget({ .open = 5s, .close = 5s });
 
     // Start with closed
     mockScheduler->setTarget(TargetState::Closed);
@@ -168,7 +168,7 @@ TEST_CASE("DelayScheduler: resets timer on state change") {
 TEST_CASE("DelayScheduler: maintains committed state when inner scheduler returns to it") {
     auto mockScheduler = std::make_shared<MockScheduler>();
     DelayScheduler delayScheduler(mockScheduler);
-    delayScheduler.setTarget({ .delayOpen = 5s, .delayClose = 5s });
+    delayScheduler.setTarget({ .open = 5s, .close = 5s });
 
     // Start with open
     mockScheduler->setTarget(TargetState::Open);
@@ -187,7 +187,7 @@ TEST_CASE("DelayScheduler: maintains committed state when inner scheduler return
 TEST_CASE("DelayScheduler: respects inner scheduler's nextDeadline") {
     auto mockScheduler = std::make_shared<MockScheduler>();
     DelayScheduler delayScheduler(mockScheduler);
-    delayScheduler.setTarget({ .delayOpen = 100s, .delayClose = 100s });
+    delayScheduler.setTarget({ .open = 100s, .close = 100s });
 
     mockScheduler->setTarget(TargetState::Open, 30s);
 
@@ -198,7 +198,7 @@ TEST_CASE("DelayScheduler: respects inner scheduler's nextDeadline") {
 TEST_CASE("DelayScheduler: uses minimum of inner deadline and remaining delay") {
     auto mockScheduler = std::make_shared<MockScheduler>();
     DelayScheduler delayScheduler(mockScheduler);
-    delayScheduler.setTarget({ .delayOpen = 5s, .delayClose = 5s });
+    delayScheduler.setTarget({ .open = 5s, .close = 5s });
 
     // Start with closed
     mockScheduler->setTarget(TargetState::Closed);
@@ -224,7 +224,7 @@ TEST_CASE("DelayScheduler: uses minimum of inner deadline and remaining delay") 
 TEST_CASE("DelayScheduler: different delays for open and close") {
     auto mockScheduler = std::make_shared<MockScheduler>();
     DelayScheduler delayScheduler(mockScheduler);
-    delayScheduler.setTarget({ .delayOpen = 2s, .delayClose = 8s });
+    delayScheduler.setTarget({ .open = 2s, .close = 8s });
 
     // Start closed
     mockScheduler->setTarget(TargetState::Closed);

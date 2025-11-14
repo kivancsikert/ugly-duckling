@@ -17,8 +17,8 @@ using namespace farmhub::peripherals::api;
 namespace farmhub::utils::scheduling {
 
 struct LightSensorSchedule {
-    Lux openLevel;
-    Lux closeLevel;
+    Lux open;
+    Lux close;
 };
 
 struct LightSensorScheduler : IScheduler {
@@ -27,6 +27,12 @@ struct LightSensorScheduler : IScheduler {
     }
 
     void setTarget(std::optional<LightSensorSchedule> target) {
+        if (target) {
+            LOGTD(SCHEDULING, "LightSensorScheduler: Setting target: open=%.2f lux, close=%.2f lux",
+                target->open, target->close);
+        } else {
+            LOGTD(SCHEDULING, "LightSensorScheduler: Clearing target");
+        }
         this->target = target;
     }
 
@@ -54,10 +60,10 @@ struct LightSensorScheduler : IScheduler {
 
 private:
     static std::optional<TargetState> calculateTargetState(Lux lightLevel, const LightSensorSchedule& target) {
-        if (lightLevel >= target.openLevel) {
+        if (lightLevel >= target.open) {
             return TargetState::Open;
         }
-        if (lightLevel <= target.closeLevel) {
+        if (lightLevel <= target.close) {
             return TargetState::Closed;
         }
         return {};

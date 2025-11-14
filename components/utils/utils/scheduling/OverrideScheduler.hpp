@@ -17,12 +17,18 @@ struct OverrideSchedule {
 
 class OverrideScheduler : public IScheduler {
 public:
-
     const char* getName() const override {
         return "override";
     }
 
     void setOverride(const std::optional<OverrideSchedule>& schedule) {
+        if (schedule) {
+            LOGTD(SCHEDULING, "OverrideScheduler: Setting override: state=%s, until=%d",
+                toString(schedule->state),
+                schedule->until.time_since_epoch().count());
+        } else {
+            LOGTD(SCHEDULING, "OverrideScheduler: Clearing override");
+        }
         this->schedule = schedule;
     }
 

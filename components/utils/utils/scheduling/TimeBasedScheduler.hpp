@@ -20,12 +20,13 @@ struct TimeBasedSchedule {
 
 class TimeBasedScheduler : public IScheduler {
 public:
-
     const char* getName() const override {
         return "time";
     }
 
     void setSchedules(const std::list<TimeBasedSchedule>& newSchedules) {
+        LOGTD(SCHEDULING, "TimeBasedScheduler: Setting %zu schedules",
+            newSchedules.size());
         schedules = newSchedules;
     }
 

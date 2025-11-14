@@ -13,8 +13,8 @@ using namespace std::chrono_literals;
 namespace farmhub::utils::scheduling {
 
 struct DelaySchedule {
-    seconds delayOpen;
-    seconds delayClose;
+    seconds open;
+    seconds close;
 };
 
 /**
@@ -42,6 +42,8 @@ public:
     }
 
     void setTarget(const DelaySchedule& target) {
+        LOGTD(SCHEDULING, "DelayScheduler: Setting target: open=%lld s, close=%lld s",
+            target.open.count(), target.close.count());
         this->target = target;
     }
 
@@ -99,7 +101,7 @@ public:
         }
 
         // Determine which delay to use
-        auto delay = (*desiredState == TargetState::Open) ? target.delayOpen : target.delayClose;
+        auto delay = (*desiredState == TargetState::Open) ? target.open : target.close;
         auto elapsed = duration_cast<seconds>(now - *transitionStartTime);
 
         // Check if delay has elapsed
@@ -136,7 +138,7 @@ private:
     }
 
     std::shared_ptr<IScheduler> innerScheduler;
-    DelaySchedule target { .delayOpen = 0s, .delayClose = 0s };
+    DelaySchedule target { .open = 0s, .close = 0s };
 
     std::optional<TargetState> committedState;
     std::optional<TargetState> pendingState;

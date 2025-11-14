@@ -113,12 +113,12 @@ public:
         configQueue.put(ConfigSpec {
             .overrideTarget = overrideTarget,
             .lightTarget = {
-                .openLevel = config->lightTarget.get()->open.get(),
-                .closeLevel = config->lightTarget.get()->close.get(),
+                .open = config->lightTarget.get()->open.get(),
+                .close = config->lightTarget.get()->close.get(),
             },
             .delayTarget = {
-                .delayOpen = config->delayTarget.get()->open.get(),
-                .delayClose = config->delayTarget.get()->close.get(),
+                .open = config->delayTarget.get()->open.get(),
+                .close = config->delayTarget.get()->close.get(),
             },
         });
     }

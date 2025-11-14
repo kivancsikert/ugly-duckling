@@ -55,7 +55,7 @@ TEST_CASE("LightSensorScheduler: returns none when no target is set") {
 TEST_CASE("LightSensorScheduler: opens when light level exceeds open threshold") {
     auto mockSensor = std::make_shared<MockLightSensor>();
     LightSensorScheduler scheduler(mockSensor);
-    scheduler.setTarget(LightSensorSchedule { .openLevel = 100.0, .closeLevel = 50.0 });
+    scheduler.setTarget(LightSensorSchedule { .open = 100.0, .close = 50.0 });
 
     mockSensor->setLightLevel(100.0);
     REQUIRE(scheduler.tick() == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 1min });
@@ -67,7 +67,7 @@ TEST_CASE("LightSensorScheduler: opens when light level exceeds open threshold")
 TEST_CASE("LightSensorScheduler: closes when light level falls below close threshold") {
     auto mockSensor = std::make_shared<MockLightSensor>();
     LightSensorScheduler scheduler(mockSensor);
-    scheduler.setTarget(LightSensorSchedule { .openLevel = 100.0, .closeLevel = 50.0 });
+    scheduler.setTarget(LightSensorSchedule { .open = 100.0, .close = 50.0 });
 
     mockSensor->setLightLevel(50.0);
     REQUIRE(scheduler.tick() == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 1min });
@@ -79,7 +79,7 @@ TEST_CASE("LightSensorScheduler: closes when light level falls below close thres
 TEST_CASE("LightSensorScheduler: returns no opinion in hysteresis zone") {
     auto mockSensor = std::make_shared<MockLightSensor>();
     LightSensorScheduler scheduler(mockSensor);
-    scheduler.setTarget(LightSensorSchedule { .openLevel = 100.0, .closeLevel = 50.0 });
+    scheduler.setTarget(LightSensorSchedule { .open = 100.0, .close = 50.0 });
 
     // Light level between close and open thresholds - no opinion
     mockSensor->setLightLevel(75.0);
@@ -95,7 +95,7 @@ TEST_CASE("LightSensorScheduler: returns no opinion in hysteresis zone") {
 TEST_CASE("LightSensorScheduler: handles exact threshold boundaries") {
     auto mockSensor = std::make_shared<MockLightSensor>();
     LightSensorScheduler scheduler(mockSensor);
-    scheduler.setTarget(LightSensorSchedule { .openLevel = 100.0, .closeLevel = 50.0 });
+    scheduler.setTarget(LightSensorSchedule { .open = 100.0, .close = 50.0 });
 
     // Exactly at open threshold - should open
     mockSensor->setLightLevel(100.0);
@@ -117,7 +117,7 @@ TEST_CASE("LightSensorScheduler: handles exact threshold boundaries") {
 TEST_CASE("LightSensorScheduler: handles same open and close thresholds") {
     auto mockSensor = std::make_shared<MockLightSensor>();
     LightSensorScheduler scheduler(mockSensor);
-    scheduler.setTarget(LightSensorSchedule { .openLevel = 75.0, .closeLevel = 75.0 });
+    scheduler.setTarget(LightSensorSchedule { .open = 75.0, .close = 75.0 });
 
     // Above threshold - open
     mockSensor->setLightLevel(76.0);
@@ -137,7 +137,7 @@ TEST_CASE("LightSensorScheduler: handles same open and close thresholds") {
 TEST_CASE("LightSensorScheduler: always returns 1 minute deadline when target is set") {
     auto mockSensor = std::make_shared<MockLightSensor>();
     LightSensorScheduler scheduler(mockSensor);
-    scheduler.setTarget(LightSensorSchedule { .openLevel = 100.0, .closeLevel = 50.0 });
+    scheduler.setTarget(LightSensorSchedule { .open = 100.0, .close = 50.0 });
 
     // All states with a target should return 1min deadline
     mockSensor->setLightLevel(150.0);
@@ -156,11 +156,11 @@ TEST_CASE("LightSensorScheduler: changing target updates behavior") {
     mockSensor->setLightLevel(60.0);
 
     // First target configuration
-    scheduler.setTarget(LightSensorSchedule { .openLevel = 100.0, .closeLevel = 50.0 });
+    scheduler.setTarget(LightSensorSchedule { .open = 100.0, .close = 50.0 });
     REQUIRE(scheduler.tick() == ScheduleResult { .targetState = std::nullopt, .nextDeadline = 1min });
 
     // Change target configuration - now in "open" range
-    scheduler.setTarget(LightSensorSchedule { .openLevel = 50.0, .closeLevel = 30.0 });
+    scheduler.setTarget(LightSensorSchedule { .open = 50.0, .close = 30.0 });
     REQUIRE(scheduler.tick() == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 1min });
 
     // Remove target
@@ -171,7 +171,7 @@ TEST_CASE("LightSensorScheduler: changing target updates behavior") {
 TEST_CASE("LightSensorScheduler: handles very low light levels") {
     auto mockSensor = std::make_shared<MockLightSensor>();
     LightSensorScheduler scheduler(mockSensor);
-    scheduler.setTarget(LightSensorSchedule { .openLevel = 10.0, .closeLevel = 1.0 });
+    scheduler.setTarget(LightSensorSchedule { .open = 10.0, .close = 1.0 });
 
     mockSensor->setLightLevel(0.0);
     REQUIRE(scheduler.tick() == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 1min });
@@ -189,7 +189,7 @@ TEST_CASE("LightSensorScheduler: handles very low light levels") {
 TEST_CASE("LightSensorScheduler: handles zero as low light level") {
     auto mockSensor = std::make_shared<MockLightSensor>();
     LightSensorScheduler scheduler(mockSensor);
-    scheduler.setTarget(LightSensorSchedule { .openLevel = 10.0, .closeLevel = 0 });
+    scheduler.setTarget(LightSensorSchedule { .open = 10.0, .close = 0 });
 
     mockSensor->setLightLevel(0.0);
     REQUIRE(scheduler.tick() == ScheduleResult { .targetState = TargetState::Closed, .nextDeadline = 1min });
@@ -201,7 +201,7 @@ TEST_CASE("LightSensorScheduler: handles zero as low light level") {
 TEST_CASE("LightSensorScheduler: handles very high light levels") {
     auto mockSensor = std::make_shared<MockLightSensor>();
     LightSensorScheduler scheduler(mockSensor);
-    scheduler.setTarget(LightSensorSchedule { .openLevel = 1000.0, .closeLevel = 500.0 });
+    scheduler.setTarget(LightSensorSchedule { .open = 1000.0, .close = 500.0 });
 
     mockSensor->setLightLevel(2000.0);
     REQUIRE(scheduler.tick() == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 1min });
