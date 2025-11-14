@@ -1,68 +1,68 @@
 {
-  "commit": "ff05e3f7078698d835f4273c3be99002fdccb427",
-  "version": "0.32.9-70-gff05e3f",
-  "id": "0.32.9-70-gff05e3f",
-  "date": "2025-11-14T21:20:16Z",
+  "commit": "3783f98a828026d114d7b81d8a3f7a6790cc1898",
+  "version": "0.32.9-71-g3783f98",
+  "id": "0.32.9-71-g3783f98",
+  "date": "2025-11-14T21:37:00Z",
   "files": [
     {
       "name": "ugly-duckling-mk5-release.bin",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-70-gff05e3f/ugly-duckling-mk5-release.bin",
-      "sha256": "6fd97c83e6d8121f3bba2a32177239adca4038a71573ee8f4c29dcc0678454d8"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-71-g3783f98/ugly-duckling-mk5-release.bin",
+      "sha256": "e11002b5216228f2f6c47c9e29b6e9e000f44633f52034aae3ab46d2ec8473b1"
     },
     {
       "name": "ugly-duckling-mk6-debug.bin",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-70-gff05e3f/ugly-duckling-mk6-debug.bin",
-      "sha256": "a225412f831fbf64c29a42ed4b7e27b1c4c5e12d11efbd653954c95b9e26eb86"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-71-g3783f98/ugly-duckling-mk6-debug.bin",
+      "sha256": "e5cba02a16431cbe6c6c5a8e247ff8360be83818c4cb95dd88007dc64ee59436"
     },
     {
       "name": "ugly-duckling-mk6-release.bin",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-70-gff05e3f/ugly-duckling-mk6-release.bin",
-      "sha256": "6fb9e1a0997ee3514280383889e9f3e0fb7bcb06269bf65f02f18be84c821137"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-71-g3783f98/ugly-duckling-mk6-release.bin",
+      "sha256": "f2383412138e62cb14a912a757404243667fb6352f3dd2ffae06ea240c89573a"
     },
     {
       "name": "ugly-duckling-mk7-release.bin",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-70-gff05e3f/ugly-duckling-mk7-release.bin",
-      "sha256": "0d53a77993cb04a7f7d27c6bd1c2521a04a95e130d4e38f470e8e8364193323e"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-71-g3783f98/ugly-duckling-mk7-release.bin",
+      "sha256": "eb65f11f1b843d1a8f3405ed8da9673fe7eb3e0a2a7e9505b17e93797aed3f39"
     },
     {
       "name": "ugly-duckling-mk8-release.bin",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-70-gff05e3f/ugly-duckling-mk8-release.bin",
-      "sha256": "a9c07e19d71c07a604c468550283d3e9e830625932282824c134cf03bbf2e702"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-71-g3783f98/ugly-duckling-mk8-release.bin",
+      "sha256": "795c5b41e97e85ee753a012723dfb99e2d0d06808dbd248ab790dc85d71a545f"
     },
     {
       "name": "ugly-duckling-mkX-release.bin",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-70-gff05e3f/ugly-duckling-mkX-release.bin",
-      "sha256": "6232254ced3268a08ffb36c7a930fd171487ecc12fe60ccae0aeb34d27c14919"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-71-g3783f98/ugly-duckling-mkX-release.bin",
+      "sha256": "35003252bc558fd88f7bd18d0da53aff1d33432a5cf989af7290f59e75355f92"
     },
     {
       "name": "ugly-duckling-mk5-release.elf",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-70-gff05e3f/ugly-duckling-mk5-release.elf",
-      "sha256": "1dccac04153c28a7704afaab4bc577a817677da23ab9578d010ded95d7041470"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-71-g3783f98/ugly-duckling-mk5-release.elf",
+      "sha256": "52ee56bd45178bc09b10e3d2026a1d6213f25574a500e86346b4bc1478b5dcde"
     },
     {
       "name": "ugly-duckling-mk6-debug.elf",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-70-gff05e3f/ugly-duckling-mk6-debug.elf",
-      "sha256": "32a60cf6aad2efa26434b0f287c4fac9164f8f23dfacf71925c1e7871ffb8d28"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-71-g3783f98/ugly-duckling-mk6-debug.elf",
+      "sha256": "510c8bfda33084f600557586cb47345adebdbf2b9add9c9ab2632e4a19bcd62e"
     },
     {
       "name": "ugly-duckling-mk6-release.elf",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-70-gff05e3f/ugly-duckling-mk6-release.elf",
-      "sha256": "6466473b0189140ae691a460b9e270fb1907db2e1b783b049cd117f3284cbf09"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-71-g3783f98/ugly-duckling-mk6-release.elf",
+      "sha256": "a0461367b6221a260d4ba841ecd7fd94b5ade1d84d035ec0f741f3f9f0078855"
     },
     {
       "name": "ugly-duckling-mk7-release.elf",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-70-gff05e3f/ugly-duckling-mk7-release.elf",
-      "sha256": "76e9c35d53e9ffd2df2f180ad52a73d2667b1e0b8f52f299814417484130ee9f"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-71-g3783f98/ugly-duckling-mk7-release.elf",
+      "sha256": "0bdc9b1207b89204b4c514e72d0fec7e79863bd0b4bcbfd1c2b55d54d55e1dff"
     },
     {
       "name": "ugly-duckling-mk8-release.elf",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-70-gff05e3f/ugly-duckling-mk8-release.elf",
-      "sha256": "c43f35fb75372a5f7f736313bd84af98c843a46fc32ace7080d5979dbbc7e1e3"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-71-g3783f98/ugly-duckling-mk8-release.elf",
+      "sha256": "8c5ee5041d6b775070251e88a9cdc65fe583fa5d18d9ecb1ffd5cadaa5c05c06"
     },
     {
       "name": "ugly-duckling-mkX-release.elf",
-      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-70-gff05e3f/ugly-duckling-mkX-release.elf",
-      "sha256": "424d45dfa728d493dbc1bb44cfd25b4dac35ed5cf01346c5d076fc2a7f0dd301"
+      "url": "https://kivancsikert.github.io/ugly-duckling/snapshots/ota/0.32.9-71-g3783f98/ugly-duckling-mkX-release.elf",
+      "sha256": "2b8b406b9f3cef73c63cf53748b4dcbabd658d83d69d290eb569b5e39515a6c5"
     }
   ],
   "branch": "chicken-door/delay-closing"
