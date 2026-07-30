@@ -5,6 +5,7 @@
 
 #include <nvs_flash.h>
 
+#include <ConfigEnvelope.hpp>
 #include <StoredConfig.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
@@ -41,7 +42,7 @@ TEST_CASE("stored config persists and reloads a verbatim envelope across instanc
 
     {
         StoredConfig config(nvs, "device");
-        config.store(body.as<JsonVariantConst>(), "fp-1", "2026-07-30T12:00:00Z");
+        config.store(ConfigEnvelope(body.as<JsonVariantConst>(), "fp-1", "2026-07-30T12:00:00Z"));
         REQUIRE(config.hasValue());
         REQUIRE(config.fingerprint() == "fp-1");
         REQUIRE(config.requestedAt() == "2026-07-30T12:00:00Z");
@@ -68,8 +69,8 @@ TEST_CASE("storing a new envelope overwrites the previous one") {
     bodyV2["publishInterval"] = 120;
 
     StoredConfig config(nvs, "device");
-    config.store(bodyV1.as<JsonVariantConst>(), "fp-1", "2026-07-30T12:00:00Z");
-    config.store(bodyV2.as<JsonVariantConst>(), "fp-2", "2026-07-30T13:00:00Z");
+    config.store(ConfigEnvelope(bodyV1.as<JsonVariantConst>(), "fp-1", "2026-07-30T12:00:00Z"));
+    config.store(ConfigEnvelope(bodyV2.as<JsonVariantConst>(), "fp-2", "2026-07-30T13:00:00Z"));
 
     REQUIRE(config.fingerprint() == "fp-2");
     REQUIRE(config.requestedAt() == "2026-07-30T13:00:00Z");
@@ -91,10 +92,10 @@ TEST_CASE("different keys in the same NVS namespace are stored independently") {
     functionBody["openDuration"] = 30;
 
     StoredConfig device(nvs, "device");
-    device.store(deviceBody.as<JsonVariantConst>(), "device-fp", "2026-07-30T12:00:00Z");
+    device.store(ConfigEnvelope(deviceBody.as<JsonVariantConst>(), "device-fp", "2026-07-30T12:00:00Z"));
 
     StoredConfig valve1(nvs, "valve1");
-    valve1.store(functionBody.as<JsonVariantConst>(), "valve1-fp", "2026-07-30T12:05:00Z");
+    valve1.store(ConfigEnvelope(functionBody.as<JsonVariantConst>(), "valve1-fp", "2026-07-30T12:05:00Z"));
 
     StoredConfig reloadedDevice(nvs, "device");
     REQUIRE(reloadedDevice.fingerprint() == "device-fp");

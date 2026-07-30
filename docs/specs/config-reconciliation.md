@@ -316,7 +316,9 @@ device-configuration *authority transfer* land in Phase 3.
       `ConfigEnvelope` (verbatim envelope + its `ArduinoJson::Converter`) and `StoredConfig` (NVS-backed wrapper,
       built on `NvsStore::get<ConfigEnvelope>`/`set<ConfigEnvelope>`) landed in
       `components/kernel/src/{ConfigEnvelope,StoredConfig}.hpp`. Not yet wired into `DeviceConfiguration`
-      loading or function configuration — that's the `FunctionRegistry` item next.
+      loading or function configuration at the time this item landed — function configuration got it via the
+      `FunctionRegistry` item next, and `DeviceConfiguration` loading got it as part of the `…/update`
+      subscription + handler item below (it needed a real device fingerprint to filter against).
 - [x] **`FunctionRegistry`.** Evolve `FunctionManager` into the in-memory `name → {handle, fingerprint}` source
       of truth. Move the hot-reload logic out of the per-function `config` subscription into
       `reconfigure(name, envelope)`; record fingerprints on successful `configure(...)` at boot and on reload;
@@ -328,11 +330,27 @@ device-configuration *authority transfer* land in Phase 3.
       item) is what calls `reconfigure()` for real. The apply-and-track-fingerprint bookkeeping itself was
       split into `FunctionConfigTracker` (no NVS dependency, unit-tested with a fake `configureFn`), matching
       `ConfigEnvelope`/`StoredConfig`'s codec/IO split, since `FunctionRegistry` itself can't be built natively.
-- [ ] **`…/update` subscription + handler.** Subscribe the device root to `update` (`NoRetain, QoS 2`). Parse
+- [x] **`…/update` subscription + handler.** Subscribe the device root to `update` (`NoRetain, QoS 2`). Parse
       `configurations`; filter by held fingerprints (ignore the whole message if nothing differs). Persist
       changed envelopes to the (single) `confirmed` slot. **Device changed → reboot; functions-only changed →
       hot-reload via `FunctionRegistry.reconfigure`.** A config for a function not defined by the (post-update)
       device configuration is a faulty configuration (unhandled in Phase 1, exactly like a malformed body).
+      The fingerprint-skip filter landed as a pure, NVS/MQTT-free function, `filterUpdate()` in
+      `components/kernel/src/UpdateFilter.hpp`, unit-tested directly (native `unit-tests`) — mirroring the
+      `FunctionConfigTracker` split. The handler itself lives in `registerUpdateHandler()` in
+      `components/devices/src/Device.hpp`: it builds a `name → fingerprint` map from `FunctionRegistry.manifest()`
+      plus the device configuration's own fingerprint, runs it through `filterUpdate()`, and branches on
+      `deviceChanged`. Device configuration is now itself loaded at boot through a `StoredConfig` (the
+      `"device-config"` key holds a verbatim envelope, not a bare body, closing the "not yet wired into
+      `DeviceConfiguration` loading" gap noted in the `StoredConfig` item above) — this is what gives the
+      handler a real confirmed device fingerprint to filter against, even though reporting it on `SYNC` is
+      still Phase 3. On a device change, every changed entry (device *and* any bundled function envelopes) is
+      persisted verbatim via `StoredConfig`/`FunctionRegistry.persist()` — deliberately skipping
+      `FunctionRegistry.reconfigure()`'s live-apply step, since a device change reboots and boot re-derives
+      everything from NVS — then `esp_restart()`. On a functions-only change, each entry goes through
+      `FunctionRegistry.reconfigure()`; a throw (bad body, or a function name the current device configuration
+      doesn't define) is caught and logged per-entry rather than crashing the MQTT dispatch task, matching how
+      the old retained-topic subscription handled it before this rewrite.
 - [ ] **Split `init` into `BOOT` + `SYNC`.** `boot` keeps all diagnostics + per-peripheral/function `error`
       feedback and **drops all configuration bodies** (`NoRetain, QoS 1`). `sync` is the fingerprint manifest
       from the `confirmed` slot / registry (`NoRetain, QoS 2`).

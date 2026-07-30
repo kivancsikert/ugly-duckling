@@ -29,7 +29,9 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 #include <Log.hpp>
 #include <NvsConfiguration.hpp>
 #include <NvsStore.hpp>
+#include <StoredConfig.hpp>
 #include <Strings.hpp>
+#include <UpdateFilter.hpp>
 #include <drivers/BleDriver.hpp>
 #include <drivers/RtcDriver.hpp>
 #include <mqtt/MqttDriver.hpp>
@@ -275,6 +277,62 @@ void registerHttpUpdateCommand(const std::shared_ptr<MqttRoot>& mqttRoot, const 
     });
 }
 
+/**
+ * @brief Subscribes to `update` (NoRetain, QoS 2) -- the only config-in path
+ * (docs/specs/config-reconciliation.md). Filters incoming configurations by the fingerprints
+ * already held (device + every live function), then either persists-and-reboots (device
+ * configuration changed -- boot re-derives everything, including which functions exist, from NVS)
+ * or hot-reloads each changed function live via FunctionRegistry::reconfigure. Phase 1 has no
+ * atomicity/rejection: a faulty function body is logged and skipped, exactly like any other
+ * faulty configuration today.
+ */
+void registerUpdateHandler(
+    const std::shared_ptr<MqttRoot>& mqttRoot,
+    const std::shared_ptr<NvsStore>& configNvs,
+    const std::string& deviceConfirmedFingerprint,
+    const std::shared_ptr<FunctionRegistry>& functionRegistry) {
+    mqttRoot->subscribe("update", QoS::ExactlyOnce, [configNvs, deviceConfirmedFingerprint, functionRegistry](const std::string&, const JsonObject& request) {
+        JsonObjectConst configurations = request["configurations"];
+        if (configurations.isNull()) {
+            LOGW("Ignoring update with no 'configurations'");
+            return;
+        }
+
+        auto heldFingerprints = functionRegistry->manifest();
+        heldFingerprints[DEVICE_CONFIGURATION_NAME] = deviceConfirmedFingerprint;
+
+        FilteredUpdate update = filterUpdate(configurations, heldFingerprints);
+        if (update.changed.empty()) {
+            LOGD("Ignoring update: nothing differs from what's currently held");
+            return;
+        }
+
+        if (update.deviceChanged) {
+            // Do not hot-reload -- let the boot sequence apply the whole set, since a device
+            // change can restructure which functions exist. No staging/atomicity yet (Phase 1):
+            // a boot that then fails is unrecoverable exactly as today.
+            for (const auto& entry : update.changed) {
+                if (entry.name == DEVICE_CONFIGURATION_NAME) {
+                    StoredConfig(configNvs, "device-config").store(entry.envelope);
+                } else {
+                    functionRegistry->persist(entry.name, entry.envelope);
+                }
+            }
+            LOGI("Device configuration changed via update, rebooting to apply");
+            esp_restart();
+            return;
+        }
+
+        for (const auto& entry : update.changed) {
+            try {
+                functionRegistry->reconfigure(entry.name, entry.envelope);
+            } catch (const std::exception& e) {
+                LOGE("Failed to apply configuration update for '%s': %s", entry.name.c_str(), e.what());
+            }
+        }
+    });
+}
+
 void initTelemetryPublishTask(
     milliseconds publishInterval,
     const std::shared_ptr<Watchdog>& watchdog,
@@ -374,8 +432,17 @@ static void startDevice() {
 
     JsonDocument networkConfigRaw;
     auto networkConfig = loadConfigFromNvs<NetworkConfig>(configNvs, "network-config", networkConfigRaw);
+
+    // Device configuration is stored as a verbatim envelope like any other reconciled
+    // configuration (docs/specs/config-reconciliation.md, "Storage"), so its fingerprint is
+    // available to the `update` handler below without recomputing anything.
+    StoredConfig deviceStoredConfig(configNvs, "device-config");
+    auto deviceConfig = std::make_shared<DeviceConfiguration>();
     JsonDocument deviceConfigRaw;
-    auto deviceConfig = loadConfigFromNvs<DeviceConfiguration>(configNvs, "device-config", deviceConfigRaw);
+    if (deviceStoredConfig.hasValue()) {
+        deviceConfigRaw = deviceStoredConfig.data();
+        deviceConfig->load(deviceConfigRaw.as<JsonObject>());
+    }
 
     const std::string modelWithRevision = deviceDefinition->model + " (rev" + std::to_string(deviceDefinition->revision) + ")";
 
@@ -545,6 +612,7 @@ static void startDevice() {
         functionRegistry->shutdown();
     });
     deviceDefinition->registerFunctionFactories(functionRegistry);
+    registerUpdateHandler(mqttRoot, configNvs, deviceStoredConfig.fingerprint(), functionRegistry);
 
     // Init telemetry
     mqttRoot->registerCommand("ping", [telemetryPublisher](const JsonObject&, JsonObject& response) {

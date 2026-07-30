@@ -120,8 +120,9 @@ FunctionFactory makeFunctionFactory(
  * reports name -> fingerprint straight from this in-memory state for the future SYNC builder. The
  * apply-and-track-fingerprint bookkeeping itself lives in FunctionConfigTracker, which has no NVS
  * dependency and is unit-tested directly; this class adds the NVS-touching persistence step.
- * Not yet wired to any live trigger -- the "...update" handler (a later Phase 1 item) is what
- * calls reconfigure() for real.
+ * reconfigure() is called for real by the `…/update` handler in Device.hpp's
+ * registerUpdateHandler(); persist() is that same handler's device-changed-and-rebooting branch,
+ * which needs the envelope written but not applied.
  */
 class FunctionRegistry final {
 public:
@@ -164,9 +165,17 @@ public:
     // unhandled exactly like any other faulty configuration today.
     void reconfigure(const std::string& name, const ConfigEnvelope& envelope) {
         StoredConfig storedConfig(nvs, name);
-        storedConfig.store(envelope.getData(), envelope.getFingerprint(), envelope.getRequestedAt());
+        storedConfig.store(envelope);
 
         tracker.apply(name, envelope.getData().template as<JsonObjectConst>(), envelope.getFingerprint());
+    }
+
+    // Persists an envelope without applying it. Used when a device-configuration change is
+    // rebooting anyway -- boot re-derives every live function (and its fingerprint) from NVS, so
+    // there is nothing to apply live or track in-memory here.
+    void persist(const std::string& name, const ConfigEnvelope& envelope) {
+        StoredConfig storedConfig(nvs, name);
+        storedConfig.store(envelope);
     }
 
     // name -> fingerprint for every live function, straight from in-memory state -- never

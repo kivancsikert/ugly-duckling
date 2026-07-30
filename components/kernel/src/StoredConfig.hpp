@@ -45,8 +45,7 @@ public:
         return envelope.getRequestedAt();
     }
 
-    void store(JsonVariantConst data, const std::string& fingerprint, const std::string& requestedAt) {
-        ConfigEnvelope updated(data, fingerprint, requestedAt);
+    void store(const ConfigEnvelope& updated) {
         if (!nvs->set(key, updated)) {
             LOGE("Failed to save config envelope for '%s'", key.c_str());
             return;
