@@ -40,7 +40,7 @@ public:
             return;
         }
 
-        JsonVariantConst rawVariant = raw.as<JsonVariantConst>();
+        auto rawVariant = raw.as<JsonVariantConst>();
         if (rawVariant.is<ConfigEnvelope>()) {
             envelope = rawVariant.as<ConfigEnvelope>();
             LOGD("Loaded config envelope for '%s'", this->key.c_str());
