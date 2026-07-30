@@ -511,7 +511,7 @@ private:
             return;
         }
         status = BleStatus::Advertising;
-        LOGTD(BLE, "Advertising as '%s'", ble_svc_gap_device_name());
+        LOGTV(BLE, "Advertising as '%s'", ble_svc_gap_device_name());
     }
 
     // One-time setup for startAdvertising(): advertising params + AD payload (flags, name, all
