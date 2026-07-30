@@ -107,6 +107,7 @@ tools/efuse_burn.py show --port /dev/ttyUSB0
 - Use test names that mirror the behavior under test.
 - Keep payload samples in `config-templates/` or dedicated fixtures, not inline strings.
 - Document required env vars: `WOKWI_CLI_TOKEN`, `WOKWI_CLI_SERVER`.
+- For local `idf.py build` verification, testing `carrot` alone is enough for most changes. If a change plausibly affects `spinach` specifically (e.g. Spinach-only devices/peripherals, BLE, or other platform-conditional code), ask before also building `spinach` rather than assuming it's needed.
 
 ## Commit & Pull Request Guidelines
 
