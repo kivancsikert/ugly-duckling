@@ -33,13 +33,13 @@ struct FunctionCreationResult {
     Handle handle;
     ConfigureFn configureFn;    // empty if the function doesn't implement HasConfig<TConfig>
     std::string fingerprint;    // empty if no config, or none was found in NVS at boot
+    std::string requestedAt;    // empty if no config, or none was found in NVS at boot
 };
 
 using FunctionCreateFn = std::function<FunctionCreationResult(
     FunctionInitParameters& params,
     const std::shared_ptr<NvsStore>& nvs,
-    const std::string& jsonSettings,
-    JsonObject& initConfigJson)>;
+    const std::string& jsonSettings)>;
 using FunctionFactory = kernel::Factory<FunctionCreateFn>;
 
 // Helper to build a FunctionFactory while keeping strong types for settings/config
@@ -61,8 +61,7 @@ FunctionFactory makeFunctionFactory(
         .create = [settingsTuple, makeImpl = std::move(makeImpl)](
                       FunctionInitParameters& params,
                       const std::shared_ptr<NvsStore>& nvs,
-                      const std::string& jsonSettings,
-                      JsonObject& initConfigJson) -> FunctionCreationResult {
+                      const std::string& jsonSettings) -> FunctionCreationResult {
             // Construct and load settings
             auto settings = std::apply([](auto&&... a) {
                 return std::make_shared<TSettings>(std::forward<decltype(a)>(a)...);
@@ -72,8 +71,8 @@ FunctionFactory makeFunctionFactory(
 
             constexpr bool hasConfig = std::is_base_of_v<HasConfig<TConfig>, Impl>;
 
-            // We load configuration up front to ensure that we always echo it in the init message, even
-            // when the instantiation of the function fails later.
+            // We load configuration up front so it's available for the fingerprint/requestedAt below
+            // even when the instantiation of the function fails later.
             std::shared_ptr<TConfig> config = std::make_shared<TConfig>();
             std::shared_ptr<StoredConfig> storedConfig;
             if constexpr (hasConfig) {
@@ -81,8 +80,6 @@ FunctionFactory makeFunctionFactory(
                 if (storedConfig->hasValue()) {
                     JsonDocument dataCopy = storedConfig->data();
                     config->load(dataCopy.as<JsonObject>());
-                    // Echo the verbatim config body in the init message
-                    initConfigJson.set(storedConfig->data().template as<JsonObjectConst>());
                 }
             }
 
@@ -94,6 +91,7 @@ FunctionFactory makeFunctionFactory(
                 std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(config);
                 if (storedConfig->hasValue()) {
                     result.fingerprint = storedConfig->fingerprint();
+                    result.requestedAt = storedConfig->requestedAt();
                 }
 
                 result.configureFn = [impl](JsonObjectConst data) {
@@ -116,10 +114,11 @@ FunctionFactory makeFunctionFactory(
  *
  * Evolved from FunctionManager per docs/specs/config-reconciliation.md: reconfigure() is the
  * hot-reload entry point that persists a verbatim envelope, parses it, applies it, and records the
- * fingerprint only once configure() succeeds (proof-of-apply, not proof-of-receipt); manifest()
- * reports name -> fingerprint straight from this in-memory state for the future SYNC builder. The
- * apply-and-track-fingerprint bookkeeping itself lives in FunctionConfigTracker, which has no NVS
- * dependency and is unit-tested directly; this class adds the NVS-touching persistence step.
+ * fingerprint/requestedAt only once configure() succeeds (proof-of-apply, not proof-of-receipt);
+ * manifest() reports name -> {fingerprint, requestedAt} straight from this in-memory state for the
+ * SYNC builder. The apply-and-track-fingerprint bookkeeping itself lives in FunctionConfigTracker,
+ * which has no NVS dependency and is unit-tested directly; this class adds the NVS-touching
+ * persistence step.
  * reconfigure() is called for real by the `…/update` handler in Device.hpp's
  * registerUpdateHandler(); persist() is that same handler's device-changed-and-rebooting branch,
  * which needs the envelope written but not applied.
@@ -145,9 +144,8 @@ public:
                         .name = name,
                         .services = services,
                     };
-                    JsonObject initConfigJson = initJson["config"].to<JsonObject>();
-                    FunctionCreationResult result = factory.create(params, nvs, settings, initConfigJson);
-                    tracker.record(name, std::move(result.configureFn), result.fingerprint);
+                    FunctionCreationResult result = factory.create(params, nvs, settings);
+                    tracker.record(name, std::move(result.configureFn), result.fingerprint, result.requestedAt);
                     return result.handle;
                 });
             return true;
@@ -167,7 +165,7 @@ public:
         StoredConfig storedConfig(nvs, name);
         storedConfig.store(envelope);
 
-        tracker.apply(name, envelope.getData().template as<JsonObjectConst>(), envelope.getFingerprint());
+        tracker.apply(name, envelope.getData().template as<JsonObjectConst>(), envelope.getFingerprint(), envelope.getRequestedAt());
     }
 
     // Persists an envelope without applying it. Used when a device-configuration change is
@@ -178,9 +176,9 @@ public:
         storedConfig.store(envelope);
     }
 
-    // name -> fingerprint for every live function, straight from in-memory state -- never
-    // re-reading NVS, so it reflects what actually applied.
-    std::unordered_map<std::string, std::string> manifest() const {
+    // name -> {fingerprint, requestedAt} for every live function, straight from in-memory state --
+    // never re-reading NVS, so it reflects what actually applied.
+    std::unordered_map<std::string, FunctionManifestEntry> manifest() const {
         return tracker.manifest();
     }
 

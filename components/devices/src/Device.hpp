@@ -284,21 +284,28 @@ void registerHttpUpdateCommand(const std::shared_ptr<MqttRoot>& mqttRoot, const 
  * configuration changed -- boot re-derives everything, including which functions exist, from NVS)
  * or hot-reloads each changed function live via FunctionRegistry::reconfigure. Phase 1 has no
  * atomicity/rejection: a faulty function body is logged and skipped, exactly like any other
- * faulty configuration today.
+ * faulty configuration today. A successful (functions-only) hot-reload pushes to
+ * syncTriggerQueue so the SYNC task re-advertises the new fingerprints without waiting for the
+ * next reconnect; a device-changed update reboots instead, so SYNC follows from the next boot's
+ * connection-established trigger.
  */
 void registerUpdateHandler(
     const std::shared_ptr<MqttRoot>& mqttRoot,
     const std::shared_ptr<NvsStore>& configNvs,
     const std::string& deviceConfirmedFingerprint,
-    const std::shared_ptr<FunctionRegistry>& functionRegistry) {
-    mqttRoot->subscribe("update", QoS::ExactlyOnce, [configNvs, deviceConfirmedFingerprint, functionRegistry](const std::string&, const JsonObject& request) {
+    const std::shared_ptr<FunctionRegistry>& functionRegistry,
+    const std::shared_ptr<CopyQueue<bool>>& syncTriggerQueue) {
+    mqttRoot->subscribe("update", QoS::ExactlyOnce, [configNvs, deviceConfirmedFingerprint, functionRegistry, syncTriggerQueue](const std::string&, const JsonObject& request) {
         JsonObjectConst configurations = request["configurations"];
         if (configurations.isNull()) {
             LOGW("Ignoring update with no 'configurations'");
             return;
         }
 
-        auto heldFingerprints = functionRegistry->manifest();
+        std::unordered_map<std::string, std::string> heldFingerprints;
+        for (const auto& [name, entry] : functionRegistry->manifest()) {
+            heldFingerprints[name] = entry.fingerprint;
+        }
         heldFingerprints[DEVICE_CONFIGURATION_NAME] = deviceConfirmedFingerprint;
 
         FilteredUpdate update = filterUpdate(configurations, heldFingerprints);
@@ -330,6 +337,54 @@ void registerUpdateHandler(
                 LOGE("Failed to apply configuration update for '%s': %s", entry.name.c_str(), e.what());
             }
         }
+
+        syncTriggerQueue->overwrite(true);
+    });
+}
+
+/**
+ * @brief Publishes `sync` (NoRetain, QoS 2): the manifest of function fingerprints/requestedAt the
+ * device has applied and booted with (docs/specs/config-reconciliation.md, "SYNC"), read straight
+ * from FunctionRegistry's in-memory state -- proof-of-apply, never re-derived from NVS. The
+ * `device` entry is Phase 3 (reporting it requires the two-slot confirmed/requested machinery).
+ */
+void publishSync(const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<FunctionRegistry>& functionRegistry) {
+    mqttRoot->publish(
+        "sync",
+        [functionRegistry](JsonObject& json) {
+            auto configurations = json["configurations"].to<JsonObject>();
+            for (const auto& [name, entry] : functionRegistry->manifest()) {
+                auto configurationEntry = configurations[name].to<JsonObject>();
+                configurationEntry["fingerprint"] = entry.fingerprint;
+                configurationEntry["requestedAt"] = entry.requestedAt;
+            }
+        },
+        Retention::NoRetain, QoS::ExactlyOnce);
+}
+
+/**
+ * @brief Dedicated task that publishes SYNC whenever triggered via syncTriggerQueue -- a
+ * single-element overwrite queue, so a flurry of triggers (reconnects, or a post-UPDATE request)
+ * coalesces into one pending SYNC. Awaits kernelReady before publishing so SYNC only ever reports
+ * a fully-booted configuration set: if MQTT connects before boot finishes, the publish simply
+ * waits. There is no boot-time SYNC -- this task is the only publisher.
+ *
+ * Any further triggers that arrive while we are waiting on kernelReady (e.g. a flaky reconnect
+ * during a slow boot) are drained right before publishing rather than left for the next loop
+ * iteration: since publishSync() always reads FunctionRegistry's current state rather than a
+ * snapshot from trigger time, the about-to-happen publish already answers them, so leaving them
+ * queued would only cause an immediate, redundant re-publish straight after this one.
+ */
+void initSyncTask(
+    const std::shared_ptr<MqttRoot>& mqttRoot,
+    const std::shared_ptr<CopyQueue<bool>>& syncTriggerQueue,
+    const std::shared_ptr<ModuleStates>& states,
+    const std::shared_ptr<FunctionRegistry>& functionRegistry) {
+    Task::loop("sync", 4096, [mqttRoot, syncTriggerQueue, states, functionRegistry](Task&) {
+        syncTriggerQueue->take();
+        states->kernelReady.awaitSet();
+        syncTriggerQueue->clear();
+        publishSync(mqttRoot, functionRegistry);
     });
 }
 
@@ -576,6 +631,16 @@ static void startDevice() {
     registerBasicCommands(mqttRoot);
     registerNvsCommands(mqttRoot);
 
+    // SYNC trigger: a single-element overwrite queue coalesces every successful (re)connection
+    // (docs/specs/config-reconciliation.md, "SYNC") plus post-UPDATE requests into one pending
+    // publish. The connected-listener callback must not publish inline (it runs on the MQTT
+    // event-loop task, which publish() itself enqueues onto and waits for), so it only overwrites
+    // the queue; initSyncTask below does the actual publish, from its own task.
+    auto syncTriggerQueue = std::make_shared<CopyQueue<bool>>("sync-trigger", 1);
+    mqttRoot->mqtt->onConnected([syncTriggerQueue]() {
+        syncTriggerQueue->overwrite(true);
+    });
+
     // Handle any pending HTTP update (will reboot if update was required and was successful)
     registerHttpUpdateCommand(mqttRoot, configNvs);
     HttpUpdater::performPendingHttpUpdateIfNecessary(configNvs, wifi, watchdog);
@@ -612,7 +677,8 @@ static void startDevice() {
         functionRegistry->shutdown();
     });
     deviceDefinition->registerFunctionFactories(functionRegistry);
-    registerUpdateHandler(mqttRoot, configNvs, deviceStoredConfig.fingerprint(), functionRegistry);
+    registerUpdateHandler(mqttRoot, configNvs, deviceStoredConfig.fingerprint(), functionRegistry, syncTriggerQueue);
+    initSyncTask(mqttRoot, syncTriggerQueue, states, functionRegistry);
 
     // Init telemetry
     mqttRoot->registerCommand("ping", [telemetryPublisher](const JsonObject&, JsonObject& response) {
@@ -666,9 +732,12 @@ static void startDevice() {
     // Enable power saving once we are done initializing
     WiFiDriver::setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
 
+    // BOOT carries diagnostics and per-peripheral/function error feedback, but no configuration
+    // bodies (docs/specs/config-reconciliation.md, "Split init into BOOT + SYNC") -- fingerprints
+    // are reported separately by SYNC (initSyncTask above), gated on kernelReady.
     mqttRoot->publish(
-        "init",
-        [resetReason, deviceConfigRaw, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion](JsonObject& json) {
+        "boot",
+        [resetReason, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion](JsonObject& json) {
             json["model"] = deviceDefinition->model;
             json["revision"] = deviceDefinition->revision;
             json["platform"] = UD_PLATFORM;
@@ -677,11 +746,6 @@ static void startDevice() {
             if (hardwareVersion.has_value()) {
                 json["batch"] = hardwareVersion->batch;
                 json["serial"] = hardwareVersion->serial;
-            }
-            // Echo the verbatim device-config body received/persisted at boot
-            auto device = json["settings"].to<JsonObject>();
-            if (!deviceConfigRaw.isNull()) {
-                device.set(deviceConfigRaw.as<JsonObjectConst>());
             }
             json["version"] = firmwareVersion;
 #ifdef UD_DEBUG

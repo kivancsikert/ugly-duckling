@@ -14,6 +14,13 @@ namespace cornucopia::ugly_duckling::functions {
 // instance. Empty for functions that don't implement HasConfig<TConfig>.
 using ConfigureFn = std::function<void(JsonObjectConst)>;
 
+// One SYNC manifest entry: the fingerprint and requestedAt stamp of the configuration a function
+// is currently running, echoed verbatim from the envelope that was last successfully applied.
+struct FunctionManifestEntry {
+    std::string fingerprint;
+    std::string requestedAt;
+};
+
 /**
  * @brief In-memory name -> {configureFn, fingerprint} bookkeeping at the heart of FunctionRegistry
  * (docs/specs/config-reconciliation.md). Deliberately has no NVS/MQTT dependency of its own, so the
@@ -22,15 +29,15 @@ using ConfigureFn = std::function<void(JsonObjectConst)>;
  */
 class FunctionConfigTracker {
 public:
-    void record(const std::string& name, ConfigureFn configureFn, const std::string& fingerprint) {
-        entries[name] = Entry { .configureFn = std::move(configureFn), .fingerprint = fingerprint };
+    void record(const std::string& name, ConfigureFn configureFn, const std::string& fingerprint, const std::string& requestedAt) {
+        entries[name] = Entry { .configureFn = std::move(configureFn), .fingerprint = fingerprint, .requestedAt = requestedAt };
     }
 
-    // Applies data via the named entry's configureFn and records the fingerprint only once
-    // configureFn succeeds (proof-of-apply, not proof-of-receipt). Throws if the name is unknown or
-    // was recorded without a configureFn -- a protocol violation, unhandled in Phase 1 exactly like
-    // any other faulty configuration.
-    void apply(const std::string& name, JsonObjectConst data, const std::string& fingerprint) {
+    // Applies data via the named entry's configureFn and records the fingerprint/requestedAt only
+    // once configureFn succeeds (proof-of-apply, not proof-of-receipt). Throws if the name is
+    // unknown or was recorded without a configureFn -- a protocol violation, unhandled in Phase 1
+    // exactly like any other faulty configuration.
+    void apply(const std::string& name, JsonObjectConst data, const std::string& fingerprint, const std::string& requestedAt) {
         auto it = entries.find(name);
         if (it == entries.end()) {
             throw std::runtime_error("Cannot reconfigure unknown function '" + name + "'");
@@ -41,13 +48,14 @@ public:
         }
         entry.configureFn(data);
         entry.fingerprint = fingerprint;
+        entry.requestedAt = requestedAt;
     }
 
-    // name -> fingerprint for every recorded entry, straight from in-memory state.
-    std::unordered_map<std::string, std::string> manifest() const {
-        std::unordered_map<std::string, std::string> result;
+    // name -> {fingerprint, requestedAt} for every recorded entry, straight from in-memory state.
+    std::unordered_map<std::string, FunctionManifestEntry> manifest() const {
+        std::unordered_map<std::string, FunctionManifestEntry> result;
         for (const auto& [name, entry] : entries) {
-            result.emplace(name, entry.fingerprint);
+            result.emplace(name, FunctionManifestEntry { .fingerprint = entry.fingerprint, .requestedAt = entry.requestedAt });
         }
         return result;
     }
@@ -56,6 +64,7 @@ private:
     struct Entry {
         ConfigureFn configureFn;
         std::string fingerprint;
+        std::string requestedAt;
     };
 
     std::unordered_map<std::string, Entry> entries;

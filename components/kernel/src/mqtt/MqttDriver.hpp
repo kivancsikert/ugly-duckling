@@ -96,6 +96,18 @@ public:
         return ready;
     }
 
+    /**
+     * @brief Registers a callback fired on every successful (re)connection, including the first.
+     * Runs on the MQTT event-loop task, from the Connected event -- it must not publish inline
+     * (publish() enqueues onto this same task and waits), only hand off work elsewhere (e.g. an
+     * overwrite queue picked up by a dedicated task; see the SYNC trigger in Device.hpp). Blocks
+     * (rather than dropping the registration on a full queue) since callers register this once at
+     * startup and would otherwise boot with no SYNC trigger at all.
+     */
+    void onConnected(std::function<void()> callback) {
+        eventQueue.put(ConnectedListenerRegistration { std::move(callback) });
+    }
+
     void populateTelemetry(JsonObject& json) {
         json["disconnects"] = disconnectCount.exchange(0, std::memory_order_relaxed);
     }
@@ -227,6 +239,10 @@ private:
     };
 
     struct Disconnected { };
+
+    struct ConnectedListenerRegistration {
+        std::function<void()> callback;
+    };
 
     PublishStatus publish(const std::string& topic, const JsonDocument& json, Retention retain, QoS qos, ticks timeout = MQTT_NETWORK_TIMEOUT, LogPublish log = LogPublish::Log) {
         std::string payload;
@@ -383,6 +399,10 @@ private:
                                 // because we got a clean session
                                 processSubscriptions(subscriptions, pendingSubscriptions);
                             }
+
+                            for (const auto& listener : connectedListeners) {
+                                listener();
+                            }
                         },
                         [&](const Disconnected&) {
                             LOGTV(MQTT, "Processing disconnected event");
@@ -421,6 +441,10 @@ private:
                                 // clean session to make the subscription.
                                 nextSessionShouldBeClean = true;
                             }
+                        },
+                        [&](const ConnectedListenerRegistration& arg) {
+                            LOGTV(MQTT, "Processing connected-listener registration");
+                            connectedListeners.push_back(arg.callback);
                         },
                     },
                     event);
@@ -700,11 +724,12 @@ private:
     uint32_t port { };
     esp_mqtt_client_handle_t client;
 
-    using MqttEvent = std::variant<Connected, Disconnected, MessagePublished, Subscribed, OutgoingMessage, Subscription>;
+    using MqttEvent = std::variant<Connected, Disconnected, MessagePublished, Subscribed, OutgoingMessage, Subscription, ConnectedListenerRegistration>;
     Queue<MqttEvent> eventQueue;
     Queue<IncomingMessage> incomingQueue;
     // TODO Use a map instead
     std::vector<Subscription> subscriptions;
+    std::vector<std::function<void()>> connectedListeners;
     PendingMessages pendingMessages;
 
     std::atomic<int> disconnectCount { 0 };

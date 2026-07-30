@@ -421,13 +421,38 @@ device-configuration *authority transfer* land in Phase 3.
       empty one. Tested natively (`ConfigEnvelopeTest.cpp`, shape detection) and against real NVS
       (`StoredConfigTest.cpp`, adopt-then-normalize round trip). Delete once *Migration* → "Reading a legacy bare
       body" no longer applies (Phase 3 device-configuration authority transfer).
-- [ ] **Split `init` into `BOOT` + `SYNC`.** `boot` keeps all diagnostics + per-peripheral/function `error`
+- [x] **Split `init` into `BOOT` + `SYNC`.** `boot` keeps all diagnostics + per-peripheral/function `error`
       feedback and **drops all configuration bodies** (`NoRetain, QoS 1`). `sync` is the fingerprint manifest
       from the `confirmed` slot / registry (`NoRetain, QoS 2`).
-- [ ] **Connection-established hook + SYNC task.** Add a registered on-connect callback to `MqttDriver` (fires
+      `startDevice()` in `components/devices/src/Device.hpp` now publishes `boot` instead of `init`, and the
+      publish body no longer echoes the device configuration (`json["settings"]` dropped). The per-peripheral/
+      function init JSON also stopped echoing configuration bodies: `SettingsBasedManager::createFromSettings`
+      (`components/kernel/src/Manager.hpp`) no longer sets `initJson["params"]`, and `makeFunctionFactory`
+      (`components/functions/src/functions/Function.hpp`) no longer echoes the function's `config` body — both
+      still report `name`/`type`/`factory`/`error` as before. `sync` is built by a new `publishSync()` in
+      `Device.hpp` from `FunctionRegistry::manifest()`. To carry `requestedAt` alongside each fingerprint (the
+      payload shape in *SYNC* below), `FunctionConfigTracker` (`components/functions/src/functions/
+      FunctionConfigTracker.hpp`) now tracks `requestedAt` per entry and `manifest()` returns
+      `name -> FunctionManifestEntry {fingerprint, requestedAt}` instead of a bare fingerprint string;
+      `FunctionRegistry::reconfigure()`/`createFunction()` and `registerUpdateHandler`'s held-fingerprint lookup
+      (`Device.hpp`) were updated for the new shape. **The `device` entry is deliberately not in `sync` yet** —
+      reporting it is Phase 3 (see the `…/update` handler note above); `sync` in Phase 1 only reports functions.
+      `FunctionConfigTrackerTest.cpp` updated for the `requestedAt`-carrying signatures.
+- [x] **Connection-established hook + SYNC task.** Add a registered on-connect callback to `MqttDriver` (fires
       from the `Connected` event; must not publish inline). It pushes to a **single-element overwrite queue**; a
       dedicated SYNC task takes from it, **awaits `kernelReady`**, then publishes `SYNC`. Also publish `SYNC`
       immediately after a successful hot-reload `UPDATE` (via the same queue). No `SYNC` from `startDevice()`.
+      `MqttDriver::onConnected(callback)` (`components/kernel/src/mqtt/MqttDriver.hpp`) queues a
+      `ConnectedListenerRegistration` event through the existing `eventQueue` (same pattern as `subscribe()`,
+      so registration is race-free against the event-loop task); the `Connected` visitor invokes every
+      registered listener after processing resubscriptions, on every (re)connect. In `Device.hpp`,
+      `syncTriggerQueue` is a `CopyQueue<bool>` of capacity 1, and the connected-listener callback only calls
+      `syncTriggerQueue->overwrite(true)` — never publishes inline. `initSyncTask()` runs a dedicated
+      `Task::loop` that takes from the queue, awaits `states->kernelReady`, then calls `publishSync()`.
+      `registerUpdateHandler`'s functions-only (hot-reload) branch also overwrites `syncTriggerQueue` after
+      applying its changed entries, so a successful `UPDATE` re-advertises fingerprints without waiting for a
+      reconnect; the device-changed branch reboots instead, so `sync` follows from the next boot's
+      connection-established trigger, not from this handler.
 - [x] **Drop the retained `config` subscription.** Remove `functions/<name>/config` in `Function.hpp`; `UPDATE`
       is the only config-in path.
       Removed together with the `FunctionRegistry` item above, rather than as a separate commit, since keeping
