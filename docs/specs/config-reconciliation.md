@@ -330,9 +330,24 @@ device-configuration *authority transfer* land in Phase 3.
       is the only config-in path.
 - [ ] **No atomicity, no rejection.** A boot/apply failure is unrecoverable exactly as today; `rejected` is not
       emitted. (Deferred to Phase 3.)
-- [ ] **Tests.** Native: envelope round-trip, fingerprint-skip (including whole-message no-op), registry
-      manifest. e2e/embedded: drive an `UPDATE` (function-only and device-change), assert reboot vs hot-reload,
-      the `SYNC` manifest, and SYNC-gated-on-boot-success.
+- [ ] **Tests.** Split by tier — `NvsStore` talks to real `nvs.h` with no fake, so anything touching actual
+      NVS or a live MQTT connection cannot run in `unit-tests` (native); anything touching a live MQTT
+      connection cannot run in `embedded-tests` either (Wokwi without Mosquitto) — only `e2e-tests` has a
+      broker (see `CLAUDE.md`: "MQTT/WiFi behavior goes in `test/e2e-tests/`").
+    - **Native (`unit-tests`).** Requires `StoredConfig` to separate envelope JSON codec from NVS I/O (worth
+      doing regardless of tests). Envelope round-trip (serialize/parse only, no NVS); fingerprint-skip
+      filtering, including the whole-message no-op; `FunctionRegistry.manifest()`/`reconfigure()` against a
+      fake function handle.
+    - **Embedded (`embedded-tests`, Wokwi/IDF, no broker).** `StoredConfig` round-trip against real NVS;
+      boot loading `confirmed` from real NVS across a real device reset. (Slot swap / requested-vs-confirmed
+      boot selection for Phase 3 belongs here too — see below.)
+    - **e2e (`e2e-tests`, Wokwi + Mosquitto).** Everything that goes over the wire: drive an `UPDATE`
+      (function-only and device-change), assert reboot vs hot-reload, the `SYNC` manifest content, and
+      SYNC-gated-on-boot-success; same-fingerprint `UPDATE` is a no-op (assert absence of
+      reconfigure/reboot); the connection-established hook firing SYNC on connect/reconnect. **Blocked on
+      [#596](https://github.com/cornucopia-machines/ugly-duckling-firmware/issues/596)** — the e2e pytest
+      harness has no MQTT client today, only serial-output assertions, so none of this tier can be written
+      until that fixture exists.
 
 ### Phase 3 — atomicity, rejection, and device-config authority
 
@@ -353,6 +368,14 @@ device-configuration *authority transfer* land in Phase 3.
       `requested` and applied across a reboot.
 - [ ] **Retire the `nvs/write` + `restart` device-config path** once the server stops using it (keep raw
       `nvs/write` for debugging). Stop treating device-authored settings as ground truth.
+- [ ] **Tests.** The `config-state` transitions (`confirmed`/`requested{pending,attempted,rejected}` →
+      load/commit/revert) should be extracted as a pure function of state, not tested by physically crashing
+      a Wokwi device mid-write. **Native (`unit-tests`):** table-driven tests over that function for every
+      state combination, including "crashed while `attempted`". **Embedded (`embedded-tests`):** slot swap
+      and revert-to-`confirmed` against real NVS across a real reboot, seeding envelopes directly into NVS
+      rather than via `UPDATE` (no broker needed for this). **e2e (`e2e-tests`, blocked on
+      [#596](https://github.com/cornucopia-machines/ugly-duckling-firmware/issues/596)):** rejection code
+      reported on the `SYNC` following a revert, then cleared (report-once).
 
 ### Phase 4 — hardening (deferred)
 
