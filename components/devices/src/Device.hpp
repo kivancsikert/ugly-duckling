@@ -353,11 +353,7 @@ void publishSync(const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_pt
         "sync",
         [functionRegistry](JsonObject& json) {
             auto configurations = json["configurations"].to<JsonObject>();
-            for (const auto& [name, entry] : functionRegistry->manifest()) {
-                auto configurationEntry = configurations[name].to<JsonObject>();
-                configurationEntry["fingerprint"] = entry.fingerprint;
-                configurationEntry["requestedAt"] = entry.requestedAt;
-            }
+            writeSyncManifest(configurations, functionRegistry->manifest());
         },
         Retention::NoRetain, QoS::ExactlyOnce);
 }

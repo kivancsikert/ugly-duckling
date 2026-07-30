@@ -478,7 +478,16 @@ device-configuration *authority transfer* land in Phase 3.
       Done: `ConfigEnvelopeTest.cpp` (round-trip, including nested arrays and legacy-shape detection),
       `UpdateFilterTest.cpp` (fingerprint-skip filtering, whole-message no-op, `deviceChanged` flagging), and
       `FunctionConfigTrackerTest.cpp` (manifest/apply against a fake `configureFn`, the native-testable stand-in
-      for `FunctionRegistry` noted above since `FunctionRegistry` itself needs real NVS).
+      for `FunctionRegistry` noted above since `FunctionRegistry` itself needs real NVS). The `SYNC` payload's
+      `configurations` construction was pulled out of `Device.hpp`'s `publishSync()` into a pure
+      `writeSyncManifest(JsonObject&, manifest)` in `FunctionConfigTracker.hpp` (no NVS/MQTT, same rationale
+      as the rest of that header) and covered by `FunctionConfigTrackerTest.cpp` (empty manifest, multiple
+      entries keyed by name, an empty/unconfirmed fingerprint echoed verbatim). `BOOT`'s payload wasn't given
+      the same treatment: past the trivial field copies, its only real logic is the per-peripheral/function
+      `name`/`type`/`factory`/`error` reporting inside `SettingsBasedManager::createFromSettings`
+      (`components/kernel/src/Manager.hpp`), which is not natively testable because `Manager.hpp` pulls in
+      FreeRTOS via `Concurrent.hpp` (see `test/unit-tests/CMakeLists.txt`'s exclusion of `kernel/State.cpp` for
+      the same reason) — the same class of constraint as the e2e blocker above, just at the native tier.
     - **Embedded (`embedded-tests`, Wokwi/IDF, no broker).** `StoredConfig` round-trip against real NVS;
       boot loading `confirmed` from real NVS across a real device reset. (Slot swap / requested-vs-confirmed
       boot selection for Phase 3 belongs here too — see below.)

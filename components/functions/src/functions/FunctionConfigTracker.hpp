@@ -70,4 +70,16 @@ private:
     std::unordered_map<std::string, Entry> entries;
 };
 
+// Writes the SYNC payload's `configurations` entries from a function manifest -- name ->
+// {fingerprint, requestedAt} (docs/specs/config-reconciliation.md, "SYNC"). Pure JSON construction
+// with no NVS/MQTT dependency, so it's unit-testable independent of FunctionRegistry; Device.hpp's
+// publishSync() is the sole caller.
+inline void writeSyncManifest(JsonObject& configurations, const std::unordered_map<std::string, FunctionManifestEntry>& manifest) {
+    for (const auto& [name, entry] : manifest) {
+        auto configurationEntry = configurations[name].to<JsonObject>();
+        configurationEntry["fingerprint"] = entry.fingerprint;
+        configurationEntry["requestedAt"] = entry.requestedAt;
+    }
+}
+
 }    // namespace cornucopia::ugly_duckling::functions

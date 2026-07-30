@@ -88,3 +88,35 @@ TEST_CASE("apply throws for a function recorded without a configureFn") {
         std::runtime_error,
         Catch::Matchers::Message("Function 'valve1' does not support configuration"));
 }
+
+TEST_CASE("writeSyncManifest writes nothing for an empty manifest") {
+    JsonDocument doc;
+    auto configurations = doc.to<JsonObject>();
+    writeSyncManifest(configurations, {});
+
+    REQUIRE(configurations.size() == 0);
+}
+
+TEST_CASE("writeSyncManifest writes fingerprint and requestedAt per function, keyed by name") {
+    JsonDocument doc;
+    auto configurations = doc.to<JsonObject>();
+    writeSyncManifest(configurations, {
+                                           { "valve1", { .fingerprint = "fp-1", .requestedAt = "2026-07-30T12:00:00Z" } },
+                                           { "door1", { .fingerprint = "fp-2", .requestedAt = "2026-07-30T13:00:00Z" } },
+                                       });
+
+    REQUIRE(configurations.size() == 2);
+    REQUIRE(configurations["valve1"]["fingerprint"].as<std::string>() == "fp-1");
+    REQUIRE(configurations["valve1"]["requestedAt"].as<std::string>() == "2026-07-30T12:00:00Z");
+    REQUIRE(configurations["door1"]["fingerprint"].as<std::string>() == "fp-2");
+    REQUIRE(configurations["door1"]["requestedAt"].as<std::string>() == "2026-07-30T13:00:00Z");
+}
+
+TEST_CASE("writeSyncManifest echoes an empty fingerprint verbatim (unconfirmed / legacy-adopted config)") {
+    JsonDocument doc;
+    auto configurations = doc.to<JsonObject>();
+    writeSyncManifest(configurations, { { "valve1", { .fingerprint = "", .requestedAt = "" } } });
+
+    REQUIRE(configurations["valve1"]["fingerprint"].as<std::string>().empty());
+    REQUIRE(configurations["valve1"]["requestedAt"].as<std::string>().empty());
+}
