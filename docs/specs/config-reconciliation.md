@@ -287,6 +287,29 @@ a firmware update already takes the device offline for a while (HTTP update requ
 so a short additional reconfiguration round-trip is not a meaningful regression. No one-time import of the old
 `device-config`/`function-cfg` blobs is done.
 
+### Upgrading into Phase 3 (no `config-state` yet)
+
+The same "no migration, reconcile from empty" answer applies to the **Phase 1 → Phase 3** boundary, not just
+Phase 0 → Phase 1. Phase 1 firmware has no `config-state` namespace and no `confirmed`/`requested` slot
+pointer — it stores each configuration as a single envelope directly. A device last booted on Phase 1 firmware
+therefore boots Phase 3 firmware with `config-state` entirely absent.
+
+Two options were considered:
+
+1. **Treat it as "no `confirmed` slot."** Boot as a no-functions device (defaults only), send an empty/minimal
+   `SYNC`, and let the server re-push the full device + function configuration set, same as any other empty-slot
+   boot.
+2. **Migrate the existing Phase 1 envelopes into a synthesized `confirmed` slot.** This would require minting
+   fingerprints for configuration the device itself already holds — but fingerprinting is exclusively the
+   server's jurisdiction (see "Fingerprints are never computed on-device" above); the firmware has no legitimate
+   way to produce one.
+
+Option 2 is ruled out by that standing invariant, so **option 1 is what Phase 3 implements**: a missing
+`config-state` (or a missing `confirmed` pointer within it) is handled identically to the empty-slot case above,
+not as a distinct migration path. This is not a complete configuration-migration framework — just enough to
+boot cleanly from old NVS and let the existing reconciliation loop (empty `SYNC` → server re-push) take it from
+there, exactly as it already does for the Phase 0 → Phase 1 upgrade.
+
 ---
 
 ## Progress checklist
@@ -394,7 +417,10 @@ device-configuration *authority transfer* land in Phase 3.
 
 - [ ] **Two-slot `confirmed`/`requested` + `config-state` machine.** Implement the staging/commit/revert flow:
       stage changes into `requested`, mark `pending`→`attempted`, commit on success, revert to `confirmed` on
-      failure across a reboot. `config-state` records `confirmed`/`requested`/`rejection`.
+      failure across a reboot. `config-state` records `confirmed`/`requested`/`rejection`. A missing
+      `config-state` namespace (device last booted on Phase 1 firmware) is handled as "no `confirmed` slot" —
+      boot no-functions, empty `SYNC` — **not** as a migration of the old single-envelope layout (see
+      *Migration* → "Upgrading into Phase 3").
 - [ ] **Boot-time apply detection + revert.** Detect a `requested` set that fails to boot (including a crash
       that leaves it `attempted`) and revert to `confirmed`, recording the rejection.
 - [ ] **Rejection reporting.** Persist the `google.rpc.Code` across the revert reboot; include it in the next
