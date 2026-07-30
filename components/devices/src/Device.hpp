@@ -372,8 +372,10 @@ static void startDevice() {
         LOGTV(NVS, " - %s", key.c_str());
     });
 
-    auto networkConfig = loadConfigFromNvs<NetworkConfig>(configNvs, "network-config");
-    auto settings = loadConfigFromNvs<DeviceSettings>(configNvs, "device-config");
+    JsonDocument networkConfigRaw;
+    auto networkConfig = loadConfigFromNvs<NetworkConfig>(configNvs, "network-config", networkConfigRaw);
+    JsonDocument settingsRaw;
+    auto settings = loadConfigFromNvs<DeviceSettings>(configNvs, "device-config", settingsRaw);
 
     const std::string modelWithRevision = deviceDefinition->model + " (rev" + std::to_string(deviceDefinition->revision) + ")";
 
@@ -598,7 +600,7 @@ static void startDevice() {
 
     mqttRoot->publish(
         "init",
-        [resetReason, settings, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion](JsonObject& json) {
+        [resetReason, settingsRaw, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion](JsonObject& json) {
             json["model"] = deviceDefinition->model;
             json["revision"] = deviceDefinition->revision;
             json["platform"] = UD_PLATFORM;
@@ -608,8 +610,11 @@ static void startDevice() {
                 json["batch"] = hardwareVersion->batch;
                 json["serial"] = hardwareVersion->serial;
             }
+            // Echo the verbatim device-config body received/persisted at boot
             auto device = json["settings"].to<JsonObject>();
-            settings->store(device);
+            if (!settingsRaw.isNull()) {
+                device.set(settingsRaw.as<JsonObjectConst>());
+            }
             json["version"] = firmwareVersion;
 #ifdef UD_DEBUG
             json["debug"] = true;

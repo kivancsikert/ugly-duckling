@@ -71,8 +71,6 @@ public:
     }
 
     virtual void load(const JsonObject& json) = 0;
-    virtual void reset() = 0;
-    virtual void store(JsonObject& json) const = 0;
     virtual bool hasValue() const = 0;
 };
 
@@ -86,18 +84,6 @@ public:
     void load(const JsonObject& json) override {
         for (auto& entry : entries) {
             entry.get().load(json);
-        }
-    }
-
-    void reset() override {
-        for (auto& entry : entries) {
-            entry.get().reset();
-        }
-    }
-
-    void store(JsonObject& json) const override {
-        for (const auto& entry : entries) {
-            entry.get().store(json);
         }
     }
 
@@ -143,25 +129,11 @@ public:
         if (json[name].template is<JsonObject>()) {
             namePresentAtLoad = true;
             delegate->load(json[name]);
-        } else {
-            reset();
-        }
-    }
-
-    void store(JsonObject& json) const override {
-        if (hasValue()) {
-            auto section = json[name].template to<JsonObject>();
-            delegate->store(section);
         }
     }
 
     bool hasValue() const override {
         return namePresentAtLoad || delegate->hasValue();
-    }
-
-    void reset() override {
-        namePresentAtLoad = false;
-        delegate->reset();
     }
 
     std::shared_ptr<TDelegateEntry> get() const {
@@ -177,9 +149,8 @@ private:
 template <typename T>
 class Property : public ConfigurationEntry {
 public:
-    Property(ConfigurationSection* parent, const std::string& name, const T& defaultValue = T(), const bool secret = false)
+    Property(ConfigurationSection* parent, const std::string& name, const T& defaultValue = T())
         : name(name)
-        , secret(secret)
         , value(defaultValue)
         , defaultValue(defaultValue) {
         parent->add(*this);
@@ -204,8 +175,6 @@ public:
         if (json[name].template is<T>()) {
             value = json[name].template as<T>();
             configured = true;
-        } else {
-            reset();
         }
     }
 
@@ -213,25 +182,8 @@ public:
         return configured;
     }
 
-    void reset() override {
-        configured = false;
-        value = T();
-    }
-
-    void store(JsonObject& json) const override {
-        if (!configured) {
-            return;
-        }
-        if (secret) {
-            json[name] = "********";
-        } else {
-            json[name] = get();
-        }
-    }
-
 private:
     const std::string name;
-    const bool secret;
     bool configured = false;
     T value;
     const T defaultValue;
@@ -250,7 +202,6 @@ public:
     }
 
     void load(const JsonObject& json) override {
-        reset();
         if (json[name].template is<JsonArray>()) {
             auto jsonArray = json[name].template as<JsonArray>();
             for (auto jsonEntry : jsonArray) {
@@ -262,17 +213,6 @@ public:
 
     bool hasValue() const override {
         return !entries.empty();
-    }
-
-    void reset() override {
-        entries.clear();
-    }
-
-    void store(JsonObject& json) const override {
-        auto jsonArray = json[name].template to<JsonArray>();
-        for (auto& entry : entries) {
-            jsonArray.add(entry);
-        }
     }
 
 private:

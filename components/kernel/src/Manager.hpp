@@ -205,7 +205,12 @@ public:
         const auto& name = settings->name.get();
         initJson["name"] = name;
         initJson["type"] = settings->type.get();
-        settings->params.store(initJson);
+        if (settings->params.hasValue()) {
+            // Echo the verbatim params body in the init message
+            JsonDocument paramsDoc;
+            deserializeJson(paramsDoc, settings->params.get().get());
+            initJson["params"].set(paramsDoc.as<JsonObjectConst>());
+        }
         try {
             this->createWithFactory(name, settings->type.get(), [&](const FactoryT& factory) {
                 initJson["factory"] = factory.factoryType;
