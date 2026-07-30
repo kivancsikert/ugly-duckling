@@ -35,8 +35,8 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 #include <mqtt/MqttDriver.hpp>
 #include <mqtt/MqttLog.hpp>
 
-#include <devices/DeviceDefinition.hpp>
 #include <devices/DeviceConfiguration.hpp>
+#include <devices/DeviceDefinition.hpp>
 #include <functions/Function.hpp>
 #include <peripherals/Peripheral.hpp>
 
