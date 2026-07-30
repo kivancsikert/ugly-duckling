@@ -23,7 +23,7 @@ using ConfigureFn = std::function<void(JsonObjectConst)>;
 class FunctionConfigTracker {
 public:
     void record(const std::string& name, ConfigureFn configureFn, const std::string& fingerprint) {
-        entries[name] = Entry { std::move(configureFn), fingerprint };
+        entries[name] = Entry { .configureFn = std::move(configureFn), .fingerprint = fingerprint };
     }
 
     // Applies data via the named entry's configureFn and records the fingerprint only once

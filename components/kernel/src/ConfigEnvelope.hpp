@@ -57,7 +57,7 @@ struct Converter<ConfigEnvelope> {
     }
 
     static ConfigEnvelope fromJson(JsonVariantConst src) {
-        return ConfigEnvelope(src["data"], src["fingerprint"] | std::string(), src["requestedAt"] | std::string());
+        return { src["data"], src["fingerprint"] | std::string(), src["requestedAt"] | std::string() };
     }
 
     static bool checkJson(JsonVariantConst src) {
