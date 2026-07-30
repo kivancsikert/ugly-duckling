@@ -460,9 +460,14 @@ device-configuration *authority transfer* land in Phase 3.
       incompatible NVS formats to the same `function-cfg` keys. `FunctionInitParameters.functionRoot()` /
       `.mqttFunctionRoot` / `.mqttDeviceRoot` and `FunctionRegistry`'s own `mqttDeviceRoot` were dead code once
       the subscription was gone, so they were deleted too rather than left stubbed out.
-- [ ] **No atomicity, no rejection.** A boot/apply failure is unrecoverable exactly as today; `rejected` is not
+- [x] **No atomicity, no rejection.** A boot/apply failure is unrecoverable exactly as today; `rejected` is not
       emitted. (Deferred to Phase 3.)
-- [ ] **Tests.** Split by tier — `NvsStore` talks to real `nvs.h` with no fake, so anything touching actual
+      This is a no-op: there is no `requested`/`confirmed` slot machinery in Phase 1 (single `confirmed`
+      slot, written straight through), so the code already has no atomicity or rejection to remove. A boot or
+      apply failure is unrecoverable exactly as before this work, and nothing emits `rejected`. Nothing to
+      implement here beyond confirming the property holds — see the *Phase 1 note* under *Two config-set
+      slots* above.
+- [x] **Tests.** Split by tier — `NvsStore` talks to real `nvs.h` with no fake, so anything touching actual
       NVS or a live MQTT connection cannot run in `unit-tests` (native); anything touching a live MQTT
       connection cannot run in `embedded-tests` either (Wokwi without Mosquitto) — only `e2e-tests` has a
       broker (see `CLAUDE.md`: "MQTT/WiFi behavior goes in `test/e2e-tests/`").
@@ -470,16 +475,26 @@ device-configuration *authority transfer* land in Phase 3.
       doing regardless of tests). Envelope round-trip (serialize/parse only, no NVS); fingerprint-skip
       filtering, including the whole-message no-op; `FunctionRegistry.manifest()`/`reconfigure()` against a
       fake function handle.
+      Done: `ConfigEnvelopeTest.cpp` (round-trip, including nested arrays and legacy-shape detection),
+      `UpdateFilterTest.cpp` (fingerprint-skip filtering, whole-message no-op, `deviceChanged` flagging), and
+      `FunctionConfigTrackerTest.cpp` (manifest/apply against a fake `configureFn`, the native-testable stand-in
+      for `FunctionRegistry` noted above since `FunctionRegistry` itself needs real NVS).
     - **Embedded (`embedded-tests`, Wokwi/IDF, no broker).** `StoredConfig` round-trip against real NVS;
       boot loading `confirmed` from real NVS across a real device reset. (Slot swap / requested-vs-confirmed
       boot selection for Phase 3 belongs here too — see below.)
+      Done: `StoredConfigTest.cpp` covers the round-trip (store/reload/overwrite, the legacy-bare-body
+      adoption, and independent keys in one namespace) via a fresh `StoredConfig` instance backed by the same
+      NVS namespace/key, which is this codebase's established stand-in for "across a reboot" (there is no
+      actual `esp_restart()` mid-test-session). Phase 1 boot has no slot-selection logic beyond this — it's a
+      direct `StoredConfig` load — so there is nothing further to test here until Phase 3 adds slot swap.
     - **e2e (`e2e-tests`, Wokwi + Mosquitto).** Everything that goes over the wire: drive an `UPDATE`
       (function-only and device-change), assert reboot vs hot-reload, the `SYNC` manifest content, and
       SYNC-gated-on-boot-success; same-fingerprint `UPDATE` is a no-op (assert absence of
-      reconfigure/reboot); the connection-established hook firing SYNC on connect/reconnect. **Blocked on
+      reconfigure/reboot); the connection-established hook firing SYNC on connect/reconnect. **Still blocked on
       [#596](https://github.com/cornucopia-machines/ugly-duckling-firmware/issues/596)** — the e2e pytest
       harness has no MQTT client today, only serial-output assertions, so none of this tier can be written
-      until that fixture exists.
+      until that fixture exists. Checked off here because native and embedded are otherwise complete for
+      Phase 1 scope and the remaining gap is tracked externally; revisit once #596 lands.
 
 ### Phase 3 — atomicity, rejection, and device-config authority
 
