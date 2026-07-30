@@ -43,11 +43,11 @@ After sourcing, `idf.py` is on `PATH`. Each platform uses a dedicated build
 directory to avoid clobbering the other's compiled artifacts and sdkconfig:
 
 ```sh
-. tools/activate_idf.sh carrot  && idf.py -B build-carrot  build 2>&1 | tail -5
-. tools/activate_idf.sh spinach && idf.py -B build-spinach build 2>&1 | tail -5
+. tools/activate_idf.sh carrot  && idf.py -B build-carrot  build > /tmp/build-carrot.log  2>&1; echo "exit: $?"
+. tools/activate_idf.sh spinach && idf.py -B build-spinach build > /tmp/build-spinach.log 2>&1; echo "exit: $?"
 ```
 
-A successful build ends with `Project build complete.` An error prints the compiler diagnostics before the build aborts. **Do not pipe `idf.py build` through `grep` to check success** — grep's exit code replaces idf.py's, making a clean build look like a failure when grep finds no matches.
+A successful build ends with `Project build complete.` and exits 0. Redirect to a log file rather than piping through `tail`: the CMake configure step and linker script listing are thousands of tokens of noise that add no value once the build succeeds, and (unlike `tail -N`) a redirect never truncates the diagnostics you actually need on failure. Check the exit code first; only `grep`/`tail` the log file when the build fails. **Do not pipe `idf.py build` through `grep` directly to check success** — grep's exit code replaces idf.py's, making a clean build look like a failure when grep finds no matches.
 
 Pass `-B build-carrot` (or `-B build-spinach`) to every `idf.py` subcommand
 (`flash`, `monitor`, `set-target`, `update-dependencies`, etc.) to keep the two
