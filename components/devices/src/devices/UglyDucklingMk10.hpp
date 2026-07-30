@@ -45,7 +45,7 @@ public:
     std::shared_ptr<Ina219Driver> ina219;
 
 protected:
-    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<DeviceSettings>& /*settings*/) override {
+    void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<DeviceConfiguration>& /*deviceConfig*/) override {
         auto motorDriver = Drv8848Driver::create(
             services.pwmManager,
             DAIN1,

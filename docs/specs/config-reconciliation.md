@@ -298,15 +298,18 @@ device-configuration *authority transfer* land in Phase 3.
 
 ### Phase 0 — prerequisite
 
-- [ ] **`Configuration`/`Property` teardown** per [`configuration-as-schema.md`](configuration-as-schema.md):
+- [x] **`Configuration`/`Property` teardown** per [`configuration-as-schema.md`](configuration-as-schema.md):
       verbatim-JSON storage, persistence split from parsing, `store()` removed once `BOOT` stops echoing config
-      bodies. **Do this first, on its own branch.**
+      bodies. **Do this first, on its own branch.** Landed in [#597](https://github.com/cornucopia-machines/ugly-duckling-firmware/pull/597).
 
 ### Phase 1 — the new protocol, happy path (single `confirmed` slot, no atomicity)
 
-- [ ] **Rename `settings` → device `configuration`.** `DeviceSettings` and the `device-config` load path,
+- [x] **Rename `settings` → device `configuration`.** `DeviceSettings` and the `device-config` load path,
       including type names and log strings. The `device` document becomes a reconciled configuration with a
-      fingerprint like any other.
+      fingerprint like any other. `DeviceSettings` → `DeviceConfiguration` (type, file, and every derived local
+      variable/parameter) across the boot path and per-device factories. The `init` message's wire-format
+      `"settings"` JSON key is intentionally left alone here — it disappears entirely once the "Split `init`
+      into `BOOT` + `SYNC`" item below removes configuration bodies from `init`.
 - [ ] **Per-configuration envelope + store.** Introduce the verbatim `{data, fingerprint, requestedAt}`
       envelope and a `StoredConfig` wrapper (read/write one envelope, expose `data`/`fingerprint`/`requestedAt`),
       separate from parsing. `requestedAt` is an ISO 8601 string (encoded like a schedule `start`).

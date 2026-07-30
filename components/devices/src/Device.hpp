@@ -36,7 +36,7 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 #include <mqtt/MqttLog.hpp>
 
 #include <devices/DeviceDefinition.hpp>
-#include <devices/DeviceSettings.hpp>
+#include <devices/DeviceConfiguration.hpp>
 #include <functions/Function.hpp>
 #include <peripherals/Peripheral.hpp>
 
@@ -374,14 +374,14 @@ static void startDevice() {
 
     JsonDocument networkConfigRaw;
     auto networkConfig = loadConfigFromNvs<NetworkConfig>(configNvs, "network-config", networkConfigRaw);
-    JsonDocument settingsRaw;
-    auto settings = loadConfigFromNvs<DeviceSettings>(configNvs, "device-config", settingsRaw);
+    JsonDocument deviceConfigRaw;
+    auto deviceConfig = loadConfigFromNvs<DeviceConfiguration>(configNvs, "device-config", deviceConfigRaw);
 
     const std::string modelWithRevision = deviceDefinition->model + " (rev" + std::to_string(deviceDefinition->revision) + ")";
 
-    auto watchdog = initWatchdog(settings->watchdogTimeout.get());
+    auto watchdog = initWatchdog(deviceConfig->watchdogTimeout.get());
 
-    auto powerManager = std::make_shared<PowerManager>(settings->sleepWhenIdle.get());
+    auto powerManager = std::make_shared<PowerManager>(deviceConfig->sleepWhenIdle.get());
 
     auto logRecords = std::make_shared<Queue<LogRecord>>("logs",
 #ifdef UD_DEBUG
@@ -390,7 +390,7 @@ static void startDevice() {
         32
 #endif
     );
-    ConsoleProvider::init(logRecords, settings->publishLogs.get());
+    ConsoleProvider::init(logRecords, deviceConfig->publishLogs.get());
 
     const auto& macAddress = getMacAddress();
     const auto& hardwareVersion = getHardwareVersion();
@@ -414,12 +414,12 @@ static void startDevice() {
     auto states = std::make_shared<ModuleStates>();
     KernelStatusTask::init(statusLed, states);
 
-    // Init BLE (optional — disabled via settings->bleEnabled; compiled out entirely on
+    // Init BLE (optional — disabled via deviceConfig->bleEnabled; compiled out entirely on
     // platforms without CONFIG_BT_NIMBLE_ENABLED, e.g. Spinach — see docs/specs/Bluetooth.md
     // "Platform support decision")
     std::shared_ptr<BleDriver> ble;
 #ifdef CONFIG_BT_NIMBLE_ENABLED
-    if (settings->bleEnabled.get()) {
+    if (deviceConfig->bleEnabled.get()) {
         LOGI("BLE enabled, starting NimBLE stack");
         auto bleNvs = std::make_shared<NvsStore>("ble");
         ble = std::make_shared<NimBleDriver>(
@@ -428,7 +428,7 @@ static void startDevice() {
             firmwareVersion,
             macAddress,
             bleNvs,
-            settings->bleAdvInterval.get());
+            deviceConfig->bleAdvInterval.get());
     } else {
         LOGI("BLE disabled, using no-op driver");
         ble = std::make_shared<BleDriver>();
@@ -505,7 +505,7 @@ static void startDevice() {
     // Init MQTT connection
     auto clientId = "ugly-duckling-" + macAddress;
     auto mqttRoot = initMqtt(states, clientId, networkConfig, states->mqttReady);
-    MqttLog::init(settings->publishLogs.get(), logRecords, mqttRoot);
+    MqttLog::init(deviceConfig->publishLogs.get(), logRecords, mqttRoot);
     registerBasicCommands(mqttRoot);
     registerNvsCommands(mqttRoot);
 
@@ -532,7 +532,7 @@ static void startDevice() {
     shutdownManager->registerShutdownListener([peripheralManager]() {
         peripheralManager->shutdown();
     });
-    deviceDefinition->registerPeripheralFactories(peripheralManager, peripheralServices, settings);
+    deviceDefinition->registerPeripheralFactories(peripheralManager, peripheralServices, deviceConfig);
 
     // Init functions
     auto functionServices = FunctionServices {
@@ -570,7 +570,7 @@ static void startDevice() {
         }
     }
 
-    const auto& peripheralsSettings = settings->peripherals.get();
+    const auto& peripheralsSettings = deviceConfig->peripherals.get();
     LOGI("Loading configuration for %d user-configured peripherals",
         peripheralsSettings.size());
     for (const auto& peripheralSettings : peripheralsSettings) {
@@ -584,7 +584,7 @@ static void startDevice() {
 
     JsonDocument functionsInitDoc;
     auto functionsInitJson = functionsInitDoc.to<JsonArray>();
-    const auto& functionsSettings = settings->functions.get();
+    const auto& functionsSettings = deviceConfig->functions.get();
     LOGI("Loading configuration for %d user-configured functions",
         functionsSettings.size());
     for (const auto& functionSettings : functionsSettings) {
@@ -593,14 +593,14 @@ static void startDevice() {
         }
     }
 
-    initTelemetryPublishTask(settings->publishInterval.get(), watchdog, mqttRoot, batteryManager, powerManager, wifi, ble, telemetryCollector, telemetryPublishQueue);
+    initTelemetryPublishTask(deviceConfig->publishInterval.get(), watchdog, mqttRoot, batteryManager, powerManager, wifi, ble, telemetryCollector, telemetryPublishQueue);
 
     // Enable power saving once we are done initializing
-    WiFiDriver::setPowerSaveMode(settings->sleepWhenIdle.get());
+    WiFiDriver::setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
 
     mqttRoot->publish(
         "init",
-        [resetReason, settingsRaw, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion](JsonObject& json) {
+        [resetReason, deviceConfigRaw, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion](JsonObject& json) {
             json["model"] = deviceDefinition->model;
             json["revision"] = deviceDefinition->revision;
             json["platform"] = UD_PLATFORM;
@@ -612,8 +612,8 @@ static void startDevice() {
             }
             // Echo the verbatim device-config body received/persisted at boot
             auto device = json["settings"].to<JsonObject>();
-            if (!settingsRaw.isNull()) {
-                device.set(settingsRaw.as<JsonObjectConst>());
+            if (!deviceConfigRaw.isNull()) {
+                device.set(deviceConfigRaw.as<JsonObjectConst>());
             }
             json["version"] = firmwareVersion;
 #ifdef UD_DEBUG

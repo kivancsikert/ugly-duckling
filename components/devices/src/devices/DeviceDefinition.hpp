@@ -8,7 +8,7 @@
 
 #include <ArduinoJson.h>
 
-#include <devices/DeviceSettings.hpp>
+#include <devices/DeviceConfiguration.hpp>
 
 #include <Log.hpp>
 #include <PulseCounter.hpp>
@@ -72,7 +72,7 @@ public:
 
     virtual ~DeviceDefinition() = default;
 
-    void registerPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<DeviceSettings>& settings) {
+    void registerPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<DeviceConfiguration>& deviceConfig) {
         peripheralManager->registerFactory(environment::makeFactoryForHdc2010());
         peripheralManager->registerFactory(environment::makeFactoryForSht3x());
         // TODO Unify these two factories
@@ -99,7 +99,7 @@ public:
         peripheralManager->registerFactory(analog_meter::makeFactory());
         peripheralManager->registerFactory(flow_meter::makeFactory());
 
-        registerDeviceSpecificPeripheralFactories(peripheralManager, services, settings);
+        registerDeviceSpecificPeripheralFactories(peripheralManager, services, deviceConfig);
     }
 
     static void registerFunctionFactories(const std::shared_ptr<FunctionManager>& functionManager) {
@@ -124,7 +124,7 @@ public:
     const InternalPinPtr statusPin;
 
 protected:
-    virtual void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<DeviceSettings>& _settings) {
+    virtual void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<DeviceConfiguration>& _deviceConfig) {
     }
 };
 
