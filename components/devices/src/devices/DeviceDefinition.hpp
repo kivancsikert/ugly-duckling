@@ -102,9 +102,9 @@ public:
         registerDeviceSpecificPeripheralFactories(peripheralManager, services, deviceConfig);
     }
 
-    static void registerFunctionFactories(const std::shared_ptr<FunctionManager>& functionManager) {
-        functionManager->registerFactory(plot_controller::makeFactory());
-        functionManager->registerFactory(chicken_door::makeFactory());
+    static void registerFunctionFactories(const std::shared_ptr<FunctionRegistry>& functionRegistry) {
+        functionRegistry->registerFactory(plot_controller::makeFactory());
+        functionRegistry->registerFactory(chicken_door::makeFactory());
     }
 
     /**

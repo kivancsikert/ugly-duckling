@@ -540,11 +540,11 @@ static void startDevice() {
         .telemetryPublisher = telemetryPublisher,
     };
     auto functionsConfigNvs = std::make_shared<NvsStore>("function-cfg");
-    auto functionManager = std::make_shared<FunctionManager>(functionsConfigNvs, functionServices, mqttRoot);
-    shutdownManager->registerShutdownListener([functionManager]() {
-        functionManager->shutdown();
+    auto functionRegistry = std::make_shared<FunctionRegistry>(functionsConfigNvs, functionServices);
+    shutdownManager->registerShutdownListener([functionRegistry]() {
+        functionRegistry->shutdown();
     });
-    deviceDefinition->registerFunctionFactories(functionManager);
+    deviceDefinition->registerFunctionFactories(functionRegistry);
 
     // Init telemetry
     mqttRoot->registerCommand("ping", [telemetryPublisher](const JsonObject&, JsonObject& response) {
@@ -588,7 +588,7 @@ static void startDevice() {
     LOGI("Loading configuration for %d user-configured functions",
         functionsSettings.size());
     for (const auto& functionSettings : functionsSettings) {
-        if (!functionManager->createFunction(functionSettings.get(), functionsInitJson)) {
+        if (!functionRegistry->createFunction(functionSettings.get(), functionsInitJson)) {
             initState = InitState::FunctionError;
         }
     }

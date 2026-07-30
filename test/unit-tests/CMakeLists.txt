@@ -34,6 +34,8 @@ FetchContent_MakeAvailable(ArduinoJson)
 set(COMPONENTS_DIR ${CMAKE_SOURCE_DIR}/../../components)
 
 include_directories(
+    ${COMPONENTS_DIR}/functions/src
+    ${COMPONENTS_DIR}/functions/test
     ${COMPONENTS_DIR}/kernel/src
     ${COMPONENTS_DIR}/kernel/test
     ${COMPONENTS_DIR}/utils/src
@@ -47,6 +49,7 @@ include_directories(
 
 # Collect all test source files
 file(GLOB_RECURSE TEST_SOURCES
+    ${COMPONENTS_DIR}/functions/test/*.cpp
     ${COMPONENTS_DIR}/kernel/test/*.cpp
     ${COMPONENTS_DIR}/peripherals/test/*.cpp
     ${COMPONENTS_DIR}/scheduling/test/*.cpp

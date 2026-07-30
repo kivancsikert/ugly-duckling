@@ -317,10 +317,17 @@ device-configuration *authority transfer* land in Phase 3.
       built on `NvsStore::get<ConfigEnvelope>`/`set<ConfigEnvelope>`) landed in
       `components/kernel/src/{ConfigEnvelope,StoredConfig}.hpp`. Not yet wired into `DeviceConfiguration`
       loading or function configuration — that's the `FunctionRegistry` item next.
-- [ ] **`FunctionRegistry`.** Evolve `FunctionManager` into the in-memory `name → {handle, fingerprint}` source
+- [x] **`FunctionRegistry`.** Evolve `FunctionManager` into the in-memory `name → {handle, fingerprint}` source
       of truth. Move the hot-reload logic out of the per-function `config` subscription into
       `reconfigure(name, envelope)`; record fingerprints on successful `configure(...)` at boot and on reload;
       expose `manifest()`.
+      `FunctionManager` renamed to `FunctionRegistry` in `components/functions/src/functions/Function.hpp`;
+      boot-time function config loading switched from bare-body `NvsConfiguration` to envelope-based
+      `StoredConfig`, so the registry has a real fingerprint to record at creation. `reconfigure(name, envelope)`
+      and `manifest()` land as designed, but aren't yet called by anything live — the `…/update` handler (next
+      item) is what calls `reconfigure()` for real. The apply-and-track-fingerprint bookkeeping itself was
+      split into `FunctionConfigTracker` (no NVS dependency, unit-tested with a fake `configureFn`), matching
+      `ConfigEnvelope`/`StoredConfig`'s codec/IO split, since `FunctionRegistry` itself can't be built natively.
 - [ ] **`…/update` subscription + handler.** Subscribe the device root to `update` (`NoRetain, QoS 2`). Parse
       `configurations`; filter by held fingerprints (ignore the whole message if nothing differs). Persist
       changed envelopes to the (single) `confirmed` slot. **Device changed → reboot; functions-only changed →
@@ -333,8 +340,13 @@ device-configuration *authority transfer* land in Phase 3.
       from the `Connected` event; must not publish inline). It pushes to a **single-element overwrite queue**; a
       dedicated SYNC task takes from it, **awaits `kernelReady`**, then publishes `SYNC`. Also publish `SYNC`
       immediately after a successful hot-reload `UPDATE` (via the same queue). No `SYNC` from `startDevice()`.
-- [ ] **Drop the retained `config` subscription.** Remove `functions/<name>/config` in `Function.hpp`; `UPDATE`
+- [x] **Drop the retained `config` subscription.** Remove `functions/<name>/config` in `Function.hpp`; `UPDATE`
       is the only config-in path.
+      Removed together with the `FunctionRegistry` item above, rather than as a separate commit, since keeping
+      the old bare-body subscription alive even transiently would have meant two config-in paths writing two
+      incompatible NVS formats to the same `function-cfg` keys. `FunctionInitParameters.functionRoot()` /
+      `.mqttFunctionRoot` / `.mqttDeviceRoot` and `FunctionRegistry`'s own `mqttDeviceRoot` were dead code once
+      the subscription was gone, so they were deleted too rather than left stubbed out.
 - [ ] **No atomicity, no rejection.** A boot/apply failure is unrecoverable exactly as today; `rejected` is not
       emitted. (Deferred to Phase 3.)
 - [ ] **Tests.** Split by tier — `NvsStore` talks to real `nvs.h` with no fake, so anything touching actual
