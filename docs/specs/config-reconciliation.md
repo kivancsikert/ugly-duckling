@@ -310,9 +310,13 @@ device-configuration *authority transfer* land in Phase 3.
       variable/parameter) across the boot path and per-device factories. The `init` message's wire-format
       `"settings"` JSON key is intentionally left alone here — it disappears entirely once the "Split `init`
       into `BOOT` + `SYNC`" item below removes configuration bodies from `init`.
-- [ ] **Per-configuration envelope + store.** Introduce the verbatim `{data, fingerprint, requestedAt}`
+- [x] **Per-configuration envelope + store.** Introduce the verbatim `{data, fingerprint, requestedAt}`
       envelope and a `StoredConfig` wrapper (read/write one envelope, expose `data`/`fingerprint`/`requestedAt`),
       separate from parsing. `requestedAt` is an ISO 8601 string (encoded like a schedule `start`).
+      `ConfigEnvelope` (verbatim envelope + its `ArduinoJson::Converter`) and `StoredConfig` (NVS-backed wrapper,
+      built on `NvsStore::get<ConfigEnvelope>`/`set<ConfigEnvelope>`) landed in
+      `components/kernel/src/{ConfigEnvelope,StoredConfig}.hpp`. Not yet wired into `DeviceConfiguration`
+      loading or function configuration — that's the `FunctionRegistry` item next.
 - [ ] **`FunctionRegistry`.** Evolve `FunctionManager` into the in-memory `name → {handle, fingerprint}` source
       of truth. Move the hot-reload logic out of the per-function `config` subscription into
       `reconfigure(name, envelope)`; record fingerprints on successful `configure(...)` at boot and on reload;
