@@ -12,25 +12,33 @@ namespace cornucopia::ugly_duckling::kernel {
 
 /**
  * @brief Loads a ConfigurationSection from NVS, and persists updates back to NVS.
+ *
+ * Parsing always yields a fresh, immutable snapshot: the constructor and update() each
+ * build a new TConfiguration rather than mutating one in place. The raw JSON body behind
+ * the current snapshot is retained verbatim (getRawJson()) so callers can echo it back
+ * without re-serializing through the Configuration/Property tree.
  */
 template <std::derived_from<ConfigurationSection> TConfiguration>
 class NvsConfiguration {
 public:
-    NvsConfiguration(std::shared_ptr<NvsStore> nvs, const std::string& key, std::shared_ptr<TConfiguration> config)
+    NvsConfiguration(std::shared_ptr<NvsStore> nvs, const std::string& key)
         : nvs(std::move(nvs))
-        , key(key)
-        , config(std::move(config)) {
-        JsonDocument doc;
-        if (this->nvs->getJson(key, doc)) {
-            this->config->load(doc.as<JsonObject>());
+        , key(key) {
+        auto initial = std::make_shared<TConfiguration>();
+        if (this->nvs->getJson(key, raw)) {
+            initial->load(raw.as<JsonObject>());
             LOGD("Loaded NVS config for '%s'", key.c_str());
         } else {
             LOGD("No NVS config found for '%s', using defaults", key.c_str());
         }
+        config = initial;
     }
 
     void update(const JsonObject& json) {
-        config->load(json);
+        auto updated = std::make_shared<TConfiguration>();
+        updated->load(json);
+        config = updated;
+        raw.set(json);
         if (!nvs->setJson(key, json)) {
             LOGE("Failed to save NVS config for '%s'", key.c_str());
         }
@@ -40,26 +48,28 @@ public:
         return config;
     }
 
-    void store(JsonObject& json) const {
-        config->store(json);
+    const JsonDocument& getRawJson() const {
+        return raw;
     }
 
 private:
     std::shared_ptr<NvsStore> nvs;
     const std::string key;
+    JsonDocument raw;
     std::shared_ptr<TConfiguration> config;
 };
 
 /**
  * @brief Loads a ConfigurationSection from NVS by key.
  * Returns default-constructed config if key is absent or cannot be parsed.
+ * rawJson is populated with the verbatim JSON body that was parsed, or left null if the
+ * key was absent, so callers can echo it back without re-serializing through Configuration.
  */
 template <std::derived_from<ConfigurationSection> TConfiguration, typename... TArgs>
-std::shared_ptr<TConfiguration> loadConfigFromNvs(const std::shared_ptr<NvsStore>& nvs, const std::string& key, TArgs&&... args) {
+std::shared_ptr<TConfiguration> loadConfigFromNvs(const std::shared_ptr<NvsStore>& nvs, const std::string& key, JsonDocument& rawJson, TArgs&&... args) {
     auto config = std::make_shared<TConfiguration>(std::forward<TArgs>(args)...);
-    JsonDocument doc;
-    if (nvs->getJson(key, doc)) {
-        config->load(doc.as<JsonObject>());
+    if (nvs->getJson(key, rawJson)) {
+        config->load(rawJson.as<JsonObject>());
         LOGD("Loaded NVS config for '%s'", key.c_str());
     } else {
         LOGD("No NVS config found for '%s', using defaults", key.c_str());

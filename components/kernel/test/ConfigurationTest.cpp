@@ -23,18 +23,8 @@ struct TestConfig : ConfigurationSection {
     NamedConfigurationEntry<TestNestedConfig> nested { this, "nested" };
 };
 
-std::string toString(const ConfigurationEntry& config) {
-    JsonDocument json;
-    auto root = json.to<JsonObject>();
-    config.store(root);
-    std::string jsonString;
-    serializeJson(json, jsonString);
-    return jsonString;
-}
-
-TEST_CASE("empty configuration is stored as empty JSON") {
+TEST_CASE("empty configuration has defaults and no values") {
     TestConfig config;
-    REQUIRE(toString(config) == R"({})");
     REQUIRE(!config.intValue.hasValue());
     REQUIRE(config.intValue.get() == 0);
     REQUIRE(!config.stringValue.hasValue());
@@ -96,7 +86,7 @@ TEST_CASE("configuration can be loaded from JSON with invalid values") {
     REQUIRE(config.nested.get()->intValue.get() == 0);
 }
 
-TEST_CASE("configuration with values is loaded from JSON and is stored as JSON") {
+TEST_CASE("configuration with values is loaded from JSON") {
     TestConfig config;
     config.loadFromString(R"({"intValue":42,"stringValue":"hello","boolValue":true,"secondsValue":60,"nested":{"intValue":7}})");
     REQUIRE(config.intValue.hasValue());
@@ -110,7 +100,6 @@ TEST_CASE("configuration with values is loaded from JSON and is stored as JSON")
     REQUIRE(config.nested.hasValue());
     REQUIRE(config.nested.get()->intValue.hasValue());
     REQUIRE(config.nested.get()->intValue.get() == 7);
-    REQUIRE(toString(config) == R"({"intValue":42,"stringValue":"hello","boolValue":true,"secondsValue":60,"nested":{"intValue":7}})");
 }
 
 struct TestNestedConfigWithDefaults : ConfigurationSection {
@@ -127,7 +116,6 @@ struct TestConfigWithDefaults : public ConfigurationSection {
 
 TEST_CASE("configuration with default values loaded from empty JSON has default values") {
     TestConfigWithDefaults config;
-    REQUIRE(toString(config) == R"({})");
     REQUIRE(!config.intValue.hasValue());
     REQUIRE(config.intValue.get() == 42);
     REQUIRE(!config.stringValue.hasValue());
@@ -144,7 +132,6 @@ TEST_CASE("configuration with default values loaded from empty JSON has default 
 TEST_CASE("configuration with default values loaded from non-empty JSON has actual values") {
     TestConfigWithDefaults config;
     config.loadFromString(R"({"intValue": 100, "stringValue": "custom", "boolValue": false, "secondsValue": 45, "nested": {"intValue": 200}})");
-    REQUIRE(toString(config) == R"({"intValue":100,"stringValue":"custom","boolValue":false,"secondsValue":45,"nested":{"intValue":200}})");
     REQUIRE(config.intValue.hasValue());
     REQUIRE(config.intValue.get() == 100);
     REQUIRE(config.stringValue.hasValue());

@@ -1,13 +1,14 @@
 # Configuration as schema — reduce `Configuration`/`Property` to parse-and-validate
 
-> Status: **Not started.** This is a **prerequisite refactor** for
-> [`config-reconciliation.md`](config-reconciliation.md): that plan assumes the model described here is
-> already in place (configuration bodies stored/echoed as verbatim JSON, persistence separated from parsing).
-> Land this first on its own branch, then return to the reconciliation work.
+> Status: **Done.** Landed together with the `store()` removal (see note at the end of the work outline):
+> `init`-message config echoing now uses verbatim JSON everywhere, so there was no reason to keep the
+> serialization machinery around as dead code in the meantime. [`config-reconciliation.md`](config-reconciliation.md)
+> can now build on this model (configuration bodies stored/echoed as verbatim JSON, persistence separated from
+> parsing).
 >
-> One-line summary: **`Configuration` should declare a schema, supply defaults, and parse+validate a JSON
-> object into an immutable typed value — nothing more. Persisting and printing configuration JSON moves out of
-> `Configuration` and is handled verbatim.**
+> One-line summary: **`Configuration` declares a schema, supplies defaults, and parses+validates a JSON object
+> into an immutable typed value — nothing more. Persisting and printing configuration JSON happens verbatim,
+> outside `Configuration`.**
 
 ## Why
 
@@ -77,33 +78,31 @@ to unblock reconciliation.
 
 ## Work outline
 
-Ordered for the branch. Most of the teardown lands independently; the **one** cross-spec dependency is the
-final removal of `store()`, whose last callers are the `init`-message population sites — those disappear when
-[`config-reconciliation.md`](config-reconciliation.md) Phase 1 splits `init` into `BOOT` (config bodies
-dropped). Sequence this branch so `store()` deletion is the hand-off point to the reconciliation work.
-
-- [ ] **Split parse from persist.** Separate "parse a `JsonObject` into a typed snapshot" (stays with
-      `Configuration`) from "persist the raw body" (moves out). Reduce/retire `NvsConfiguration`'s
-      parse-and-persist coupling; repoint the boot-time function/peripheral/device load paths so parsing takes a
-      `JsonObject` and persistence is a caller concern.
-- [ ] **Store the configuration body verbatim.** Persist and print the JSON exactly as received; stop
-      re-serializing from a `Configuration`. This is the behavior the fingerprint contract depends on.
-- [ ] **Snapshot semantics for `Property`/`ArrayProperty`/`NamedConfigurationEntry`.** Parsing yields a fresh
-      immutable snapshot; a re-configure parses a new `Configuration` rather than mutating one. Drop the
-      in-place-reload contract (`reset()`, mutate-on-`load`).
-- [ ] **Trim the mutable/optional accessor surface.** Audit `getIfPresent()`/`getOrDefault()`/`hasValue()`
-      callers; keep only what schema consumers genuinely need at parse time, drop the rest.
-- [ ] **Verbatim JSON for diagnostics.** Anywhere configuration was printed via `store()`, print the stored raw
-      JSON instead.
-- [ ] **Remove `store()` from the `Configuration` hierarchy** (`ConfigurationSection`, `Property`,
-      `ArrayProperty`, `NamedConfigurationEntry`). Gate on the `init`/`BOOT` split having dropped the last
-      callers ([`Device.hpp:612`](../../components/devices/src/Device.hpp),
-      [`Manager.hpp:208`](../../components/kernel/src/Manager.hpp),
-      [`Function.hpp:83`](../../components/functions/src/functions/Function.hpp),
-      [`NvsConfiguration.hpp:44`](../../components/kernel/src/NvsConfiguration.hpp)); this is the coordination
-      point with the reconciliation branch.
-- [ ] **Tests.** Keep/adjust `ConfigurationTest` for parse+defaults+validation; drop the
-      round-trip-serialization assertions (`ConfigurationTest.cpp:29`).
+- [x] **Split parse from persist.** `NvsConfiguration<TConfiguration>` and `loadConfigFromNvs` now construct a
+      fresh typed snapshot on every load, and expose the raw `JsonDocument` they parsed from (`getRawJson()` /
+      the out-param on `loadConfigFromNvs`) so callers can echo it verbatim instead of re-deriving it.
+- [x] **Store the configuration body verbatim.** `Device.hpp`, `Manager.hpp`, and `Function.hpp` now embed the
+      raw JSON retained from parsing directly into the `init` message instead of calling `store()`.
+- [x] **Snapshot semantics for `Property`/`ArrayProperty`/`NamedConfigurationEntry`.** `load()` no longer relies
+      on `reset()` — a fresh instance already starts in its default/unconfigured state, so absent JSON fields are
+      simply left alone. `NvsConfiguration::update()` builds a new snapshot and swaps the `shared_ptr` rather than
+      mutating the existing one in place.
+- [x] **Trim the mutable/optional accessor surface.** Audited `getIfPresent()`/`getOrDefault()`/`hasValue()` —
+      every one has a live caller (`ChickenDoor`/`PlotController` configure(), `UglyDucklingMk6Base`), so nothing
+      to drop. The unused `secret` masking parameter on `Property` (never passed `true` anywhere) was dropped
+      along with `store()`.
+- [x] **Verbatim JSON for diagnostics.** Covered by the same call-site changes as "store verbatim" above — there
+      were no other `store()`-based print sites.
+- [x] **Remove `store()` from the `Configuration` hierarchy** (`ConfigurationSection`, `Property`,
+      `ArrayProperty`, `NamedConfigurationEntry`, and the `NvsConfiguration` passthrough). This landed in the same
+      branch as the verbatim-echo changes above rather than being deferred to the reconciliation branch: once
+      `Device.hpp`/`Manager.hpp`/`Function.hpp` stopped calling it, `store()` had zero callers, and there was no
+      reason to leave dead serialization code in the tree waiting for a coordinated deletion. The `init` message's
+      wire shape (keys present, retention/QoS) is unchanged — only how the `settings`/`params`/`config` bodies are
+      produced (verbatim JSON instead of re-serialized from a `Configuration`) is different, matching the
+      non-goal below.
+- [x] **Tests.** `ConfigurationTest` keeps parse+defaults+validation coverage; the round-trip-serialization
+      assertions and the `toString()` helper were dropped.
 
 ## Non-goals
 

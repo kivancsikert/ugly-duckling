@@ -73,14 +73,19 @@ FunctionFactory makeFunctionFactory(
 
             constexpr bool hasConfig = std::is_base_of_v<HasConfig<TConfig>, Impl>;
 
-            // We load configuration up front to ensure that we always store it in the init message, even
+            // We load configuration up front to ensure that we always echo it in the init message, even
             // when the instantiation of the function fails later.
-            auto config = std::make_shared<TConfig>();
+            std::shared_ptr<TConfig> config;
             std::shared_ptr<NvsConfiguration<TConfig>> nvsConfig;
             if constexpr (hasConfig) {
-                nvsConfig = std::make_shared<NvsConfiguration<TConfig>>(nvs, params.name, config);
-                // Store configuration in init message
-                config->store(initConfigJson);
+                nvsConfig = std::make_shared<NvsConfiguration<TConfig>>(nvs, params.name);
+                config = nvsConfig->getConfig();
+                // Echo the verbatim config body in the init message
+                if (!nvsConfig->getRawJson().isNull()) {
+                    initConfigJson.set(nvsConfig->getRawJson().template as<JsonObjectConst>());
+                }
+            } else {
+                config = std::make_shared<TConfig>();
             }
 
             // Create concrete implementation via user-provided callable
