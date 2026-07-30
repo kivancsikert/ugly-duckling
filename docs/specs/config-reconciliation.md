@@ -131,7 +131,9 @@ every function's fingerprint. The `SYNC` builder reads both, never re-deriving a
 time.
 
 Because no legitimate configuration body has top-level `data` or `fingerprint` keys, the envelope shape is
-unambiguous. There is **no legacy bare-body reader** — this build never reads the old format (see *Migration*).
+unambiguous. `StoredConfig` uses this to detect a **legacy bare body** (pre-reconciliation firmware wrote the
+body directly under the key, no wrapper) and adopts it as a one-time bridge — see *Migration* → "Reading a
+legacy bare body."
 
 ### Two config-set slots + a state pointer
 
@@ -276,16 +278,51 @@ specified here so Phase 3 has a target, but nothing emits `rejected` before then
 
 ## Migration
 
-There is **no in-place NVS migration** and no reader for the old bare-body format. On the first boot of the new
-firmware the slot layout is effectively empty, so the device reconciles from the server: an empty (or minimal)
-`SYNC` prompts the server to re-push the full configuration set. Network configuration is untouched, so the
-device still connects.
+There is **no in-place migration of the configuration model** — nothing splits, reshapes, or reinterprets an old
+schema into the new one. The one exception is reading a legacy bare body, which isn't a migration of meaning,
+just of storage: the same bytes a pre-reconciliation firmware already wrote, adopted verbatim (below).
 
-This means an upgraded device runs with **no device/function configuration** (defaults only) for the window
-between first boot and the server's re-push + reboot. **We accept this as a cost of keeping the design simple:**
-a firmware update already takes the device offline for a while (HTTP update requires connectivity and reboots),
-so a short additional reconfiguration round-trip is not a meaningful regression. No one-time import of the old
-`device-config`/`function-cfg` blobs is done.
+### Reading a legacy bare body
+
+Pre-reconciliation firmware stored the `device-config`/`function-cfg` bodies directly under their NVS key, with
+no envelope wrapper. Because no legitimate body has top-level `data`/`fingerprint`/`requestedAt` keys (see
+*Storage* above), `StoredConfig` can tell the two shapes apart on read (`ConfigEnvelope`'s `checkJson`, i.e.
+`is<ConfigEnvelope>()`): a legacy blob is adopted verbatim as `data`, given an **empty fingerprint**, and
+immediately re-persisted as a proper envelope — so the fallback fires at most once per device, on the first
+boot after the field upgrade.
+
+The empty fingerprint is deliberate, not a stand-in for a real one: it can never match a fingerprint the server
+issues, so the very next `UPDATE` for that configuration always applies rather than being filtered out as a
+no-op ("Skip what it already has" above) — the fingerprinting-is-the-server's-job invariant, applied to the one
+case where the device is reading *something* rather than nothing. This is **not** a general migration
+framework: it recognizes exactly one already-known old shape (bare body under the same key), nothing else, and
+is deleted once `device-config` always originates from the server (Phase 3's device-configuration authority
+transfer) — at that point no device can still have a bare-body blob left to adopt.
+
+### First boot with an empty slot
+
+On an actual first boot — no `device-config`/`function-cfg` key present at all, not even a legacy body — the
+slot layout is effectively empty, so the device reconciles from the server: an empty (or minimal) `SYNC` prompts
+the server to re-push the full configuration set. Network configuration is untouched, so the device still
+connects.
+
+This means such a device runs with **no device/function configuration** (defaults only) for the window between
+first boot and the server's re-push + reboot. **We accept this as a cost of keeping the design simple:** a
+firmware update already takes the device offline for a while (HTTP update requires connectivity and reboots), so
+a short additional reconfiguration round-trip is not a meaningful regression.
+
+### Generated NVS (`gen_config_nvs.py`) still seeds a bare body
+
+`scripts/gen_config_nvs.py` (and its `test/e2e-tests` copy) writes `config/device-config.json` into the
+`device-config` key as a bare body — it predates the envelope format and was never updated. The legacy-bare-body
+bridge above means this still boots correctly today (adopted with an empty fingerprint, then normalized in
+NVS), so no fix is required for Phase 1. **By Phase 3**, once device configuration always comes from the server
+rather than being seeded locally (the device-configuration authority transfer noted at the top of Phase 3
+below), the script no longer needs to write `device-config` at all — a freshly generated/erased partition
+reconciles it from the server via the same empty-slot bootstrap as any other missing configuration. Drop the
+`device-config` entry from `gen_config_nvs.py`'s generated partition at that point (`config/device-config.json`
+/ `config-templates/*device-config*.json` can stay as fixtures for schema/parsing tests; they just stop being
+NVS-seeded).
 
 ### Upgrading into Phase 3 (no `config-state` yet)
 
@@ -374,6 +411,16 @@ device-configuration *authority transfer* land in Phase 3.
       `FunctionRegistry.reconfigure()`; a throw (bad body, or a function name the current device configuration
       doesn't define) is caught and logged per-entry rather than crashing the MQTT dispatch task, matching how
       the old retained-topic subscription handled it before this rewrite.
+- [x] **`StoredConfig` reads a legacy bare body.** A blob with no `data`/`fingerprint`/`requestedAt` wrapper
+      (pre-reconciliation firmware, or `gen_config_nvs.py`'s still-unupdated `device-config` seeding — see
+      *Migration*) is adopted verbatim as `data` with an **empty fingerprint** and immediately re-persisted as a
+      proper envelope, so the bridge fires at most once per device. `StoredConfig`'s constructor now reads the
+      raw JSON first and branches on `is<ConfigEnvelope>()` (`components/kernel/src/StoredConfig.hpp`) instead
+      of always trusting `NvsStore::get<ConfigEnvelope>()`, which previously parsed a bare body into a
+      *valid-looking but silently empty* envelope with no error and no log distinguishing it from a legitimately
+      empty one. Tested natively (`ConfigEnvelopeTest.cpp`, shape detection) and against real NVS
+      (`StoredConfigTest.cpp`, adopt-then-normalize round trip). Delete once *Migration* → "Reading a legacy bare
+      body" no longer applies (Phase 3 device-configuration authority transfer).
 - [ ] **Split `init` into `BOOT` + `SYNC`.** `boot` keeps all diagnostics + per-peripheral/function `error`
       feedback and **drops all configuration bodies** (`NoRetain, QoS 1`). `sync` is the fingerprint manifest
       from the `confirmed` slot / registry (`NoRetain, QoS 2`).
@@ -431,6 +478,12 @@ device-configuration *authority transfer* land in Phase 3.
       `requested` and applied across a reboot.
 - [ ] **Retire the `nvs/write` + `restart` device-config path** once the server stops using it (keep raw
       `nvs/write` for debugging). Stop treating device-authored settings as ground truth.
+- [ ] **Stop seeding `device-config` in generated NVS.** `scripts/gen_config_nvs.py` (and its `test/e2e-tests`
+      copy) currently writes `config/device-config.json` into the `device-config` key as a bare body. Once
+      device configuration always comes from the server, drop that entry from the generated partition — a
+      freshly generated/erased device reconciles it via the empty-slot bootstrap like any other missing
+      configuration (see *Migration*). `config/device-config.json` / `config-templates/*device-config*.json` can
+      stay as fixtures for schema/parsing tests without being NVS-seeded.
 - [ ] **Tests.** The `config-state` transitions (`confirmed`/`requested{pending,attempted,rejected}` →
       load/commit/revert) should be extracted as a pure function of state, not tested by physically crashing
       a Wokwi device mid-write. **Native (`unit-tests`):** table-driven tests over that function for every

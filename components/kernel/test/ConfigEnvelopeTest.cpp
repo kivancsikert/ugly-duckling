@@ -54,3 +54,16 @@ TEST_CASE("default-constructed envelope has empty fingerprint and requestedAt") 
     REQUIRE(envelope.getRequestedAt() == "");
     REQUIRE(envelope.getData().isNull());
 }
+
+TEST_CASE("is<ConfigEnvelope>() distinguishes envelope-shaped JSON from a bare legacy body") {
+    JsonDocument envelopeShaped;
+    envelopeShaped["data"]["publishInterval"] = 60;
+    envelopeShaped["fingerprint"] = "abc123";
+    envelopeShaped["requestedAt"] = "2026-07-30T12:34:56Z";
+    REQUIRE(envelopeShaped.as<JsonVariantConst>().is<ConfigEnvelope>());
+
+    JsonDocument bareBody;
+    bareBody["publishInterval"] = 60;
+    bareBody["peripherals"] = "[]";
+    REQUIRE_FALSE(bareBody.as<JsonVariantConst>().is<ConfigEnvelope>());
+}
