@@ -112,7 +112,7 @@ FunctionFactory makeFunctionFactory(
 /**
  * @brief In-memory source of truth for name -> {handle, fingerprint} across every live function.
  *
- * Evolved from FunctionManager per docs/specs/config-reconciliation.md: reconfigure() is the
+ * Evolved from FunctionManager per docs/Configuration.md: reconfigure() is the
  * hot-reload entry point that persists a verbatim envelope, parses it, applies it, and records the
  * fingerprint/requestedAt only once configure() succeeds (proof-of-apply, not proof-of-receipt);
  * manifest() reports name -> {fingerprint, requestedAt} straight from this in-memory state for the
@@ -157,15 +157,20 @@ public:
         }
     }
 
-    // Hot-reload entry point: persists the envelope, then applies it and records the fingerprint
-    // via the tracker. Throws on any failure (unknown function name, a function without
-    // configuration, or a faulty body) -- there is no rejection reporting in Phase 1, so this is
-    // unhandled exactly like any other faulty configuration today.
+    // Hot-reload entry point: applies the envelope and records the fingerprint via the tracker,
+    // then persists it -- in that order, so a faulty body (configureFn throws) leaves both NVS and
+    // the in-memory fingerprint on the last-good envelope, matching the tracker's own
+    // proof-of-apply guarantee (record only after configureFn succeeds). Persisting first would
+    // leave a broken envelope in NVS even though the in-memory/SYNC fingerprint still (correctly)
+    // reports the old one -- and boot would then reload and fail on that same broken envelope every
+    // time. Throws on any failure (unknown function name, a function without configuration, or a
+    // faulty body) -- there is no rejection reporting in Phase 1, so this is unhandled exactly like
+    // any other faulty configuration today.
     void reconfigure(const std::string& name, const ConfigEnvelope& envelope) {
+        tracker.apply(name, envelope.getData().template as<JsonObjectConst>(), envelope.getFingerprint(), envelope.getRequestedAt());
+
         StoredConfig storedConfig(nvs, name);
         storedConfig.store(envelope);
-
-        tracker.apply(name, envelope.getData().template as<JsonObjectConst>(), envelope.getFingerprint(), envelope.getRequestedAt());
     }
 
     // Persists an envelope without applying it. Used when a device-configuration change is

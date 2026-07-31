@@ -104,12 +104,15 @@ The `scheduling` component contains independent scheduling strategies used by `P
 
 ```
 /devices/ugly-duckling/$INSTANCE/          ← device root
-    init                                   ← boot announcement
+    boot                                   ← boot announcement, diagnostics
+    sync                                   ← fingerprint manifest of applied config
+    update                                 ← incoming configuration
     telemetry                              ← periodic telemetry (all features)
     commands/$COMMAND                      ← retained command messages
     responses/$COMMAND                     ← command responses
-    peripheral/$PERIPHERAL_NAME/config     ← per-peripheral runtime config
 ```
+
+See [Configuration.md](Configuration.md) for how `boot`/`sync`/`update` reconcile configuration.
 
 ## Component dependency graph
 

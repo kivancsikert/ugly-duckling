@@ -21,6 +21,9 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 
 #include <BatteryManager.hpp>
 #include <Console.hpp>
+#include <ConfigBootPlan.hpp>
+#include <ConfigState.hpp>
+#include <ConfigStateStore.hpp>
 #include <CrashManager.hpp>
 #include <DebugConsole.hpp>
 #include <HardwareVersion.hpp>
@@ -279,7 +282,7 @@ void registerHttpUpdateCommand(const std::shared_ptr<MqttRoot>& mqttRoot, const 
 
 /**
  * @brief Subscribes to `update` (NoRetain, QoS 2) -- the only config-in path
- * (docs/specs/config-reconciliation.md). Filters incoming configurations by the fingerprints
+ * (docs/Configuration.md, "BOOT, SYNC, UPDATE"). Filters incoming configurations by the fingerprints
  * already held (device + every live function), then either persists-and-reboots (device
  * configuration changed -- boot re-derives everything, including which functions exist, from NVS)
  * or hot-reloads each changed function live via FunctionRegistry::reconfigure. Phase 1 has no
@@ -344,16 +347,29 @@ void registerUpdateHandler(
 
 /**
  * @brief Publishes `sync` (NoRetain, QoS 2): the manifest of function fingerprints/requestedAt the
- * device has applied and booted with (docs/specs/config-reconciliation.md, "SYNC"), read straight
+ * device has applied and booted with (docs/Configuration.md, "BOOT, SYNC, UPDATE"), read straight
  * from FunctionRegistry's in-memory state -- proof-of-apply, never re-derived from NVS. The
  * `device` entry is Phase 3 (reporting it requires the two-slot confirmed/requested machinery).
+ *
+ * `pendingRejection` carries this boot's rejection code (if any) so it can ride on the first SYNC
+ * published after boot, alongside BOOT (docs/Configuration.md, "Rejection reporting") -- it is
+ * consumed (reset to nullopt) right here, so a later SYNC in the same boot session doesn't repeat
+ * it.
  */
-void publishSync(const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<FunctionRegistry>& functionRegistry) {
+void publishSync(
+    const std::shared_ptr<MqttRoot>& mqttRoot,
+    const std::shared_ptr<FunctionRegistry>& functionRegistry,
+    const std::shared_ptr<std::optional<RejectionCode>>& pendingRejection) {
+    std::optional<RejectionCode> rejection = *pendingRejection;
+    *pendingRejection = std::nullopt;
     mqttRoot->publish(
         "sync",
-        [functionRegistry](JsonObject& json) {
+        [functionRegistry, rejection](JsonObject& json) {
             auto configurations = json["configurations"].to<JsonObject>();
             writeSyncManifest(configurations, functionRegistry->manifest());
+            if (rejection) {
+                json["rejection"] = static_cast<int>(*rejection);
+            }
         },
         Retention::NoRetain, QoS::ExactlyOnce);
 }
@@ -370,17 +386,22 @@ void publishSync(const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_pt
  * iteration: since publishSync() always reads FunctionRegistry's current state rather than a
  * snapshot from trigger time, the about-to-happen publish already answers them, so leaving them
  * queued would only cause an immediate, redundant re-publish straight after this one.
+ *
+ * `pendingRejection` is populated by the caller (`startDevice()`) strictly before `kernelReady` is
+ * set, so `awaitSet()` below establishes happens-after visibility of it regardless of how early a
+ * trigger arrives.
  */
 void initSyncTask(
     const std::shared_ptr<MqttRoot>& mqttRoot,
     const std::shared_ptr<CopyQueue<bool>>& syncTriggerQueue,
     const std::shared_ptr<ModuleStates>& states,
-    const std::shared_ptr<FunctionRegistry>& functionRegistry) {
-    Task::loop("sync", 4096, [mqttRoot, syncTriggerQueue, states, functionRegistry](Task&) {
+    const std::shared_ptr<FunctionRegistry>& functionRegistry,
+    const std::shared_ptr<std::optional<RejectionCode>>& pendingRejection) {
+    Task::loop("sync", 4096, [mqttRoot, syncTriggerQueue, states, functionRegistry, pendingRejection](Task&) {
         syncTriggerQueue->take();
         states->kernelReady.awaitSet();
         syncTriggerQueue->clear();
-        publishSync(mqttRoot, functionRegistry);
+        publishSync(mqttRoot, functionRegistry, pendingRejection);
     });
 }
 
@@ -484,10 +505,36 @@ static void startDevice() {
     JsonDocument networkConfigRaw;
     auto networkConfig = loadConfigFromNvs<NetworkConfig>(configNvs, "network-config", networkConfigRaw);
 
+    // Two-slot confirmed/requested atomicity (docs/Configuration.md, "The confirmed/requested state
+    // machine"). Nothing populates `requested` yet -- that is item 4's job (staging an
+    // UPDATE's device-configuration change instead of writing straight through) -- so in practice
+    // bootPlan.slotToLoad is always nullopt today and the branches below fall through to exactly
+    // today's flat device-config/function-cfg storage. The strict/revert machinery is real and
+    // boot-wired regardless, exercised directly by ConfigStateStoreTest.cpp until item 4 lands.
+    auto configStateNvs = std::make_shared<NvsStore>("config-state");
+    ConfigStateStore configStateStore(configStateNvs);
+    ConfigState configState = configStateStore.load();
+    BootPlan bootPlan = decideBootPlan(configState);
+    if (bootPlan.stateToPersistBeforeLoad) {
+        configStateStore.save(*bootPlan.stateToPersistBeforeLoad);
+        configState = *bootPlan.stateToPersistBeforeLoad;
+    }
+
     // Device configuration is stored as a verbatim envelope like any other reconciled
-    // configuration (docs/specs/config-reconciliation.md, "Storage"), so its fingerprint is
-    // available to the `update` handler below without recomputing anything.
-    StoredConfig deviceStoredConfig(configNvs, "device-config");
+    // configuration (docs/Configuration.md, "Storage: envelopes and slots"), so its fingerprint is
+    // available to the `update` handler below without recomputing anything. When bootPlan selects a
+    // slot (a `requested` set being attempted, or a previously-committed `confirmed` slot), device
+    // and function configuration load from that slot's own namespaces instead of the flat storage.
+    std::shared_ptr<NvsStore> deviceConfigNvs = configNvs;
+    std::string deviceConfigKey = "device-config";
+    std::shared_ptr<NvsStore> functionsConfigSlotNvs;
+    if (bootPlan.slotToLoad) {
+        const std::string slotSuffix = "-" + toString(*bootPlan.slotToLoad);
+        deviceConfigNvs = std::make_shared<NvsStore>("config" + slotSuffix);
+        deviceConfigKey = "device";
+        functionsConfigSlotNvs = std::make_shared<NvsStore>("function-cfg" + slotSuffix);
+    }
+    StoredConfig deviceStoredConfig(deviceConfigNvs, deviceConfigKey);
     auto deviceConfig = std::make_shared<DeviceConfiguration>();
     JsonDocument deviceConfigRaw;
     if (deviceStoredConfig.hasValue()) {
@@ -628,7 +675,7 @@ static void startDevice() {
     registerNvsCommands(mqttRoot);
 
     // SYNC trigger: a single-element overwrite queue coalesces every successful (re)connection
-    // (docs/specs/config-reconciliation.md, "SYNC") plus post-UPDATE requests into one pending
+    // (docs/Configuration.md, "BOOT, SYNC, UPDATE") plus post-UPDATE requests into one pending
     // publish. The connected-listener callback must not publish inline (it runs on the MQTT
     // event-loop task, which publish() itself enqueues onto and waits for), so it only overwrites
     // the queue; initSyncTask below does the actual publish, from its own task.
@@ -636,6 +683,11 @@ static void startDevice() {
     mqttRoot->mqtt->onConnected([syncTriggerQueue]() {
         syncTriggerQueue->overwrite(true);
     });
+
+    // Holds this boot's rejection code (if any) for the SYNC task to attach to the first SYNC it
+    // publishes -- populated below, once the strict-boot outcome is known, strictly before
+    // kernelReady is set (docs/Configuration.md, "Rejection reporting").
+    auto pendingSyncRejection = std::make_shared<std::optional<RejectionCode>>();
 
     // Handle any pending HTTP update (will reboot if update was required and was successful)
     registerHttpUpdateCommand(mqttRoot, configNvs);
@@ -667,14 +719,14 @@ static void startDevice() {
         .peripherals = peripheralManager,
         .telemetryPublisher = telemetryPublisher,
     };
-    auto functionsConfigNvs = std::make_shared<NvsStore>("function-cfg");
+    auto functionsConfigNvs = functionsConfigSlotNvs ? functionsConfigSlotNvs : std::make_shared<NvsStore>("function-cfg");
     auto functionRegistry = std::make_shared<FunctionRegistry>(functionsConfigNvs, functionServices);
     shutdownManager->registerShutdownListener([functionRegistry]() {
         functionRegistry->shutdown();
     });
     deviceDefinition->registerFunctionFactories(functionRegistry);
     registerUpdateHandler(mqttRoot, configNvs, deviceStoredConfig.fingerprint(), functionRegistry, syncTriggerQueue);
-    initSyncTask(mqttRoot, syncTriggerQueue, states, functionRegistry);
+    initSyncTask(mqttRoot, syncTriggerQueue, states, functionRegistry, pendingSyncRejection);
 
     // Init telemetry
     mqttRoot->registerCommand("ping", [telemetryPublisher](const JsonObject&, JsonObject& response) {
@@ -723,17 +775,55 @@ static void startDevice() {
         }
     }
 
+    // Booting a `requested` set is strict (docs/Configuration.md, "The confirmed/requested state
+    // machine"): unlike `confirmed` (or the empty-slot default), which boots best-effort regardless
+    // of errors, any peripheral/function apply error here is a detected failure -- revert to `confirmed` and
+    // reboot immediately, never reaching the `boot`/`sync` publishes below for this failed attempt.
+    // A hard crash before reaching this point is caught on the *next* boot instead, since the
+    // pending -> attempted transition was already persisted above, before this attempt started.
+    if (bootPlan.strict) {
+        bool success = (initState == InitState::Success);
+        ConfigState outcome = recordStrictBootOutcome(configState, *bootPlan.slotToLoad, success, RejectionCode::Internal);
+        configStateStore.save(outcome);
+        if (!success) {
+            LOGE("Requested configuration failed to apply (state=%d); reverting and rebooting",
+                static_cast<int>(initState));
+            esp_restart();
+            return;
+        }
+        configState = outcome;
+        LOGI("Requested configuration applied successfully; committed slot '%s' as confirmed",
+            toString(*bootPlan.slotToLoad).c_str());
+    }
+
+    // A rejection recorded by this boot's revert (or an earlier one still unreported) is echoed on
+    // this boot's BOOT message *and* on the first SYNC this boot publishes (docs/Configuration.md,
+    // "Rejection reporting"): BOOT because it fires deterministically on every boot, unlike SYNC
+    // which waits on kernelReady + a live MQTT connection, and SYNC too since it's what most
+    // clients are already watching for reconciliation state. Cleared from config-state immediately
+    // (not after confirmed delivery), matching this system's existing no-delivery-guarantees
+    // posture; `pendingSyncRejection` carries the in-memory copy to the SYNC task, which consumes
+    // it after its first publish so later SYNCs in this boot session don't repeat it.
+    std::optional<RejectionCode> rejectionToReport = configState.rejection;
+    if (rejectionToReport) {
+        ConfigState cleared = configState;
+        cleared.rejection.reset();
+        configStateStore.save(cleared);
+    }
+    *pendingSyncRejection = rejectionToReport;
+
     initTelemetryPublishTask(deviceConfig->publishInterval.get(), watchdog, mqttRoot, batteryManager, powerManager, wifi, ble, telemetryCollector, telemetryPublishQueue);
 
     // Enable power saving once we are done initializing
     WiFiDriver::setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
 
     // BOOT carries diagnostics and per-peripheral/function error feedback, but no configuration
-    // bodies (docs/specs/config-reconciliation.md, "Split init into BOOT + SYNC") -- fingerprints
-    // are reported separately by SYNC (initSyncTask above), gated on kernelReady.
+    // bodies (docs/Configuration.md, "BOOT, SYNC, UPDATE") -- fingerprints are reported separately
+    // by SYNC (initSyncTask above), gated on kernelReady. `rejection` is present only when a
+    // requested-set revert (this boot or an earlier, unreported one) left one recorded.
     mqttRoot->publish(
         "boot",
-        [resetReason, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion](JsonObject& json) {
+        [resetReason, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion, rejectionToReport](JsonObject& json) {
             json["model"] = deviceDefinition->model;
             json["revision"] = deviceDefinition->revision;
             json["platform"] = UD_PLATFORM;
@@ -757,6 +847,9 @@ static void startDevice() {
             json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
             json["functions"].to<JsonArray>().set(functionsInitJson);
             json["sleepWhenIdle"] = powerManager->sleepWhenIdle;
+            if (rejectionToReport) {
+                json["rejection"] = static_cast<int>(*rejectionToReport);
+            }
 
             CrashManager::handleCrashReport(json);
         },

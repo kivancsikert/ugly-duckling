@@ -10,7 +10,7 @@ namespace cornucopia::ugly_duckling::kernel {
  * @brief A verbatim configuration envelope: the config body plus the opaque fingerprint and
  * requestedAt stamp it arrived with. The firmware never hashes or reinterprets any of these --
  * data, fingerprint, and requestedAt are stored and echoed back exactly as received from the
- * authority (see docs/specs/config-reconciliation.md, "Storage").
+ * authority (see docs/Configuration.md, "Storage: envelopes and slots").
  */
 class ConfigEnvelope {
 public:

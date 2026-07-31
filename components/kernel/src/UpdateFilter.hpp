@@ -21,7 +21,7 @@ struct ChangedConfiguration {
 
 /**
  * @brief Result of filtering an incoming `update` message against the fingerprints the device
- * currently holds (docs/specs/config-reconciliation.md, "Receiving an UPDATE" step 1).
+ * currently holds (docs/Configuration.md, "BOOT, SYNC, UPDATE").
  * `deviceChanged` reflects whether the "device" entry survived the filter, which is what decides
  * reboot vs. hot-reload.
  */

@@ -25,7 +25,7 @@ void ensureNvsFlashInitialized() {
 
 TEST_CASE("stored config has no value before anything is stored") {
     ensureNvsFlashInitialized();
-    auto nvs = std::make_shared<NvsStore>("stored-config-test");
+    auto nvs = std::make_shared<NvsStore>("stored-cfg-test");
     nvs->eraseAll();
 
     StoredConfig config(nvs, "device");
@@ -34,7 +34,7 @@ TEST_CASE("stored config has no value before anything is stored") {
 
 TEST_CASE("stored config persists and reloads a verbatim envelope across instances") {
     ensureNvsFlashInitialized();
-    auto nvs = std::make_shared<NvsStore>("stored-config-test");
+    auto nvs = std::make_shared<NvsStore>("stored-cfg-test");
     nvs->eraseAll();
 
     JsonDocument body;
@@ -60,7 +60,7 @@ TEST_CASE("stored config persists and reloads a verbatim envelope across instanc
 
 TEST_CASE("storing a new envelope overwrites the previous one") {
     ensureNvsFlashInitialized();
-    auto nvs = std::make_shared<NvsStore>("stored-config-test");
+    auto nvs = std::make_shared<NvsStore>("stored-cfg-test");
     nvs->eraseAll();
 
     JsonDocument bodyV1;
@@ -83,7 +83,7 @@ TEST_CASE("storing a new envelope overwrites the previous one") {
 
 TEST_CASE("a legacy bare-body blob (no envelope wrapper) is adopted with an empty fingerprint") {
     ensureNvsFlashInitialized();
-    auto nvs = std::make_shared<NvsStore>("stored-config-test");
+    auto nvs = std::make_shared<NvsStore>("stored-cfg-test");
     nvs->eraseAll();
 
     // Simulate firmware that predates config reconciliation: the configuration body written
@@ -108,7 +108,7 @@ TEST_CASE("a legacy bare-body blob (no envelope wrapper) is adopted with an empt
 
 TEST_CASE("different keys in the same NVS namespace are stored independently") {
     ensureNvsFlashInitialized();
-    auto nvs = std::make_shared<NvsStore>("stored-config-test");
+    auto nvs = std::make_shared<NvsStore>("stored-cfg-test");
     nvs->eraseAll();
 
     JsonDocument deviceBody;

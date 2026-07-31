@@ -1,6 +1,10 @@
 # Config Reconciliation — firmware side (`BOOT`/`SYNC`/`UPDATE`, fingerprints, confirmed delivery)
 
-> Status: **Not started.** This is the firmware counterpart to the server-side spec in the app repo,
+> Status: **Phase 1 complete; Phase 3 underway** (atomicity + boot-time revert + rejection
+> reporting on `BOOT` and that boot's `SYNC` landed; device-config authority transfer and
+> cause-classified rejection codes remain). See the
+> progress checklist below, and [`Configuration.md`](../Configuration.md) for how the current implementation
+> actually behaves. This is the firmware counterpart to the server-side spec in the app repo,
 > [`cornucopia-app/docs/specs/config-reconciliation.md`](../../../cornucopia-app/docs/specs/config-reconciliation.md).
 > **Read that spec first** — it owns the protocol design, the *why* behind every decision, and the
 > server/UX half. This document is the firmware implementation plan.
@@ -144,7 +148,8 @@ The reconciled set (the `device` envelope + one envelope per function, keyed by 
 - `confirmed`: which slot (`a`/`b`) holds the last-known-good set. Always present after first provisioning.
 - `requested`: `{ slot, state }` for a new-but-unconfirmed set, or absent. `state ∈ { pending, attempted,
   rejected }`.
-- `rejection`: an optional stored `google.rpc.Code` to report on the next `SYNC` (Phase 3+; see *Rejection*).
+- `rejection`: an optional stored `google.rpc.Code` to report on the next `BOOT` and that boot's next
+  `SYNC` (Phase 3+; see *Rejection*).
 
 Each slot namespace holds a **full** set (device + every function), so a slot is self-contained: a boot loads
 exactly one slot and never merges. Network configuration stays in its own stable namespace and is never
@@ -184,7 +189,8 @@ Read `config-state`, then:
 - **`requested` == `pending`** → mark `attempted`, load `requested`. On a detected failure → mark `rejected`
   and reboot (next boot reverts). On full success → **commit** (`requested` → `confirmed`).
 - **`requested` == `attempted`** (we started applying but crashed before committing or gracefully rejecting) or
-  **`rejected`** → record the rejection for the next `SYNC`, load `confirmed`, drop `requested`.
+  **`rejected`** → record the rejection for the next `BOOT` and that boot's next `SYNC` (see *Rejection*'s
+  design amendment below), load `confirmed`, drop `requested`.
 
 So a bad `requested` set costs one extra reboot and always lands back on the last-known-good `confirmed` set.
 This is the atomic-revert mechanism; it is **Phase 3**. Phase 1 has only the "no `requested` → load
@@ -240,8 +246,9 @@ applies.
   connect trigger is the only trigger; the connection-established hook covers first boot and every reconnect
   uniformly.
 - **Payload:** `{ configurations: { device: {fingerprint, requestedAt}, <function>: {fingerprint, requestedAt},
-  … } }` built from the `confirmed` slot / registry. A stored `rejection` code (Phase 3+) is included, then
-  **cleared locally** so it is reported exactly once. `NoRetain, QoS 2`.
+  … }, rejection? }` built from the `confirmed` slot / registry. `NoRetain, QoS 2`. `rejection` is present only
+  on the first `SYNC` published after a revert (see *Rejection* below) — it rides alongside `BOOT`, not instead
+  of it.
 
 The **connection-established hook** is new surface on `MqttDriver`: a registered callback (analogous to how
 commands are registered), fired from the `Connected` event. Because that event runs on the MQTT event-loop task
@@ -253,8 +260,16 @@ pushes to the overwrite queue; the separate SYNC task does the publish.
 - Queued once at boot (diagnostics + per-peripheral/function `error` feedback; **no configuration bodies**),
   delivered when MQTT connects. `NoRetain, QoS 1`.
 - If the device reboots due to a faulty `requested` configuration **before** MQTT is established, that `BOOT`
-  never reaches the server — accepted; the eventual `SYNC` after a successful boot (carrying the rejection
-  code) is what informs the server.
+  never reaches the server — accepted; the *next* boot (which reverts to `confirmed` and always publishes
+  `BOOT`) is what informs the server, carrying the rejection code (see *Rejection*).
+- **Rejection reporting rides on `BOOT`, and that same boot's `SYNC`.** A `rejection` code stored in
+  `config-state` is included in this device's `BOOT` payload as `rejection` (a `google.rpc.Code` int) whenever
+  one is set — whether recorded by this exact boot's revert or an earlier, still-unreported one — and cleared
+  from `config-state` immediately after being read (report-once, at the persistence layer). `BOOT` carries it
+  unconditionally because it fires deterministically on every boot, including the revert boot itself, without
+  waiting on `kernelReady` or a live MQTT connection the way `SYNC` does. The same code also rides on the
+  first `SYNC` this boot publishes, if any — an in-memory copy is handed to the SYNC task and consumed after
+  its first publish, so a later `SYNC` in the same boot session doesn't repeat it.
 
 ### QoS 2 + clean session — an explicit assumption
 
@@ -266,15 +281,25 @@ Reconciliation converges through SYNC-driven re-push, not through MQTT delivery 
 
 ### Rejection
 
-Rejection is a single `google.rpc.Code` on `SYNC` (`INVALID_ARGUMENT`=3, `FAILED_PRECONDITION`=9,
+Rejection is a single `google.rpc.Code` on `BOOT` (and that boot's `SYNC`) (`INVALID_ARGUMENT`=3, `FAILED_PRECONDITION`=9,
 `RESOURCE_EXHAUSTED`=8, `UNIMPLEMENTED`=12, `INTERNAL`=13; `OK`=0 is never sent — a matching fingerprint *is*
-success). No message travels on the wire; human-readable detail goes to the `log` channel and an operator
-correlates by device + time.
+success). No message travels on the wire beyond that int; human-readable detail goes to the `log` channel and
+an operator correlates by device + time.
 
-**Rejection is Phase 3.** It only becomes meaningful once we can apply-or-reject an `UPDATE` **atomically** (the
-two-slot revert), and until then we **do not handle faulty configuration at all** — exactly as today. The code
-subset and the "store rejection across the revert reboot, report once in the next `SYNC`, then clear" flow are
-specified here so Phase 3 has a target, but nothing emits `rejected` before then.
+> **Design amendment (landed with atomicity):** the original draft of this section specified reporting on
+> `SYNC` only. Once the two-slot machine and boot-time revert made a rejection code exist to report at all,
+> `BOOT` was added as a second, unconditional channel — see *`BOOT`* above for why — since `SYNC` isn't
+> guaranteed to fire at all for a revert boot (no MQTT connection, or a crash before `kernelReady`). `SYNC`
+> keeps its rejection field: the first `SYNC` published after a revert still carries the same code, alongside
+> `BOOT`, not instead of it.
+
+**Persistence + report-once is done; cause classification is not.** `config-state.rejection` is stored across
+the revert reboot and reported exactly once, on the next `BOOT` and that boot's next `SYNC`, then cleared —
+that part landed alongside the two-slot machine and boot-time revert (below). What's still open: every
+rejection is currently reported as `INTERNAL`, regardless of cause. The classification this section originally
+specified — parse/validation → `INVALID_ARGUMENT`, unknown function type → `UNIMPLEMENTED`, NVS-full →
+`RESOURCE_EXHAUSTED`, else `INTERNAL` — needs a typed error path through peripheral/function creation that
+doesn't exist yet, and remains a Phase 3 checklist item.
 
 ## Migration
 
@@ -511,17 +536,50 @@ device-configuration *authority transfer* land in Phase 3.
 > `nvs/write` as the write mechanism) depends on the server side + `ble-provisioning.md`. The **atomicity +
 > rejection** mechanism below is firmware-local and could land earlier if useful.
 
-- [ ] **Two-slot `confirmed`/`requested` + `config-state` machine.** Implement the staging/commit/revert flow:
+- [x] **Two-slot `confirmed`/`requested` + `config-state` machine.** Implement the staging/commit/revert flow:
       stage changes into `requested`, mark `pending`→`attempted`, commit on success, revert to `confirmed` on
       failure across a reboot. `config-state` records `confirmed`/`requested`/`rejection`. A missing
       `config-state` namespace (device last booted on Phase 1 firmware) is handled as "no `confirmed` slot" —
       boot no-functions, empty `SYNC` — **not** as a migration of the old single-envelope layout (see
       *Migration* → "Upgrading into Phase 3").
-- [ ] **Boot-time apply detection + revert.** Detect a `requested` set that fails to boot (including a crash
+      `ConfigSlot`/`RequestedConfigStatus`/`RejectionCode`/`RequestedConfig`/`ConfigState` (verbatim types +
+      JSON codec) landed in `components/kernel/src/ConfigState.hpp`; `ConfigStateStore` (NVS-backed
+      load/save of the `config-state` namespace, defaulting to an all-absent `ConfigState` when missing) in
+      `components/kernel/src/ConfigStateStore.hpp`. The per-slot NVS layout (`config-a`/`config-b`,
+      `function-cfg-a`/`function-cfg-b`) is wired into `startDevice()` (`components/devices/src/Device.hpp`),
+      selected whenever `BootPlan.slotToLoad` is set. **Not yet wired:** `registerUpdateHandler`'s
+      device-changed branch still writes straight through to the flat, unslotted Phase 1 storage — staging a
+      real `UPDATE` into `requested` is the `device` in `SYNC` + full `UPDATE` handling item below. So this
+      machinery is real but, until that item lands, only ever exercised by tests that seed a `requested` slot
+      directly into NVS, not by live traffic — see [`Configuration.md`](../Configuration.md), "Current
+      implementation status".
+- [x] **Boot-time apply detection + revert.** Detect a `requested` set that fails to boot (including a crash
       that leaves it `attempted`) and revert to `confirmed`, recording the rejection.
-- [ ] **Rejection reporting.** Persist the `google.rpc.Code` across the revert reboot; include it in the next
-      `SYNC`, then clear it (report-once). Map parse/validation → `INVALID_ARGUMENT`, unknown function type →
-      `UNIMPLEMENTED`, NVS-full → `RESOURCE_EXHAUSTED`, else `INTERNAL`.
+      `decideBootPlan()` / `recordStrictBootOutcome()` (`components/kernel/src/ConfigBootPlan.hpp`) are pure
+      functions implementing the state table in [`Configuration.md`](../Configuration.md), "The
+      confirmed/requested state machine" — table-driven native tests (`ConfigBootPlanTest.cpp`) cover every
+      transition, including "crashed while `attempted`", without needing a real boot. `startDevice()` calls
+      `decideBootPlan()` right after `configNvs` is opened, persists the `pending`→`attempted` transition
+      before attempting to load, and — for a strict (`requested`) load — calls
+      `recordStrictBootOutcome()` after the peripheral/function init loops: on failure it persists the
+      revert and calls `esp_restart()` immediately, never reaching the `boot`/`sync` publishes for that
+      failed attempt; on success it commits (`confirmed` flips to the loaded slot) and boot continues
+      normally. Same caveat as above: real today, but not yet reachable by live traffic.
+- [x] **Rejection reporting — persistence and report-once, via `BOOT` and that boot's `SYNC`.** Persist the
+      `google.rpc.Code` across the revert reboot; include it in the next `BOOT` and that boot's next `SYNC`,
+      then clear it (report-once). **Cause classification remains open** — see below.
+      Landed as part of the same change as the two items above: `startDevice()` reads
+      `configState.rejection` right after computing the boot plan (which reflects both a fresh revert this
+      boot and an older, still-unreported one — `recordStrictBootOutcome()`'s success path deliberately
+      leaves an unrelated `rejection` untouched, so it survives to be reported on a later boot), includes it
+      as the `boot` payload's `rejection` field (a `google.rpc.Code` int) when set, and clears it from
+      `config-state` immediately after. `BOOT` carries it unconditionally since it fires deterministically on
+      every boot without waiting on `kernelReady`/a live connection the way `SYNC` does; the same code is also
+      handed to the SYNC task (`pendingSyncRejection` in `Device.hpp`) so the first `SYNC` this boot publishes
+      carries it too, alongside `BOOT` as originally specified — see *Rejection* above. **Still open:** every
+      rejection is reported as `INTERNAL` regardless of cause; the parse/validation → `INVALID_ARGUMENT` /
+      unknown function type → `UNIMPLEMENTED` / NVS-full → `RESOURCE_EXHAUSTED` classification needs a typed
+      error path through peripheral/function creation that doesn't exist yet.
 - [ ] **`device` in the `SYNC` manifest + full `UPDATE` handling.** Report the `device` fingerprint; handle an
       `UPDATE` that bundles the `device` document plus every function it defines, persisted atomically into
       `requested` and applied across a reboot.
@@ -533,14 +591,26 @@ device-configuration *authority transfer* land in Phase 3.
       freshly generated/erased device reconciles it via the empty-slot bootstrap like any other missing
       configuration (see *Migration*). `config/device-config.json` / `config-templates/*device-config*.json` can
       stay as fixtures for schema/parsing tests without being NVS-seeded.
-- [ ] **Tests.** The `config-state` transitions (`confirmed`/`requested{pending,attempted,rejected}` →
-      load/commit/revert) should be extracted as a pure function of state, not tested by physically crashing
-      a Wokwi device mid-write. **Native (`unit-tests`):** table-driven tests over that function for every
-      state combination, including "crashed while `attempted`". **Embedded (`embedded-tests`):** slot swap
-      and revert-to-`confirmed` against real NVS across a real reboot, seeding envelopes directly into NVS
-      rather than via `UPDATE` (no broker needed for this). **e2e (`e2e-tests`, blocked on
-      [#596](https://github.com/cornucopia-machines/ugly-duckling-firmware/issues/596)):** rejection code
-      reported on the `SYNC` following a revert, then cleared (report-once).
+- [x] **Tests — Native (`unit-tests`).** The `config-state` transitions
+      (`confirmed`/`requested{pending,attempted,rejected}` → load/commit/revert) are extracted as a pure
+      function of state, not tested by physically crashing a Wokwi device mid-write: table-driven tests over
+      `decideBootPlan()`/`recordStrictBootOutcome()` for every state combination, including "crashed while
+      `attempted`" (`ConfigBootPlanTest.cpp`), plus JSON round-trip coverage for every `ConfigState`-family
+      type (`ConfigStateTest.cpp`).
+- [x] **Tests — Embedded (`embedded-tests`, Wokwi).** Slot swap and revert-to-`confirmed` against real NVS
+      across a real reboot, seeding envelopes directly into NVS rather than via `UPDATE` (no broker needed for
+      this). `ConfigStateStoreTest.cpp`
+      (`test/embedded-tests/components/kernel-test/src/ConfigStateStoreTest.cpp`: real-NVS round-trip of
+      `ConfigState`, plus seeded pending→attempted→commit and pending→attempted→revert scenarios) built and ran
+      green on Wokwi (`test/embedded-tests`, `pytest --embedded-services idf,wokwi pytest_embedded-tests.py`,
+      `WOKWI_CLI_TOKEN`/`WOKWI_CLI_SERVER` sourced from `test/.wokwi-env`): 65 assertions / 14 test cases
+      passed. That first real run also caught a genuine bug — this test's NVS namespace name
+      (`"config-state-test"`, 17 chars) and `StoredConfigTest.cpp`'s (`"stored-config-test"`, 18 chars) both
+      exceeded ESP-IDF's 15-character NVS namespace limit (`ESP_ERR_NVS_KEY_TOO_LONG`), invisible to native
+      tests since they never touch real NVS. Renamed to `"cfg-state-test"`/`"stored-cfg-test"`.
+- [ ] **Tests — e2e (`e2e-tests`, blocked on
+      [#596](https://github.com/cornucopia-machines/ugly-duckling-firmware/issues/596)).** Rejection code
+      reported on the `BOOT` following a revert, then cleared (report-once).
 
 ### Phase 4 — hardening (deferred)
 

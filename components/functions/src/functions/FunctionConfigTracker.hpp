@@ -23,7 +23,7 @@ struct FunctionManifestEntry {
 
 /**
  * @brief In-memory name -> {configureFn, fingerprint} bookkeeping at the heart of FunctionRegistry
- * (docs/specs/config-reconciliation.md). Deliberately has no NVS/MQTT dependency of its own, so the
+ * (docs/Configuration.md). Deliberately has no NVS/MQTT dependency of its own, so the
  * apply-and-track-fingerprint logic is unit-testable with a fake configureFn, independent of
  * FunctionRegistry's real persistence (StoredConfig, which needs real NVS).
  */
@@ -71,7 +71,7 @@ private:
 };
 
 // Writes the SYNC payload's `configurations` entries from a function manifest -- name ->
-// {fingerprint, requestedAt} (docs/specs/config-reconciliation.md, "SYNC"). Pure JSON construction
+// {fingerprint, requestedAt} (docs/Configuration.md, "BOOT, SYNC, UPDATE"). Pure JSON construction
 // with no NVS/MQTT dependency, so it's unit-testable independent of FunctionRegistry; Device.hpp's
 // publishSync() is the sole caller.
 inline void writeSyncManifest(JsonObject& configurations, const std::unordered_map<std::string, FunctionManifestEntry>& manifest) {

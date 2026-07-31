@@ -25,7 +25,7 @@ namespace cornucopia::ugly_duckling::kernel {
  * as `data`, with an empty fingerprint -- which can never match a real server-issued
  * fingerprint, so the next UPDATE always applies -- and immediately persisted as a proper
  * envelope, so the fallback fires at most once per device. See
- * docs/specs/config-reconciliation.md, "Migration" -- delete once the device-config
+ * docs/Configuration.md, "Storage: envelopes and slots" -- delete once the device-config
  * write-through-NVS path is retired (Phase 3).
  */
 class StoredConfig {
