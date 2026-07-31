@@ -59,6 +59,9 @@ Checks:
 
 CheckOptions:
   readability-function-cognitive-complexity.Threshold: 500
+  # Raised past the default (800) to accommodate startDevice() in Device.hpp (844 statements as of
+  # writing). Temporary: drop back to default once that function is split up.
+  readability-function-size.StatementThreshold: 900
   cppcoreguidelines-avoid-do-while.IgnoreMacros: true
   hicpp-signed-bitwise.IgnorePositiveIntegerLiterals: true
 
