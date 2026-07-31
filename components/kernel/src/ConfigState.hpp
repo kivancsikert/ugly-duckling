@@ -36,7 +36,7 @@ enum class RequestedConfigStatus : std::uint8_t { Pending, Attempted, Rejected }
  * "Rejection reporting"). `OK` is never stored here -- a matching fingerprint *is* success, so there is
  * nothing to reject.
  */
-enum class RejectionCode : std::int32_t {
+enum class RejectionCode : std::uint8_t {
     InvalidArgument = 3,
     ResourceExhausted = 8,
     FailedPrecondition = 9,
@@ -151,7 +151,7 @@ struct Converter<RequestedConfig> {
     }
 
     static RequestedConfig fromJson(JsonVariantConst src) {
-        return { src["slot"].as<ConfigSlot>(), src["status"].as<RequestedConfigStatus>() };
+        return { .slot = src["slot"].as<ConfigSlot>(), .status = src["status"].as<RequestedConfigStatus>() };
     }
 
     static bool checkJson(JsonVariantConst src) {

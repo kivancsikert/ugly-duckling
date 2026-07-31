@@ -20,10 +20,10 @@
 static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app_get_description()->version);
 
 #include <BatteryManager.hpp>
-#include <Console.hpp>
 #include <ConfigBootPlan.hpp>
 #include <ConfigState.hpp>
 #include <ConfigStateStore.hpp>
+#include <Console.hpp>
 #include <CrashManager.hpp>
 #include <DebugConsole.hpp>
 #include <HardwareVersion.hpp>

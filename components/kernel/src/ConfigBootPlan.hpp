@@ -37,7 +37,7 @@ struct BootPlan {
  */
 inline BootPlan decideBootPlan(const ConfigState& state) {
     if (!state.requested) {
-        return { .slotToLoad = state.confirmed, .strict = false };
+        return { .slotToLoad = state.confirmed, .strict = false, .stateToPersistBeforeLoad = std::nullopt };
     }
 
     const RequestedConfig& requested = *state.requested;
@@ -59,7 +59,7 @@ inline BootPlan decideBootPlan(const ConfigState& state) {
     }
     // Unreachable, but keeps this a well-formed function for compilers that don't see the switch
     // above as exhaustive.
-    return { .slotToLoad = state.confirmed, .strict = false };
+    return { .slotToLoad = state.confirmed, .strict = false, .stateToPersistBeforeLoad = std::nullopt };
 }
 
 /**
