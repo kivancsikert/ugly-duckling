@@ -48,7 +48,8 @@ graph TD
   Peripherals have names that identify them in the context of their owning device. They also have types that define their functionality,
   and the features they expose.
 
-  Peripherals are initialized based on parameters in the **device configuration** (`/device-config.json` on the file system).
+  Peripherals are initialized based on parameters in the **device configuration**, a reconciled
+  configuration the server pushes via `UPDATE` (see [`Configuration.md`](Configuration.md)); `config-templates/*device-config*.json` are schema/fixture examples, not a runtime source.
 
 * Peripherals publish telemetry as **features**
 

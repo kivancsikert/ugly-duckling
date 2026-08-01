@@ -19,14 +19,7 @@ namespace cornucopia::ugly_duckling::kernel {
  * constructs a Configuration -- parsing data into a typed snapshot is a distinct step. One
  * nvs_set_blob per envelope (via NvsStore's JSON codec) keeps data/fingerprint/requestedAt
  * inseparable, so a crash mid-write can never leave them out of sync with each other.
- *
- * Bridges one legacy shape: firmware that predates config reconciliation stored the
- * configuration body directly under the key, with no wrapper. Such a blob is adopted verbatim
- * as `data`, with an empty fingerprint -- which can never match a real server-issued
- * fingerprint, so the next UPDATE always applies -- and immediately persisted as a proper
- * envelope, so the fallback fires at most once per device. See
- * docs/Configuration.md, "Storage: envelopes and slots" -- delete once the device-config
- * write-through-NVS path is retired (Phase 3).
+ * See docs/Configuration.md, "Storage: envelopes and slots".
  */
 class StoredConfig {
 public:
@@ -40,15 +33,8 @@ public:
             return;
         }
 
-        auto rawVariant = raw.as<JsonVariantConst>();
-        if (rawVariant.is<ConfigEnvelope>()) {
-            envelope = rawVariant.as<ConfigEnvelope>();
-            LOGD("Loaded config envelope for '%s'", this->key.c_str());
-            return;
-        }
-
-        LOGD("Adopting legacy bare-body config for '%s'", this->key.c_str());
-        store(ConfigEnvelope(rawVariant, "", ""));
+        envelope = raw.as<ConfigEnvelope>();
+        LOGD("Loaded config envelope for '%s'", this->key.c_str());
     }
 
     bool hasValue() const {
@@ -65,6 +51,10 @@ public:
 
     const std::string& requestedAt() const {
         return envelope.getRequestedAt();
+    }
+
+    const ConfigEnvelope& configEnvelope() const {
+        return envelope;
     }
 
     void store(const ConfigEnvelope& updated) {

@@ -1,7 +1,9 @@
 # Config Reconciliation — firmware side (`BOOT`/`SYNC`/`UPDATE`, fingerprints, confirmed delivery)
 
 > Status: **Phase 1 complete; Phase 3 underway** (atomicity + boot-time revert + rejection
-> reporting on `BOOT` and that boot's `SYNC` landed; device-config authority transfer and
+> reporting on `BOOT` and that boot's `SYNC`, `device` in `SYNC`, full `UPDATE` staging for both
+> device-changed and functions-only changes, and dropping flat device-config storage entirely have
+> all landed; device-config authority transfer (retiring `nvs/write` as a write mechanism) and
 > cause-classified rejection codes remain). See the
 > progress checklist below, and [`Configuration.md`](../Configuration.md) for how the current implementation
 > actually behaves. This is the firmware counterpart to the server-side spec in the app repo,
@@ -173,7 +175,8 @@ swapped.
      `requested` set (peripherals ride inside the device document — a device change can restructure which
      functions exist).
    - **Only function configurations changed → hot-reload.** Mark `requested` `attempted`, then for each changed
-     function call `FunctionRegistry.reconfigure(name, envelope)` → `configure(...)`. On success of all, **commit**
+     function call `FunctionRegistry.applyLive(name, envelope)` → `configure(...)` (the envelope is already
+     persisted, by step 2, so this only applies it to the running function). On success of all, **commit**
      (`requested` becomes `confirmed`, old `confirmed` dropped, `requested` cleared). On any failure, mark
      `rejected` and **reboot** (boot reverts to `confirmed`).
 
@@ -217,11 +220,13 @@ cleanup.
 
 - **Populated at boot** as each function is created from the loaded slot: the registry records the function's
   fingerprint from its envelope once `configure(...)` **succeeds** (proof-of-apply, not proof-of-receipt).
-- **`reconfigure(name, envelope)`** — the hot-reload entry point `UPDATE` calls: persist the envelope, parse,
-  `configure(...)`, and on success update the stored fingerprint. This is the logic that lives today inside the
-  per-function `functions/<name>/config` subscription lambda; it **moves out of the factory into the
-  registry**, so there is one apply path shared by boot and `UPDATE`, and one place that knows every function's
-  current fingerprint.
+- **`applyLive(name, envelope)`** — the hot-reload entry point `UPDATE` calls: parse, `configure(...)`, and on
+  success update the stored fingerprint. Persistence is not this method's job — by the time it's called, the
+  envelope is already persisted as part of writing the whole staged slot (see *Receiving an `UPDATE`* above) —
+  so this only applies the change to the already-running function. This apply-and-track-fingerprint logic
+  originally lived inside the per-function `functions/<name>/config` subscription lambda; it **moved out of the
+  factory into the registry**, so there is one apply path shared by boot and `UPDATE`, and one place that knows
+  every function's current fingerprint.
 - **`manifest()`** — yields `name → fingerprint` for the `SYNC` builder, straight from in-memory state (never
   re-reading NVS, so it reflects what actually applied).
 
@@ -303,74 +308,50 @@ doesn't exist yet, and remains a Phase 3 checklist item.
 
 ## Migration
 
-There is **no in-place migration of the configuration model** — nothing splits, reshapes, or reinterprets an old
-schema into the new one. The one exception is reading a legacy bare body, which isn't a migration of meaning,
-just of storage: the same bytes a pre-reconciliation firmware already wrote, adopted verbatim (below).
+There is **no in-place migration of the configuration model, and no bridge from any older on-device
+storage shape.** Migrating a real device to this firmware — whether it's upgrading from Phase 1's flat
+`device-config`/`function-cfg` storage, from firmware that predates config reconciliation entirely
+(a bare, unwrapped body under those same keys), or is a factory-fresh device with nothing written at
+all — means the device boots **as if freshly minted**: no confirmed device or function configuration,
+defaults only, no functions. It reports this via an empty (or minimal) `SYNC`, which prompts the
+server to re-push the full configuration set via `UPDATE`, exactly like a brand-new device's first
+reconciliation.
 
-### Reading a legacy bare body
+**This is deliberate, not a temporarily-accepted shortcut.** Fingerprinting is exclusively the server's
+job (see "Fingerprints are never computed on-device" above), so the firmware has no legitimate way to
+synthesize a fingerprint for configuration it already holds locally under some older shape — the only
+way to get a real fingerprint is to receive one from the server. Given that standing invariant, there
+is no version of "migrate the old bytes forward" that doesn't involve minting a fingerprint the
+firmware isn't allowed to mint, so reconciling from empty is not a fallback of last resort, it's the
+only correct answer.
 
-Pre-reconciliation firmware stored the `device-config`/`function-cfg` bodies directly under their NVS key, with
-no envelope wrapper. Because no legitimate body has top-level `data`/`fingerprint`/`requestedAt` keys (see
-*Storage* above), `StoredConfig` can tell the two shapes apart on read (`ConfigEnvelope`'s `checkJson`, i.e.
-`is<ConfigEnvelope>()`): a legacy blob is adopted verbatim as `data`, given an **empty fingerprint**, and
-immediately re-persisted as a proper envelope — so the fallback fires at most once per device, on the first
-boot after the field upgrade.
+### A missing/absent `confirmed` slot is the one bootstrap path
 
-The empty fingerprint is deliberate, not a stand-in for a real one: it can never match a fingerprint the server
-issues, so the very next `UPDATE` for that configuration always applies rather than being filtered out as a
-no-op ("Skip what it already has" above) — the fingerprinting-is-the-server's-job invariant, applied to the one
-case where the device is reading *something* rather than nothing. This is **not** a general migration
-framework: it recognizes exactly one already-known old shape (bare body under the same key), nothing else, and
-is deleted once `device-config` always originates from the server (Phase 3's device-configuration authority
-transfer) — at that point no device can still have a bare-body blob left to adopt.
+A missing `config-state` namespace, or one with `confirmed` absent, covers every case that isn't an
+already-slotted device with a confirmed set: an actual first boot with nothing ever written; a device
+upgrading from Phase 1 firmware (flat `device-config`/`function-cfg` keys, no `config-state` namespace
+at all); and a device running firmware from before config reconciliation existed (a bare body with no
+envelope wrapper, again no `config-state`). All three collapse to the same handling: boot with
+defaults and no functions, send an empty/minimal `SYNC`, let the server re-push the full device +
+function configuration set. **The device never reads old-format storage to bootstrap itself** — not
+the flat Phase 1 keys, not a bare pre-reconciliation body. Whatever is sitting under those old keys is
+simply never looked at again.
 
-### First boot with an empty slot
+This means such a device runs with **no device/function configuration** (defaults only) for the window
+between boot and the server's re-push + reboot. **We accept this as a cost of keeping the design
+simple:** a firmware update already takes the device offline for a while (HTTP update requires
+connectivity and reboots), so a short additional reconfiguration round-trip is not a meaningful
+regression.
 
-On an actual first boot — no `device-config`/`function-cfg` key present at all, not even a legacy body — the
-slot layout is effectively empty, so the device reconciles from the server: an empty (or minimal) `SYNC` prompts
-the server to re-push the full configuration set. Network configuration is untouched, so the device still
-connects.
+### Generated NVS (`gen_config_nvs.py`) no longer seeds a device configuration
 
-This means such a device runs with **no device/function configuration** (defaults only) for the window between
-first boot and the server's re-push + reboot. **We accept this as a cost of keeping the design simple:** a
-firmware update already takes the device offline for a while (HTTP update requires connectivity and reboots), so
-a short additional reconfiguration round-trip is not a meaningful regression.
-
-### Generated NVS (`gen_config_nvs.py`) still seeds a bare body
-
-`scripts/gen_config_nvs.py` (and its `test/e2e-tests` copy) writes `config/device-config.json` into the
-`device-config` key as a bare body — it predates the envelope format and was never updated. The legacy-bare-body
-bridge above means this still boots correctly today (adopted with an empty fingerprint, then normalized in
-NVS), so no fix is required for Phase 1. **By Phase 3**, once device configuration always comes from the server
-rather than being seeded locally (the device-configuration authority transfer noted at the top of Phase 3
-below), the script no longer needs to write `device-config` at all — a freshly generated/erased partition
-reconciles it from the server via the same empty-slot bootstrap as any other missing configuration. Drop the
-`device-config` entry from `gen_config_nvs.py`'s generated partition at that point (`config/device-config.json`
-/ `config-templates/*device-config*.json` can stay as fixtures for schema/parsing tests; they just stop being
-NVS-seeded).
-
-### Upgrading into Phase 3 (no `config-state` yet)
-
-The same "no migration, reconcile from empty" answer applies to the **Phase 1 → Phase 3** boundary, not just
-Phase 0 → Phase 1. Phase 1 firmware has no `config-state` namespace and no `confirmed`/`requested` slot
-pointer — it stores each configuration as a single envelope directly. A device last booted on Phase 1 firmware
-therefore boots Phase 3 firmware with `config-state` entirely absent.
-
-Two options were considered:
-
-1. **Treat it as "no `confirmed` slot."** Boot as a no-functions device (defaults only), send an empty/minimal
-   `SYNC`, and let the server re-push the full device + function configuration set, same as any other empty-slot
-   boot.
-2. **Migrate the existing Phase 1 envelopes into a synthesized `confirmed` slot.** This would require minting
-   fingerprints for configuration the device itself already holds — but fingerprinting is exclusively the
-   server's jurisdiction (see "Fingerprints are never computed on-device" above); the firmware has no legitimate
-   way to produce one.
-
-Option 2 is ruled out by that standing invariant, so **option 1 is what Phase 3 implements**: a missing
-`config-state` (or a missing `confirmed` pointer within it) is handled identically to the empty-slot case above,
-not as a distinct migration path. This is not a complete configuration-migration framework — just enough to
-boot cleanly from old NVS and let the existing reconciliation loop (empty `SYNC` → server re-push) take it from
-there, exactly as it already does for the Phase 0 → Phase 1 upgrade.
+`scripts/gen_config_nvs.py` (and its `test/e2e-tests` copy, a symlink to the same file) used to write
+`config/device-config.json` into the flat `device-config` key as a bare body. Since firmware no longer
+reads that key under any circumstance (see above), the script no longer writes it either — a
+generated/erased partition now has no confirmed slot and reconciles from the server via the same
+empty-slot bootstrap as any other missing configuration.
+`config-templates/*device-config*.json` remain on disk as schema/fixture examples; they just aren't
+NVS-seeded any more.
 
 ---
 
@@ -444,8 +425,12 @@ device-configuration *authority transfer* land in Phase 3.
       of always trusting `NvsStore::get<ConfigEnvelope>()`, which previously parsed a bare body into a
       *valid-looking but silently empty* envelope with no error and no log distinguishing it from a legitimately
       empty one. Tested natively (`ConfigEnvelopeTest.cpp`, shape detection) and against real NVS
-      (`StoredConfigTest.cpp`, adopt-then-normalize round trip). Delete once *Migration* → "Reading a legacy bare
-      body" no longer applies (Phase 3 device-configuration authority transfer).
+      (`StoredConfigTest.cpp`, adopt-then-normalize round trip).
+      **Removed** once flat device-config storage was dropped entirely (see the functions-only
+      atomicity item under Phase 3 below) — `StoredConfig` no longer branches on shape at all, since
+      every reader of a slotted namespace is this firmware's own `StoredConfig.store()`, always
+      envelope-shaped. `ConfigEnvelope::checkJson`/`is<ConfigEnvelope>()` and the corresponding tests
+      were removed along with it.
 - [x] **Split `init` into `BOOT` + `SYNC`.** `boot` keeps all diagnostics + per-peripheral/function `error`
       feedback and **drops all configuration bodies** (`NoRetain, QoS 1`). `sync` is the fingerprint manifest
       from the `confirmed` slot / registry (`NoRetain, QoS 2`).
@@ -541,18 +526,16 @@ device-configuration *authority transfer* land in Phase 3.
       failure across a reboot. `config-state` records `confirmed`/`requested`/`rejection`. A missing
       `config-state` namespace (device last booted on Phase 1 firmware) is handled as "no `confirmed` slot" —
       boot no-functions, empty `SYNC` — **not** as a migration of the old single-envelope layout (see
-      *Migration* → "Upgrading into Phase 3").
+      *Migration* → "A missing/absent `confirmed` slot is the one bootstrap path").
       `ConfigSlot`/`RequestedConfigStatus`/`RejectionCode`/`RequestedConfig`/`ConfigState` (verbatim types +
       JSON codec) landed in `components/kernel/src/ConfigState.hpp`; `ConfigStateStore` (NVS-backed
       load/save of the `config-state` namespace, defaulting to an all-absent `ConfigState` when missing) in
-      `components/kernel/src/ConfigStateStore.hpp`. The per-slot NVS layout (`config-a`/`config-b`,
-      `function-cfg-a`/`function-cfg-b`) is wired into `startDevice()` (`components/devices/src/Device.hpp`),
-      selected whenever `BootPlan.slotToLoad` is set. **Not yet wired:** `registerUpdateHandler`'s
-      device-changed branch still writes straight through to the flat, unslotted Phase 1 storage — staging a
-      real `UPDATE` into `requested` is the `device` in `SYNC` + full `UPDATE` handling item below. So this
-      machinery is real but, until that item lands, only ever exercised by tests that seed a `requested` slot
-      directly into NVS, not by live traffic — see [`Configuration.md`](../Configuration.md), "Current
-      implementation status".
+      `components/kernel/src/ConfigStateStore.hpp`. The per-slot NVS layout (`config-a`/`config-b`, holding the
+      device document and every function together in one namespace — see the functions-only atomicity item
+      below for how that merge came about) is wired into `startDevice()` (`components/devices/src/Device.hpp`),
+      selected whenever `BootPlan.slotToLoad` is set. `registerUpdateHandler` now stages every `UPDATE` into
+      `requested` — device-changed or functions-only alike (see the `device` in `SYNC` + full `UPDATE` handling
+      item below) — so this machinery is exercised by live traffic, not just by tests that seed NVS directly.
 - [x] **Boot-time apply detection + revert.** Detect a `requested` set that fails to boot (including a crash
       that leaves it `attempted`) and revert to `confirmed`, recording the rejection.
       `decideBootPlan()` / `recordStrictBootOutcome()` (`components/kernel/src/ConfigBootPlan.hpp`) are pure
@@ -564,7 +547,7 @@ device-configuration *authority transfer* land in Phase 3.
       `recordStrictBootOutcome()` after the peripheral/function init loops: on failure it persists the
       revert and calls `esp_restart()` immediately, never reaching the `boot`/`sync` publishes for that
       failed attempt; on success it commits (`confirmed` flips to the loaded slot) and boot continues
-      normally. Same caveat as above: real today, but not yet reachable by live traffic.
+      normally.
 - [x] **Rejection reporting — persistence and report-once, via `BOOT` and that boot's `SYNC`.** Persist the
       `google.rpc.Code` across the revert reboot; include it in the next `BOOT` and that boot's next `SYNC`,
       then clear it (report-once). **Cause classification remains open** — see below.
@@ -580,23 +563,81 @@ device-configuration *authority transfer* land in Phase 3.
       rejection is reported as `INTERNAL` regardless of cause; the parse/validation → `INVALID_ARGUMENT` /
       unknown function type → `UNIMPLEMENTED` / NVS-full → `RESOURCE_EXHAUSTED` classification needs a typed
       error path through peripheral/function creation that doesn't exist yet.
-- [ ] **`device` in the `SYNC` manifest + full `UPDATE` handling.** Report the `device` fingerprint; handle an
+- [x] **`device` in the `SYNC` manifest + full `UPDATE` handling.** Report the `device` fingerprint; handle an
       `UPDATE` that bundles the `device` document plus every function it defines, persisted atomically into
       `requested` and applied across a reboot.
+      `publishSync()` (`components/devices/src/Device.hpp`) now takes a `FunctionManifestEntry
+      deviceManifestEntry` -- the device's fingerprint/requestedAt, captured once at boot from the
+      `StoredConfig` `startDevice()` loaded and passed through unchanged for the process's life, since a
+      device-configuration change is never hot-reloaded, only ever applied across a reboot -- and merges it
+      into the function manifest under the `device` key before `writeSyncManifest()` writes the
+      `configurations` object, so `device` rides the same `{fingerprint, requestedAt}` shape as every function
+      with no separate wire-format special-casing. `registerUpdateHandler`'s device-changed branch no longer
+      writes straight through to flat storage: it reads every currently-confirmed envelope (the `device`
+      document plus one per live function, via `StoredConfig`/`FunctionRegistry::manifest()`) and merges it
+      with what the `UPDATE` changed via a new pure function, `stageDeviceUpdate()`
+      (`components/kernel/src/ConfigStaging.hpp`) -- free of NVS/MQTT so the merge and free-slot-selection
+      logic (whichever slot isn't `confirmed`, or slot `a` if there is no `confirmed` slot yet) is
+      unit-testable on its own, matching this codebase's established pure-decision/NVS-glue split
+      (`ConfigBootPlan.hpp`, `UpdateFilter.hpp`). The merged, self-contained set is written into the free
+      slot's `config-<slot>` namespace, `config-state` is saved with `requested` marked `pending` for that
+      slot, and the device reboots -- `decideBootPlan()` takes it from there, unchanged.
+      `FunctionRegistry::persist()` (the old flat-write helper this branch used to call) had no other
+      callers and was deleted. The very first device-changed `UPDATE` a device with no confirmed slot yet
+      ever receives stages into slot `a`, which is what gives it its first confirmed slot -- no separate
+      migration code needed, this falls out of `stageDeviceUpdate()`'s existing "no confirmed slot yet"
+      branch. `StoredConfig` grew a `configEnvelope()` accessor (the full envelope, not just its individual
+      `data`/`fingerprint`/`requestedAt` fields) so the handler can copy an unchanged entry verbatim without
+      reconstructing it.
+- [x] **Functions-only `UPDATE` goes through the same atomic stage/commit/revert machinery, and flat
+      device-config storage is dropped entirely.** The item above only staged the device-changed branch;
+      a functions-only change was still hot-reloading straight into whatever NVS the device booted from
+      (`FunctionRegistry::reconfigure()`, persist-then-apply), which meant a partial failure across
+      several changed functions in one `UPDATE` left the confirmed slot half-updated with no rejection
+      recorded and no way to revert -- a real atomicity gap, not just an unimplemented spec nicety.
+      Closed by making a functions-only `UPDATE` go through the identical
+      stage → `pending` → `attempted` → commit-or-reject flow a device-changed `UPDATE` uses, just reaching
+      the commit/reject decision via a live apply instead of a reboot (see
+      [`Configuration.md`](../Configuration.md), "Applying a functions-only UPDATE", for the full
+      sequence and diagram). `FunctionRegistry::reconfigure()` (persist + apply) is gone, replaced by
+      `applyLive()` (apply only -- persistence now always happens once, up front, via the same
+      `stageDeviceUpdate()`/slot-write step the device-changed branch already used, since both branches
+      stage before doing anything else). The commit-or-reject decision itself reuses
+      `recordStrictBootOutcome()` (`ConfigBootPlan.hpp`) unchanged -- a live hot-reload attempt and a
+      strict boot attempt are, from `config-state`'s point of view, the same kind of event, so this path's
+      correctness rides on the same table-driven tests that already cover every `ConfigBootPlan`
+      transition. Covered by two new embedded-tests cases in `ConfigStagingTest.cpp` (real NVS): a clean
+      functions-only apply commits without a reboot, and a failed one is rejected instead, ready for
+      `decideBootPlan()` to revert on the reboot the handler triggers.
+      Landed alongside this: `config-a`/`config-b` now hold the device document and every function
+      together, keyed by name, in one namespace -- `function-cfg-a`/`function-cfg-b` are gone -- since a
+      function named `device` would already collide with the `device` entry in the `SYNC`/`UPDATE` wire
+      payload's `configurations` object (both are keyed in the same map there), so merging the NVS
+      namespace the same way introduces no new collision risk, only removes a namespace split with no
+      remaining purpose. Flat/unslotted storage (`config`/`device-config`, `function-cfg`) is also dropped
+      entirely, not just left to coexist: there is no longer any code path that reads or writes those
+      keys, `StoredConfig`'s legacy-bare-body adoption bridge (and `ConfigEnvelope::checkJson`) was
+      deleted as dead code once nothing could still be reading a bare body under a namespace this firmware
+      touches, and `gen_config_nvs.py` stopped seeding `device-config` (closing the item below). See
+      *Migration* above for what this means for a real device upgrading from older firmware: it boots as
+      if freshly minted and reconciles the full set from the server.
 - [ ] **Retire the `nvs/write` + `restart` device-config path** once the server stops using it (keep raw
       `nvs/write` for debugging). Stop treating device-authored settings as ground truth.
-- [ ] **Stop seeding `device-config` in generated NVS.** `scripts/gen_config_nvs.py` (and its `test/e2e-tests`
-      copy) currently writes `config/device-config.json` into the `device-config` key as a bare body. Once
-      device configuration always comes from the server, drop that entry from the generated partition — a
-      freshly generated/erased device reconciles it via the empty-slot bootstrap like any other missing
-      configuration (see *Migration*). `config/device-config.json` / `config-templates/*device-config*.json` can
-      stay as fixtures for schema/parsing tests without being NVS-seeded.
+- [x] **Stop seeding `device-config` in generated NVS.** `scripts/gen_config_nvs.py` (and its
+      `test/e2e-tests` copy, a symlink) no longer writes a `device-config` entry — a freshly
+      generated/erased device reconciles it via the empty-slot bootstrap like any other missing
+      configuration (see *Migration*). `config-templates/*device-config*.json`
+      stay on disk as fixtures for schema/parsing tests without being NVS-seeded. Landed together with the
+      functions-only atomicity item above.
 - [x] **Tests — Native (`unit-tests`).** The `config-state` transitions
       (`confirmed`/`requested{pending,attempted,rejected}` → load/commit/revert) are extracted as a pure
       function of state, not tested by physically crashing a Wokwi device mid-write: table-driven tests over
       `decideBootPlan()`/`recordStrictBootOutcome()` for every state combination, including "crashed while
       `attempted`" (`ConfigBootPlanTest.cpp`), plus JSON round-trip coverage for every `ConfigState`-family
-      type (`ConfigStateTest.cpp`).
+      type (`ConfigStateTest.cpp`). `stageDeviceUpdate()`'s free-slot selection (no `confirmed` yet → slot
+      `a`; otherwise whichever slot isn't `confirmed`) and merge behavior (an untouched entry copied verbatim,
+      a changed one overwritten, a brand-new one added, `confirmed`/an unrelated `rejection` left untouched)
+      are covered the same way, NVS-free (`ConfigStagingTest.cpp`).
 - [x] **Tests — Embedded (`embedded-tests`, Wokwi).** Slot swap and revert-to-`confirmed` against real NVS
       across a real reboot, seeding envelopes directly into NVS rather than via `UPDATE` (no broker needed for
       this). `ConfigStateStoreTest.cpp`
@@ -608,6 +649,13 @@ device-configuration *authority transfer* land in Phase 3.
       (`"config-state-test"`, 17 chars) and `StoredConfigTest.cpp`'s (`"stored-config-test"`, 18 chars) both
       exceeded ESP-IDF's 15-character NVS namespace limit (`ESP_ERR_NVS_KEY_TOO_LONG`), invisible to native
       tests since they never touch real NVS. Renamed to `"cfg-state-test"`/`"stored-cfg-test"`.
+      `ConfigStagingTest.cpp` (same directory) covers the staging half against real NVS the same way:
+      seeding a confirmed slot's device + two functions, staging a device-changed update that touches only
+      some of them, and asserting the free slot ends up with the changed entries plus the untouched one
+      copied verbatim, `config-state` pointing `requested` at it, and `decideBootPlan()` picking it up
+      strictly; plus the no-`confirmed`-yet case picking slot `a`. Full suite (all of
+      `ConfigStagingTest.cpp`/`ConfigStateStoreTest.cpp`/`StoredConfigTest.cpp`/`WatchdogTest.cpp`) reran
+      green: 83 assertions / 16 test cases.
 - [ ] **Tests — e2e (`e2e-tests`, blocked on
       [#596](https://github.com/cornucopia-machines/ugly-duckling-firmware/issues/596)).** Rejection code
       reported on the `BOOT` following a revert, then cleared (report-once).

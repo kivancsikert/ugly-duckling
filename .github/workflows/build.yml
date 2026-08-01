@@ -55,7 +55,6 @@ jobs:
       - name: Create dummy config directory
         run: |
           mkdir -p config
-          echo "{}" > config/device-config.json
           echo "{}" > config/network-config.json
 
       - name: esp-idf build

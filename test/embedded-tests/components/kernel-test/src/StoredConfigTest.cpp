@@ -81,31 +81,6 @@ TEST_CASE("storing a new envelope overwrites the previous one") {
     REQUIRE(reloaded.data()["publishInterval"].as<int>() == 120);
 }
 
-TEST_CASE("a legacy bare-body blob (no envelope wrapper) is adopted with an empty fingerprint") {
-    ensureNvsFlashInitialized();
-    auto nvs = std::make_shared<NvsStore>("stored-cfg-test");
-    nvs->eraseAll();
-
-    // Simulate firmware that predates config reconciliation: the configuration body written
-    // directly under the key, with no {data, fingerprint, requestedAt} wrapper.
-    JsonDocument legacyBody;
-    legacyBody["publishInterval"] = 60;
-    nvs->setJson("device", legacyBody.as<JsonVariantConst>());
-
-    StoredConfig config(nvs, "device");
-    REQUIRE(config.hasValue());
-    REQUIRE(config.fingerprint().empty());
-    REQUIRE(config.requestedAt().empty());
-    REQUIRE(config.data()["publishInterval"].as<int>() == 60);
-
-    // The adoption also normalizes NVS in place, so a subsequent boot loads a proper envelope
-    // directly -- the fallback fires at most once per device.
-    StoredConfig reloaded(nvs, "device");
-    REQUIRE(reloaded.hasValue());
-    REQUIRE(reloaded.fingerprint().empty());
-    REQUIRE(reloaded.data()["publishInterval"].as<int>() == 60);
-}
-
 TEST_CASE("different keys in the same NVS namespace are stored independently") {
     ensureNvsFlashInitialized();
     auto nvs = std::make_shared<NvsStore>("stored-cfg-test");

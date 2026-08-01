@@ -17,7 +17,7 @@ test/
   unit-tests/       # Native Catch2 tests (no hardware)
   embedded-tests/   # ESP-IDF Catch2 tests (runs on Wokwi)
   e2e-tests/        # Full MQTT + Wokwi end-to-end tests
-config/             # Runtime NVS config files (device-config.json, network-config.json)
+config/             # network-config.json (NVS-seeded)
 config-templates/   # Config templates by device type (never commit real credentials)
 wokwi/              # Wokwi diagrams and local dev-env (docker-compose + Mosquitto)
 docs/               # Architecture, component, coding standards, and spec documents

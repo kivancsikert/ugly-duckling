@@ -63,8 +63,10 @@ inline BootPlan decideBootPlan(const ConfigState& state) {
 }
 
 /**
- * @brief Called after attempting to load+apply `loadedSlot` in strict mode. Implements "commit is a
- * single pointer flip": on success, `confirmed` flips to `loadedSlot` and `requested` is cleared --
+ * @brief Called after attempting to load+apply `loadedSlot`, whether that attempt was a strict boot
+ * or a functions-only UPDATE applied live (docs/Configuration.md, "Applying a functions-only
+ * UPDATE") -- the commit/reject decision is identical either way. Implements "commit is a single
+ * pointer flip": on success, `confirmed` flips to `loadedSlot` and `requested` is cleared --
  * `rejection` is left untouched, since it may hold an unrelated code from an earlier failed attempt
  * that hasn't been reported yet (report-once, via BOOT and that boot's SYNC, is item 3's job, not
  * this function's). On

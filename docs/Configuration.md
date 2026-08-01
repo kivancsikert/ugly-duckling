@@ -37,7 +37,7 @@ alongside but independent of `commands`/`responses`.
 | Topic | Direction | Retention / QoS | Carries |
 | --- | --- | --- | --- |
 | `boot` | device → server | `NoRetain`, `QoS 1` | Diagnostics: model/revision/platform, reset/wakeup reason, boot count, per-peripheral/function apply errors, and (see *Rejection reporting* below) a rejection code, if one is pending. **No configuration bodies.** |
-| `sync` | device → server | `NoRetain`, `QoS 2` | The fingerprint manifest of what the device has **applied and booted with** — proof-of-apply, not proof-of-receipt. Built from live in-memory state, never re-derived from NVS. Also carries a rejection code (see *Rejection reporting* below) on the first `SYNC` published after a revert, alongside `BOOT`. |
+| `sync` | device → server | `NoRetain`, `QoS 2` | The fingerprint manifest of what the device has **applied and booted with** — the `device` document plus every function — proof-of-apply, not proof-of-receipt. Built from live in-memory state, never re-derived from NVS. Also carries a rejection code (see *Rejection reporting* below) on the first `SYNC` published after a revert, alongside `BOOT`. |
 | `update` | server → device | `NoRetain`, `QoS 2` | New configuration: `{configurations: {device: envelope, <function>: envelope, ...}}`. |
 
 - **`BOOT`** is published once per boot, from [`startDevice()`](../components/devices/src/Device.hpp)
@@ -47,19 +47,68 @@ alongside but independent of `commands`/`responses`.
   ([`initSyncTask`](../components/devices/src/Device.hpp)) triggered by a single-element overwrite
   queue: every successful MQTT (re)connection, and immediately after a successful hot-reload
   `UPDATE`. It always waits for `kernelReady` first, so it only ever reports a fully-booted set.
-  There is no boot-time `SYNC` separate from the connection trigger.
+  There is no boot-time `SYNC` separate from the connection trigger. The `device` entry's
+  fingerprint/requestedAt are captured once at boot (from the `StoredConfig` `startDevice()` loaded)
+  and passed through unchanged for the life of the process — a device configuration change is never
+  hot-reloaded, only ever applied across a reboot (below), so that snapshot never goes stale.
 - **`UPDATE`** is handled by [`registerUpdateHandler`](../components/devices/src/Device.hpp): it
   filters the incoming configurations against currently-held fingerprints (an entry whose
   fingerprint already matches is dropped; if nothing differs, the whole message is a no-op — see
-  [`filterUpdate`](../components/kernel/src/UpdateFilter.hpp)), then branches:
-  - **Device configuration changed** → persist the changed envelopes and reboot. The boot sequence
-    re-derives everything, since a device change can restructure which functions exist.
-  - **Only function configuration(s) changed** → hot-reload each live, via
-    [`FunctionRegistry::reconfigure`](../components/functions/src/functions/Function.hpp), and
-    trigger a `SYNC`.
+  [`filterUpdate`](../components/kernel/src/UpdateFilter.hpp)), then **always stages into the free
+  slot first**, whether the device document changed or only functions did: every configuration the
+  device is currently confirmed/running as (the `device` document plus every live function's
+  envelope) is read and merged with what the `UPDATE` actually changed — via
+  [`stageDeviceUpdate`](../components/kernel/src/ConfigStaging.hpp), a pure function so the
+  merge/slot-selection logic is unit-testable independent of NVS — so the destination slot ends up
+  self-contained even though the `UPDATE` only carried the changed entries. The result is written
+  into the free slot's own `config-<slot>` namespace and `requested` is marked `pending` for that
+  slot. From there the two cases diverge:
+  - **Device configuration changed** → reboot. The boot sequence (*The confirmed/requested state
+    machine*, below) re-derives everything, including which functions exist, from the staged slot,
+    strictly.
+  - **Only function configuration(s) changed** → hot-reload live, without a reboot on the happy
+    path (*Applying a functions-only UPDATE*, below).
 
   Function configuration used to arrive on a retained `functions/$NAME/config` topic and apply
   live on receipt; that subscription is gone. `UPDATE` is the only config-in path.
+
+### Applying a functions-only UPDATE
+
+A functions-only change goes through the same atomic stage/commit/revert machinery a device change
+does — it just reaches commit via a live apply instead of a reboot, so the happy path costs no
+downtime:
+
+```mermaid
+flowchart TD
+    U(["UPDATE arrives<br>(functions only)"]) --> Stage["Stage into the free slot<br>(stageDeviceUpdate)"]
+    Stage --> Pending["Persist slot;<br>config-state: requested = {slot, pending}"]
+    Pending --> Attempted["config-state: requested = {slot, attempted}"]
+    Attempted --> Apply["Apply each changed function live<br>(FunctionRegistry::applyLive)"]
+    Apply --> AllOk{"All applied<br>cleanly?"}
+    AllOk -- "yes" --> Commit["Commit:<br>confirmed = slot, requested cleared"]
+    Commit --> Sync["Trigger SYNC"]
+    AllOk -- "no" --> Reject["Mark rejected,<br>record rejection code"]
+    Reject --> Reboot(["esp_restart()"])
+    Reboot -.-> Revert["Boot sees rejected -><br>reverts to the untouched<br>old confirmed slot"]
+```
+
+The commit/reject decision itself is
+[`recordStrictBootOutcome`](../components/kernel/src/ConfigBootPlan.hpp) — the exact same function a
+strict boot uses to decide whether a `requested` set it just tried to load becomes the new
+`confirmed` or gets rejected. A live hot-reload and a strict boot attempt are, from `config-state`'s
+point of view, the same kind of event: an attempt to promote a staged slot, that either succeeds or
+doesn't. Reusing the function means this path's correctness rides on the same table-driven tests
+that already cover every `ConfigBootPlan` transition, including a crash mid-attempt (if the device
+dies between the `pending` and `attempted` writes above, or between `attempted` and commit/reject,
+the next boot's `decideBootPlan` sees `pending` or `attempted` and handles it exactly as it would for
+a crashed strict boot).
+
+Only the entries an `UPDATE` actually named are applied via `FunctionRegistry::applyLive` — every
+other function in the staged slot is already correct (copied verbatim by `stageDeviceUpdate`) and
+needs no live action. A faulty function body throws, which stops the apply loop, marks the slot
+`rejected`, and reboots; the functions that already applied live in this attempt are discarded too,
+since the reboot reloads everything fresh from the untouched old `confirmed` slot — all-or-nothing,
+matching the device-changed path's semantics.
 
 ## Storage: envelopes and slots
 
@@ -67,19 +116,19 @@ Every configuration is a `StoredConfig`-backed envelope, keyed by name (`device`
 name) within an `NvsStore` namespace. `StoredConfig` never parses `data` into a typed object — it's
 opaque bytes as far as storage is concerned; parsing is a separate step done by the caller.
 
-Two namespace layouts coexist today:
+There is no flat/unslotted layout — every device runs on the slotted layout, or has no confirmed
+configuration at all yet:
 
-- **Flat (Phase 1, still what every real device uses):** `config`/`device-config` for the device
-  document, `function-cfg` for functions — one envelope per key, no slot concept.
-- **Slotted (machinery in place, not yet driving real devices — see *Current implementation
-  status*):** `config-a`/`config-b` (key `device`) and `function-cfg-a`/`function-cfg-b`, mirroring
-  each other so a slot is fully self-contained. A separate `config-state` namespace (key `state`)
-  holds the `ConfigState` record described above.
-
-A `StoredConfig` also recognizes a **legacy bare body** — a blob written directly under the key by
-pre-reconciliation firmware, no `{data, fingerprint, requestedAt}` wrapper — and adopts it with an
-**empty fingerprint** (which can never match a real one, so the next `UPDATE` for that name always
-applies) rather than treating it as a parse failure.
+- **Slotted:** `config-a`/`config-b` hold the device document (key `device`) and every function
+  (key = function name) together, in the same namespace, so a slot is one self-contained unit — a
+  boot loads exactly one slot and never merges across namespaces. A separate `config-state`
+  namespace (key `state`) holds the `ConfigState` record described above.
+- **No confirmed slot:** a freshly minted device, or one that last booted firmware from before this
+  storage model existed, has no `config-state` namespace (or one with `confirmed` absent) at all. It
+  boots with defaults and no functions — identically to an empty slot — and reconciles from scratch:
+  an empty `SYNC` prompts the server to re-push the full configuration set (see
+  docs/specs/config-reconciliation.md, "Migration" → "A missing/absent `confirmed` slot is the one
+  bootstrap path"). There is no migration path from an older storage shape; this is the only bootstrap.
 
 ## The confirmed/requested state machine
 
@@ -139,18 +188,10 @@ doesn't repeat it.
 
 ## Current implementation status
 
-Everything above except the following is live on real devices today:
+Everything above is live on real devices today, including a functions-only `UPDATE` going through the
+same stage/commit-or-revert machinery as a device-changed one (just reaching commit via a live apply
+instead of a reboot) and `SYNC` reporting the `device` fingerprint — except:
 
-- **Nothing currently populates a `requested` slot.** `registerUpdateHandler`'s device-changed
-  branch still writes straight into the flat, unslotted storage and reboots (Phase 1 behavior,
-  unchanged) — it does not yet stage into `requested`. The confirmed/requested state machine, the
-  slotted NVS layout, and the strict/revert boot logic are real and boot-wired, but exercised today
-  only by tests that seed NVS directly
-  ([`ConfigStateStoreTest.cpp`](../test/embedded-tests/components/kernel-test/src/ConfigStateStoreTest.cpp)),
-  not by live traffic. This is intentional, incremental sequencing — see
-  [`specs/config-reconciliation.md`](specs/config-reconciliation.md)'s Phase 3 checklist for what
-  wires it up for real.
-- **`SYNC` does not yet include the `device` fingerprint** — only functions.
 - **Rejection codes are always `INTERNAL`** — the cause-specific mapping
   (parse/validation → `INVALID_ARGUMENT`, unknown function type → `UNIMPLEMENTED`, NVS-full →
   `RESOURCE_EXHAUSTED`) isn't implemented.

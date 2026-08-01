@@ -112,16 +112,17 @@ FunctionFactory makeFunctionFactory(
 /**
  * @brief In-memory source of truth for name -> {handle, fingerprint} across every live function.
  *
- * Evolved from FunctionManager per docs/Configuration.md: reconfigure() is the
- * hot-reload entry point that persists a verbatim envelope, parses it, applies it, and records the
+ * Evolved from FunctionManager per docs/Configuration.md: applyLive() is the hot-reload entry
+ * point that applies an already-persisted envelope to a running function, recording the
  * fingerprint/requestedAt only once configure() succeeds (proof-of-apply, not proof-of-receipt);
  * manifest() reports name -> {fingerprint, requestedAt} straight from this in-memory state for the
  * SYNC builder. The apply-and-track-fingerprint bookkeeping itself lives in FunctionConfigTracker,
- * which has no NVS dependency and is unit-tested directly; this class adds the NVS-touching
- * persistence step.
- * reconfigure() is called for real by the `…/update` handler in Device.hpp's
- * registerUpdateHandler(); persist() is that same handler's device-changed-and-rebooting branch,
- * which needs the envelope written but not applied.
+ * which has no NVS dependency and is unit-tested directly.
+ * Persistence is deliberately not this class's job: a functions-only `UPDATE` persists the whole
+ * staged slot up front, once, the same way a device-changed `UPDATE` does (docs/Configuration.md,
+ * "Applying a functions-only UPDATE") -- applyLive() only applies the change to the already-running
+ * function. It's called by the `…/update` handler in Device.hpp's registerUpdateHandler(), for its
+ * functions-only branch.
  */
 class FunctionRegistry final {
 public:
@@ -157,28 +158,17 @@ public:
         }
     }
 
-    // Hot-reload entry point: applies the envelope and records the fingerprint via the tracker,
-    // then persists it -- in that order, so a faulty body (configureFn throws) leaves both NVS and
-    // the in-memory fingerprint on the last-good envelope, matching the tracker's own
-    // proof-of-apply guarantee (record only after configureFn succeeds). Persisting first would
-    // leave a broken envelope in NVS even though the in-memory/SYNC fingerprint still (correctly)
-    // reports the old one -- and boot would then reload and fail on that same broken envelope every
-    // time. Throws on any failure (unknown function name, a function without configuration, or a
-    // faulty body) -- there is no rejection reporting in Phase 1, so this is unhandled exactly like
-    // any other faulty configuration today.
-    void reconfigure(const std::string& name, const ConfigEnvelope& envelope) {
+    // Hot-reload entry point: applies the envelope to the running function and records the
+    // fingerprint via the tracker, only once configureFn succeeds (proof-of-apply). The envelope
+    // itself is already persisted -- by the caller, once, as part of writing the whole staged slot
+    // (docs/Configuration.md, "Applying a functions-only UPDATE") -- so a faulty body throwing here
+    // leaves NVS on the not-yet-committed staged slot and the in-memory fingerprint on the last-good
+    // one; the caller reacts to the throw by marking the attempt rejected and rebooting to revert.
+    // Throws on any failure (unknown function name, a function without configuration, or a faulty
+    // body) -- there is no cause-classified rejection yet, so this is unhandled exactly like any
+    // other faulty configuration today.
+    void applyLive(const std::string& name, const ConfigEnvelope& envelope) {
         tracker.apply(name, envelope.getData().template as<JsonObjectConst>(), envelope.getFingerprint(), envelope.getRequestedAt());
-
-        StoredConfig storedConfig(nvs, name);
-        storedConfig.store(envelope);
-    }
-
-    // Persists an envelope without applying it. Used when a device-configuration change is
-    // rebooting anyway -- boot re-derives every live function (and its fingerprint) from NVS, so
-    // there is nothing to apply live or track in-memory here.
-    void persist(const std::string& name, const ConfigEnvelope& envelope) {
-        StoredConfig storedConfig(nvs, name);
-        storedConfig.store(envelope);
     }
 
     // name -> {fingerprint, requestedAt} for every live function, straight from in-memory state --
