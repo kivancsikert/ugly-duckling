@@ -7,10 +7,10 @@
 namespace cornucopia::ugly_duckling::kernel {
 
 /**
- * @brief What startDevice() should do this boot, and what config-state to persist (if any) before
- * attempting to load -- decided purely from the last-persisted ConfigState, with no NVS/MQTT
- * dependency of its own so it is unit-testable independent of real boot (docs/Configuration.md,
- * "The confirmed/requested state machine").
+ * @brief What startDevice() should do this boot, and what crash-recovery checkpoint (if any) to
+ * persist before attempting to load -- decided purely from the last-persisted ConfigState, with no
+ * NVS/MQTT dependency of its own so it is unit-testable independent of real boot
+ * (docs/Configuration.md, "The confirmed/requested state machine").
  */
 struct BootPlan {
     // nullopt means "no confirmed slot": boot with device/function defaults, exactly as an empty
@@ -20,10 +20,13 @@ struct BootPlan {
     // -- any apply error is a detected failure (see recordStrictBootOutcome). false means
     // best-effort.
     bool strict = false;
-    // Set only when the state to persist differs from what was loaded -- the pending -> attempted
-    // transition (write before attempting the load, so a crash mid-load is caught next boot), or a
-    // revert-cleanup (attempted/rejected -> confirmed, requested dropped).
-    std::optional<ConfigState> stateToPersistBeforeLoad;
+    // Set only when the state to persist differs from what was loaded. Must be persisted BEFORE
+    // attempting the load below, so that a crash during the attempt leaves behind a state the next
+    // boot can recognize and recover from: either the pending -> attempted transition (a crash
+    // during a strict load is then seen as "attempted", a detected failure) or a revert-cleanup
+    // (attempted/rejected -> confirmed, requested dropped -- crashing during the best-effort load
+    // that follows is harmless, since this write already landed).
+    std::optional<ConfigState> crashRecoveryCheckpoint;
 };
 
 /**
@@ -37,7 +40,7 @@ struct BootPlan {
  */
 inline BootPlan decideBootPlan(const ConfigState& state) {
     if (!state.requested) {
-        return { .slotToLoad = state.confirmed, .strict = false, .stateToPersistBeforeLoad = std::nullopt };
+        return { .slotToLoad = state.confirmed, .strict = false, .crashRecoveryCheckpoint = std::nullopt };
     }
 
     const RequestedConfig& requested = *state.requested;
@@ -45,7 +48,7 @@ inline BootPlan decideBootPlan(const ConfigState& state) {
         case RequestedConfigStatus::Pending: {
             ConfigState next = state;
             next.requested = RequestedConfig { .slot = requested.slot, .status = RequestedConfigStatus::Attempted };
-            return { .slotToLoad = requested.slot, .strict = true, .stateToPersistBeforeLoad = next };
+            return { .slotToLoad = requested.slot, .strict = true, .crashRecoveryCheckpoint = next };
         }
         case RequestedConfigStatus::Attempted:
         case RequestedConfigStatus::Rejected: {
@@ -54,12 +57,12 @@ inline BootPlan decideBootPlan(const ConfigState& state) {
                 next.rejection = RejectionCode::Internal;
             }
             next.requested.reset();
-            return { .slotToLoad = state.confirmed, .strict = false, .stateToPersistBeforeLoad = next };
+            return { .slotToLoad = state.confirmed, .strict = false, .crashRecoveryCheckpoint = next };
         }
     }
     // Unreachable, but keeps this a well-formed function for compilers that don't see the switch
     // above as exhaustive.
-    return { .slotToLoad = state.confirmed, .strict = false, .stateToPersistBeforeLoad = std::nullopt };
+    return { .slotToLoad = state.confirmed, .strict = false, .crashRecoveryCheckpoint = std::nullopt };
 }
 
 /**

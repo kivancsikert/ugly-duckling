@@ -10,7 +10,7 @@ TEST_CASE("decideBootPlan: no config-state at all loads nothing, best-effort") {
 
     REQUIRE_FALSE(plan.slotToLoad.has_value());
     REQUIRE_FALSE(plan.strict);
-    REQUIRE_FALSE(plan.stateToPersistBeforeLoad.has_value());
+    REQUIRE_FALSE(plan.crashRecoveryCheckpoint.has_value());
 }
 
 TEST_CASE("decideBootPlan: confirmed only, no requested, loads confirmed best-effort") {
@@ -19,7 +19,7 @@ TEST_CASE("decideBootPlan: confirmed only, no requested, loads confirmed best-ef
 
     REQUIRE(plan.slotToLoad == ConfigSlot::A);
     REQUIRE_FALSE(plan.strict);
-    REQUIRE_FALSE(plan.stateToPersistBeforeLoad.has_value());
+    REQUIRE_FALSE(plan.crashRecoveryCheckpoint.has_value());
 }
 
 TEST_CASE("decideBootPlan: pending requested is loaded strictly and marked attempted before load") {
@@ -31,10 +31,10 @@ TEST_CASE("decideBootPlan: pending requested is loaded strictly and marked attem
 
     REQUIRE(plan.slotToLoad == ConfigSlot::B);
     REQUIRE(plan.strict);
-    REQUIRE(plan.stateToPersistBeforeLoad.has_value());
-    REQUIRE(plan.stateToPersistBeforeLoad->confirmed == ConfigSlot::A);
-    REQUIRE(plan.stateToPersistBeforeLoad->requested->slot == ConfigSlot::B);
-    REQUIRE(plan.stateToPersistBeforeLoad->requested->status == RequestedConfigStatus::Attempted);
+    REQUIRE(plan.crashRecoveryCheckpoint.has_value());
+    REQUIRE(plan.crashRecoveryCheckpoint->confirmed == ConfigSlot::A);
+    REQUIRE(plan.crashRecoveryCheckpoint->requested->slot == ConfigSlot::B);
+    REQUIRE(plan.crashRecoveryCheckpoint->requested->status == RequestedConfigStatus::Attempted);
 }
 
 TEST_CASE("decideBootPlan: pending requested with no confirmed slot yet (first-ever requested set)") {
@@ -45,7 +45,7 @@ TEST_CASE("decideBootPlan: pending requested with no confirmed slot yet (first-e
 
     REQUIRE(plan.slotToLoad == ConfigSlot::B);
     REQUIRE(plan.strict);
-    REQUIRE_FALSE(plan.stateToPersistBeforeLoad->confirmed.has_value());
+    REQUIRE_FALSE(plan.crashRecoveryCheckpoint->confirmed.has_value());
 }
 
 TEST_CASE("decideBootPlan: attempted requested (crash mid-boot) reverts to confirmed and records a rejection") {
@@ -57,10 +57,10 @@ TEST_CASE("decideBootPlan: attempted requested (crash mid-boot) reverts to confi
 
     REQUIRE(plan.slotToLoad == ConfigSlot::A);
     REQUIRE_FALSE(plan.strict);
-    REQUIRE(plan.stateToPersistBeforeLoad.has_value());
-    REQUIRE_FALSE(plan.stateToPersistBeforeLoad->requested.has_value());
-    REQUIRE(plan.stateToPersistBeforeLoad->confirmed == ConfigSlot::A);
-    REQUIRE(plan.stateToPersistBeforeLoad->rejection == RejectionCode::Internal);
+    REQUIRE(plan.crashRecoveryCheckpoint.has_value());
+    REQUIRE_FALSE(plan.crashRecoveryCheckpoint->requested.has_value());
+    REQUIRE(plan.crashRecoveryCheckpoint->confirmed == ConfigSlot::A);
+    REQUIRE(plan.crashRecoveryCheckpoint->rejection == RejectionCode::Internal);
 }
 
 TEST_CASE("decideBootPlan: rejected requested (revert cleanup didn't finish) is cleaned up the same way") {
@@ -72,8 +72,8 @@ TEST_CASE("decideBootPlan: rejected requested (revert cleanup didn't finish) is 
 
     REQUIRE(plan.slotToLoad == ConfigSlot::A);
     REQUIRE_FALSE(plan.strict);
-    REQUIRE_FALSE(plan.stateToPersistBeforeLoad->requested.has_value());
-    REQUIRE(plan.stateToPersistBeforeLoad->rejection == RejectionCode::Internal);
+    REQUIRE_FALSE(plan.crashRecoveryCheckpoint->requested.has_value());
+    REQUIRE(plan.crashRecoveryCheckpoint->rejection == RejectionCode::Internal);
 }
 
 TEST_CASE("decideBootPlan: attempted requested with no confirmed slot reverts to no confirmed slot") {
@@ -94,7 +94,7 @@ TEST_CASE("decideBootPlan: an already-recorded rejection is never clobbered by a
     };
     BootPlan plan = decideBootPlan(state);
 
-    REQUIRE(plan.stateToPersistBeforeLoad->rejection == RejectionCode::InvalidArgument);
+    REQUIRE(plan.crashRecoveryCheckpoint->rejection == RejectionCode::InvalidArgument);
 }
 
 TEST_CASE("recordStrictBootOutcome: success commits confirmed to the loaded slot and clears requested") {

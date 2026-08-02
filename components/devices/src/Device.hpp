@@ -575,14 +575,14 @@ static void startDevice() {
     ConfigState configState = configStateStore->load();
     BootPlan bootPlan = decideBootPlan(configState);
 
-    LOGD("Booting from slot '%s', strict: %s, new state to persist before load: %s",
+    LOGD("Booting from slot '%s', strict: %s, crash recovery checkpoint to persist: %s",
         bootPlan.slotToLoad ? toString(*bootPlan.slotToLoad).c_str() : "(none)",
         bootPlan.strict ? "true" : "false",
-        bootPlan.stateToPersistBeforeLoad ? "true": "false");
+        bootPlan.crashRecoveryCheckpoint ? "true": "false");
 
-    if (bootPlan.stateToPersistBeforeLoad) {
-        configStateStore->save(*bootPlan.stateToPersistBeforeLoad);
-        configState = *bootPlan.stateToPersistBeforeLoad;
+    if (bootPlan.crashRecoveryCheckpoint) {
+        configStateStore->save(*bootPlan.crashRecoveryCheckpoint);
+        configState = *bootPlan.crashRecoveryCheckpoint;
     }
 
     // Device configuration is stored as a verbatim envelope like any other reconciled

@@ -81,13 +81,13 @@ TEST_CASE("boot slot swap: a pending requested set is applied strictly, then com
     BootPlan plan = decideBootPlan(loaded);
     REQUIRE(plan.slotToLoad == ConfigSlot::B);
     REQUIRE(plan.strict);
-    REQUIRE(plan.stateToPersistBeforeLoad.has_value());
-    ConfigStateStore(nvs).save(*plan.stateToPersistBeforeLoad);
+    REQUIRE(plan.crashRecoveryCheckpoint.has_value());
+    ConfigStateStore(nvs).save(*plan.crashRecoveryCheckpoint);
 
     REQUIRE(ConfigStateStore(nvs).load().requested->status == RequestedConfigStatus::Attempted);
 
     // The requested set applied cleanly: commit.
-    ConfigState next = recordStrictBootOutcome(*plan.stateToPersistBeforeLoad, ConfigSlot::B, true, RejectionCode::Internal);
+    ConfigState next = recordStrictBootOutcome(*plan.crashRecoveryCheckpoint, ConfigSlot::B, true, RejectionCode::Internal);
     ConfigStateStore(nvs).save(next);
 
     ConfigState committed = ConfigStateStore(nvs).load();
@@ -112,10 +112,10 @@ TEST_CASE("boot slot swap: a requested set that fails to apply is reverted to co
     ConfigStateStore(nvs).save(seeded);
 
     BootPlan plan = decideBootPlan(ConfigStateStore(nvs).load());
-    ConfigStateStore(nvs).save(*plan.stateToPersistBeforeLoad);
+    ConfigStateStore(nvs).save(*plan.crashRecoveryCheckpoint);
 
     // The requested set failed to apply: revert.
-    ConfigState next = recordStrictBootOutcome(*plan.stateToPersistBeforeLoad, ConfigSlot::B, false, RejectionCode::Internal);
+    ConfigState next = recordStrictBootOutcome(*plan.crashRecoveryCheckpoint, ConfigSlot::B, false, RejectionCode::Internal);
     ConfigStateStore(nvs).save(next);
 
     ConfigState rejected = ConfigStateStore(nvs).load();
@@ -128,7 +128,7 @@ TEST_CASE("boot slot swap: a requested set that fails to apply is reverted to co
     BootPlan revertBootPlan = decideBootPlan(rejected);
     REQUIRE(revertBootPlan.slotToLoad == ConfigSlot::A);
     REQUIRE_FALSE(revertBootPlan.strict);
-    ConfigStateStore(nvs).save(*revertBootPlan.stateToPersistBeforeLoad);
+    ConfigStateStore(nvs).save(*revertBootPlan.crashRecoveryCheckpoint);
 
     ConfigState cleaned = ConfigStateStore(nvs).load();
     REQUIRE_FALSE(cleaned.requested.has_value());
@@ -154,7 +154,7 @@ TEST_CASE("boot slot swap: a crash that leaves requested attempted is reverted o
     BootPlan plan = decideBootPlan(ConfigStateStore(nvs).load());
     REQUIRE(plan.slotToLoad == ConfigSlot::A);
     REQUIRE_FALSE(plan.strict);
-    ConfigStateStore(nvs).save(*plan.stateToPersistBeforeLoad);
+    ConfigStateStore(nvs).save(*plan.crashRecoveryCheckpoint);
 
     ConfigState reverted = ConfigStateStore(nvs).load();
     REQUIRE(reverted.confirmed == ConfigSlot::A);
