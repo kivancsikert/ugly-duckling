@@ -84,7 +84,7 @@ TEST_CASE("staging a device-changed update into the free slot copies unchanged e
     // Persist the staged set into the free slot's namespace, exactly as registerUpdateHandler()
     // does, then mark it requested.
     for (const auto& [name, envelope] : staged.configurations) {
-        StoredConfig(slotBNvs, name).store(envelope);
+        storeIfChanged(slotBNvs, name, envelope);
     }
     configStateStore.save(staged.nextState);
 
@@ -113,6 +113,68 @@ TEST_CASE("staging a device-changed update into the free slot copies unchanged e
     BootPlan plan = decideBootPlan(reloadedState);
     REQUIRE(plan.slotToLoad == ConfigSlot::B);
     REQUIRE(plan.strict);
+}
+
+// Slots ping-pong between A and B, so by the time a slot becomes "free" again it's usually not
+// empty -- it's whatever was staged into it two UPDATEs ago. If an entry hasn't changed since then,
+// it's already sitting there with the right fingerprint, and storeIfChanged() (Device.hpp's write
+// loop uses it too) should skip re-persisting it rather than paying a redundant flash write.
+TEST_CASE("staging into a free slot that already holds a matching entry skips rewriting it") {
+    ensureNvsFlashInitialized();
+
+    auto stateNvs = std::make_shared<NvsStore>("stg-state");
+    stateNvs->eraseAll();
+    auto slotANvs = std::make_shared<NvsStore>("stg-a");
+    slotANvs->eraseAll();
+    auto slotBNvs = std::make_shared<NvsStore>("stg-b");
+    slotBNvs->eraseAll();
+
+    // Slot A is confirmed: device + valve1, both unchanged since the last time slot B (the free
+    // slot for this UPDATE) was written -- so slot B already has a matching valve1 entry left over
+    // from that earlier round.
+    JsonDocument deviceBody;
+    deviceBody["publishInterval"] = 60;
+    StoredConfig(slotANvs, DEVICE_CONFIGURATION_NAME).store(ConfigEnvelope(deviceBody.as<JsonVariantConst>(), "device-fp", "2026-07-30T12:00:00Z"));
+    JsonDocument valve1Body;
+    valve1Body["openDuration"] = 30;
+    StoredConfig(slotANvs, "valve1").store(ConfigEnvelope(valve1Body.as<JsonVariantConst>(), "valve1-fp", "2026-07-30T12:00:00Z"));
+
+    // Slot B's stale valve1 entry: same fingerprint, but data a real device would never actually
+    // have written under that fingerprint -- this makes a skipped write directly observable: if
+    // storeIfChanged() rewrote it instead of skipping, this planted value would be gone.
+    JsonDocument staleValve1Body;
+    staleValve1Body["openDuration"] = -1;
+    StoredConfig(slotBNvs, "valve1").store(ConfigEnvelope(staleValve1Body.as<JsonVariantConst>(), "valve1-fp", "2026-07-29T09:00:00Z"));
+
+    ConfigStateStore configStateStore(stateNvs);
+    configStateStore.save(ConfigState { .confirmed = ConfigSlot::A });
+
+    // An UPDATE arrives changing only the device document; valve1 isn't touched.
+    std::unordered_map<std::string, ConfigEnvelope> currentConfigurations;
+    currentConfigurations[DEVICE_CONFIGURATION_NAME] = StoredConfig(slotANvs, DEVICE_CONFIGURATION_NAME).configEnvelope();
+    currentConfigurations["valve1"] = StoredConfig(slotANvs, "valve1").configEnvelope();
+
+    JsonDocument deviceBodyV2;
+    deviceBodyV2["publishInterval"] = 120;
+    std::vector<ChangedConfiguration> changed = {
+        { DEVICE_CONFIGURATION_NAME, ConfigEnvelope(deviceBodyV2.as<JsonVariantConst>(), "device-fp-2", "2026-07-30T13:00:00Z") },
+    };
+
+    StagedUpdate staged = stageDeviceUpdate(configStateStore.load(), currentConfigurations, changed);
+    REQUIRE(staged.slot == ConfigSlot::B);
+    for (const auto& [name, envelope] : staged.configurations) {
+        storeIfChanged(slotBNvs, name, envelope);
+    }
+
+    StoredConfig reloadedDevice(slotBNvs, DEVICE_CONFIGURATION_NAME);
+    REQUIRE(reloadedDevice.fingerprint() == "device-fp-2");
+    REQUIRE(reloadedDevice.data()["publishInterval"].as<int>() == 120);
+
+    // valve1's write was skipped: the planted stale-but-fingerprint-matching data survived, proving
+    // storeIfChanged() never touched it.
+    StoredConfig reloadedValve1(slotBNvs, "valve1");
+    REQUIRE(reloadedValve1.fingerprint() == "valve1-fp");
+    REQUIRE(reloadedValve1.data()["openDuration"].as<int>() == -1);
 }
 
 TEST_CASE("staging the very first device-changed update (no confirmed slot yet) picks slot A") {
@@ -185,7 +247,7 @@ TEST_CASE("a functions-only update that applies cleanly commits without a reboot
     StagedUpdate staged = stageDeviceUpdate(configStateStore.load(), currentConfigurations, changed);
     REQUIRE(staged.slot == ConfigSlot::B);
     for (const auto& [name, envelope] : staged.configurations) {
-        StoredConfig(slotBNvs, name).store(envelope);
+        storeIfChanged(slotBNvs, name, envelope);
     }
     configStateStore.save(staged.nextState);
 
@@ -238,7 +300,7 @@ TEST_CASE("a functions-only update that fails to apply live is rejected, not com
 
     StagedUpdate staged = stageDeviceUpdate(configStateStore.load(), currentConfigurations, changed);
     for (const auto& [name, envelope] : staged.configurations) {
-        StoredConfig(slotBNvs, name).store(envelope);
+        storeIfChanged(slotBNvs, name, envelope);
     }
     configStateStore.save(staged.nextState);
 

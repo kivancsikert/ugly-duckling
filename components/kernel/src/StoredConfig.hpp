@@ -73,4 +73,18 @@ private:
     bool present;
 };
 
+/**
+ * @brief Writes `updated` under `key` in `nvs`, but skips the NVS write entirely if what's already
+ * there carries the same fingerprint. Slots ping-pong between `a`/`b`, so the free slot's previous
+ * occupant already holds the right envelope for anything that hasn't changed across the last two
+ * staged sets (docs/Configuration.md, "Storage: envelopes and slots") -- there's no reason to pay a
+ * flash write to re-persist an entry that's already correct.
+ */
+inline void storeIfChanged(const std::shared_ptr<NvsStore>& nvs, const std::string& key, const ConfigEnvelope& updated) {
+    StoredConfig existing(nvs, key);
+    if (!existing.hasValue() || existing.fingerprint() != updated.getFingerprint()) {
+        existing.store(updated);
+    }
+}
+
 }    // namespace cornucopia::ugly_duckling::kernel

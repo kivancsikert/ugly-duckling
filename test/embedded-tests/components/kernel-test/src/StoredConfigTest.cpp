@@ -81,6 +81,60 @@ TEST_CASE("storing a new envelope overwrites the previous one") {
     REQUIRE(reloaded.data()["publishInterval"].as<int>() == 120);
 }
 
+TEST_CASE("storeIfChanged skips the write when the target already has a matching fingerprint") {
+    ensureNvsFlashInitialized();
+    auto nvs = std::make_shared<NvsStore>("stored-cfg-test");
+    nvs->eraseAll();
+
+    JsonDocument bodyV1;
+    bodyV1["publishInterval"] = 60;
+    StoredConfig(nvs, "device").store(ConfigEnvelope(bodyV1.as<JsonVariantConst>(), "fp-1", "2026-07-30T12:00:00Z"));
+
+    // Same fingerprint, different data -- if the fingerprint alone decides the skip (as it should:
+    // the fingerprint is what identifies a revision, never the body), the stale-looking data is left
+    // untouched rather than being overwritten with what's actually a no-op change.
+    JsonDocument bodyV2;
+    bodyV2["publishInterval"] = 999;
+    storeIfChanged(nvs, "device", ConfigEnvelope(bodyV2.as<JsonVariantConst>(), "fp-1", "2026-07-30T13:00:00Z"));
+
+    StoredConfig reloaded(nvs, "device");
+    REQUIRE(reloaded.fingerprint() == "fp-1");
+    REQUIRE(reloaded.requestedAt() == "2026-07-30T12:00:00Z");
+    REQUIRE(reloaded.data()["publishInterval"].as<int>() == 60);
+}
+
+TEST_CASE("storeIfChanged writes when the target's fingerprint differs") {
+    ensureNvsFlashInitialized();
+    auto nvs = std::make_shared<NvsStore>("stored-cfg-test");
+    nvs->eraseAll();
+
+    JsonDocument bodyV1;
+    bodyV1["publishInterval"] = 60;
+    StoredConfig(nvs, "device").store(ConfigEnvelope(bodyV1.as<JsonVariantConst>(), "fp-1", "2026-07-30T12:00:00Z"));
+
+    JsonDocument bodyV2;
+    bodyV2["publishInterval"] = 120;
+    storeIfChanged(nvs, "device", ConfigEnvelope(bodyV2.as<JsonVariantConst>(), "fp-2", "2026-07-30T13:00:00Z"));
+
+    StoredConfig reloaded(nvs, "device");
+    REQUIRE(reloaded.fingerprint() == "fp-2");
+    REQUIRE(reloaded.data()["publishInterval"].as<int>() == 120);
+}
+
+TEST_CASE("storeIfChanged writes when the target has nothing stored yet") {
+    ensureNvsFlashInitialized();
+    auto nvs = std::make_shared<NvsStore>("stored-cfg-test");
+    nvs->eraseAll();
+
+    JsonDocument body;
+    body["publishInterval"] = 60;
+    storeIfChanged(nvs, "device", ConfigEnvelope(body.as<JsonVariantConst>(), "fp-1", "2026-07-30T12:00:00Z"));
+
+    StoredConfig reloaded(nvs, "device");
+    REQUIRE(reloaded.hasValue());
+    REQUIRE(reloaded.fingerprint() == "fp-1");
+}
+
 TEST_CASE("different keys in the same NVS namespace are stored independently") {
     ensureNvsFlashInitialized();
     auto nvs = std::make_shared<NvsStore>("stored-cfg-test");

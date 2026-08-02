@@ -354,7 +354,10 @@ void registerUpdateHandler(
         StagedUpdate staged = stageDeviceUpdate(state, currentConfigurations, update.changed);
         auto slotNvs = std::make_shared<NvsStore>("config-" + toString(staged.slot));
         for (const auto& [name, envelope] : staged.configurations) {
-            StoredConfig(slotNvs, name).store(envelope);
+            // The free slot is whichever one wasn't confirmed -- its previous occupant, from two
+            // staged sets ago, may already hold the correct envelope for an entry this UPDATE didn't
+            // touch, so skip the write rather than re-persisting something already there.
+            storeIfChanged(slotNvs, name, envelope);
         }
         configStateStore->save(staged.nextState);
 
