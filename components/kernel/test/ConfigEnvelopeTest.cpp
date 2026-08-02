@@ -2,9 +2,10 @@
 
 #include <string>
 
-#include <ConfigEnvelope.hpp>
+#include <config/ConfigEnvelope.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
+using namespace cornucopia::ugly_duckling::kernel::config;
 
 TEST_CASE("envelope round-trips data, fingerprint, and requestedAt through JSON") {
     JsonDocument body;

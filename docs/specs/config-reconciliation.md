@@ -421,7 +421,7 @@ device-configuration *authority transfer* land in Phase 3.
       (pre-reconciliation firmware, or `gen_config_nvs.py`'s still-unupdated `device-config` seeding — see
       *Migration*) is adopted verbatim as `data` with an **empty fingerprint** and immediately re-persisted as a
       proper envelope, so the bridge fires at most once per device. `StoredConfig`'s constructor now reads the
-      raw JSON first and branches on `is<ConfigEnvelope>()` (`components/kernel/src/StoredConfig.hpp`) instead
+      raw JSON first and branches on `is<ConfigEnvelope>()` (`components/kernel/src/config/StoredConfig.hpp`) instead
       of always trusting `NvsStore::get<ConfigEnvelope>()`, which previously parsed a bare body into a
       *valid-looking but silently empty* envelope with no error and no log distinguishing it from a legitimately
       empty one. Tested natively (`ConfigEnvelopeTest.cpp`, shape detection) and against real NVS
@@ -528,9 +528,9 @@ device-configuration *authority transfer* land in Phase 3.
       boot no-functions, empty `SYNC` — **not** as a migration of the old single-envelope layout (see
       *Migration* → "A missing/absent `confirmed` slot is the one bootstrap path").
       `ConfigSlot`/`RequestedConfigStatus`/`RejectionCode`/`RequestedConfig`/`ConfigState` (verbatim types +
-      JSON codec) landed in `components/kernel/src/ConfigState.hpp`; `ConfigStateStore` (NVS-backed
+      JSON codec) landed in `components/kernel/src/config/ConfigState.hpp`; `ConfigStateStore` (NVS-backed
       load/save of the `config-state` namespace, defaulting to an all-absent `ConfigState` when missing) in
-      `components/kernel/src/ConfigStateStore.hpp`. The per-slot NVS layout (`config-a`/`config-b`, holding the
+      `components/kernel/src/config/ConfigStateStore.hpp`. The per-slot NVS layout (`config-a`/`config-b`, holding the
       device document and every function together in one namespace — see the functions-only atomicity item
       below for how that merge came about) is wired into `startDevice()` (`components/devices/src/Device.hpp`),
       selected whenever `BootPlan.slotToLoad` is set. `registerUpdateHandler` now stages every `UPDATE` into
@@ -538,7 +538,7 @@ device-configuration *authority transfer* land in Phase 3.
       item below) — so this machinery is exercised by live traffic, not just by tests that seed NVS directly.
 - [x] **Boot-time apply detection + revert.** Detect a `requested` set that fails to boot (including a crash
       that leaves it `attempted`) and revert to `confirmed`, recording the rejection.
-      `decideBootPlan()` / `recordStrictBootOutcome()` (`components/kernel/src/ConfigBootPlan.hpp`) are pure
+      `decideBootPlan()` / `recordStrictBootOutcome()` (`components/kernel/src/config/ConfigBootPlan.hpp`) are pure
       functions implementing the state table in [`Configuration.md`](../Configuration.md), "The
       confirmed/requested state machine" — table-driven native tests (`ConfigBootPlanTest.cpp`) cover every
       transition, including "crashed while `attempted`", without needing a real boot. `startDevice()` calls
@@ -576,7 +576,7 @@ device-configuration *authority transfer* land in Phase 3.
       writes straight through to flat storage: it reads every currently-confirmed envelope (the `device`
       document plus one per live function, via `StoredConfig`/`FunctionRegistry::manifest()`) and merges it
       with what the `UPDATE` changed via a new pure function, `stageDeviceUpdate()`
-      (`components/kernel/src/ConfigStaging.hpp`) -- free of NVS/MQTT so the merge and free-slot-selection
+      (`components/kernel/src/config/ConfigStaging.hpp`) -- free of NVS/MQTT so the merge and free-slot-selection
       logic (whichever slot isn't `confirmed`, or slot `a` if there is no `confirmed` slot yet) is
       unit-testable on its own, matching this codebase's established pure-decision/NVS-glue split
       (`ConfigBootPlan.hpp`, `UpdateFilter.hpp`). The merged, self-contained set is written into the free

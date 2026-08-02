@@ -4,7 +4,7 @@
 
 #include "ConfigState.hpp"
 
-namespace cornucopia::ugly_duckling::kernel {
+namespace cornucopia::ugly_duckling::kernel::config {
 
 /**
  * @brief What startDevice() should do this boot, and what crash-recovery checkpoint (if any) to
@@ -92,4 +92,4 @@ inline ConfigState recordStrictBootOutcome(
     return next;
 }
 
-}    // namespace cornucopia::ugly_duckling::kernel
+}    // namespace cornucopia::ugly_duckling::kernel::config

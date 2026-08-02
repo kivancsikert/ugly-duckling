@@ -4,11 +4,12 @@
 
 #include <nvs_flash.h>
 
-#include <ConfigBootPlan.hpp>
-#include <ConfigState.hpp>
-#include <ConfigStateStore.hpp>
+#include <config/ConfigBootPlan.hpp>
+#include <config/ConfigState.hpp>
+#include <config/ConfigStateStore.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
+using namespace cornucopia::ugly_duckling::kernel::config;
 
 namespace {
 

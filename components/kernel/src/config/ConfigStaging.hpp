@@ -7,9 +7,9 @@
 
 #include "ConfigEnvelope.hpp"
 #include "ConfigState.hpp"
-#include "UpdateFilter.hpp"
+#include <UpdateFilter.hpp>
 
-namespace cornucopia::ugly_duckling::kernel {
+namespace cornucopia::ugly_duckling::kernel::config {
 
 /**
  * @brief What an `UPDATE` stages into the free slot -- device-changed or functions-only alike, both
@@ -54,4 +54,4 @@ inline StagedUpdate stageDeviceUpdate(
     return { .slot = slot, .configurations = std::move(merged), .nextState = nextState };
 }
 
-}    // namespace cornucopia::ugly_duckling::kernel
+}    // namespace cornucopia::ugly_duckling::kernel::config

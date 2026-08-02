@@ -14,18 +14,18 @@ is and isn't built yet via its progress checklist; this one describes what's act
   sent, so a serialization difference between server and firmware can never cause the two to
   disagree about whether a configuration has changed.
 - Each configuration is persisted as an **envelope**: `{data, fingerprint, requestedAt}`, with
-  `data` kept byte-for-byte verbatim. See [`ConfigEnvelope`](../components/kernel/src/ConfigEnvelope.hpp)
-  / [`StoredConfig`](../components/kernel/src/StoredConfig.hpp).
+  `data` kept byte-for-byte verbatim. See [`ConfigEnvelope`](../components/kernel/src/config/ConfigEnvelope.hpp)
+  / [`StoredConfig`](../components/kernel/src/config/StoredConfig.hpp).
 - The device holds up to two full configuration sets (device configuration + every function) at
   once, in interchangeable **slots** named `a`/`b`. A small **`config-state`** record says which
   slot is **`confirmed`** (last-known-good, what the device actually boots and runs) and, while a
   new set is being tried, which slot is **`requested`** and how far it's gotten. See
-  [`ConfigState`](../components/kernel/src/ConfigState.hpp) /
-  [`ConfigStateStore`](../components/kernel/src/ConfigStateStore.hpp).
+  [`ConfigState`](../components/kernel/src/config/ConfigState.hpp) /
+  [`ConfigStateStore`](../components/kernel/src/config/ConfigStateStore.hpp).
 - Applying `confirmed` at boot is **best-effort**: a peripheral or function that fails to apply is
   reported as an error, but the device still boots and runs. Applying a `requested` set is
   **strict**: any failure reverts to `confirmed` and reboots. See
-  [`decideBootPlan`/`recordStrictBootOutcome`](../components/kernel/src/ConfigBootPlan.hpp).
+  [`decideBootPlan`/`recordStrictBootOutcome`](../components/kernel/src/config/ConfigBootPlan.hpp).
 - Three MQTT messages carry all of this: the device announces itself on **`BOOT`**, advertises what
   it's actually running on **`SYNC`**, and receives new configuration on **`UPDATE`**.
 
@@ -58,7 +58,7 @@ alongside but independent of `commands`/`responses`.
   slot first**, whether the device document changed or only functions did: every configuration the
   device is currently confirmed/running as (the `device` document plus every live function's
   envelope) is read and merged with what the `UPDATE` actually changed — via
-  [`stageDeviceUpdate`](../components/kernel/src/ConfigStaging.hpp), a pure function so the
+  [`stageDeviceUpdate`](../components/kernel/src/config/ConfigStaging.hpp), a pure function so the
   merge/slot-selection logic is unit-testable independent of NVS — so the destination slot ends up
   self-contained even though the `UPDATE` only carried the changed entries. The result is written
   into the free slot's own `config-<slot>` namespace and `requested` is marked `pending` for that
@@ -93,7 +93,7 @@ flowchart TD
 ```
 
 The commit/reject decision itself is
-[`recordStrictBootOutcome`](../components/kernel/src/ConfigBootPlan.hpp) — the exact same function a
+[`recordStrictBootOutcome`](../components/kernel/src/config/ConfigBootPlan.hpp) — the exact same function a
 strict boot uses to decide whether a `requested` set it just tried to load becomes the new
 `confirmed` or gets rejected. A live hot-reload and a strict boot attempt are, from `config-state`'s
 point of view, the same kind of event: an attempt to promote a staged slot, that either succeeds or
@@ -160,7 +160,7 @@ flowchart TD
 - **`rejection`** — an optional code left over from a failed attempt, cleared once reported (see
   below).
 
-`decideBootPlan()` ([`ConfigBootPlan.hpp`](../components/kernel/src/ConfigBootPlan.hpp)) is a pure
+`decideBootPlan()` ([`ConfigBootPlan.hpp`](../components/kernel/src/config/ConfigBootPlan.hpp)) is a pure
 function of `ConfigState` implementing the diagram above; `recordStrictBootOutcome()` implements the
 commit/reject step after a strict load is attempted. Both are unit-tested directly
 (`ConfigBootPlanTest.cpp`) independent of NVS, so every state transition — including "crashed while

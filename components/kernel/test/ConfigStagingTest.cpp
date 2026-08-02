@@ -3,9 +3,10 @@
 #include <string>
 #include <unordered_map>
 
-#include <ConfigStaging.hpp>
+#include <config/ConfigStaging.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
+using namespace cornucopia::ugly_duckling::kernel::config;
 
 namespace {
 

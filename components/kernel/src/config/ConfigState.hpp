@@ -7,7 +7,7 @@
 
 #include <ArduinoJson.h>
 
-namespace cornucopia::ugly_duckling::kernel {
+namespace cornucopia::ugly_duckling::kernel::config {
 
 /**
  * @brief One of the two interchangeable full configuration sets (device + every function) a
@@ -67,15 +67,15 @@ struct ConfigState {
     std::optional<RejectionCode> rejection;
 };
 
-}    // namespace cornucopia::ugly_duckling::kernel
+}    // namespace cornucopia::ugly_duckling::kernel::config
 
 namespace ArduinoJson {
 
-using cornucopia::ugly_duckling::kernel::ConfigSlot;
-using cornucopia::ugly_duckling::kernel::ConfigState;
-using cornucopia::ugly_duckling::kernel::RejectionCode;
-using cornucopia::ugly_duckling::kernel::RequestedConfig;
-using cornucopia::ugly_duckling::kernel::RequestedConfigStatus;
+using cornucopia::ugly_duckling::kernel::config::ConfigSlot;
+using cornucopia::ugly_duckling::kernel::config::ConfigState;
+using cornucopia::ugly_duckling::kernel::config::RejectionCode;
+using cornucopia::ugly_duckling::kernel::config::RequestedConfig;
+using cornucopia::ugly_duckling::kernel::config::RequestedConfigStatus;
 
 template <>
 struct Converter<ConfigSlot> {

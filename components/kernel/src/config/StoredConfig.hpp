@@ -9,9 +9,9 @@
 #include <Log.hpp>
 
 #include "ConfigEnvelope.hpp"
-#include "NvsStore.hpp"
+#include <NvsStore.hpp>
 
-namespace cornucopia::ugly_duckling::kernel {
+namespace cornucopia::ugly_duckling::kernel::config {
 
 /**
  * @brief Owns reading/writing one verbatim {data, fingerprint, requestedAt} envelope in NVS,
@@ -87,4 +87,4 @@ inline void storeIfChanged(const std::shared_ptr<NvsStore>& nvs, const std::stri
     }
 }
 
-}    // namespace cornucopia::ugly_duckling::kernel
+}    // namespace cornucopia::ugly_duckling::kernel::config

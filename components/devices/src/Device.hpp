@@ -20,10 +20,6 @@
 static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app_get_description()->version);
 
 #include <BatteryManager.hpp>
-#include <ConfigBootPlan.hpp>
-#include <ConfigStaging.hpp>
-#include <ConfigState.hpp>
-#include <ConfigStateStore.hpp>
 #include <Console.hpp>
 #include <CrashManager.hpp>
 #include <DebugConsole.hpp>
@@ -33,9 +29,14 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 #include <Log.hpp>
 #include <NvsConfiguration.hpp>
 #include <NvsStore.hpp>
-#include <StoredConfig.hpp>
 #include <Strings.hpp>
 #include <UpdateFilter.hpp>
+#include <config/ConfigBootPlan.hpp>
+#include <config/ConfigEnvelope.hpp>
+#include <config/ConfigStaging.hpp>
+#include <config/ConfigState.hpp>
+#include <config/ConfigStateStore.hpp>
+#include <config/StoredConfig.hpp>
 #include <drivers/BleDriver.hpp>
 #include <drivers/RtcDriver.hpp>
 #include <mqtt/MqttDriver.hpp>
@@ -50,6 +51,7 @@ using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::devices;
 using namespace cornucopia::ugly_duckling::functions;
 using namespace cornucopia::ugly_duckling::kernel;
+using namespace cornucopia::ugly_duckling::kernel::config;
 using namespace cornucopia::ugly_duckling::peripherals;
 
 #ifdef CONFIG_HEAP_TRACING

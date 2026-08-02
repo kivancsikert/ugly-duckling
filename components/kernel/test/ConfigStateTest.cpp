@@ -1,8 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <ConfigState.hpp>
+#include <config/ConfigState.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
+using namespace cornucopia::ugly_duckling::kernel::config;
 
 TEST_CASE("ConfigSlot round-trips through JSON as 'a'/'b'") {
     JsonDocument docA;

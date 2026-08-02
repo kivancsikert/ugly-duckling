@@ -6,14 +6,15 @@
 
 #include <nvs_flash.h>
 
-#include <ConfigBootPlan.hpp>
-#include <ConfigEnvelope.hpp>
-#include <ConfigStaging.hpp>
-#include <ConfigState.hpp>
-#include <ConfigStateStore.hpp>
-#include <StoredConfig.hpp>
+#include <config/ConfigBootPlan.hpp>
+#include <config/ConfigEnvelope.hpp>
+#include <config/ConfigStaging.hpp>
+#include <config/ConfigState.hpp>
+#include <config/ConfigStateStore.hpp>
+#include <config/StoredConfig.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
+using namespace cornucopia::ugly_duckling::kernel::config;
 
 namespace {
 

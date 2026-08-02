@@ -4,7 +4,7 @@
 
 #include <ArduinoJson.h>
 
-namespace cornucopia::ugly_duckling::kernel {
+namespace cornucopia::ugly_duckling::kernel::config {
 
 /**
  * @brief A verbatim configuration envelope: the config body plus the opaque fingerprint and
@@ -40,11 +40,11 @@ private:
     std::string requestedAt;
 };
 
-}    // namespace cornucopia::ugly_duckling::kernel
+}    // namespace cornucopia::ugly_duckling::kernel::config
 
 namespace ArduinoJson {
 
-using cornucopia::ugly_duckling::kernel::ConfigEnvelope;
+using cornucopia::ugly_duckling::kernel::config::ConfigEnvelope;
 
 template <>
 struct Converter<ConfigEnvelope> {

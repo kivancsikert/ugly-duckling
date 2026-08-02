@@ -8,9 +8,9 @@
 #include <Log.hpp>
 
 #include "ConfigState.hpp"
-#include "NvsStore.hpp"
+#include <NvsStore.hpp>
 
-namespace cornucopia::ugly_duckling::kernel {
+namespace cornucopia::ugly_duckling::kernel::config {
 
 /**
  * @brief Owns reading/writing the device's ConfigState in NVS (docs/Configuration.md,
@@ -46,4 +46,4 @@ private:
     std::shared_ptr<NvsStore> nvs;
 };
 
-}    // namespace cornucopia::ugly_duckling::kernel
+}    // namespace cornucopia::ugly_duckling::kernel::config

@@ -7,9 +7,11 @@
 
 #include <ArduinoJson.h>
 
-#include "ConfigEnvelope.hpp"
+#include <config/ConfigEnvelope.hpp>
 
 namespace cornucopia::ugly_duckling::kernel {
+
+using config::ConfigEnvelope;
 
 // Key of the device configuration entry within an `update` message's `configurations` object.
 inline const std::string DEVICE_CONFIGURATION_NAME = "device";

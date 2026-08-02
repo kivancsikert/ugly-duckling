@@ -1,8 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include <ConfigBootPlan.hpp>
+#include <config/ConfigBootPlan.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
+using namespace cornucopia::ugly_duckling::kernel::config;
 
 TEST_CASE("decideBootPlan: no config-state at all loads nothing, best-effort") {
     ConfigState state;

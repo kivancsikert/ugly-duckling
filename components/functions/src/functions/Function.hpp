@@ -1,14 +1,16 @@
 #pragma once
 
-#include <ConfigEnvelope.hpp>
 #include <Manager.hpp>
 #include <NvsStore.hpp>
-#include <StoredConfig.hpp>
 #include <Telemetry.hpp>
+#include <config/ConfigEnvelope.hpp>
+#include <config/StoredConfig.hpp>
 
 #include <functions/FunctionConfigTracker.hpp>
 #include <peripherals/Peripheral.hpp>
 
+using cornucopia::ugly_duckling::kernel::config::ConfigEnvelope;
+using cornucopia::ugly_duckling::kernel::config::StoredConfig;
 using cornucopia::ugly_duckling::peripherals::PeripheralManager;
 
 namespace cornucopia::ugly_duckling::functions {

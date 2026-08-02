@@ -5,10 +5,11 @@
 
 #include <nvs_flash.h>
 
-#include <ConfigEnvelope.hpp>
-#include <StoredConfig.hpp>
+#include <config/ConfigEnvelope.hpp>
+#include <config/StoredConfig.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
+using namespace cornucopia::ugly_duckling::kernel::config;
 
 namespace {
 
