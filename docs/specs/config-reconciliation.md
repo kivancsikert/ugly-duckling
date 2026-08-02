@@ -621,6 +621,11 @@ device-configuration *authority transfer* land in Phase 3.
       touches, and `gen_config_nvs.py` stopped seeding `device-config` (closing the item below). See
       *Migration* above for what this means for a real device upgrading from older firmware: it boots as
       if freshly minted and reconciles the full set from the server.
+      Landed later: the write into the free slot (`stageDeviceUpdate()`'s result, above) goes through
+      `storeIfChanged()` (`StoredConfig.hpp`), which skips the NVS write for any entry whose fingerprint
+      already matches what's sitting in that slot's namespace. Slots ping-pong between `a`/`b`, so the
+      free slot's previous occupant is usually not empty -- it's whatever was staged there two `UPDATE`s
+      ago -- and an entry that hasn't changed since then is already correct, making the write redundant.
 - [ ] **Retire the `nvs/write` + `restart` device-config path** once the server stops using it (keep raw
       `nvs/write` for debugging). Stop treating device-authored settings as ground truth.
 - [x] **Stop seeding `device-config` in generated NVS.** `scripts/gen_config_nvs.py` (and its

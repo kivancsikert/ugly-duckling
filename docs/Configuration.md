@@ -61,8 +61,12 @@ alongside but independent of `commands`/`responses`.
   [`stageDeviceUpdate`](../components/kernel/src/config/ConfigStaging.hpp), a pure function so the
   merge/slot-selection logic is unit-testable independent of NVS — so the destination slot ends up
   self-contained even though the `UPDATE` only carried the changed entries. The result is written
-  into the free slot's own `config-<slot>` namespace and `requested` is marked `pending` for that
-  slot. From there the two cases diverge:
+  into the free slot's own `config-<slot>` namespace via
+  [`storeIfChanged`](../components/kernel/src/config/StoredConfig.hpp), which skips the write for any
+  entry whose fingerprint already matches what's sitting there — slots ping-pong between `a`/`b`, so
+  the free slot's previous occupant often already holds the right envelope for anything that hasn't
+  changed across the last two staged sets, and there's no reason to pay a flash write to re-persist
+  it. `requested` is then marked `pending` for that slot. From there the two cases diverge:
   - **Device configuration changed** → reboot. The boot sequence (*The confirmed/requested state
     machine*, below) re-derives everything, including which functions exist, from the staged slot,
     strictly.
