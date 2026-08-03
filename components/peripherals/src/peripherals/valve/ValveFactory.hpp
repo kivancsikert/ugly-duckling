@@ -5,7 +5,7 @@
 
 #include <ArduinoJson.h>
 
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>
 #include <drivers/MotorDriver.hpp>

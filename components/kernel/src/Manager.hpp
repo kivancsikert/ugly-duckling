@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 #include <Concurrent.hpp>
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 
 namespace cornucopia::ugly_duckling::kernel {
 

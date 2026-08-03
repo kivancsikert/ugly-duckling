@@ -2,7 +2,7 @@
 
 #include <chrono>
 
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 #include <I2CManager.hpp>
 
 using namespace std::chrono;

@@ -5,7 +5,7 @@
 
 #include <tsl2591.h>
 
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 #include <I2CManager.hpp>
 #include <Telemetry.hpp>
 

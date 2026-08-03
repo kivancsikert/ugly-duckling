@@ -8,7 +8,7 @@
 #include "esp_netif_sntp.h"
 #include "esp_sntp.h"
 
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 #include <State.hpp>
 #include <Task.hpp>
 #include <utility>

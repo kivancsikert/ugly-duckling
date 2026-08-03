@@ -5,10 +5,11 @@
 
 #include <ArduinoJson.h>
 
-#include "Configuration.hpp"
-#include "NvsStore.hpp"
+#include <NvsStore.hpp>
 
-namespace cornucopia::ugly_duckling::kernel {
+#include "Configuration.hpp"
+
+namespace cornucopia::ugly_duckling::kernel::config {
 
 /**
  * @brief Loads a ConfigurationSection from NVS, and persists updates back to NVS.
@@ -77,4 +78,4 @@ std::shared_ptr<TConfiguration> loadConfigFromNvs(const std::shared_ptr<NvsStore
     return config;
 }
 
-}    // namespace cornucopia::ugly_duckling::kernel
+}    // namespace cornucopia::ugly_duckling::kernel::config

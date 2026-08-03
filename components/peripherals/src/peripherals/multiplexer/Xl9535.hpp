@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 #include <Pin.hpp>
 #include <utility>
 

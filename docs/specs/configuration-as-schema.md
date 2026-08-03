@@ -12,7 +12,7 @@
 
 ## Why
 
-`Configuration`/`Property` ([`Configuration.hpp`](../../components/kernel/src/Configuration.hpp)) were designed
+`Configuration`/`Property` ([`Configuration.hpp`](../../components/kernel/src/config/Configuration.hpp)) were designed
 in the early days as **long-lived, mutable** objects: a `Property` holds a current value you can read at any
 time, `load()` mutates it in place, and the whole tree can serialize itself back to JSON via `store()`. That is
 no longer how the firmware uses them.
@@ -42,7 +42,7 @@ to unblock reconciliation.
     (peripheral/function params into `init`).
   - [`Function.hpp:83`](../../components/functions/src/functions/Function.hpp) —
     `config->store(initConfigJson)` (function config body into `init`).
-  - [`NvsConfiguration.hpp:44`](../../components/kernel/src/NvsConfiguration.hpp) — a thin `store()` pass-through.
+  - [`NvsConfiguration.hpp:44`](../../components/kernel/src/config/NvsConfiguration.hpp) — a thin `store()` pass-through.
   - [`ConfigurationTest.cpp:29`](../../components/kernel/test/ConfigurationTest.cpp) — round-trip test.
 - **`NvsConfiguration` couples parse and persist**: its constructor reads NVS → `config->load(...)`, and
   `update()` does `config->load(json)` **and** `nvs->setJson(key, json)` in one call. Reconciliation needs

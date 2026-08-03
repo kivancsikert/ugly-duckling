@@ -4,7 +4,7 @@
 
 #include <ArduinoJson.h>
 
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 
 #include <peripherals/api/IValve.hpp>
 #include <peripherals/valve/ValveControlStrategy.hpp>

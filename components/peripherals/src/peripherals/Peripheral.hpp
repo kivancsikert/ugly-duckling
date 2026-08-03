@@ -7,7 +7,7 @@
 #include <type_traits>
 #include <vector>
 
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 #include <EspException.hpp>
 #include <I2CManager.hpp>
 #include <Manager.hpp>

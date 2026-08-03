@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 #include <Pin.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;

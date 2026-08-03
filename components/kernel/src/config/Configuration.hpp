@@ -13,7 +13,7 @@
 using std::ref;
 using std::reference_wrapper;
 
-namespace cornucopia::ugly_duckling::kernel {
+namespace cornucopia::ugly_duckling::kernel::config {
 
 class ConfigurationException
     : public std::exception {
@@ -220,7 +220,13 @@ private:
     std::vector<T> entries;
 };
 
-}    // namespace cornucopia::ugly_duckling::kernel
+}    // namespace cornucopia::ugly_duckling::kernel::config
+
+// ConfigurationSection/Property/etc. are used unqualified throughout the peripherals/functions/
+// devices tree, exactly as when they lived directly in `kernel` -- re-exporting them here (rather
+// than touching every one of those call sites) mirrors how KernelStatus.hpp re-exports
+// `kernel::mqtt` for anything that includes it.
+using namespace cornucopia::ugly_duckling::kernel::config;
 
 namespace ArduinoJson {
 
@@ -246,7 +252,7 @@ struct Converter<D> {
     }
 };
 
-using cornucopia::ugly_duckling::kernel::JsonAsString;
+using cornucopia::ugly_duckling::kernel::config::JsonAsString;
 
 template <>
 struct Converter<JsonAsString> {

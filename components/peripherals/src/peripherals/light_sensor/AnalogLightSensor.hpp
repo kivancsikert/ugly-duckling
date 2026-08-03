@@ -5,7 +5,7 @@
 
 #include <esp_system.h>
 
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 #include <Pin.hpp>
 #include <Telemetry.hpp>
 

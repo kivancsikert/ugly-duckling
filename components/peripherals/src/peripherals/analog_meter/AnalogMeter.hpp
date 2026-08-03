@@ -4,7 +4,7 @@
 #include <utility>
 
 #include <Concurrent.hpp>
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 #include <Log.hpp>
 #include <MovingAverage.hpp>
 #include <Named.hpp>

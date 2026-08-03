@@ -27,7 +27,6 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 #include <HttpUpdate.hpp>
 #include <KernelStatus.hpp>
 #include <Log.hpp>
-#include <NvsConfiguration.hpp>
 #include <NvsStore.hpp>
 #include <Strings.hpp>
 #include <UpdateFilter.hpp>
@@ -36,6 +35,7 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 #include <config/ConfigStaging.hpp>
 #include <config/ConfigState.hpp>
 #include <config/ConfigStateStore.hpp>
+#include <config/NvsConfiguration.hpp>
 #include <config/StoredConfig.hpp>
 #include <drivers/BleDriver.hpp>
 #include <drivers/RtcDriver.hpp>

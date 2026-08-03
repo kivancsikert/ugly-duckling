@@ -4,7 +4,7 @@
 #include <memory>
 #include <utility>
 
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 #include <I2CManager.hpp>
 #include <MovingAverage.hpp>
 #include <Named.hpp>
