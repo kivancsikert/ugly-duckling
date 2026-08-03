@@ -2,9 +2,9 @@
 
 #include <cmath>
 
-#include <config/Configuration.hpp>
 #include <Log.hpp>
 #include <Pin.hpp>
+#include <config/Configuration.hpp>
 
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ITemperatureSensor.hpp>

@@ -4,8 +4,8 @@
 #include <memory>
 #include <utility>
 
-#include <config/Configuration.hpp>
 #include <Named.hpp>
+#include <config/Configuration.hpp>
 #include <functions/Function.hpp>
 #include <functions/ScheduledTransitionLoop.hpp>
 

@@ -7,7 +7,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <config/Configuration.hpp>
 #include <EspException.hpp>
 #include <I2CManager.hpp>
 #include <Manager.hpp>
@@ -15,6 +14,7 @@
 #include <PulseCounter.hpp>
 #include <PwmManager.hpp>
 #include <Telemetry.hpp>
+#include <config/Configuration.hpp>
 #include <drivers/SwitchManager.hpp>
 #include <mqtt/MqttRoot.hpp>
 

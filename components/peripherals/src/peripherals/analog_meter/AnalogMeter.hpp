@@ -4,12 +4,12 @@
 #include <utility>
 
 #include <Concurrent.hpp>
-#include <config/Configuration.hpp>
 #include <Log.hpp>
 #include <MovingAverage.hpp>
 #include <Named.hpp>
 #include <Pin.hpp>
 #include <Task.hpp>
+#include <config/Configuration.hpp>
 #include <mqtt/MqttDriver.hpp>
 #include <peripherals/Peripheral.hpp>
 

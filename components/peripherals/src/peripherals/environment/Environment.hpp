@@ -3,8 +3,8 @@
 #include <concepts>
 #include <memory>
 
-#include <config/Configuration.hpp>
 #include <I2CManager.hpp>
+#include <config/Configuration.hpp>
 
 #include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <config/Configuration.hpp>
 #include <Pin.hpp>
+#include <config/Configuration.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
 
