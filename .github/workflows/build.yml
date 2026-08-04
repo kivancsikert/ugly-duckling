@@ -40,13 +40,13 @@ jobs:
       UD_LOG_VERBOSE: ""
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           submodules: "recursive"
 
       - name: Restore ccache cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ env.ESP_IDF_VERSION }}-${{ matrix.target }}-${{ matrix.ud_debug }}-${{ github.run_id }}
@@ -104,7 +104,7 @@ jobs:
 
       - name: Save ccache cache
         if: always()
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ env.ESP_IDF_VERSION }}-${{ matrix.target }}-${{ matrix.ud_debug }}-${{ github.run_id }}
@@ -124,7 +124,7 @@ jobs:
           cp build/ugly-duckling.spdx.json work/artifacts/ugly-duckling-${{ matrix.environment }}.spdx.json
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ugly-duckling-${{ matrix.environment }}
           path: work/artifacts/
@@ -134,7 +134,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Build Project
         uses: threeal/cmake-action@v2.1.0
@@ -153,10 +153,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Restore ccache cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ env.ESP_IDF_VERSION }}-${{ env.TEST_TARGET }}-embedded-test-${{ github.run_id }}
@@ -207,7 +207,7 @@ jobs:
 
       - name: Upload pytest-embedded logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pytest-embedded-logs
           path: |
@@ -221,7 +221,7 @@ jobs:
       HOSTNAME: ""
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Start Mosquitto
         uses: namoshek/mosquitto-github-action@v1
@@ -235,7 +235,7 @@ jobs:
           echo "HOSTNAME=$HOSTNAME" >> $GITHUB_ENV
 
       - name: Restore ccache cache
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ env.ESP_IDF_VERSION }}-${{ env.TEST_TARGET }}-e2e-test-${{ github.run_id }}
@@ -293,12 +293,12 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Download workflow artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           path: work/artifacts
 
@@ -332,7 +332,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           path: work/artifacts
 
@@ -340,7 +340,7 @@ jobs:
         run: ls -R
 
       - name: Release
-        uses: AButler/upload-release-assets@v3.0
+        uses: AButler/upload-release-assets@v4
         with:
           files: work/artifacts/ugly-duckling-*/*
           repo-token: ${{ secrets.GITHUB_TOKEN }}
