@@ -870,6 +870,8 @@ static void startDevice() {
         if (!success) {
             LOGE("Requested configuration failed to apply (state=%d); reverting and rebooting",
                 static_cast<int>(initState));
+            // Give the log a chance to flush before rebooting
+            Task::delay(5s);
             esp_restart();
             return;
         }
