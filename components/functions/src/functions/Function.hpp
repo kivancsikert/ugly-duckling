@@ -1,12 +1,16 @@
 #pragma once
 
 #include <Manager.hpp>
-#include <NvsConfiguration.hpp>
 #include <NvsStore.hpp>
 #include <Telemetry.hpp>
+#include <config/ConfigEnvelope.hpp>
+#include <config/StoredConfig.hpp>
 
+#include <functions/FunctionConfigTracker.hpp>
 #include <peripherals/Peripheral.hpp>
 
+using cornucopia::ugly_duckling::kernel::config::ConfigEnvelope;
+using cornucopia::ugly_duckling::kernel::config::StoredConfig;
 using cornucopia::ugly_duckling::peripherals::PeripheralManager;
 
 namespace cornucopia::ugly_duckling::functions {
@@ -18,13 +22,6 @@ struct FunctionServices {
 };
 
 struct FunctionInitParameters {
-    std::shared_ptr<MqttRoot> functionRoot() {
-        if (!mqttFunctionRoot) {
-            mqttFunctionRoot = mqttDeviceRoot->forSuffix("functions/" + name);
-        }
-        return mqttFunctionRoot;
-    }
-
     template <typename T>
     std::shared_ptr<T> peripheral(const std::string& name) const {
         return services.peripherals->getPeripheral<T>(name);
@@ -32,15 +29,19 @@ struct FunctionInitParameters {
 
     const std::string name;
     const FunctionServices& services;
-    const std::shared_ptr<MqttRoot> mqttDeviceRoot;
-    std::shared_ptr<MqttRoot> mqttFunctionRoot = nullptr;
 };
 
-using FunctionCreateFn = std::function<Handle(
+struct FunctionCreationResult {
+    Handle handle;
+    ConfigureFn configureFn;    // empty if the function doesn't implement HasConfig<TConfig>
+    std::string fingerprint;    // empty if no config, or none was found in NVS at boot
+    std::string requestedAt;    // empty if no config, or none was found in NVS at boot
+};
+
+using FunctionCreateFn = std::function<FunctionCreationResult(
     FunctionInitParameters& params,
     const std::shared_ptr<NvsStore>& nvs,
-    const std::string& jsonSettings,
-    JsonObject& initConfigJson)>;
+    const std::string& jsonSettings)>;
 using FunctionFactory = kernel::Factory<FunctionCreateFn>;
 
 // Helper to build a FunctionFactory while keeping strong types for settings/config
@@ -62,8 +63,7 @@ FunctionFactory makeFunctionFactory(
         .create = [settingsTuple, makeImpl = std::move(makeImpl)](
                       FunctionInitParameters& params,
                       const std::shared_ptr<NvsStore>& nvs,
-                      const std::string& jsonSettings,
-                      JsonObject& initConfigJson) -> Handle {
+                      const std::string& jsonSettings) -> FunctionCreationResult {
             // Construct and load settings
             auto settings = std::apply([](auto&&... a) {
                 return std::make_shared<TSettings>(std::forward<decltype(a)>(a)...);
@@ -73,56 +73,66 @@ FunctionFactory makeFunctionFactory(
 
             constexpr bool hasConfig = std::is_base_of_v<HasConfig<TConfig>, Impl>;
 
-            // We load configuration up front to ensure that we always echo it in the init message, even
-            // when the instantiation of the function fails later.
-            std::shared_ptr<TConfig> config;
-            std::shared_ptr<NvsConfiguration<TConfig>> nvsConfig;
+            // We load configuration up front so it's available for the fingerprint/requestedAt below
+            // even when the instantiation of the function fails later.
+            std::shared_ptr<TConfig> config = std::make_shared<TConfig>();
+            std::shared_ptr<StoredConfig> storedConfig;
             if constexpr (hasConfig) {
-                nvsConfig = std::make_shared<NvsConfiguration<TConfig>>(nvs, params.name);
-                config = nvsConfig->getConfig();
-                // Echo the verbatim config body in the init message
-                if (!nvsConfig->getRawJson().isNull()) {
-                    initConfigJson.set(nvsConfig->getRawJson().template as<JsonObjectConst>());
+                storedConfig = std::make_shared<StoredConfig>(nvs, params.name);
+                if (storedConfig->hasValue()) {
+                    JsonDocument dataCopy = storedConfig->data();
+                    config->load(dataCopy.as<JsonObject>());
                 }
-            } else {
-                config = std::make_shared<TConfig>();
             }
 
             // Create concrete implementation via user-provided callable
             auto impl = makeImpl(params, settings);
 
-            // Configuration lifecycle, mirroring the templated factory behavior
+            FunctionCreationResult result;
             if constexpr (hasConfig) {
                 std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(config);
+                if (storedConfig->hasValue()) {
+                    result.fingerprint = storedConfig->fingerprint();
+                    result.requestedAt = storedConfig->requestedAt();
+                }
 
-                // Subscribe for config updates
-                params.functionRoot()->subscribe("config", [name = params.name, nvsConfig, impl](const std::string&, const JsonObject& cfgJson) {
-                    LOGD("Received configuration update for function: %s", name.c_str());
-                    try {
-                        nvsConfig->update(cfgJson);
-                        if constexpr (std::is_base_of_v<HasConfig<TConfig>, Impl>) {
-                            std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(nvsConfig->getConfig());
-                        }
-                    } catch (const std::exception& e) {
-                        LOGE("Failed to update configuration for function '%s' because %s", name.c_str(), e.what());
-                    }
-                });
+                result.configureFn = [impl](JsonObjectConst data) {
+                    auto parsed = std::make_shared<TConfig>();
+                    JsonDocument copy;
+                    copy.set(data);
+                    parsed->load(copy.as<JsonObject>());
+                    std::static_pointer_cast<HasConfig<TConfig>>(impl)->configure(parsed);
+                };
             }
 
-            return Handle::wrap(std::move(impl));
+            result.handle = Handle::wrap(std::move(impl));
+            return result;
         },
     };
 }
 
-class FunctionManager final {
+/**
+ * @brief In-memory source of truth for name -> {handle, fingerprint} across every live function.
+ *
+ * Evolved from FunctionManager per docs/Configuration.md: applyLive() is the hot-reload entry
+ * point that applies an already-persisted envelope to a running function, recording the
+ * fingerprint/requestedAt only once configure() succeeds (proof-of-apply, not proof-of-receipt);
+ * manifest() reports name -> {fingerprint, requestedAt} straight from this in-memory state for the
+ * SYNC builder. The apply-and-track-fingerprint bookkeeping itself lives in FunctionConfigTracker,
+ * which has no NVS dependency and is unit-tested directly.
+ * Persistence is deliberately not this class's job: a functions-only `UPDATE` persists the whole
+ * staged slot up front, once, the same way a device-changed `UPDATE` does (docs/Configuration.md,
+ * "Applying a functions-only UPDATE") -- applyLive() only applies the change to the already-running
+ * function. It's called by the `…/update` handler in Device.hpp's registerUpdateHandler(), for its
+ * functions-only branch.
+ */
+class FunctionRegistry final {
 public:
-    FunctionManager(
+    FunctionRegistry(
         const std::shared_ptr<NvsStore>& nvs,
-        const FunctionServices& services,
-        const std::shared_ptr<MqttRoot>& mqttDeviceRoot)
+        const FunctionServices& services)
         : nvs(nvs)
         , services(services)
-        , mqttDeviceRoot(mqttDeviceRoot)
         , manager("function") {
     }
 
@@ -136,10 +146,10 @@ public:
                     FunctionInitParameters params = {
                         .name = name,
                         .services = services,
-                        .mqttDeviceRoot = mqttDeviceRoot,
                     };
-                    JsonObject initConfigJson = initJson["config"].to<JsonObject>();
-                    return factory.create(params, nvs, settings, initConfigJson);
+                    FunctionCreationResult result = factory.create(params, nvs, settings);
+                    tracker.record(name, std::move(result.configureFn), result.fingerprint, result.requestedAt);
+                    return result.handle;
                 });
             return true;
         } catch (const std::exception& e) {
@@ -148,6 +158,25 @@ public:
             initJson["error"] = std::string(e.what());
             return false;
         }
+    }
+
+    // Hot-reload entry point: applies the envelope to the running function and records the
+    // fingerprint via the tracker, only once configureFn succeeds (proof-of-apply). The envelope
+    // itself is already persisted -- by the caller, once, as part of writing the whole staged slot
+    // (docs/Configuration.md, "Applying a functions-only UPDATE") -- so a faulty body throwing here
+    // leaves NVS on the not-yet-committed staged slot and the in-memory fingerprint on the last-good
+    // one; the caller reacts to the throw by marking the attempt rejected and rebooting to revert.
+    // Throws on any failure (unknown function name, a function without configuration, or a faulty
+    // body) -- there is no cause-classified rejection yet, so this is unhandled exactly like any
+    // other faulty configuration today.
+    void applyLive(const std::string& name, const ConfigEnvelope& envelope) {
+        tracker.apply(name, envelope.getData().template as<JsonObjectConst>(), envelope.getFingerprint(), envelope.getRequestedAt());
+    }
+
+    // name -> {fingerprint, requestedAt} for every live function, straight from in-memory state --
+    // never re-reading NVS, so it reflects what actually applied.
+    std::unordered_map<std::string, FunctionManifestEntry> manifest() const {
+        return tracker.manifest();
     }
 
     void registerFactory(FunctionFactory factory) {
@@ -161,9 +190,9 @@ public:
 private:
     const std::shared_ptr<NvsStore> nvs;
     const FunctionServices services;
-    const std::shared_ptr<MqttRoot>& mqttDeviceRoot;
 
     SettingsBasedManager<FunctionFactory> manager;
+    FunctionConfigTracker tracker;
 };
 
 }    // namespace cornucopia::ugly_duckling::functions

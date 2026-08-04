@@ -24,7 +24,6 @@ def main():
     output_file = sys.argv[2]
     partition_size = sys.argv[3]
 
-    device_config_file = os.path.join(config_dir, "device-config.json")
     network_config_file = os.path.join(config_dir, "network-config.json")
 
     idf_path = os.environ.get("IDF_PATH")
@@ -32,18 +31,18 @@ def main():
         print("Error: IDF_PATH environment variable is not set", file=sys.stderr)
         sys.exit(1)
 
-    with open(device_config_file) as f:
-        device_config = json.load(f)
-
     with open(network_config_file) as f:
         network_config = json.load(f)
 
-    # Generate NVS CSV with compact JSON values
+    # Generate NVS CSV with compact JSON values. Device/function configuration is deliberately not
+    # seeded here: a freshly generated partition has no confirmed slot, so the device boots exactly
+    # like an empty slot (defaults, no functions) and reconciles the full set from the server via the
+    # empty-SYNC bootstrap (docs/specs/config-reconciliation.md, "Migration" -> "A missing/absent
+    # confirmed slot is the one bootstrap path").
     csv_content = io.StringIO()
     writer = csv.writer(csv_content, quoting=csv.QUOTE_MINIMAL)
     writer.writerow(["key", "type", "encoding", "value"])
     writer.writerow(["config", "namespace", "", ""])
-    writer.writerow(["device-config", "data", "base64", base64.b64encode(json.dumps(device_config, separators=(',', ':')).encode()).decode()])
     writer.writerow(["network-config", "data", "base64", base64.b64encode(json.dumps(network_config, separators=(',', ':')).encode()).decode()])
 
     # Write temporary CSV file

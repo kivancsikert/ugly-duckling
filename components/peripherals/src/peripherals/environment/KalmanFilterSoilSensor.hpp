@@ -3,7 +3,7 @@
 #include <chrono>
 #include <memory>
 
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ISoilMoistureSensor.hpp>
 #include <peripherals/api/ITemperatureSensor.hpp>

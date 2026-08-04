@@ -4,9 +4,9 @@
 #include <memory>
 #include <utility>
 
-#include <Configuration.hpp>
 #include <Log.hpp>
 #include <Named.hpp>
+#include <config/Configuration.hpp>
 #include <functions/Function.hpp>
 #include <functions/ScheduledTransitionLoop.hpp>
 #include <mqtt/MqttDriver.hpp>

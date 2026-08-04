@@ -5,9 +5,9 @@
 
 #include <esp_system.h>
 
-#include <Configuration.hpp>
 #include <Pin.hpp>
 #include <Telemetry.hpp>
+#include <config/Configuration.hpp>
 
 #include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>

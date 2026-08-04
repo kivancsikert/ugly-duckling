@@ -5,9 +5,9 @@
 
 #include <ArduinoJson.h>
 
-#include <Configuration.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>
+#include <config/Configuration.hpp>
 #include <drivers/MotorDriver.hpp>
 
 #include <peripherals/Motors.hpp>

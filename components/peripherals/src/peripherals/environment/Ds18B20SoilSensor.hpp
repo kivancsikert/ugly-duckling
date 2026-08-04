@@ -6,7 +6,7 @@
 
 #include <ds18x20.h>
 
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ITemperatureSensor.hpp>

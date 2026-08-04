@@ -97,8 +97,10 @@ The certificates and keys must be in Base64 encoded PEM format, each line must b
 
 ## Device configuration
 
-Hardware configuration is stored under the `device-config` key in NVS (the `config` namespace).
-This describes the device peripherals and functions.
+The device configuration describes the device's peripherals and functions. It's one of the
+reconciled configurations the server pushes via `UPDATE` and the firmware persists/applies per
+[`docs/Configuration.md`](docs/Configuration.md) — there's no local NVS seeding for it any more; a
+freshly flashed or erased device boots with none and reconciles the full set from the server.
 
 ```jsonc
 {
@@ -225,7 +227,7 @@ idf.py build -DUD_GEN=MK10_REV1      # Carrot (ESP32-C6)
 idf.py flash
 ```
 
-This flashes the full firmware: the bootloader, the partition table, the app, and the NVS config partition (generated from `config/device-config.json` and `config/network-config.json`).
+This flashes the full firmware: the bootloader, the partition table, the app, and the NVS config partition (generated from `config/network-config.json`; device configuration is no longer NVS-seeded, see *Device configuration* above).
 
 > [!WARNING]
 > Flashing the NVS partition will erase all NVS data on the device, including WiFi credentials.
@@ -246,12 +248,11 @@ idf.py build
 esptool.py write_flash 0x18000 build/config.bin
 ```
 
-Alternatively, use the NVS commands over MQTT to update individual keys without erasing the device:
+Alternatively, use the NVS commands over MQTT to update network config without erasing the device
+(device configuration is no longer set this way — it arrives only via the server's `UPDATE` message,
+see [`docs/Configuration.md`](docs/Configuration.md)):
 
 ```bash
-# Write device config
-mosquitto_pub -t "$DEVICE_ROOT/commands/nvs/write" -m '{"key":"device-config","value":{...}}'
-# Write network config
 mosquitto_pub -t "$DEVICE_ROOT/commands/nvs/write" -m '{"key":"network-config","value":{...}}'
 ```
 

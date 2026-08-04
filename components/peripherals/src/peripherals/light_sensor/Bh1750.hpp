@@ -7,9 +7,9 @@
 
 #include <bh1750.h>
 
-#include <Configuration.hpp>
 #include <I2CManager.hpp>
 #include <Telemetry.hpp>
+#include <config/Configuration.hpp>
 
 #include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>

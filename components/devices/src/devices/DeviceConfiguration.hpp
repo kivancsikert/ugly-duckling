@@ -1,13 +1,13 @@
 #pragma once
 
-#include <Configuration.hpp>
 #include <Pin.hpp>
+#include <config/Configuration.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
 
 namespace cornucopia::ugly_duckling::devices {
 
-struct DeviceSettings : ConfigurationSection {
+struct DeviceConfiguration : ConfigurationSection {
     ArrayProperty<JsonAsString> peripherals { this, "peripherals" };
     ArrayProperty<JsonAsString> functions { this, "functions" };
 

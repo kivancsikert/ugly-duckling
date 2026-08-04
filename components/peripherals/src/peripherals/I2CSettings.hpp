@@ -2,8 +2,8 @@
 
 #include <chrono>
 
-#include <Configuration.hpp>
 #include <I2CManager.hpp>
+#include <config/Configuration.hpp>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::kernel;

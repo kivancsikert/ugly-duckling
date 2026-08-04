@@ -47,7 +47,7 @@ enum class BleStatus : std::uint8_t {
     Connected
 };
 
-// No-op BLE driver used when BLE is disabled — either at runtime (settings->bleEnabled =
+// No-op BLE driver used when BLE is disabled — either at runtime (deviceConfig->bleEnabled =
 // false) or entirely at compile time on platforms without CONFIG_BT_NIMBLE_ENABLED (e.g.
 // Spinach, see docs/specs/Bluetooth.md). All methods are no-ops; getStatus() returns
 // Disabled. Subclassed by NimBleDriver where BLE is compiled in.
@@ -511,7 +511,7 @@ private:
             return;
         }
         status = BleStatus::Advertising;
-        LOGTD(BLE, "Advertising as '%s'", ble_svc_gap_device_name());
+        LOGTV(BLE, "Advertising as '%s'", ble_svc_gap_device_name());
     }
 
     // One-time setup for startAdvertising(): advertising params + AD payload (flags, name, all

@@ -5,7 +5,7 @@
 #include <chrono>
 #include <string>
 
-#include <Configuration.hpp>
+#include <config/Configuration.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
