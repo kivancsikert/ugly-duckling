@@ -482,7 +482,9 @@ void initTelemetryPublishTask(
     Task::loop("telemetry", 8192, [publishInterval, watchdog, mqttRoot, batteryManager, powerManager, wifi, ble, telemetryCollector, telemetryPublishQueue](Task& task) {
         task.markWakeTime();
 
-        ble->setBatteryLevel(static_cast<uint8_t>(batteryManager->getPercentage()));
+        if (batteryManager != nullptr) {
+            ble->setBatteryLevel(static_cast<uint8_t>(batteryManager->getPercentage()));
+        }
 
         mqttRoot->publish("telemetry", [batteryManager, powerManager, wifi, mqttRoot, telemetryCollector](JsonObject& telemetry) {
             telemetry["uptime"] = duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();

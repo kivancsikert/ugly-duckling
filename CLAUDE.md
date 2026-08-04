@@ -78,6 +78,26 @@ Quick reference — build a custom chip after editing its `.c` file:
 wokwi-cli chip compile chips/<name>.chip.c -o chips/<name>.chip.wasm
 ```
 
+## Resolving Crash Backtraces
+
+Use `lookup-backtrace.py` to symbolize a `Guru Meditation Error` backtrace. Paste the `PC:`
+value and the full `Backtrace:` line on stdin; it prints source locations, including inlined
+frames by default (inlined frames are frequently exactly where the crash is — lambdas,
+`shared_ptr` accessors, and small getters are routinely inlined).
+
+```sh
+python3 lookup-backtrace.py path/to/the-exact-crashing.elf <<< "$(pbpaste)"
+# or interactively: python3 lookup-backtrace.py path/to/the-exact-crashing.elf, then paste and Ctrl-D
+```
+
+The ELF argument is optional (defaults to `build/ugly-duckling.elf`), but must be the exact
+build that produced the log (matching version string) — not a fresh local `build-*/` output.
+The script picks the right `addr2line` binary in this order: `--target esp32|esp32s3|esp32c6`
+if passed, else the `IDF_TARGET` env var (set by `tools/activate_idf.sh carrot|spinach`), else
+a guess from the ELF path/filename (`carrot`/`esp32c6` → RISC-V, `spinach`/`esp32s3` → Xtensa
+S3, else classic Xtensa ESP32). Pass `--addr2line` to bypass all of that and name the binary
+directly. Requires the matching IDF toolchain on `PATH` either way.
+
 ## Hardware Identity (eFuse)
 
 See [docs/specs/Hardware-Version-in-eFuse.md](docs/specs/Hardware-Version-in-eFuse.md)
