@@ -366,6 +366,8 @@ void registerUpdateHandler(
         if (update.deviceChanged) {
             LOGI("Device configuration changed via update, staged into slot '%s'; rebooting to apply",
                 toString(staged.slot).c_str());
+            // Give the log a chance to flush before rebooting
+            Task::delay(5s);
             esp_restart();
             return;
         }
