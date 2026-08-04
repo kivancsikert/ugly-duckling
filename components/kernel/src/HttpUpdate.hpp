@@ -115,6 +115,12 @@ private:
             case HTTP_EVENT_ON_HEADER:
                 LOGTV(UPDATE, "HTTP header: %s: %s", event->header_key, event->header_value);
                 break;
+            case HTTP_EVENT_ON_HEADERS_COMPLETE:
+                LOGTV(UPDATE, "HTTP headers complete");
+                break;
+            case HTTP_EVENT_ON_STATUS_CODE:
+                LOGTV(UPDATE, "HTTP status code: %d", *reinterpret_cast<int*>(event->data));
+                break;
             case HTTP_EVENT_ON_DATA: {
                 LOGTD(UPDATE, "HTTP data: %d bytes", event->data_len);
                 // Keep running while we are receiving data
