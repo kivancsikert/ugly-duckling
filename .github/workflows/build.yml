@@ -136,13 +136,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Configure
+        run: cmake -G Ninja -DCMAKE_CXX_COMPILER=clang++ -S test/unit-tests -B test/unit-tests/build-native
+
       - name: Build Project
-        uses: threeal/cmake-action@v2.1.0
-        with:
-          generator: Ninja
-          cxx-compiler: clang++
-          source-dir: test/unit-tests
-          build-dir: test/unit-tests/build-native
+        run: cmake --build test/unit-tests/build-native
 
       - name: Run tests
         working-directory: test/unit-tests/build-native
