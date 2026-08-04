@@ -92,10 +92,11 @@ python3 lookup-backtrace.py path/to/the-exact-crashing.elf <<< "$(pbpaste)"
 
 The ELF argument is optional (defaults to `build/ugly-duckling.elf`), but must be the exact
 build that produced the log (matching version string) — not a fresh local `build-*/` output.
-The script guesses the right `addr2line` binary from the ELF path/filename (`carrot`/`esp32c6`
-→ RISC-V, `spinach`/`esp32s3` → Xtensa S3, else classic Xtensa ESP32); override with
-`--addr2line` if the guess is wrong. Requires the matching IDF toolchain on `PATH` — run
-`. tools/activate_idf.sh carrot` or `spinach` first.
+The script picks the right `addr2line` binary in this order: `--target esp32|esp32s3|esp32c6`
+if passed, else the `IDF_TARGET` env var (set by `tools/activate_idf.sh carrot|spinach`), else
+a guess from the ELF path/filename (`carrot`/`esp32c6` → RISC-V, `spinach`/`esp32s3` → Xtensa
+S3, else classic Xtensa ESP32). Pass `--addr2line` to bypass all of that and name the binary
+directly. Requires the matching IDF toolchain on `PATH` either way.
 
 ## Hardware Identity (eFuse)
 
