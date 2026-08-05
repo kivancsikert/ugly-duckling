@@ -161,6 +161,15 @@ static void performFactoryReset(const std::shared_ptr<LedDriver>& statusLed, boo
     esp_restart();
 }
 
+// TODO(heap-investigation): temporary boot-time heap checkpoints, remove once the two-slot
+// config protocol's memory usage regression (docs/Configuration.md) is diagnosed.
+static void logHeapCheckpoint(const char* label) {
+    LOGI("Heap checkpoint '%s': free = %lu, min-free = %lu",
+        label,
+        static_cast<unsigned long>(heap_caps_get_free_size(MALLOC_CAP_INTERNAL)),
+        static_cast<unsigned long>(heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL)));
+}
+
 std::shared_ptr<BatteryDriver> initBattery(const std::shared_ptr<DeviceDefinition>& deviceDefinition, const std::shared_ptr<I2CManager>& i2c) {
     auto battery = deviceDefinition->createBatteryDriver(i2c);
     if (battery != nullptr) {
@@ -555,6 +564,7 @@ static void startDevice() {
     auto battery = initBattery(deviceDefinition, i2c);
 
     initNvsFlash();
+    logHeapCheckpoint("after nvs flash init");
 
     // Install GPIO ISR service
     ESP_ERROR_CHECK(gpio_install_isr_service(0));
@@ -618,6 +628,8 @@ static void startDevice() {
             deviceConfirmedRequestedAt = deviceStoredConfig.requestedAt();
         }
     }
+
+    logHeapCheckpoint("after device/config-state load");
 
     const std::string modelWithRevision = deviceDefinition->model + " (rev" + std::to_string(deviceDefinition->revision) + ")";
 
@@ -750,6 +762,7 @@ static void startDevice() {
     MqttLog::init(deviceConfig->publishLogs.get(), logRecords, mqttRoot);
     registerBasicCommands(mqttRoot);
     registerNvsCommands(mqttRoot);
+    logHeapCheckpoint("after mqtt init");
 
     // SYNC trigger: a single-element overwrite queue coalesces every successful (re)connection
     // (docs/Configuration.md, "BOOT, SYNC, UPDATE") plus post-UPDATE requests into one pending
@@ -811,6 +824,7 @@ static void startDevice() {
     };
     registerUpdateHandler(mqttRoot, deviceConfirmedFingerprint, functionRegistry, configStateStore, syncTriggerQueue);
     initSyncTask(mqttRoot, syncTriggerQueue, states, functionRegistry, deviceManifestEntry, pendingSyncRejection);
+    logHeapCheckpoint("after update handler + sync task registered");
 
     // Init telemetry
     mqttRoot->registerCommand("ping", [telemetryPublisher](const JsonObject&, JsonObject& response) {
@@ -847,6 +861,7 @@ static void startDevice() {
 
     // Start ULP pulse counter after all channels have been registered by peripherals above.
     pulseCounterManager->start();
+    logHeapCheckpoint("after peripherals init");
 
     JsonDocument functionsInitDoc;
     auto functionsInitJson = functionsInitDoc.to<JsonArray>();
@@ -858,6 +873,7 @@ static void startDevice() {
             initState = InitState::FunctionError;
         }
     }
+    logHeapCheckpoint("after functions init");
 
     // Booting a `requested` set is strict (docs/Configuration.md, "The confirmed/requested state
     // machine"): unlike `confirmed` (or the empty-slot default), which boots best-effort regardless
@@ -940,6 +956,8 @@ static void startDevice() {
             CrashManager::handleCrashReport(json);
         },
         Retention::NoRetain, QoS::AtLeastOnce, 5s);
+
+    logHeapCheckpoint("before kernelReady");
 
     states->kernelReady.set();
 
