@@ -755,6 +755,8 @@ static void startDevice() {
     wifi->setOnStatusChanged([ble](const std::string& status) {
         ble->setWifiStatus(status);
     });
+    states->networkReady.awaitSet();
+    logHeapCheckpoint("after wifi connected + rtc sync (before peripherals)");
 
     // Init MQTT connection
     auto clientId = "ugly-duckling-" + macAddress;
@@ -773,6 +775,8 @@ static void startDevice() {
     mqttRoot->mqtt->onConnected([syncTriggerQueue]() {
         syncTriggerQueue->overwrite(true);
     });
+    states->mqttReady.awaitSet();
+    logHeapCheckpoint("mqtt connected (TLS handshake complete)");
 
     // Holds this boot's rejection code (if any) for the SYNC task to attach to the first SYNC it
     // publishes -- populated below, once the strict-boot outcome is known, strictly before
