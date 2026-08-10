@@ -55,7 +55,7 @@ volatile uint32_t channel_count;
 volatile uint32_t gpio_num[MAX_CHANNELS];
 
 /** Set to 1 on the first instruction of main(). Used by the main CPU to confirm startup. */
-volatile uint32_t running;
+volatile uint32_t started;
 
 /**
  * Debounce window in microseconds. Written by main CPU before coprocessor starts.
@@ -77,7 +77,7 @@ static uint32_t last_edge_cycle[MAX_CHANNELS];
 static uint32_t debounce_cycles[MAX_CHANNELS];
 
 int main(void) {
-    running = 1;
+    started = 1;
     uint32_t n = channel_count;
 
     for (uint32_t gpio_idx = 0; gpio_idx < n; gpio_idx++) {
