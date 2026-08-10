@@ -471,6 +471,15 @@ void initSyncTask(
     });
 }
 
+/**
+ * @brief Publishes `telemetry` (NoRetain, QoS 2) on the interval below. QoS 2 (not 1) matters here:
+ * esp-mqtt's outbox resends an unacked PUBLISH verbatim (same packet id, DUP set) if the ack doesn't
+ * arrive within its retransmit timeout while the connection stays up, and at QoS 1 the broker has no
+ * obligation to dedup that resend before fanning it out to subscribers. Several features
+ * (e.g. flow-meter volume, reported as a delta since last report with the on-device counter reset to
+ * 0 right after) aren't idempotent under a duplicate delivery, so QoS 2's packet-id-keyed handshake is
+ * what actually prevents the resend from being delivered twice (issue #579).
+ */
 void initTelemetryPublishTask(
     milliseconds publishInterval,
     const std::shared_ptr<Watchdog>& watchdog,
@@ -520,7 +529,7 @@ void initTelemetryPublishTask(
             powerManager->populateTelemetry(powerManagementData);
 
             auto features = telemetry["features"].to<JsonArray>();
-            telemetryCollector->collect(features); }, Retention::NoRetain, QoS::AtLeastOnce);
+            telemetryCollector->collect(features); }, Retention::NoRetain, QoS::ExactlyOnce);
 
         // Signal that we are still alive
         watchdog->restart();
@@ -906,7 +915,10 @@ static void startDevice() {
     // BOOT carries diagnostics and per-peripheral/function error feedback, but no configuration
     // bodies (docs/Configuration.md, "BOOT, SYNC, UPDATE") -- fingerprints are reported separately
     // by SYNC (initSyncTask above), gated on kernelReady. `rejection` is present only when a
-    // requested-set revert (this boot or an earlier, unreported one) left one recorded.
+    // requested-set revert (this boot or an earlier, unreported one) left one recorded. Published at
+    // QoS 2, consistent with every other outbound topic (sync, log, responses) -- also closes off the
+    // same duplicate-resend risk described on initTelemetryPublishTask above, even though BOOT's own
+    // payload has no delta/counter state that a duplicate would corrupt.
     mqttRoot->publish(
         "boot",
         [resetReason, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion, rejectionToReport](JsonObject& json) {
@@ -939,7 +951,7 @@ static void startDevice() {
 
             CrashManager::handleCrashReport(json);
         },
-        Retention::NoRetain, QoS::AtLeastOnce, 5s);
+        Retention::NoRetain, QoS::ExactlyOnce, 5s);
 
     states->kernelReady.set();
 

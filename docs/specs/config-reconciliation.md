@@ -263,7 +263,7 @@ pushes to the overwrite queue; the separate SYNC task does the publish.
 ### `BOOT`
 
 - Queued once at boot (diagnostics + per-peripheral/function `error` feedback; **no configuration bodies**),
-  delivered when MQTT connects. `NoRetain, QoS 1`.
+  delivered when MQTT connects. `NoRetain, QoS 2`.
 - If the device reboots due to a faulty `requested` configuration **before** MQTT is established, that `BOOT`
   never reaches the server — accepted; the *next* boot (which reverts to `confirmed` and always publishes
   `BOOT`) is what informs the server, carrying the rejection code (see *Rejection*).
@@ -283,6 +283,15 @@ reconnect**, so an `UPDATE` published while the device is offline is **not broke
 **This is by design and fine:** delivery of `UPDATE` is never relied upon. The device's `SYNC` on the next
 successful connection re-advertises its `confirmed` fingerprints, and the server re-pushes whatever differs.
 Reconciliation converges through SYNC-driven re-push, not through MQTT delivery guarantees.
+
+Every other outbound topic (`boot`, `telemetry`, `log`, `responses/*`) is QoS 2 too, for a different reason
+than reconciliation convergence: esp-mqtt's outbox resends an unacked PUBLISH verbatim (same packet id, DUP
+set) if the ack doesn't arrive within its retransmit timeout while the connection stays up, and QoS 2's
+packet-id-keyed handshake is what stops the broker from fanning that resend out to subscribers a second time.
+At QoS 1 (`telemetry`'s setting until issue #579) the broker has no such obligation, so a resend under a flaky
+link surfaces as a genuine duplicate delivery — harmless for continuously-sampled readings, but not for
+delta-since-last-report values (e.g. flow-meter volume) whose on-device counter is reset immediately after
+being read.
 
 ### Rejection
 
@@ -432,7 +441,8 @@ device-configuration *authority transfer* land in Phase 3.
       envelope-shaped. `ConfigEnvelope::checkJson`/`is<ConfigEnvelope>()` and the corresponding tests
       were removed along with it.
 - [x] **Split `init` into `BOOT` + `SYNC`.** `boot` keeps all diagnostics + per-peripheral/function `error`
-      feedback and **drops all configuration bodies** (`NoRetain, QoS 1`). `sync` is the fingerprint manifest
+      feedback and **drops all configuration bodies** (`NoRetain, QoS 1` at the time; bumped to `QoS 2` by
+      issue #579, see *QoS 2 + clean session* above). `sync` is the fingerprint manifest
       from the `confirmed` slot / registry (`NoRetain, QoS 2`).
       `startDevice()` in `components/devices/src/Device.hpp` now publishes `boot` instead of `init`, and the
       publish body no longer echoes the device configuration (`json["settings"]` dropped). The per-peripheral/
