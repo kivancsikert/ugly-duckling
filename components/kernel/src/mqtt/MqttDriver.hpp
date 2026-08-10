@@ -210,7 +210,7 @@ private:
         std::string payload;
         Retention retain;
         QoS qos;
-        TaskHandle_t waitingTask;
+        PendingMessagePtr pending;
         LogPublish log;
     };
 
@@ -275,7 +275,9 @@ private:
     }
 
     PublishStatus publishAndWait(const std::string& topic, const std::string& payload, Retention retain, QoS qos, ticks timeout) {
-        TaskHandle_t waitingTask = timeout == ticks::zero() ? nullptr : xTaskGetCurrentTaskHandle();
+        // Fire-and-forget publishes (timeout == 0) don't get a pending-outcome slot at all --
+        // there's nobody around to wait on it.
+        auto pending = timeout == ticks::zero() ? nullptr : std::make_shared<PendingMessage>();
 
         bool offered = eventQueue.offerIn(
             MQTT_QUEUE_TIMEOUT,
@@ -284,28 +286,21 @@ private:
                 .payload = payload,
                 .retain = retain,
                 .qos = qos,
-                .waitingTask = waitingTask,
+                .pending = pending,
                 .log = LogPublish::Log,
             });
 
         if (!offered) {
             return PublishStatus::QueueFull;
         }
-        if (waitingTask == nullptr) {
+        if (pending == nullptr) {
             return PublishStatus::Pending;
         }
 
-        // Wait for task notification
-        auto status = static_cast<PublishStatus>(ulTaskNotifyTake(pdTRUE, timeout.count()));
-        switch (status) {
-            case PublishStatus::TimeOut:
-                pendingMessages.cancelWaitingOn(waitingTask);
-                return PublishStatus::TimeOut;
-            case PublishStatus::Success:
-                return PublishStatus::Success;
-            default:
-                return PublishStatus::Failed;
-        }
+        // This timeout is purely how long *this call* is willing to block -- if it expires
+        // before the real outcome arrives, we just stop waiting; `pending` keeps the outcome
+        // slot alive for whoever (if anyone) still holds a reference to it (see PendingMessages).
+        return pending->await(timeout);
     }
 
     bool subscribe(const std::string& topic, QoS qos, SubscriptionHandler handler) {
@@ -585,7 +580,9 @@ private:
         if (ret < 0) {
             LOGTD(MQTT, "Error publishing to '%s': %s",
                 message.topic.c_str(), ret == -2 ? "outbox full" : "failure");
-            PendingMessages::notifyWaitingTask(message.waitingTask, false);
+            if (message.pending != nullptr) {
+                message.pending->resolve(PublishStatus::Failed);
+            }
         } else {
             auto messageId = ret;
 #ifdef DUMP_MQTT
@@ -594,7 +591,7 @@ private:
                     message.topic.c_str(), message.payload.length(), messageId);
             }
 #endif
-            pendingMessages.waitOn(messageId, message.waitingTask);
+            pendingMessages.waitOn(messageId, message.pending);
         }
     }
 
