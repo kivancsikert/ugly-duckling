@@ -73,27 +73,34 @@ namespace cornucopia::ugly_duckling::kernel {
 class UlpPulseCounter final : public PulseCounter {
 public:
     uint32_t getCount() const override {
-        if (ulp_running == 0U) {
-            // ULP not running, so the count won't be changing
-            return lastSeen;
+        if (ulp_started == 0U) {
+            // ULP not started yet, so no new pulses have been counted since lastSeen
+            return 0;
         }
         uint32_t current = ulp_pulse_count[channelIndex];
+        if (isDesynced(current)) {
+            return 0;
+        }
         uint32_t delta = current - lastSeen;
-        LOGTV(PULSE, "Counted %" PRIu32 " ULP pulses on pin %s, ULP running: %d",
-            delta, pin->getName().c_str(), ulp_running);
+        LOGTV(PULSE, "Counted %" PRIu32 " ULP pulses on pin %s, ULP started: %d",
+            delta, pin->getName().c_str(), ulp_started);
         return delta;
     }
 
     uint32_t reset() override {
-        if (ulp_running == 0U) {
-            // ULP not running, so the count won't be changing
-            return lastSeen;
+        if (ulp_started == 0U) {
+            // ULP not started yet, so no new pulses have been counted since lastSeen
+            return 0;
         }
         uint32_t current = ulp_pulse_count[channelIndex];
+        if (isDesynced(current)) {
+            lastSeen = current;
+            return 0;
+        }
         uint32_t delta = current - lastSeen;
         lastSeen = current;
-        LOGTV(PULSE, "Counted %" PRIu32 " ULP pulses and cleared on pin %s, ULP running: %d",
-            delta, pin->getName().c_str(), ulp_running);
+        LOGTV(PULSE, "Counted %" PRIu32 " ULP pulses and cleared on pin %s, ULP started: %d",
+            delta, pin->getName().c_str(), ulp_started);
         return delta;
     }
 
@@ -105,6 +112,23 @@ private:
     UlpPulseCounter(InternalPinPtr pin, uint32_t channelIndex)
         : pin(std::move(pin))
         , channelIndex(channelIndex) {
+    }
+
+    // Detects a coprocessor/CPU desync: current - lastSeen wraps around to a
+    // huge unsigned delta whenever current < lastSeen (e.g. the ULP-side counter
+    // was reset or corrupted in RTC slow memory, e.g. by a brownout/EMI). Checking
+    // the subtraction as a signed int32 catches exactly that case, since a "borrow"
+    // in the unsigned subtraction always produces a bit pattern that reads negative
+    // when reinterpreted as two's-complement — regardless of how large the
+    // (bogus) unsigned delta would have been. See issue #608.
+    bool isDesynced(uint32_t current) const {
+        auto delta = static_cast<int32_t>(current - lastSeen);
+        if (delta < 0) {
+            LOGTE(PULSE, "ULP pulse counter desync on pin %s (channel %" PRIu32 "): current=%" PRIu32 " < lastSeen=%" PRIu32 ", discarding delta",
+                pin->getName().c_str(), channelIndex, current, lastSeen);
+            return true;
+        }
+        return false;
     }
 
     const InternalPinPtr pin;
@@ -172,13 +196,13 @@ void PulseCounterManager::start() {
     uint32_t sensState = REG_READ(SENS_SAR_COCPU_STATE_REG);
     uint32_t intRaw = REG_READ(RTC_CNTL_INT_RAW_REG);
     // NOLINTEND(cppcoreguidelines-pro-type-cstyle-cast,performance-no-int-to-ptr)
-    LOGTD(PULSE, "COCPU_CTRL=0x%" PRIx32 " SENSE=0x%" PRIx32 " DONE=%d TRAP=%d TRAP_INT_RAW=%d running=%" PRIu32,
+    LOGTD(PULSE, "COCPU_CTRL=0x%" PRIx32 " SENSE=0x%" PRIx32 " DONE=%d TRAP=%d TRAP_INT_RAW=%d started=%" PRIu32,
         cocpuCtrl,
         sensState,
         static_cast<int>((cocpuCtrl & RTC_CNTL_COCPU_DONE_M) != 0),
         static_cast<int>((sensState & SENS_COCPU_TRAP_M) != 0),
         static_cast<int>((intRaw & RTC_CNTL_COCPU_TRAP_INT_RAW_M) != 0),
-        ulp_running);
+        ulp_started);
 #endif
 #elif defined(CONFIG_ULP_COPROC_TYPE_LP_CORE)
     ulp_lp_core_cfg_t cfg = {
