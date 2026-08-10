@@ -104,6 +104,29 @@ function nowUtcIso(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
+// Runs `fn` over `items` with at most `limit` calls in flight at once.
+// Results are returned in input order regardless of completion order.
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i], i);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  );
+  return results;
+}
+
 function isSnapshot(version: string): boolean {
   // A snapshot version ends with a commit hash like "-ga728583"
   return /-g[0-9a-f]+$/.test(version);
@@ -289,10 +312,10 @@ async function deleteVersionFromR2(
   const prefix = `${channel}/${version}/`;
   const keys = await r2ListPrefix(client, bucket, prefix);
 
-  for (const key of keys) {
+  await mapWithConcurrency(keys, 8, async (key) => {
     await r2Delete(client, bucket, key);
     console.log(`Deleted ${key}`);
-  }
+  });
 }
 
 async function pruneOldBuilds(
@@ -469,23 +492,28 @@ async function main() {
     allManifests.splice(existingIndex, 1);
   }
 
-  // Upload artifacts and build file entries
-  const files: FileEntry[] = [];
-  for (const filePath of artifactFiles.sort()) {
-    const fileName = basename(filePath);
-    const sha256 = sha256File(filePath);
-    const url = `${config.baseUrl}/${channel}/${version}/${fileName}`;
+  // Upload artifacts and build file entries. Uploads run with bounded
+  // concurrency instead of one-at-a-time, since sequential uploads were the
+  // dominant cost of this job (~1 file/sec against R2).
+  const files: FileEntry[] = await mapWithConcurrency(
+    artifactFiles.sort(),
+    8,
+    async (filePath) => {
+      const fileName = basename(filePath);
+      const sha256 = sha256File(filePath);
+      const url = `${config.baseUrl}/${channel}/${version}/${fileName}`;
 
-    await uploadArtifact(
-      client,
-      config.r2BucketName,
-      channel,
-      version,
-      filePath,
-    );
+      await uploadArtifact(
+        client,
+        config.r2BucketName,
+        channel,
+        version,
+        filePath,
+      );
 
-    files.push({ name: fileName, url, sha256 });
-  }
+      return { name: fileName, url, sha256 };
+    },
+  );
 
   // Create build manifest
   const buildManifest: BuildManifest = {
