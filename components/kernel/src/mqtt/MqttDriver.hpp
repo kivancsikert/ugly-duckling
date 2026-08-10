@@ -453,7 +453,16 @@ private:
         stopClient();
 
         esp_mqtt_client_config_t mqttConfig { };
-        configMqttClient(mqttConfig);
+        try {
+            configMqttClient(mqttConfig);
+        } catch (const std::exception& e) {
+            // Config is loaded once at startup and won't fix itself without a reboot, but we
+            // still just leave the state machine to retry on its normal cadence (see the
+            // Connecting-state timeout in runEventLoop()) rather than special-casing a backoff --
+            // the client was never started, so that retry is as cheap as this one was.
+            LOGTE(MQTT, "Cannot configure MQTT client, not connecting: %s", e.what());
+            return;
+        }
         mqttConfig.session.disable_clean_session = !startCleanSession;
         esp_mqtt_set_config(client, &mqttConfig);
         LOGTI(MQTT, "Connecting to %s:%" PRIu32 ", clean session: %d",
@@ -464,8 +473,12 @@ private:
 
     void disconnect() {
         ready.clear();
-        LOGTD(MQTT, "Disconnecting from MQTT server");
-        ESP_ERROR_CHECK(esp_mqtt_client_disconnect(client));
+        // Guard against disconnecting a client that was never started -- e.g. connect() bailed
+        // out above because of a config error, so esp_mqtt_client_start() was never called.
+        if (clientRunning) {
+            LOGTD(MQTT, "Disconnecting from MQTT server");
+            ESP_ERROR_CHECK(esp_mqtt_client_disconnect(client));
+        }
         stopClient();
     }
 
