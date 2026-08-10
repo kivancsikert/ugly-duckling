@@ -36,7 +36,7 @@ alongside but independent of `commands`/`responses`.
 
 | Topic | Direction | Retention / QoS | Carries |
 | --- | --- | --- | --- |
-| `boot` | device → server | `NoRetain`, `QoS 1` | Diagnostics: model/revision/platform, reset/wakeup reason, boot count, per-peripheral/function apply errors, and (see *Rejection reporting* below) a rejection code, if one is pending. **No configuration bodies.** |
+| `boot` | device → server | `NoRetain`, `QoS 2` | Diagnostics: model/revision/platform, reset/wakeup reason, boot count, per-peripheral/function apply errors, and (see *Rejection reporting* below) a rejection code, if one is pending. **No configuration bodies.** |
 | `sync` | device → server | `NoRetain`, `QoS 2` | The fingerprint manifest of what the device has **applied and booted with** — the `device` document plus every function — proof-of-apply, not proof-of-receipt. Built from live in-memory state, never re-derived from NVS. Also carries a rejection code (see *Rejection reporting* below) on the first `SYNC` published after a revert, alongside `BOOT`. |
 | `update` | server → device | `NoRetain`, `QoS 2` | New configuration: `{configurations: {device: envelope, <function>: envelope, ...}}`. |
 
