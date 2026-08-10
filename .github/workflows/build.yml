@@ -338,7 +338,7 @@ jobs:
         run: ls -R
 
       - name: Release
-        uses: AButler/upload-release-assets@v4
+        uses: AButler/upload-release-assets@v4.0.0
         with:
           files: work/artifacts/ugly-duckling-*/*
           repo-token: ${{ secrets.GITHUB_TOKEN }}
