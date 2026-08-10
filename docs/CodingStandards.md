@@ -9,11 +9,13 @@
 ## Static Analysis
 
 - Static analysis is via `.clang-tidy` with warnings-as-errors.
-- The clang compile DB (`build/clang/compile_commands.json`) is regenerated automatically at the end of every `idf.py build`.
+- The clang compile DB (`<build-dir>/clang/compile_commands.json`) is regenerated automatically at the end of every `idf.py build` (`<build-dir>` is whatever `-B` was passed — `build-carrot`/`build-spinach` when building via `tools/build.sh`, which defaults to `build-carrot`).
 - Run tidy manually:
 
   ```bash
-  run-clang-tidy -p build/clang -header-filter="$(pwd)/(main|components)/" <file>
+  run-clang-tidy -p build-carrot/clang -header-filter="$(pwd)/(main|components)/" <file>
+  # or, if you built spinach:
+  run-clang-tidy -p build-spinach/clang -header-filter="$(pwd)/(main|components)/" <file>
   ```
 
 - CI runs clang-tidy on every build.

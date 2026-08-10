@@ -10,7 +10,7 @@ project(ugly-duckling)
 
 add_custom_command(
     TARGET app POST_BUILD
-    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/generate-clang-compile-db.py
+    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/generate-clang-compile-db.py ${CMAKE_BINARY_DIR}
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMENT "Regenerating clang compile DB"
     VERBATIM

@@ -2,7 +2,7 @@
 """
 Generate an NVS partition binary from config JSON files.
 
-Usage: gen_config_nvs.py <config-dir> <output.bin> <size>
+Usage: gen_config_nvs.py <network-config.json> <output.bin> <size>
 """
 
 import base64
@@ -17,14 +17,12 @@ import tempfile
 
 def main():
     if len(sys.argv) != 4:
-        print(f"Usage: {sys.argv[0]} <config-dir> <output.bin> <size>", file=sys.stderr)
+        print(f"Usage: {sys.argv[0]} <network-config.json> <output.bin> <size>", file=sys.stderr)
         sys.exit(1)
 
-    config_dir = sys.argv[1]
+    network_config_file = sys.argv[1]
     output_file = sys.argv[2]
     partition_size = sys.argv[3]
-
-    network_config_file = os.path.join(config_dir, "network-config.json")
 
     idf_path = os.environ.get("IDF_PATH")
     if not idf_path:

@@ -22,7 +22,7 @@ config-templates/   # Config templates by device type (never commit real credent
 wokwi/              # Wokwi diagrams and local dev-env (docker-compose + Mosquitto)
 docs/               # Architecture, component, coding standards, and spec documents
 scripts/            # Build helpers (gen_config_nvs.py)
-tools/              # Development tools (eFuse burn/verify CLI, kalman notebook, …)
+tools/              # Development tools (build/activate wrappers, eFuse burn/verify CLI, kalman notebook, …)
   test/             # Python tests for tools/ scripts (stdlib unittest, no ESP-IDF build required)
 ```
 
@@ -57,6 +57,20 @@ target. `sdkconfig` is generated inside the build directory (e.g.
 `build-carrot/sdkconfig`), not in the project root.
 
 `tools/activate_idf.sh` reads the IDF version from `main/idf_component.yml`. When upgrading IDF, update the version there (and in `components/kernel/idf_component.yml` and `.github/workflows/build.yml`); the script picks it up automatically.
+
+`tools/build.sh [carrot|spinach] [idf.py args...]` wraps the two steps above:
+it sources `activate_idf.sh` for the given platform and runs `idf.py` with
+`-B build-<platform>` already set, forwarding any remaining arguments. The
+platform argument is optional and defaults to `carrot` when omitted. Like
+`activate_idf.sh`, it must be **sourced**, not executed, and run from the
+project root — IDF's own activation script only exports its environment
+variables when it detects it's sourced directly by an interactive shell, so
+nested inside an executed script it refuses to run:
+
+```sh
+. tools/build.sh build                          # carrot (default)
+. tools/build.sh spinach -DUD_NETWORK_CONFIG=config/network-config.prod.json build app-flash monitor
+```
 
 ## Coding Style
 

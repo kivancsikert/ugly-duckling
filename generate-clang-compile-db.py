@@ -8,10 +8,16 @@
 # file would add and injects them as -isystem flags so that clang-tidy sees the
 # correct (picolibc) headers instead of the legacy newlib ones.
 #
+# Usage: generate-clang-compile-db.py [build-dir]
+#
+# build-dir defaults to "build-carrot" (matching tools/build.sh's default
+# platform); pass the actual build directory (e.g. "build-spinach") when
+# building a different platform.
 
 import json
 import subprocess
 import re
+import sys
 from pathlib import Path
 
 # Flags from GCC that are not supported by Clang
@@ -102,7 +108,8 @@ def fix_compile_commands(input_path, output_path):
 
 # --- Main ---
 if __name__ == "__main__":
-    input_file = "build/compile_commands.json"
-    output_file = "build/clang/compile_commands.json"
+    build_dir = sys.argv[1] if len(sys.argv) > 1 else "build-carrot"
+    input_file = f"{build_dir}/compile_commands.json"
+    output_file = f"{build_dir}/clang/compile_commands.json"
 
     fix_compile_commands(input_file, output_file)
