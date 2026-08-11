@@ -25,17 +25,22 @@ using namespace cornucopia::ugly_duckling::peripherals::valve;
 
 namespace cornucopia::ugly_duckling::devices {
 
-class UglyDucklingMk11Rev1 : public DeviceDefinition {
+class UglyDucklingMk12Rev1 : public DeviceDefinition {
 public:
-    explicit UglyDucklingMk11Rev1()
-        : DeviceDefinition({ .model = "mk11", .revision = 1, .boot = GPIO_NUM_9, .status = GPIO_NUM_8 }) {
+    explicit UglyDucklingMk12Rev1()
+        : DeviceDefinition({ .model = "mk12", .revision = 1, .boot = GPIO_NUM_9, .status = GPIO_NUM_8 }) {
         rtc_clk_32k_enable(true);
+
+        // Pull buzzer low
+        BUZZER->pinMode(Pin::Mode::Output);
+        BUZZER->digitalWrite(0);
     }
 
-    std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& _i2c) override {
-        return std::make_shared<AnalogBatteryDriver>(
-            BAT_LEVEL,
-            2,    // RBATL1 (5.6 MΩ) / RBATL2 (5.6 MΩ) voltage divider: V_VBAT = V_BAT_LEVEL × 2
+    std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& i2c) override {
+        return std::make_shared<Bq27220Driver>(
+            i2c,
+            LP_SDA,
+            LP_SCL,
             BatteryParameters {
                 .maximumVoltage = 4100,
                 .bootThreshold = 3300,
@@ -64,15 +69,21 @@ protected:
     DEFINE_PIN(GPIO_NUM_0, XTAL32K_P, "XTAL_32K_P")
     DEFINE_PIN(GPIO_NUM_1, XTAL32K_N, "XTAL_32K_N")
 
-    // Battery level behind a voltage divider (RBATL1 = 5.6 MΩ, RBATL2 = 5.6 MΩ)
-    DEFINE_PIN(GPIO_NUM_2, BAT_LEVEL)
+    // Motor fault pin
+    DEFINE_PIN(GPIO_NUM_2, NFAULT)
+
+    // Flow meter B
+    DEFINE_PIN(GPIO_NUM_3, IFLOWB)
+
+    // Flow meter B
+    DEFINE_PIN(GPIO_NUM_4, BAT_GPOUT)
 
     // Flow meter A
-    DEFINE_PIN(GPIO_NUM_3, IFLOWA)
+    DEFINE_PIN(GPIO_NUM_5, IFLOWA)
 
     // Internal I2C
-    DEFINE_PIN(GPIO_NUM_6, SDA)
-    DEFINE_PIN(GPIO_NUM_7, SCL)
+    DEFINE_PIN(GPIO_NUM_6, LP_SDA)
+    DEFINE_PIN(GPIO_NUM_7, LP_SCL)
 
     // Status LED 2
     DEFINE_PIN(GPIO_NUM_9, STATUS2)
@@ -84,9 +95,6 @@ protected:
     // USB
     DEFINE_PIN(GPIO_NUM_12, DMINUS, "D-")
     DEFINE_PIN(GPIO_NUM_13, DPLUS, "D+")
-
-    // Flow meter B
-    DEFINE_PIN(GPIO_NUM_15, IFLOWB)
 
     // UART
     DEFINE_PIN(GPIO_NUM_16, TXD0)
@@ -101,8 +109,8 @@ protected:
     // Enable / disable external load
     DEFINE_PIN(GPIO_NUM_22, LOADEN)
 
-    // Motor fault pin
-    DEFINE_PIN(GPIO_NUM_23, NFAULT)
+    // Buzzer
+    DEFINE_PIN(GPIO_NUM_23, BUZZER)
 };
 
 }    // namespace cornucopia::ugly_duckling::devices
