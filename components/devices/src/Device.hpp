@@ -9,8 +9,10 @@
 #define TOSTRING(x) STRINGIFY(x)
 
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -23,11 +25,14 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 #include <Console.hpp>
 #include <CrashManager.hpp>
 #include <DebugConsole.hpp>
+#include <FirmwareRollback.hpp>
+#include <FirmwareUpdateDecision.hpp>
 #include <HardwareVersion.hpp>
 #include <HttpUpdate.hpp>
 #include <KernelStatus.hpp>
 #include <Log.hpp>
 #include <NvsStore.hpp>
+#include <Restart.hpp>
 #include <Strings.hpp>
 #include <UpdateFilter.hpp>
 #include <config/ConfigBootPlan.hpp>
@@ -158,7 +163,7 @@ static void performFactoryReset(const std::shared_ptr<LedDriver>& statusLed, boo
     }
 
     LOGI(" - Restarting...");
-    esp_restart();
+    delayedRestart();
 }
 
 std::shared_ptr<BatteryDriver> initBattery(const std::shared_ptr<DeviceDefinition>& deviceDefinition, const std::shared_ptr<I2CManager>& i2c) {
@@ -208,9 +213,7 @@ std::shared_ptr<MqttRoot> initMqtt(const std::shared_ptr<ModuleStates>& states, 
 void registerBasicCommands(const std::shared_ptr<MqttRoot>& mqttRoot) {
     mqttRoot->registerCommand("restart", [](const JsonObject&, JsonObject&) {
         printf("Restarting...\n");
-        (void) fflush(stdout);
-        fsync(fileno(stdout));
-        esp_restart();
+        delayedRestart();
     });
     mqttRoot->registerCommand("sleep", [](const JsonObject& request, JsonObject& _response) {
         seconds duration = seconds(request["duration"].as<int64_t>());
@@ -283,157 +286,211 @@ void registerHttpUpdateCommand(const std::shared_ptr<MqttRoot>& mqttRoot, const 
     });
 }
 
+enum class ConfigUpdateResult : std::uint8_t {
+    NoChanges,          // configurations absent or nothing differs from what's held
+    DeviceChanged,      // staged into free slot, needs reboot to apply
+    FunctionsApplied,   // hot-reloaded live, succeeded and committed
+    FunctionsFailed,    // hot-reload failed, needs reboot to revert
+};
+
 /**
- * @brief Subscribes to `update` (NoRetain, QoS 2) -- the only config-in path
- * (docs/Configuration.md, "BOOT, SYNC, UPDATE"). Filters incoming configurations by the fingerprints
- * already held (device + every live function), then stages the merged, self-contained result into
- * the free slot -- the same staging step regardless of what changed, since a functions-only change
- * is just as much an atomic commit/revert candidate as a device change is (docs/Configuration.md,
- * "Applying a functions-only UPDATE"). From there the two cases diverge:
- *   - **Device configuration changed** -> reboot; the boot sequence (*The confirmed/requested state
- *     machine*) re-derives everything, including which functions exist, from the staged slot,
- *     strictly.
- *   - **Only function configuration(s) changed** -> hot-reload live, without a reboot on the happy
- *     path: mark the staged slot `attempted`, apply each changed function via
- *     FunctionRegistry::applyLive(), then commit -- a single `config-state` pointer flip, reached via
- *     recordStrictBootOutcome(), the very same commit/reject decision a strict boot makes, just
- *     driven by a live apply instead of a boot attempt. Any failure marks the slot `rejected` and
- *     reboots, so the boot-time revert machinery restores the untouched previous confirmed slot,
- *     exactly as it would for a failed device-changed attempt.
- * A successful commit (either branch reaching it) pushes to syncTriggerQueue so the SYNC task
- * re-advertises the new fingerprints without waiting for the next reconnect; a reboot (device-changed,
- * or a functions-only revert) means SYNC instead follows from the next boot's
- * connection-established trigger.
+ * @brief Processes the `configurations` half of an `UPDATE` message: filters against held
+ * fingerprints, stages into the free slot, then either reboots (device changed) or hot-reloads
+ * (functions only). Returns what happened so the caller can decide the terminal action --
+ * including whether a firmware download (handled separately) should subsume the reboot.
+ *
+ * docs/Configuration.md, "BOOT, SYNC, UPDATE" and "Applying a functions-only UPDATE".
  *
  * The confirmed baseline `stageDeviceUpdate()` merges against is re-read fresh from
- * `configStateStore->load()` on every `UPDATE`, not captured once at boot: a functions-only commit
- * earlier in this same boot session moves `confirmed` to a different slot without a reboot, and the
- * next `UPDATE` must see that new location, not a stale one.
+ * `configStateStore->load()` on every call, not captured once at boot: a functions-only commit
+ * earlier in this same boot session moves `confirmed` to a different slot without a reboot, and
+ * the next `UPDATE` must see that new location, not a stale one.
+ */
+ConfigUpdateResult applyConfigUpdate(
+    JsonObjectConst configurations,
+    const std::string& deviceConfirmedFingerprint,
+    const std::shared_ptr<FunctionRegistry>& functionRegistry,
+    const std::shared_ptr<ConfigStateStore>& configStateStore) {
+
+    if (configurations.isNull()) {
+        LOGD("No 'configurations' in update");
+        return ConfigUpdateResult::NoChanges;
+    }
+
+    auto manifest = functionRegistry->manifest();
+    std::unordered_map<std::string, std::string> heldFingerprints;
+    for (const auto& [name, entry] : manifest) {
+        heldFingerprints[name] = entry.fingerprint;
+    }
+    heldFingerprints[DEVICE_CONFIGURATION_NAME] = deviceConfirmedFingerprint;
+
+    FilteredUpdate update = filterUpdate(configurations, heldFingerprints);
+    if (update.changed.empty()) {
+        LOGD("Ignoring update: nothing differs from what's currently held");
+        return ConfigUpdateResult::NoChanges;
+    }
+
+    // Gather the full set the device is currently confirmed/running as, so the free slot ends
+    // up self-contained: every entry not touched by this UPDATE is copied verbatim, and
+    // stageDeviceUpdate() overwrites the rest. A confirmed slot is always fully self-contained
+    // (device + every live function) -- reading it is unconditional. With no confirmed slot at
+    // all, the baseline is simply empty: the very first UPDATE a fresh device ever gets is
+    // necessarily device-changed (no function can exist without a device configuration defining
+    // it), so `update.changed` alone already carries everything needed.
+    ConfigState state = configStateStore->load();
+    std::unordered_map<std::string, ConfigEnvelope> currentConfigurations;
+    if (state.confirmed) {
+        auto confirmedNvs = std::make_shared<NvsStore>("config-" + toString(*state.confirmed));
+        currentConfigurations[DEVICE_CONFIGURATION_NAME] = StoredConfig(confirmedNvs, DEVICE_CONFIGURATION_NAME).configEnvelope();
+        for (const auto& [name, entry] : manifest) {
+            currentConfigurations[name] = StoredConfig(confirmedNvs, name).configEnvelope();
+        }
+    }
+
+    StagedUpdate staged = stageDeviceUpdate(state, currentConfigurations, update.changed);
+    auto slotNvs = std::make_shared<NvsStore>("config-" + toString(staged.slot));
+    for (const auto& [name, envelope] : staged.configurations) {
+        // The free slot is whichever one wasn't confirmed -- its previous occupant, from two
+        // staged sets ago, may already hold the correct envelope for an entry this UPDATE didn't
+        // touch, so skip the write rather than re-persisting something already there.
+        storeIfChanged(slotNvs, name, envelope);
+    }
+    configStateStore->save(staged.nextState);
+
+    if (update.deviceChanged) {
+        LOGI("Device configuration changed via update, staged into slot '%s'",
+            toString(staged.slot).c_str());
+        return ConfigUpdateResult::DeviceChanged;
+    }
+
+    // Functions-only: hot-reload instead of rebooting, but through the same
+    // pending -> attempted -> commit/reject machinery a device-changed UPDATE uses across a
+    // reboot, so a bad function body reverts atomically instead of leaving a half-applied
+    // confirmed slot behind.
+    ConfigState attempted = staged.nextState;
+    // stageDeviceUpdate() unconditionally populates `requested`
+    if (!attempted.requested.has_value()) {
+        LOGE("BUG: staged update has no requested config");
+        return ConfigUpdateResult::FunctionsFailed;
+    }
+    attempted.requested->status = RequestedConfigStatus::Attempted;
+    configStateStore->save(attempted);
+
+    bool success = true;
+    for (const auto& entry : update.changed) {
+        try {
+            functionRegistry->applyLive(entry.name, entry.envelope);
+        } catch (const std::exception& e) {
+            LOGE("Failed to apply configuration update for '%s': %s", entry.name.c_str(), e.what());
+            success = false;
+            break;
+        }
+    }
+
+    ConfigState outcome = recordStrictBootOutcome(attempted, staged.slot, success, RejectionCode::Internal);
+    configStateStore->save(outcome);
+
+    if (!success) {
+        LOGE("Functions-only update failed to apply; will reboot to revert");
+        return ConfigUpdateResult::FunctionsFailed;
+    }
+
+    LOGI("Functions-only update applied and committed to slot '%s'", toString(staged.slot).c_str());
+    return ConfigUpdateResult::FunctionsApplied;
+}
+
+/**
+ * @brief Subscribes to `update` (NoRetain, QoS 2) -- the combined config + firmware inbound path.
+ *
+ * Each UPDATE can carry a `configurations` entry (config reconciliation, docs/Configuration.md)
+ * and/or a `firmware` entry (firmware reconciliation, docs/specs/firmware-update-via-sync-update.md).
+ * The handler processes them in order -- config first, firmware second -- and picks a single
+ * terminal action:
+ *   - **Firmware present**: `HttpUpdater::startUpdate()` persists the URL and schedules a delayed
+ *     reboot, which subsumes any config-driven reboot (device-changed staging or functions-only
+ *     revert) that would otherwise need its own `esp_restart()`.
+ *   - **No firmware, config needs reboot**: `esp_restart()` directly (device-changed or
+ *     functions-only failure).
+ *   - **No firmware, functions-only succeeded**: push to `syncTriggerQueue` to re-advertise the
+ *     new fingerprints.
  */
 void registerUpdateHandler(
     const std::shared_ptr<MqttRoot>& mqttRoot,
     const std::string& deviceConfirmedFingerprint,
     const std::shared_ptr<FunctionRegistry>& functionRegistry,
     const std::shared_ptr<ConfigStateStore>& configStateStore,
-    const std::shared_ptr<CopyQueue<bool>>& syncTriggerQueue) {
-    mqttRoot->subscribe("update", QoS::ExactlyOnce, [deviceConfirmedFingerprint, functionRegistry, configStateStore, syncTriggerQueue](const std::string&, const JsonObject& request) {
-        JsonObjectConst configurations = request["configurations"];
-        if (configurations.isNull()) {
-            LOGW("Ignoring update with no 'configurations'");
+    const std::shared_ptr<CopyQueue<bool>>& syncTriggerQueue,
+    const std::shared_ptr<NvsStore>& nvs) {
+    mqttRoot->subscribe("update", QoS::ExactlyOnce, [deviceConfirmedFingerprint, functionRegistry, configStateStore, syncTriggerQueue, nvs](const std::string&, const JsonObject& request) {
+        auto firmwareUrl = parseFirmwareUpdate(request["firmware"], firmwareVersion);
+        if (firmwareUrl) {
+            LOGI("Firmware update available, will download from %s", firmwareUrl->c_str());
+        } else if (!request["firmware"].isNull()) {
+            LOGD("Firmware entry present but no action needed (malformed or already current)");
+        }
+
+        auto configResult = applyConfigUpdate(request["configurations"], deviceConfirmedFingerprint, functionRegistry, configStateStore);
+
+        // Single terminal action: firmware download (with its own delayed reboot) takes priority
+        // and subsumes any config-driven reboot; without firmware, the config result decides.
+        if (firmwareUrl) {
+            HttpUpdater::startUpdate(*firmwareUrl, nvs);
             return;
         }
-
-        auto manifest = functionRegistry->manifest();
-        std::unordered_map<std::string, std::string> heldFingerprints;
-        for (const auto& [name, entry] : manifest) {
-            heldFingerprints[name] = entry.fingerprint;
-        }
-        heldFingerprints[DEVICE_CONFIGURATION_NAME] = deviceConfirmedFingerprint;
-
-        FilteredUpdate update = filterUpdate(configurations, heldFingerprints);
-        if (update.changed.empty()) {
-            LOGD("Ignoring update: nothing differs from what's currently held");
-            return;
-        }
-
-        // Gather the full set the device is currently confirmed/running as, so the free slot ends
-        // up self-contained: every entry not touched by this UPDATE is copied verbatim, and
-        // stageDeviceUpdate() overwrites the rest. A confirmed slot is always fully self-contained
-        // (device + every live function) -- reading it is unconditional. With no confirmed slot at
-        // all, the baseline is simply empty: the very first UPDATE a fresh device ever gets is
-        // necessarily device-changed (no function can exist without a device configuration defining
-        // it), so `update.changed` alone already carries everything needed.
-        ConfigState state = configStateStore->load();
-        std::unordered_map<std::string, ConfigEnvelope> currentConfigurations;
-        if (state.confirmed) {
-            auto confirmedNvs = std::make_shared<NvsStore>("config-" + toString(*state.confirmed));
-            currentConfigurations[DEVICE_CONFIGURATION_NAME] = StoredConfig(confirmedNvs, DEVICE_CONFIGURATION_NAME).configEnvelope();
-            for (const auto& [name, entry] : manifest) {
-                currentConfigurations[name] = StoredConfig(confirmedNvs, name).configEnvelope();
-            }
-        }
-
-        StagedUpdate staged = stageDeviceUpdate(state, currentConfigurations, update.changed);
-        auto slotNvs = std::make_shared<NvsStore>("config-" + toString(staged.slot));
-        for (const auto& [name, envelope] : staged.configurations) {
-            // The free slot is whichever one wasn't confirmed -- its previous occupant, from two
-            // staged sets ago, may already hold the correct envelope for an entry this UPDATE didn't
-            // touch, so skip the write rather than re-persisting something already there.
-            storeIfChanged(slotNvs, name, envelope);
-        }
-        configStateStore->save(staged.nextState);
-
-        if (update.deviceChanged) {
-            LOGI("Device configuration changed via update, staged into slot '%s'; rebooting to apply",
-                toString(staged.slot).c_str());
-            // Give the log a chance to flush before rebooting
-            Task::delay(5s);
-            esp_restart();
-            return;
-        }
-
-        // Functions-only: hot-reload instead of rebooting, but through the same
-        // pending -> attempted -> commit/reject machinery a device-changed UPDATE uses across a
-        // reboot, so a bad function body reverts atomically instead of leaving a half-applied
-        // confirmed slot behind.
-        ConfigState attempted = staged.nextState;
-        attempted.requested->status = RequestedConfigStatus::Attempted;
-        configStateStore->save(attempted);
-
-        bool success = true;
-        for (const auto& entry : update.changed) {
-            try {
-                functionRegistry->applyLive(entry.name, entry.envelope);
-            } catch (const std::exception& e) {
-                LOGE("Failed to apply configuration update for '%s': %s", entry.name.c_str(), e.what());
-                success = false;
+        switch (configResult) {
+            case ConfigUpdateResult::DeviceChanged:
+            case ConfigUpdateResult::FunctionsFailed:
+                delayedRestart();
                 break;
-            }
+            case ConfigUpdateResult::FunctionsApplied:
+                syncTriggerQueue->overwrite(true);
+                break;
+            case ConfigUpdateResult::NoChanges:
+                break;
         }
-
-        ConfigState outcome = recordStrictBootOutcome(attempted, staged.slot, success, RejectionCode::Internal);
-        configStateStore->save(outcome);
-
-        if (!success) {
-            LOGE("Functions-only update failed to apply; reverting and rebooting");
-            esp_restart();
-            return;
-        }
-
-        LOGI("Functions-only update applied and committed to slot '%s'", toString(staged.slot).c_str());
-        syncTriggerQueue->overwrite(true);
     });
 }
 
 /**
  * @brief Publishes `sync` (NoRetain, QoS 2): the manifest of fingerprints/requestedAt the device
- * has applied and booted with -- the `device` document plus every function -- read straight from
- * in-memory state, never re-derived from NVS (docs/Configuration.md, "BOOT, SYNC, UPDATE").
+ * currently holds, plus the firmware identity (`platform`, `version`) the server needs for
+ * firmware reconciliation (docs/specs/firmware-update-via-sync-update.md) -- all read straight
+ * from in-memory state, never re-derived from NVS (docs/Configuration.md, "BOOT, SYNC, UPDATE").
  * `deviceManifestEntry` is the device's own fingerprint/requestedAt: unlike a function's, it can be
  * captured once at boot and passed through unchanged for the life of the process, since a device
  * configuration change always reboots rather than hot-reloading (see registerUpdateHandler).
  *
- * `pendingRejection` carries this boot's rejection code (if any) so it can ride on the first SYNC
- * published after boot, alongside BOOT (docs/Configuration.md, "Rejection reporting") -- it is
- * consumed (reset to nullopt) right here, so a later SYNC in the same boot session doesn't repeat
- * it.
+ * `pendingConfigRejection` carries this boot's config rejection code (if any) so it can ride on the
+ * first SYNC published after boot, alongside BOOT (docs/Configuration.md, "Rejection reporting")
+ * -- it is consumed (reset to nullopt) right here, so a later SYNC in the same boot session doesn't
+ * repeat it. `pendingFirmwareRejection` works the same way for a failed firmware download/install
+ * (docs/specs/firmware-update-via-sync-update.md, "Rejection reporting").
  */
 void publishSync(
     const std::shared_ptr<MqttRoot>& mqttRoot,
     const std::shared_ptr<FunctionRegistry>& functionRegistry,
     const FunctionManifestEntry& deviceManifestEntry,
-    const std::shared_ptr<std::optional<RejectionCode>>& pendingRejection) {
-    std::optional<RejectionCode> rejection = *pendingRejection;
-    *pendingRejection = std::nullopt;
+    const std::shared_ptr<std::optional<RejectionCode>>& pendingConfigRejection,
+    const std::shared_ptr<std::optional<RejectionCode>>& pendingFirmwareRejection) {
+    std::optional<RejectionCode> configRejection = *pendingConfigRejection;
+    *pendingConfigRejection = std::nullopt;
+    std::optional<RejectionCode> firmwareRejection = *pendingFirmwareRejection;
+    *pendingFirmwareRejection = std::nullopt;
     mqttRoot->publish(
         "sync",
-        [functionRegistry, deviceManifestEntry, rejection](JsonObject& json) {
+        [functionRegistry, deviceManifestEntry, configRejection, firmwareRejection](JsonObject& json) {
             auto configurations = json["configurations"].to<JsonObject>();
             auto manifest = functionRegistry->manifest();
             manifest[DEVICE_CONFIGURATION_NAME] = deviceManifestEntry;
             writeSyncManifest(configurations, manifest);
-            if (rejection) {
-                json["rejection"] = static_cast<int>(*rejection);
+            if (configRejection) {
+                json["rejection"] = static_cast<int>(*configRejection);
+            }
+            auto firmware = json["firmware"].to<JsonObject>();
+            firmware["platform"] = UD_PLATFORM;
+            firmware["version"] = firmwareVersion;
+            if (firmwareRejection) {
+                firmware["rejection"] = static_cast<int>(*firmwareRejection);
             }
         },
         Retention::NoRetain, QoS::ExactlyOnce);
@@ -452,9 +509,9 @@ void publishSync(
  * snapshot from trigger time, the about-to-happen publish already answers them, so leaving them
  * queued would only cause an immediate, redundant re-publish straight after this one.
  *
- * `pendingRejection` is populated by the caller (`startDevice()`) strictly before `kernelReady` is
- * set, so `awaitSet()` below establishes happens-after visibility of it regardless of how early a
- * trigger arrives.
+ * `pendingConfigRejection` and `pendingFirmwareRejection` are populated by the caller
+ * (`startDevice()`) strictly before `kernelReady` is set, so `awaitSet()` below establishes
+ * happens-after visibility of them regardless of how early a trigger arrives.
  */
 void initSyncTask(
     const std::shared_ptr<MqttRoot>& mqttRoot,
@@ -462,12 +519,13 @@ void initSyncTask(
     const std::shared_ptr<ModuleStates>& states,
     const std::shared_ptr<FunctionRegistry>& functionRegistry,
     const FunctionManifestEntry& deviceManifestEntry,
-    const std::shared_ptr<std::optional<RejectionCode>>& pendingRejection) {
-    Task::loop("sync", 4096, [mqttRoot, syncTriggerQueue, states, functionRegistry, deviceManifestEntry, pendingRejection](Task&) {
+    const std::shared_ptr<std::optional<RejectionCode>>& pendingConfigRejection,
+    const std::shared_ptr<std::optional<RejectionCode>>& pendingFirmwareRejection) {
+    Task::loop("sync", 4096, [mqttRoot, syncTriggerQueue, states, functionRegistry, deviceManifestEntry, pendingConfigRejection, pendingFirmwareRejection](Task&) {
         syncTriggerQueue->take();
         states->kernelReady.awaitSet();
         syncTriggerQueue->clear();
-        publishSync(mqttRoot, functionRegistry, deviceManifestEntry, pendingRejection);
+        publishSync(mqttRoot, functionRegistry, deviceManifestEntry, pendingConfigRejection, pendingFirmwareRejection);
     });
 }
 
@@ -773,11 +831,30 @@ static void startDevice() {
     // Holds this boot's rejection code (if any) for the SYNC task to attach to the first SYNC it
     // publishes -- populated below, once the strict-boot outcome is known, strictly before
     // kernelReady is set (docs/Configuration.md, "Rejection reporting").
-    auto pendingSyncRejection = std::make_shared<std::optional<RejectionCode>>();
+    auto pendingConfigRejection = std::make_shared<std::optional<RejectionCode>>();
+
+    // Firmware rejection: same pattern as pendingConfigRejection, but for a failed firmware
+    // download/install (docs/specs/firmware-update-via-sync-update.md, "Rejection reporting").
+    // Populated here from performPendingHttpUpdateIfNecessary()'s return value, consumed once
+    // by the first SYNC this boot publishes.
+    auto pendingFirmwareRejection = std::make_shared<std::optional<RejectionCode>>();
 
     // Handle any pending HTTP update (will reboot if update was required and was successful)
     registerHttpUpdateCommand(mqttRoot, configNvs);
-    HttpUpdater::performPendingHttpUpdateIfNecessary(configNvs, wifi, watchdog);
+    auto firmwareDownloadRejection = HttpUpdater::performPendingHttpUpdateIfNecessary(configNvs, wifi, watchdog);
+
+    // Detect whether the bootloader rolled back from a failed OTA partition. This and a failed
+    // download cannot co-occur: a failed download never writes a new partition, so there's nothing
+    // for the bootloader to roll back from. If both somehow fire (defense in depth), the rollback
+    // takes priority — it's the more severe signal.
+    auto rollback = detectAndClearRollback();
+
+    // Thread whichever rejection source fired (at most one) to BOOT and SYNC
+    if (rollback) {
+        *pendingFirmwareRejection = rollback->rejectionCode;
+    } else {
+        *pendingFirmwareRejection = firmwareDownloadRejection;
+    }
 
     auto peripheralsNvs = std::make_shared<NvsStore>("perf-state");
     auto pulseCounterManager = std::make_shared<PulseCounterManager>();
@@ -818,8 +895,8 @@ static void startDevice() {
         .fingerprint = deviceConfirmedFingerprint,
         .requestedAt = deviceConfirmedRequestedAt,
     };
-    registerUpdateHandler(mqttRoot, deviceConfirmedFingerprint, functionRegistry, configStateStore, syncTriggerQueue);
-    initSyncTask(mqttRoot, syncTriggerQueue, states, functionRegistry, deviceManifestEntry, pendingSyncRejection);
+    registerUpdateHandler(mqttRoot, deviceConfirmedFingerprint, functionRegistry, configStateStore, syncTriggerQueue, configNvs);
+    initSyncTask(mqttRoot, syncTriggerQueue, states, functionRegistry, deviceManifestEntry, pendingConfigRejection, pendingFirmwareRejection);
 
     // Init telemetry
     mqttRoot->registerCommand("ping", [telemetryPublisher](const JsonObject&, JsonObject& response) {
@@ -881,9 +958,7 @@ static void startDevice() {
         if (!success) {
             LOGE("Requested configuration failed to apply (state=%d); reverting and rebooting",
                 static_cast<int>(initState));
-            // Give the log a chance to flush before rebooting
-            Task::delay(5s);
-            esp_restart();
+            delayedRestart();
             return;
         }
         configState = outcome;
@@ -897,7 +972,7 @@ static void startDevice() {
     // which waits on kernelReady + a live MQTT connection, and SYNC too since it's what most
     // clients are already watching for reconciliation state. Cleared from config-state immediately
     // (not after confirmed delivery), matching this system's existing no-delivery-guarantees
-    // posture; `pendingSyncRejection` carries the in-memory copy to the SYNC task, which consumes
+    // posture; `pendingConfigRejection` carries the in-memory copy to the SYNC task, which consumes
     // it after its first publish so later SYNCs in this boot session don't repeat it.
     std::optional<RejectionCode> rejectionToReport = configState.rejection;
     if (rejectionToReport) {
@@ -905,7 +980,7 @@ static void startDevice() {
         cleared.rejection.reset();
         configStateStore->save(cleared);
     }
-    *pendingSyncRejection = rejectionToReport;
+    *pendingConfigRejection = rejectionToReport;
 
     initTelemetryPublishTask(deviceConfig->publishInterval.get(), watchdog, mqttRoot, batteryManager, powerManager, wifi, ble, telemetryCollector, telemetryPublishQueue);
 
@@ -921,7 +996,7 @@ static void startDevice() {
     // payload has no delta/counter state that a duplicate would corrupt.
     mqttRoot->publish(
         "boot",
-        [resetReason, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion, rejectionToReport](JsonObject& json) {
+        [resetReason, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion, rejectionToReport, firmwareDownloadRejection, rollback](JsonObject& json) {
             json["model"] = deviceDefinition->model;
             json["revision"] = deviceDefinition->revision;
             json["platform"] = UD_PLATFORM;
@@ -948,12 +1023,29 @@ static void startDevice() {
             if (rejectionToReport) {
                 json["rejection"] = static_cast<int>(*rejectionToReport);
             }
+            // firmwareRejection: either a failed download or a rollback (at most one)
+            if (rollback) {
+                json["firmwareRejection"] = static_cast<int>(rollback->rejectionCode);
+            } else if (firmwareDownloadRejection) {
+                json["firmwareRejection"] = static_cast<int>(*firmwareDownloadRejection);
+            }
 
-            CrashManager::handleCrashReport(json);
+            // When a rollback was detected, attribute any coredump to the failed partition's
+            // version rather than the currently running (rolled-back-to) firmwareVersion
+            std::optional<std::string> rolledBackFromVersion;
+            if (rollback) {
+                rolledBackFromVersion = rollback->failedVersion;
+            }
+            CrashManager::handleCrashReport(json, rolledBackFromVersion);
         },
         Retention::NoRetain, QoS::ExactlyOnce, 5s);
 
     states->kernelReady.set();
+
+    // Confirm this firmware as valid, cancelling any pending rollback. Must happen after
+    // kernelReady — until this call, the bootloader considers a freshly-flashed partition
+    // PENDING_VERIFY and will automatically revert if the device resets.
+    confirmFirmwareValid();
 
     LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
         duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count() / 1000.0,

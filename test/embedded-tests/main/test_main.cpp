@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string_view>
 
+#include <esp_ota_ops.h>
+
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_case_info.hpp>
 #include <catch2/reporters/catch_reporter_event_listener.hpp>
@@ -40,6 +42,11 @@ private:
 CATCH_REGISTER_LISTENER(testRunListener)
 
 extern "C" void app_main(void) {
+    // With CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y, a freshly-flashed image boots as
+    // PENDING_VERIFY. Confirm it immediately so the test binary isn't reverted on the
+    // next reboot (e.g. when a test triggers esp_restart).
+    esp_ota_mark_app_valid_cancel_rollback();
+
     const char* argv[] = {
         "target_test_main",
     };

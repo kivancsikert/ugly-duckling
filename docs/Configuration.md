@@ -199,3 +199,9 @@ instead of a reboot) and `SYNC` reporting the `device` fingerprint — except:
 - **Rejection codes are always `INTERNAL`** — the cause-specific mapping
   (parse/validation → `INVALID_ARGUMENT`, unknown function type → `UNIMPLEMENTED`, NVS-full →
   `RESOURCE_EXHAUSTED`) isn't implemented.
+- [ ] **Add the config/firmware ordering diagram** once the mass-firmware-update code changes in
+  [`specs/firmware-update-via-sync-update.md`](specs/firmware-update-via-sync-update.md#ordering-config-and-firmware-in-the-same-update)
+  land — the *Ordering* mermaid flowchart there (how a firmware entry in the same `UPDATE` changes
+  the device-changed/functions-only reboot decisions above) belongs in this doc alongside the
+  *Applying a functions-only UPDATE* and *confirmed/requested state machine* diagrams, once it
+  reflects shipped behavior rather than a spec proposal.
