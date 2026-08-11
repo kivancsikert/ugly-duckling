@@ -68,11 +68,14 @@ jobs:
             -e IDF_CCACHE_ENABLE=1
             -e CCACHE_COMPILERCHECK=content
           command: |
-            ccache --max-size=${{ env.CCACHE_MAXSIZE }} --zero-stats && \
+            ccache --max-size=${{ env.CCACHE_MAXSIZE }} --zero-stats
+            echo "::group::idf.py build"
             idf.py build \
               -DUD_DEBUG=${{ matrix.ud_debug }} \
-              -DUD_LOG_VERBOSE=${{ env.UD_LOG_VERBOSE }} \
-              && \
+              -DUD_LOG_VERBOSE=${{ env.UD_LOG_VERBOSE }}
+            rc=$?
+            echo "::endgroup::"
+            if [ $rc -ne 0 ]; then exit $rc; fi
             esp-idf-sbom create -o build/ugly-duckling.spdx build/project_description.json && \
             pyspdxtools --novalidation --infile build/ugly-duckling.spdx --outfile build/ugly-duckling.spdx.json && \
             ccache -s
@@ -171,8 +174,12 @@ jobs:
             -e IDF_CCACHE_ENABLE=1
             -e CCACHE_COMPILERCHECK=content
           command: |
-            ccache --max-size=${{ env.CCACHE_MAXSIZE }} --zero-stats && \
-            idf.py build && \
+            ccache --max-size=${{ env.CCACHE_MAXSIZE }} --zero-stats
+            echo "::group::idf.py build"
+            idf.py build
+            rc=$?
+            echo "::endgroup::"
+            if [ $rc -ne 0 ]; then exit $rc; fi
             ccache -s
 
       - name: Run tools tests
@@ -250,8 +257,12 @@ jobs:
             -e IDF_CCACHE_ENABLE=1
             -e CCACHE_COMPILERCHECK=content
           command: |
-            ccache --max-size=${{ env.CCACHE_MAXSIZE }} --zero-stats && \
-            idf.py -DUD_GEN=MK6_REV3 -DUD_DEBUG=1 -DWOKWI=1 -DWOKWI_MQTT_HOST=${{ env.HOSTNAME }} build && \
+            ccache --max-size=${{ env.CCACHE_MAXSIZE }} --zero-stats
+            echo "::group::idf.py build"
+            idf.py -DUD_GEN=MK6_REV3 -DUD_DEBUG=1 -DWOKWI=1 -DWOKWI_MQTT_HOST=${{ env.HOSTNAME }} build
+            rc=$?
+            echo "::endgroup::"
+            if [ $rc -ne 0 ]; then exit $rc; fi
             ccache -s
 
       - name: Install wokwi-cli
