@@ -1,6 +1,8 @@
 # Mass Firmware Updates — firmware side (`firmware` in `SYNC`/`UPDATE`, OTA trigger, rejection)
 
-> Status: **Spec draft. Nothing implemented yet.** This is the firmware counterpart to the
+> Status: **`firmware` in SYNC/UPDATE, download triggering, and download-failure rejection are
+> implemented (exit criteria 1–6). OTA rollback (exit criteria 7–9) is next.** This is the
+> firmware counterpart to the
 > server/UX-owning spec in the app repo,
 > [`cornucopia-app/docs/specs/firmware-update-en-masse.md`](https://github.com/cornucopia-machines/cornucopia-app/blob/main/docs/specs/firmware-update-en-masse.md)
 > — **read that spec first.** It owns the protocol design, the *why* behind every decision, the

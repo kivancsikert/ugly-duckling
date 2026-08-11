@@ -25,6 +25,7 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 #include <Console.hpp>
 #include <CrashManager.hpp>
 #include <DebugConsole.hpp>
+#include <FirmwareRollback.hpp>
 #include <FirmwareUpdateDecision.hpp>
 #include <HardwareVersion.hpp>
 #include <HttpUpdate.hpp>
@@ -841,7 +842,19 @@ static void startDevice() {
     // Handle any pending HTTP update (will reboot if update was required and was successful)
     registerHttpUpdateCommand(mqttRoot, configNvs);
     auto firmwareDownloadRejection = HttpUpdater::performPendingHttpUpdateIfNecessary(configNvs, wifi, watchdog);
-    *pendingFirmwareRejection = firmwareDownloadRejection;
+
+    // Detect whether the bootloader rolled back from a failed OTA partition. This and a failed
+    // download cannot co-occur: a failed download never writes a new partition, so there's nothing
+    // for the bootloader to roll back from. If both somehow fire (defense in depth), the rollback
+    // takes priority — it's the more severe signal.
+    auto rollback = detectAndClearRollback();
+
+    // Thread whichever rejection source fired (at most one) to BOOT and SYNC
+    if (rollback) {
+        *pendingFirmwareRejection = rollback->rejectionCode;
+    } else {
+        *pendingFirmwareRejection = firmwareDownloadRejection;
+    }
 
     auto peripheralsNvs = std::make_shared<NvsStore>("perf-state");
     auto pulseCounterManager = std::make_shared<PulseCounterManager>();
@@ -983,7 +996,7 @@ static void startDevice() {
     // payload has no delta/counter state that a duplicate would corrupt.
     mqttRoot->publish(
         "boot",
-        [resetReason, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion, rejectionToReport, firmwareDownloadRejection](JsonObject& json) {
+        [resetReason, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion, rejectionToReport, firmwareDownloadRejection, rollback](JsonObject& json) {
             json["model"] = deviceDefinition->model;
             json["revision"] = deviceDefinition->revision;
             json["platform"] = UD_PLATFORM;
@@ -1010,15 +1023,29 @@ static void startDevice() {
             if (rejectionToReport) {
                 json["rejection"] = static_cast<int>(*rejectionToReport);
             }
-            if (firmwareDownloadRejection) {
+            // firmwareRejection: either a failed download or a rollback (at most one)
+            if (rollback) {
+                json["firmwareRejection"] = static_cast<int>(rollback->rejectionCode);
+            } else if (firmwareDownloadRejection) {
                 json["firmwareRejection"] = static_cast<int>(*firmwareDownloadRejection);
             }
 
-            CrashManager::handleCrashReport(json);
+            // When a rollback was detected, attribute any coredump to the failed partition's
+            // version rather than the currently running (rolled-back-to) firmwareVersion
+            std::optional<std::string> rolledBackFromVersion;
+            if (rollback) {
+                rolledBackFromVersion = rollback->failedVersion;
+            }
+            CrashManager::handleCrashReport(json, rolledBackFromVersion);
         },
         Retention::NoRetain, QoS::ExactlyOnce, 5s);
 
     states->kernelReady.set();
+
+    // Confirm this firmware as valid, cancelling any pending rollback. Must happen after
+    // kernelReady — until this call, the bootloader considers a freshly-flashed partition
+    // PENDING_VERIFY and will automatically revert if the device resets.
+    confirmFirmwareValid();
 
     LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
         duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count() / 1000.0,

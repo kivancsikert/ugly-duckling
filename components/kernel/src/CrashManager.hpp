@@ -1,13 +1,14 @@
 #pragma once
 
+#include <optional>
+#include <string>
+
 #include <esp_core_dump.h>
 #include <mbedtls/base64.h>
 
 #include <ArduinoJson.h>
 
-#include <NvsStore.hpp>
 #include <Strings.hpp>
-#include <utility>
 
 namespace cornucopia::ugly_duckling::kernel {
 
@@ -15,18 +16,34 @@ LOGGING_TAG(CRASH, "crash")
 
 class CrashManager {
 public:
-    static void handleCrashReport(JsonObject& json) {
-        NvsStore nvs("crash-report");
+    /**
+     * @brief Checks for a core dump from a previous crash and reports it on BOOT.
+     *
+     * @param json         The BOOT message's JSON object to populate with crash info.
+     * @param rolledBackFromVersion  If this boot detected a rollback (via detectAndClearRollback()),
+     *                     the version that was on the failed partition. When a coredump exists and
+     *                     this is set, the crash is attributed to this version — not to firmwareVersion
+     *                     (which is the version we rolled back *to*). When empty/nullopt, the crash
+     *                     is attributed to firmwareVersion (the normal case: the currently running
+     *                     firmware crashed on a previous boot and then recovered on this one).
+     */
+    static void handleCrashReport(JsonObject& json, const std::optional<std::string>& rolledBackFromVersion = std::nullopt) {
         switch (getCoreDumpStatus()) {
             case CoreDumpStatus::NoDump: {
                 break;
             }
             case CoreDumpStatus::DumpFound: {
-                std::string crashedFirmwareVersion;
-                if (!nvs.get<std::string>("version", crashedFirmwareVersion)) {
-                    crashedFirmwareVersion = "unknown";
-                }
-                reportPreviousCrash(json, crashedFirmwareVersion);
+                // If this boot detected a rollback, the crash belongs to the failed partition's
+                // version (read from flash by detectAndClearRollback), not the version we're
+                // running now. This fixes a pre-existing bug: previously, CrashManager stamped
+                // firmwareVersion into NVS on every successful boot, so a crash *before* that
+                // stamp left the next boot blaming whichever version last wrote the key — i.e.
+                // the old, innocent firmware, not the one that actually crashed. Reading the
+                // version from the failed partition eliminates the NVS round-trip entirely.
+                const std::string& crashedVersion = rolledBackFromVersion.has_value()
+                    ? *rolledBackFromVersion
+                    : std::string(firmwareVersion);
+                reportPreviousCrash(json, crashedVersion);
                 ESP_ERROR_CHECK_WITHOUT_ABORT(esp_core_dump_image_erase());
                 break;
             }
@@ -35,7 +52,6 @@ public:
                 break;
             }
         }
-        nvs.set("version", firmwareVersion);
     }
 
 private:
