@@ -8,7 +8,7 @@
       "id": "esp",
       "top": -0.18,
       "left": 4.57,
-      "attrs": { "flashSize": "8" }
+      "attrs": { "flashSize": "16" }
     },
     {
       "type": "wokwi-pushbutton",
