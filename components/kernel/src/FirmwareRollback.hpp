@@ -45,8 +45,7 @@ struct RollbackDetection {
  *
  * @return Detection result with rejection code and failed version, or nullopt if no rollback.
  */
-inline std::optional<RollbackDetection> detectAndClearRollback() {
-    const esp_partition_t* lastInvalid = esp_ota_get_last_invalid_partition();
+inline std::optional<RollbackDetection> detectAndClearRollback(const esp_partition_t* lastInvalid) {
     if (lastInvalid == nullptr) {
         return std::nullopt;
     }
@@ -81,6 +80,10 @@ inline std::optional<RollbackDetection> detectAndClearRollback() {
         .rejectionCode = config::RejectionCode::Internal,
         .failedVersion = std::move(failedVersion),
     };
+}
+
+inline std::optional<RollbackDetection> detectAndClearRollback() {
+    return detectAndClearRollback(esp_ota_get_last_invalid_partition());
 }
 
 /**
