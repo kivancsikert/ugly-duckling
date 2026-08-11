@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 
 #include <ArduinoJson.h>
@@ -10,7 +11,9 @@
 
 #include <Log.hpp>
 #include <NvsStore.hpp>
+#include <Restart.hpp>
 #include <Watchdog.hpp>
+#include <config/ConfigState.hpp>
 #include <drivers/WiFiDriver.hpp>
 #include <utility>
 
@@ -23,33 +26,32 @@ public:
     static void startUpdate(const std::string& url, const std::shared_ptr<NvsStore>& nvs) {
         nvs->set(HttpUpdater::UPDATE_KEY, url);
         Task::run("update", 3072, [](Task& _task) {
-            LOGTI(UPDATE, "Restarting in 5 seconds to apply update");
-            Task::delay(5s);
-            esp_restart();
+            LOGTI(UPDATE, "Restarting to apply update");
+            delayedRestart();
         });
     }
 
-    static void performPendingHttpUpdateIfNecessary(const std::shared_ptr<NvsStore>& nvs, const std::shared_ptr<WiFiDriver>& wifi, std::shared_ptr<Watchdog> watchdog) {
+    static std::optional<config::RejectionCode> performPendingHttpUpdateIfNecessary(const std::shared_ptr<NvsStore>& nvs, const std::shared_ptr<WiFiDriver>& wifi, std::shared_ptr<Watchdog> watchdog) {
         // Do we need to update?
         if (!nvs->contains(UPDATE_KEY)) {
             LOGTV(UPDATE, "No pending update found, not updating");
-            return;
+            return std::nullopt;
         }
 
         std::string url;
         if (!nvs->get<std::string>(UPDATE_KEY, url) || url.empty()) {
             LOGTE(UPDATE, "Failed to read pending update URL");
             nvs->remove(UPDATE_KEY);
-            return;
+            return config::RejectionCode::Internal;
         }
 
         if (!nvs->remove(UPDATE_KEY)) {
             LOGTE(UPDATE, "Failed to delete pending update key");
-            return;
+            return config::RejectionCode::Internal;
         }
 
         HttpUpdater updater(std::move(watchdog));
-        updater.performPendingHttpUpdate(url, wifi);
+        return updater.performPendingHttpUpdate(url, wifi);
     }
 
     static constexpr const char* UPDATE_KEY = "pending-update";
@@ -59,14 +61,14 @@ private:
         : watchdog(std::move(watchdog)) {
     }
 
-    void performPendingHttpUpdate(const std::string& url, const std::shared_ptr<WiFiDriver>& wifi) {
+    std::optional<config::RejectionCode> performPendingHttpUpdate(const std::string& url, const std::shared_ptr<WiFiDriver>& wifi) {
         LOGTI(UPDATE, "Updating from version %s via URL %s",
             firmwareVersion, url.c_str());
 
         LOGTD(UPDATE, "Waiting for network...");
         if (!wifi->getNetworkReady().awaitSet(15s)) {
             LOGTE(UPDATE, "Network not ready, aborting update");
-            return;
+            return config::RejectionCode::Internal;
         }
 
         esp_http_client_config_t httpConfig = {};
@@ -85,13 +87,12 @@ private:
 
         esp_err_t ret = esp_https_ota(&otaConfig);
         if (ret == ESP_OK) {
-            LOGTI(UPDATE, "Update succeeded, rebooting in 5 seconds...");
-            Task::delay(5s);
-            esp_restart();
+            LOGTI(UPDATE, "Update succeeded, restarting...");
+            delayedRestart();
         } else {
             LOGTE(UPDATE, "Update failed (%s), continuing with regular boot",
                 esp_err_to_name(ret));
-            return;
+            return config::RejectionCode::Internal;
         }
     }
 
