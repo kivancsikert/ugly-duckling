@@ -4,8 +4,10 @@
 
 #include <esp_app_desc.h>
 #include <esp_app_format.h>
+#include <esp_flash_partitions.h>
 #include <esp_ota_ops.h>
 #include <esp_partition.h>
+#include <esp_rom_crc.h>
 
 #include <FirmwareRollback.hpp>
 
@@ -13,40 +15,6 @@ using namespace cornucopia::ugly_duckling::kernel;
 
 namespace {
 
-/**
- * @brief Writes a fake esp_app_desc_t with the given version string into the inactive OTA
- * partition at the offset where esp_ota_get_partition_description() reads it.
- *
- * This doesn't create a bootable image — just enough for the version-reading code path
- * in detectAndClearRollback() to work.
- */
-void plantFakeAppDescInPartition(const esp_partition_t* partition, const char* version) {
-    // esp_ota_get_partition_description reads at offset sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t)
-    constexpr size_t appDescOffset = sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t);
-
-    // Erase the sector(s) covering the app descriptor (sector size = 4096 bytes)
-    ESP_ERROR_CHECK(esp_partition_erase_range(partition, 0, 4096));
-
-    // Write a valid app descriptor with the desired version
-    esp_app_desc_t desc {};
-    desc.magic_word = ESP_APP_DESC_MAGIC_WORD;
-    strncpy(desc.version, version, sizeof(desc.version) - 1);
-    desc.version[sizeof(desc.version) - 1] = '\0';
-
-    ESP_ERROR_CHECK(esp_partition_write(partition, appDescOffset, &desc, sizeof(desc)));
-}
-
-/**
- * @brief Marks the inactive OTA partition as "last invalid" by writing it through the
- * OTA begin/end cycle with an intentionally invalid image, then setting its state.
- *
- * Uses esp_ota_begin + esp_ota_end (which fails validation but still writes otadata)
- * to register the partition in the OTA data, then relies on
- * esp_ota_get_last_invalid_partition() to find it.
- *
- * This is a test-only workaround — in production, the bootloader sets this state when a
- * PENDING_VERIFY partition fails to confirm.
- */
 const esp_partition_t* getInactiveOtaPartition() {
     const esp_partition_t* running = esp_ota_get_running_partition();
     REQUIRE(running != nullptr);
@@ -54,6 +22,39 @@ const esp_partition_t* getInactiveOtaPartition() {
     REQUIRE(next != nullptr);
     REQUIRE(next != running);
     return next;
+}
+
+/**
+ * @brief Copies partition content sector-by-sector from src to dst.
+ */
+void copyPartitionContent(const esp_partition_t* dst, const esp_partition_t* src, size_t size) {
+    constexpr size_t SECTOR = 4096;
+    uint8_t buf[SECTOR];
+    for (size_t offset = 0; offset < size; offset += SECTOR) {
+        ESP_ERROR_CHECK(esp_partition_read(src, offset, buf, SECTOR));
+        ESP_ERROR_CHECK(esp_partition_erase_range(dst, offset, SECTOR));
+        ESP_ERROR_CHECK(esp_partition_write(dst, offset, buf, SECTOR));
+    }
+}
+
+/**
+ * @brief Writes an otadata entry to a specific sector, simulating what the bootloader
+ * writes during OTA boot selection or rollback.
+ *
+ * The otadata partition has two sectors (0 and 1). Each holds one esp_ota_select_entry_t.
+ * The entry with the higher ota_seq is the "active" boot selection; the other is "inactive".
+ * The CRC covers only the ota_seq field.
+ */
+void writeOtadataEntry(const esp_partition_t* otadataPartition, int sector,
+    uint32_t otaSeq, uint32_t otaState) {
+    esp_ota_select_entry_t entry {};
+    entry.ota_seq = otaSeq;
+    entry.ota_state = otaState;
+    entry.crc = esp_rom_crc32_le(UINT32_MAX, reinterpret_cast<const uint8_t*>(&entry.ota_seq), sizeof(entry.ota_seq));
+
+    size_t offset = static_cast<size_t>(sector) * otadataPartition->erase_size;
+    ESP_ERROR_CHECK(esp_partition_erase_range(otadataPartition, offset, otadataPartition->erase_size));
+    ESP_ERROR_CHECK(esp_partition_write(otadataPartition, offset, &entry, sizeof(entry)));
 }
 
 }    // namespace
@@ -77,31 +78,44 @@ TEST_CASE("confirmFirmwareValid does not crash") {
 }
 
 TEST_CASE("detectAndClearRollback reads version from a simulated rollback") {
+    const esp_partition_t* running = esp_ota_get_running_partition();
+    REQUIRE(running != nullptr);
     const esp_partition_t* inactive = getInactiveOtaPartition();
 
-    // Plant a fake app descriptor with a known version in the inactive partition
-    plantFakeAppDescInPartition(inactive, "99.88.77");
+    // Copy the running image to the inactive partition so it passes esp_image_verify(),
+    // which esp_ota_get_last_invalid_partition() requires before returning a result.
+    // We can't plant a fake version string because modifying any byte would invalidate
+    // the image's trailing SHA-256 hash — so we verify the running app's own version.
+    copyPartitionContent(inactive, running, running->size);
 
-    // Mark the inactive partition as the "last booted" by writing minimal OTA data for it,
-    // then invalidate it to simulate what the bootloader does on rollback
-    esp_ota_handle_t handle;
-    esp_err_t err = esp_ota_begin(inactive, OTA_SIZE_UNKNOWN, &handle);
-    REQUIRE(err == ESP_OK);
-    // esp_ota_begin erased the partition, so re-plant the fake app descriptor
-    plantFakeAppDescInPartition(inactive, "99.88.77");
-    // esp_ota_end will fail (invalid image) but that's fine — the otadata entry is already written
-    esp_ota_end(handle);
+    // Write otadata entries that simulate a bootloader rollback:
+    //   - The running partition's slot: VALID with a higher ota_seq (active)
+    //   - The inactive partition's slot: ABORTED with a lower ota_seq (last-invalid)
+    //
+    // ota_seq → slot mapping: (ota_seq - 1) % ota_app_count
+    // With 2 OTA partitions: odd seq → slot 0, even seq → slot 1
+    //
+    // The ABORTED entry must have the lower ota_seq so that
+    // esp_ota_invalidate_inactive_ota_data_slot() (called by detectAndClearRollback
+    // to clear the marker) erases the right sector.
+    const esp_partition_t* otadata = esp_partition_find_first(
+        ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_OTA, nullptr);
+    REQUIRE(otadata != nullptr);
 
-    // Now invalidate the slot to mark it as a "last invalid" partition — this is what
-    // the bootloader does when a PENDING_VERIFY partition fails
-    ESP_ERROR_CHECK(esp_ota_invalidate_inactive_ota_data_slot());
+    int runningSlot = running->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0;
+    int inactiveSlot = inactive->subtype - ESP_PARTITION_SUBTYPE_APP_OTA_0;
+    uint32_t abortedSeq = inactiveSlot + 1;
+    uint32_t validSeq = runningSlot + 1 + 2;
 
-    // Verify detectAndClearRollback sees it
+    writeOtadataEntry(otadata, 0, validSeq, ESP_OTA_IMG_VALID);
+    writeOtadataEntry(otadata, 1, abortedSeq, ESP_OTA_IMG_ABORTED);
+
+    // Verify detectAndClearRollback sees the simulated rollback
     auto result = detectAndClearRollback();
 
     REQUIRE(result.has_value());
     REQUIRE(result->rejectionCode == config::RejectionCode::Internal);
-    REQUIRE(result->failedVersion == "99.88.77");
+    REQUIRE(result->failedVersion == esp_app_get_description()->version);
 
     // After detection, the marker should be cleared — a second call returns nullopt
     auto second = detectAndClearRollback();
