@@ -193,7 +193,6 @@ jobs:
         uses: wokwi/wokwi-ci-server-action@v1
 
       - name: esp-idf test
-        if: false # Temporarily disabled
         run: |
             docker run \
             -v .:/project \
