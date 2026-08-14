@@ -763,7 +763,7 @@ static void startDevice() {
         .mode = SwitchMode::PullUp,
         .onDisengaged = [statusLed, telemetryPublisher](const SwitchEvent& event) {
             auto duration = event.timeSinceLastChange;
-            if (duration >= 15s) {
+            if (duration >= 30s) {
                 LOGI("Factory reset triggered after %lld ms", duration.count());
                 performFactoryReset(statusLed, true);
             } else if (duration >= 5s) {
