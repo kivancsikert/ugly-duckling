@@ -353,7 +353,6 @@ jobs:
         run: |
           gh release upload "${{ github.event.release.tag_name }}" \
             work/artifacts/ugly-duckling-*/* \
-            --repo "${{ github.repository }}" \
-            --clobber
+            --repo "${{ github.repository }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
