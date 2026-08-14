@@ -7,6 +7,7 @@
 
 #include <Log.hpp>
 #include <Pin.hpp>
+#include <PowerManager.hpp>
 #include <PwmManager.hpp>
 #include <drivers/SharedEnable.hpp>
 
@@ -65,6 +66,7 @@ public:
         esp_timer_stop(stopTimer);
 
         enableHandle.acquire();
+        sleepLock.emplace(PowerManager::noLightSleep);
         auto dutyValue = static_cast<uint32_t>(channel.maxValue() * duty);
         channel.write(dutyValue);
 
@@ -80,6 +82,7 @@ private:
     void stop() {
         channel.write(0);
         enableHandle.release();
+        sleepLock.reset();
     }
 
     static constexpr uint32_t BUZZER_FREQ = 4000;
@@ -88,6 +91,7 @@ private:
     PwmPin& channel;
     SharedEnable::Handle enableHandle;
     esp_timer_handle_t stopTimer = nullptr;
+    std::optional<PowerManagementLockGuard> sleepLock;
 };
 
 }    // namespace cornucopia::ugly_duckling::kernel::drivers

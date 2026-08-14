@@ -90,8 +90,6 @@ private:
     const InternalPinPtr pin;
     const LedcTimer& timer;
     const ledc_channel_t channel;
-
-    friend class PmwManager;
 };
 
 class PwmManager {
