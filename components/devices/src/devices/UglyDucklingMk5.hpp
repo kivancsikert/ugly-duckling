@@ -24,13 +24,15 @@ public:
 
 protected:
     void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<DeviceConfiguration>& _deviceConfig) override {
+        auto motorEnable = SharedEnable::forActiveHighPin(NSLEEP);
+
         auto motorA = std::make_shared<Drv8874Driver>(
             services.pwmManager,
             AIN1,
             AIN2,
             AIPROPI,
             NFault,
-            NSLEEP);
+            motorEnable);
 
         auto motorB = std::make_shared<Drv8874Driver>(
             services.pwmManager,
@@ -38,7 +40,7 @@ protected:
             BIN2,
             BIPROPI,
             NFault,
-            NSLEEP);
+            motorEnable);
 
         std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorA }, { "b", motorB } };
 

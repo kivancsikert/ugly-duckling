@@ -45,6 +45,7 @@ public:
 
 protected:
     void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<DeviceConfiguration>& /*deviceConfig*/) override {
+        auto motorEnable = SharedEnable::forActiveHighPin(LOADEN);
         auto motorDriver = Drv8848Driver::create(
             services.pwmManager,
             DAIN1,
@@ -52,7 +53,7 @@ protected:
             DBIN1,
             DBIN2,
             NFAULT,
-            LOADEN);
+            motorEnable);
 
         std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorDriver->getMotorA() }, { "b", motorDriver->getMotorB() } };
 

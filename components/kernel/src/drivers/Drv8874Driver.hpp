@@ -1,15 +1,12 @@
 #pragma once
 
-#include <atomic>
-#include <chrono>
 #include <memory>
 
 #include <Log.hpp>
 #include <Pin.hpp>
 #include <PwmManager.hpp>
 #include <drivers/MotorDriver.hpp>
-
-using namespace std::chrono;
+#include <drivers/SharedEnable.hpp>
 
 namespace cornucopia::ugly_duckling::kernel::drivers {
 
@@ -33,34 +30,31 @@ public:
         const InternalPinPtr& in2Pin,
         const PinPtr& currentPin,
         const PinPtr& faultPin,
-        const PinPtr& sleepPin)
+        const std::shared_ptr<SharedEnable>& enable)
         : in1Channel(pwm->registerPin(in1Pin, PWM_FREQ, PWM_RESOLUTION))
         , in2Channel(pwm->registerPin(in2Pin, PWM_FREQ, PWM_RESOLUTION))
         , currentPin(currentPin)
         , faultPin(faultPin)
-        , sleepPin(sleepPin) {
+        , enableHandle(enable->createHandle()) {
 
-        LOGI("Initializing DRV8874 on pins in1 = %s, in2 = %s, fault = %s, sleep = %s, current = %s",
+        LOGI("Initializing DRV8874 on pins in1 = %s, in2 = %s, fault = %s, current = %s",
             in1Pin->getName().c_str(),
             in2Pin->getName().c_str(),
             faultPin->getName().c_str(),
-            sleepPin->getName().c_str(),
             currentPin->getName().c_str());
 
-        sleepPin->pinMode(Pin::Mode::Output);
         faultPin->pinMode(Pin::Mode::Input);
         currentPin->pinMode(Pin::Mode::Input);
-
-        sleep();
+        // Sleep pin is managed by SharedEnable — starts in inactive (sleeping) state
     }
 
     void drive(MotorPhase phase, double duty) override {
         if (duty == 0) {
             LOGD("Stopping motor");
-            sleep();
+            enableHandle.release();
             return;
         }
-        wakeUp();
+        enableHandle.acquire();
 
         int dutyValue = static_cast<int>((in1Channel.maxValue() + in1Channel.maxValue() * duty) / 2);
         LOGD("Driving motor %s at %.2f%%",
@@ -79,28 +73,12 @@ public:
         }
     }
 
-    void sleep() {
-        sleepPin->digitalWrite(0);
-        sleeping = true;
-    }
-
-    void wakeUp() {
-        sleepPin->digitalWrite(1);
-        sleeping = false;
-    }
-
-    bool isSleeping() const {
-        return sleeping;
-    }
-
 private:
     const PwmPin& in1Channel;
     const PwmPin& in2Channel;
     const PinPtr currentPin;
     const PinPtr faultPin;
-    const PinPtr sleepPin;
-
-    std::atomic<bool> sleeping { false };
+    SharedEnable::Handle enableHandle;
 };
 
 }    // namespace cornucopia::ugly_duckling::kernel::drivers

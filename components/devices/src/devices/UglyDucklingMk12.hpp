@@ -7,6 +7,7 @@
 #include <MacAddress.hpp>
 #include <Pin.hpp>
 #include <drivers/Bq27220Driver.hpp>
+#include <drivers/BuzzerDriver.hpp>
 #include <drivers/Drv8848Driver.hpp>
 #include <drivers/LedDriver.hpp>
 
@@ -48,8 +49,12 @@ public:
             });
     }
 
+    std::shared_ptr<BuzzerDriver> buzzer;
+
 protected:
     void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<DeviceConfiguration>& /*deviceConfig*/) override {
+        auto loadEnable = SharedEnable::forActiveHighPin(LOADEN);
+
         auto motorDriver = Drv8848Driver::create(
             services.pwmManager,
             DAIN1,
@@ -57,7 +62,10 @@ protected:
             DBIN1,
             DBIN2,
             NFAULT,
-            LOADEN);
+            loadEnable);
+
+        buzzer = std::make_shared<BuzzerDriver>(
+            services.pwmManager, BUZZER, loadEnable);
 
         std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorDriver->getMotorA() }, { "b", motorDriver->getMotorB() } };
 
