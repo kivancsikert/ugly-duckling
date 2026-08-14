@@ -49,6 +49,12 @@ public:
             });
     }
 
+    void handleShortButtonPress(milliseconds duration) override {
+        if (duration >= 200ms) {
+            buzzer->buzz(1s, 0.1);
+        }
+    }
+
     std::shared_ptr<BuzzerDriver> buzzer;
 
 protected:
@@ -64,8 +70,7 @@ protected:
             NFAULT,
             loadEnable);
 
-        buzzer = std::make_shared<BuzzerDriver>(
-            services.pwmManager, BUZZER, loadEnable);
+        buzzer = std::make_shared<BuzzerDriver>(services.pwmManager, BUZZER, loadEnable);
 
         std::map<std::string, std::shared_ptr<PwmMotorDriver>> motors = { { "a", motorDriver->getMotorA() }, { "b", motorDriver->getMotorB() } };
 
