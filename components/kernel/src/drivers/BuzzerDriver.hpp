@@ -85,7 +85,7 @@ private:
         sleepLock.reset();
     }
 
-    static constexpr uint32_t BUZZER_FREQ = 4000;
+    static constexpr uint32_t BUZZER_FREQ = 2700;
     static constexpr ledc_timer_bit_t BUZZER_RES = LEDC_TIMER_8_BIT;
 
     PwmPin& channel;
