@@ -48,7 +48,12 @@ public:
 
     ~BuzzerDriver() {
         esp_timer_stop(stopTimer);
-        stop();
+        try {
+            stop();
+        } catch (...) {
+            LOGE("Failed to stop buzzer: %s",
+                std::current_exception().__cxa_exception_type()->name());
+        }
         esp_timer_delete(stopTimer);
     }
 
