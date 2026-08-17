@@ -1,15 +1,12 @@
 #pragma once
 
-#include <atomic>
-#include <chrono>
 #include <memory>
 
 #include <Log.hpp>
 #include <Pin.hpp>
 #include <PwmManager.hpp>
 #include <drivers/MotorDriver.hpp>
-
-using namespace std::chrono;
+#include <drivers/SharedEnable.hpp>
 
 namespace cornucopia::ugly_duckling::kernel::drivers {
 
@@ -26,7 +23,6 @@ private:
     static constexpr ledc_timer_bit_t PWM_RESOLUTION = LEDC_TIMER_8_BIT;
 
 public:
-    // Note: on Ugly Duckling MK5, the DRV8874's PMODE is wired to 3.3V, so it's locked in PWM mode
     Drv8801Driver(
         const std::shared_ptr<PwmManager>& pwm,
         const PinPtr& enablePin,
@@ -35,18 +31,17 @@ public:
         const PinPtr& mode2Pin,
         const PinPtr& currentPin,
         const PinPtr& faultPin,
-        const PinPtr& sleepPin)
+        const std::shared_ptr<SharedEnable>& enable)
         : enablePin(enablePin)
         , phaseChannel(pwm->registerPin(phasePin, PWM_FREQ, PWM_RESOLUTION))
         , currentPin(currentPin)
         , faultPin(faultPin)
-        , sleepPin(sleepPin) {
+        , enableHandle(enable->createHandle()) {
 
-        LOGI("Initializing DRV8801 on pins enable = %s, phase = %s, fault = %s, sleep = %s, mode1 = %s, mode2 = %s, current = %s",
+        LOGI("Initializing DRV8801 on pins enable = %s, phase = %s, fault = %s, mode1 = %s, mode2 = %s, current = %s",
             enablePin->getName().c_str(),
             phasePin->getName().c_str(),
             faultPin->getName().c_str(),
-            sleepPin->getName().c_str(),
             mode1Pin->getName().c_str(),
             mode2Pin->getName().c_str(),
             currentPin->getName().c_str());
@@ -54,25 +49,23 @@ public:
         enablePin->pinMode(Pin::Mode::Output);
         mode1Pin->pinMode(Pin::Mode::Output);
         mode2Pin->pinMode(Pin::Mode::Output);
-        sleepPin->pinMode(Pin::Mode::Output);
         faultPin->pinMode(Pin::Mode::Input);
         currentPin->pinMode(Pin::Mode::Input);
 
         // TODO Allow using the DRV8801 in other modes
         mode1Pin->digitalWrite(1);
         mode2Pin->digitalWrite(1);
-
-        sleep();
+        // Sleep pin is managed by SharedEnable — starts in inactive (sleeping) state
     }
 
     void drive(MotorPhase phase, double duty) override {
         if (duty == 0) {
             LOGD("Stopping");
-            sleep();
+            enableHandle.release();
             enablePin->digitalWrite(0);
             return;
         }
-        wakeUp();
+        enableHandle.acquire();
         enablePin->digitalWrite(1);
 
         int direction = (phase == MotorPhase::Forward ? 1 : -1);
@@ -84,28 +77,12 @@ public:
         phaseChannel.write(dutyValue);
     }
 
-    void sleep() {
-        sleepPin->digitalWrite(0);
-        sleeping = true;
-    }
-
-    void wakeUp() {
-        sleepPin->digitalWrite(1);
-        sleeping = false;
-    }
-
-    bool isSleeping() const {
-        return sleeping;
-    }
-
 private:
     const PinPtr enablePin;
     const PwmPin& phaseChannel;
     const PinPtr currentPin;
     const PinPtr faultPin;
-    const PinPtr sleepPin;
-
-    std::atomic<bool> sleeping { false };
+    SharedEnable::Handle enableHandle;
 };
 
 }    // namespace cornucopia::ugly_duckling::kernel::drivers

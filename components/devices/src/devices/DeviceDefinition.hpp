@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
@@ -116,6 +117,9 @@ public:
 
     virtual std::shared_ptr<BatteryDriver> createBatteryDriver(const std::shared_ptr<I2CManager>& _i2c) {
         return nullptr;
+    }
+
+    virtual void handleShortButtonPress(milliseconds duration) {
     }
 
     const std::string model;

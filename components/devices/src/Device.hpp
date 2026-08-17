@@ -758,10 +758,11 @@ static void startDevice() {
 
     // Init switch and button handling
     auto switches = std::make_shared<SwitchManager>();
-    switches->registerSwitch({ .name = "factory-reset",
+    switches->registerSwitch({
+        .name = "factory-reset",
         .pin = deviceDefinition->bootPin,
         .mode = SwitchMode::PullUp,
-        .onDisengaged = [statusLed, telemetryPublisher](const SwitchEvent& event) {
+        .onDisengaged = [statusLed, deviceDefinition, telemetryPublisher](const SwitchEvent& event) {
             auto duration = event.timeSinceLastChange;
             if (duration >= 30s) {
                 LOGI("Factory reset triggered after %lld ms", duration.count());
@@ -769,9 +770,11 @@ static void startDevice() {
             } else if (duration >= 5s) {
                 LOGI("WiFi reset triggered after %lld ms", duration.count());
                 performFactoryReset(statusLed, false);
-            } else if (duration >= 200ms) {
+            } else if (duration >= 1000ms) {
                 LOGD("Publishing telemetry after %lld ms", duration.count());
                 telemetryPublisher->requestTelemetryPublishing();
+            } else {
+                deviceDefinition->handleShortButtonPress(duration);
             }
         } });
 
