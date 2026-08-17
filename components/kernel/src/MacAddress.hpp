@@ -11,7 +11,7 @@ namespace cornucopia::ugly_duckling::kernel {
 
 constexpr size_t MAC_ADDRESS_LENGTH = 6;
 
-static std::array<uint8_t, MAC_ADDRESS_LENGTH> getRawMacAddress() {
+inline std::array<uint8_t, MAC_ADDRESS_LENGTH> getRawMacAddress() {
     static bool queried;
     static std::array<uint8_t, MAC_ADDRESS_LENGTH> mac {};
     if (!queried) {
@@ -21,7 +21,7 @@ static std::array<uint8_t, MAC_ADDRESS_LENGTH> getRawMacAddress() {
     return mac;
 }
 
-static const std::string& getMacAddress() {
+inline const std::string& getMacAddress() {
     static std::string macAddress;
     if (macAddress.empty()) {
         auto rawMac = getRawMacAddress();

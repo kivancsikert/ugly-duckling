@@ -18,6 +18,11 @@
 #include <esp_app_desc.h>
 
 #include <KernelStatus.hpp>
+
+// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
+static RTC_DATA_ATTR int bootCount = 0;
+// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
+
 #include <memory>
 #include <string>
 #include <optional>

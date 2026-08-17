@@ -31,6 +31,8 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 
 #include <devices/DeviceDefinition.hpp>
 
+#include <MacAddress.hpp>
+
 #include <BootConfig.hpp>
 #include <BootHelpers.hpp>
 #include <BootMessage.hpp>

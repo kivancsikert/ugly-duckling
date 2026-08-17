@@ -12,7 +12,6 @@
 #include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle)
 
 #include <I2CManager.hpp>
-#include <MacAddress.hpp>
 #include <PowerManager.hpp>
 #include <StateManager.hpp>
 #include <drivers/LedDriver.hpp>
@@ -27,10 +26,6 @@ using namespace cornucopia::ugly_duckling::kernel::drivers;
 using namespace cornucopia::ugly_duckling::kernel::mqtt;
 
 namespace cornucopia::ugly_duckling::kernel {
-
-// NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
-static RTC_DATA_ATTR int bootCount = 0;
-// NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 class KernelStatusTask;
 
