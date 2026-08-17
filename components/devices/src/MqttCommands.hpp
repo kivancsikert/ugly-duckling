@@ -1,88 +1,14 @@
 #pragma once
 
 #include <memory>
-#include <string>
 
-#include <HttpUpdate.hpp>
-#include <Log.hpp>
 #include <NvsStore.hpp>
-#include <Restart.hpp>
+#include <drivers/LedDriver.hpp>
 #include <mqtt/MqttRoot.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
+using namespace cornucopia::ugly_duckling::kernel::mqtt;
 
-void registerBasicCommands(const std::shared_ptr<MqttRoot>& mqttRoot) {
-    mqttRoot->registerCommand("restart", [](const JsonObject&, JsonObject&) {
-        printf("Restarting...\n");
-        delayedRestart();
-    });
-    mqttRoot->registerCommand("sleep", [](const JsonObject& request, JsonObject& _response) {
-        seconds duration = seconds(request["duration"].as<int64_t>());
-        esp_sleep_enable_timer_wakeup((microseconds(duration)).count());
-        LOGI("Sleeping deep for %lld seconds",
-            duration.count());
-        esp_deep_sleep_start();
-    });
-}
-
-void registerNvsCommands(const std::shared_ptr<MqttRoot>& mqttRoot) {
-    mqttRoot->registerCommand("nvs/list", [](const JsonObject& request, JsonObject& response) {
-        const char* ns = request["namespace"] | "config";
-        NvsStore store(ns);
-        JsonArray entries = response["entries"].to<JsonArray>();
-        store.list([entries](const std::string& key) {
-            auto entry = entries.add<JsonObject>();
-            entry["key"] = key;
-        });
-    });
-    mqttRoot->registerCommand("nvs/read", [](const JsonObject& request, JsonObject& response) {
-        const char* ns = request["namespace"] | "config";
-        NvsStore store(ns);
-        auto key = request["key"].as<std::string>();
-        LOGI("Reading NVS key '%s' from namespace '%s'", key.c_str(), ns);
-        response["key"] = key;
-        JsonDocument valueDoc;
-        if (store.getJson(key, valueDoc)) {
-            response["value"].set(valueDoc.as<JsonVariant>());
-        } else {
-            response["error"] = "Key not found";
-        }
-    });
-    mqttRoot->registerCommand("nvs/write", [](const JsonObject& request, JsonObject& response) {
-        const char* ns = request["namespace"] | "config";
-        NvsStore store(ns);
-        auto key = request["key"].as<std::string>();
-        LOGI("Writing NVS key '%s' to namespace '%s'", key.c_str(), ns);
-        response["key"] = key;
-        store.setJson(key, request["value"]);
-        response["written"] = true;
-    });
-    mqttRoot->registerCommand("nvs/remove", [](const JsonObject& request, JsonObject& response) {
-        const char* ns = request["namespace"] | "config";
-        NvsStore store(ns);
-        auto key = request["key"].as<std::string>();
-        LOGI("Removing NVS key '%s' from namespace '%s'", key.c_str(), ns);
-        response["key"] = key;
-        if (store.remove(key)) {
-            response["removed"] = true;
-        } else {
-            response["error"] = "Key not found or could not be removed";
-        }
-    });
-}
-
-void registerHttpUpdateCommand(const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<NvsStore>& nvs) {
-    mqttRoot->registerCommand("update", [nvs](const JsonObject& request, JsonObject& response) {
-        if (!request["url"].is<std::string>()) {
-            response["failure"] = "Command contains no URL";
-            return;
-        }
-        std::string url = request["url"];
-        if (url.empty()) {
-            response["failure"] = "Command contains empty url";
-            return;
-        }
-        HttpUpdater::startUpdate(url, nvs);
-        response["success"] = true;
-    });
-}
+void registerBasicCommands(const std::shared_ptr<MqttRoot>& mqttRoot);
+void registerNvsCommands(const std::shared_ptr<MqttRoot>& mqttRoot);
+void registerHttpUpdateCommand(const std::shared_ptr<MqttRoot>& mqttRoot, const std::shared_ptr<NvsStore>& nvs);

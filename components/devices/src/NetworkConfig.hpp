@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <string>
 
-#include <drivers/RtcDriver.hpp>
 #include <MacAddress.hpp>
+#include <drivers/RtcDriver.hpp>
 #include <mqtt/MqttDriver.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;

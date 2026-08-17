@@ -10,7 +10,6 @@
 
 #include <chrono>
 #include <concepts>
-#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -19,7 +18,6 @@
 static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app_get_description()->version);
 
 #include <Console.hpp>
-#include <CrashManager.hpp>
 #include <DebugConsole.hpp>
 #include <FirmwareRollback.hpp>
 #include <HardwareVersion.hpp>
@@ -27,6 +25,7 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 #include <Log.hpp>
 #include <ShutdownManager.hpp>
 #include <Strings.hpp>
+#include <UpdateFilter.hpp>
 #include <config/ConfigBootPlan.hpp>
 #include <config/NvsConfiguration.hpp>
 #include <drivers/WiFiDriver.hpp>
@@ -37,6 +36,7 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 #include <peripherals/Peripheral.hpp>
 
 #include <BootHelpers.hpp>
+#include <BootMessage.hpp>
 #include <ConfigUpdate.hpp>
 #include <HeapTrace.hpp>
 #include <MqttCommands.hpp>
@@ -50,12 +50,6 @@ using namespace cornucopia::ugly_duckling::functions;
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::config;
 using namespace cornucopia::ugly_duckling::peripherals;
-
-enum class InitState : std::uint8_t {
-    Success = 0,
-    PeripheralError = 1,
-    FunctionError = 2,
-};
 
 template <std::derived_from<DeviceDefinition> TDeviceDefinition>
 static void startDevice() {
@@ -171,28 +165,7 @@ static void startDevice() {
     auto states = std::make_shared<ModuleStates>();
     KernelStatusTask::init(statusLed, states);
 
-    // Init BLE (optional — disabled via deviceConfig->bleEnabled; compiled out entirely on
-    // platforms without CONFIG_BT_NIMBLE_ENABLED, e.g. Spinach — see docs/specs/Bluetooth.md
-    // "Platform support decision")
-    std::shared_ptr<BleDriver> ble;
-#ifdef CONFIG_BT_NIMBLE_ENABLED
-    if (deviceConfig->bleEnabled.get()) {
-        LOGI("BLE enabled, starting NimBLE stack");
-        auto bleNvs = std::make_shared<NvsStore>("ble");
-        ble = std::make_shared<NimBleDriver>(
-            networkConfig->getHostname(),
-            "Ugly Duckling " + modelWithRevision,
-            firmwareVersion,
-            macAddress,
-            bleNvs,
-            deviceConfig->bleAdvInterval.get());
-    } else {
-        LOGI("BLE disabled, using no-op driver");
-        ble = std::make_shared<BleDriver>();
-    }
-#else
-    ble = std::make_shared<BleDriver>();
-#endif
+    auto ble = initBle(deviceConfig, networkConfig->getHostname(), "Ugly Duckling " + modelWithRevision, firmwareVersion, macAddress);
 
     // Init WiFi
     auto wifi = std::make_shared<WiFiDriver>(
@@ -438,58 +411,8 @@ static void startDevice() {
     // Enable power saving once we are done initializing
     WiFiDriver::setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
 
-    // BOOT carries diagnostics and per-peripheral/function error feedback, but no configuration
-    // bodies (docs/Configuration.md, "BOOT, SYNC, UPDATE") -- fingerprints are reported separately
-    // by SYNC (initSyncTask above), gated on kernelReady. `rejection` is present only when a
-    // requested-set revert (this boot or an earlier, unreported one) left one recorded. Published at
-    // QoS 2, consistent with every other outbound topic (sync, log, responses) -- also closes off the
-    // same duplicate-resend risk described on initTelemetryPublishTask above, even though BOOT's own
-    // payload has no delta/counter state that a duplicate would corrupt.
-    mqttRoot->publish(
-        "boot",
-        [resetReason, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion, rejectionToReport, firmwareDownloadRejection, rollback](JsonObject& json) {
-            json["model"] = deviceDefinition->model;
-            json["revision"] = deviceDefinition->revision;
-            json["platform"] = UD_PLATFORM;
-            json["instance"] = networkConfig->instance.get();
-            json["mac"] = macAddress;
-            if (hardwareVersion.has_value()) {
-                json["batch"] = hardwareVersion->batch;
-                json["serial"] = hardwareVersion->serial;
-            }
-            json["version"] = firmwareVersion;
-#ifdef UD_DEBUG
-            json["debug"] = true;
-#else
-            json["debug"] = false;
-#endif
-            json["reset"] = resetReason;
-            json["wakeup"] = esp_sleep_get_wakeup_causes();
-            json["bootCount"] = bootCount++;
-            json["time"] = duration_cast<seconds>(system_clock::now().time_since_epoch()).count();
-            json["state"] = static_cast<int>(initState);
-            json["peripherals"].to<JsonArray>().set(peripheralsInitJson);
-            json["functions"].to<JsonArray>().set(functionsInitJson);
-            json["sleepWhenIdle"] = powerManager->sleepWhenIdle;
-            if (rejectionToReport) {
-                json["rejection"] = static_cast<int>(*rejectionToReport);
-            }
-            // firmwareRejection: either a failed download or a rollback (at most one)
-            if (rollback) {
-                json["firmwareRejection"] = static_cast<int>(rollback->rejectionCode);
-            } else if (firmwareDownloadRejection) {
-                json["firmwareRejection"] = static_cast<int>(*firmwareDownloadRejection);
-            }
-
-            // When a rollback was detected, attribute any coredump to the failed partition's
-            // version rather than the currently running (rolled-back-to) firmwareVersion
-            std::optional<std::string> rolledBackFromVersion;
-            if (rollback) {
-                rolledBackFromVersion = rollback->failedVersion;
-            }
-            CrashManager::handleCrashReport(json, rolledBackFromVersion);
-        },
-        Retention::NoRetain, QoS::ExactlyOnce, 5s);
+    publishBootMessage(mqttRoot, resetReason, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson,
+        powerManager, deviceDefinition, hardwareVersion, rejectionToReport, firmwareDownloadRejection, rollback);
 
     states->kernelReady.set();
 
