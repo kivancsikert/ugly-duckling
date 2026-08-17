@@ -9,6 +9,8 @@
 
 #include <ArduinoJson.h>
 
+#include <Log.hpp>
+
 namespace cornucopia::ugly_duckling::kernel {
 
 LOGGING_TAG(NVS, "nvs")

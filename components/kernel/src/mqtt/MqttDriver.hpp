@@ -16,11 +16,15 @@
 #include <State.hpp>
 #include <Task.hpp>
 #include <config/Configuration.hpp>
+#include <Log.hpp>
 #include <mqtt/PendingMessages.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace cornucopia::ugly_duckling::kernel;
+
+// Forward-declare the drivers namespace so the using directive works regardless of include order
+namespace cornucopia::ugly_duckling::kernel::drivers {}
 using namespace cornucopia::ugly_duckling::kernel::drivers;
 
 namespace cornucopia::ugly_duckling::kernel::mqtt {

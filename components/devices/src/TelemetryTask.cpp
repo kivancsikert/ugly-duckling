@@ -1,7 +1,23 @@
-#include <Log.hpp>
+#include <ArduinoJson.h>
+#include "Watchdog.hpp"
+#include "mqtt/MqttRoot.hpp"
+#include "BatteryManager.hpp"
+#include "PowerManager.hpp"
+#include "drivers/WiFiDriver.hpp"
+#include "drivers/BleDriver.hpp"
+#include "Telemetry.hpp"
+#include "Concurrent.hpp"
+#include "Task.hpp"
+#include "ArduinoJson/Object/JsonObject.hpp"
+#include "ArduinoJson/Array/JsonArray.hpp"
+#include "mqtt/MqttDriver.hpp"
 #include <TelemetryTask.hpp>
 
+#include <chrono>
+#include <cstdint>
+#include <bits/chrono.h>
 #include <esp_heap_caps.h>
+#include <memory>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::kernel;

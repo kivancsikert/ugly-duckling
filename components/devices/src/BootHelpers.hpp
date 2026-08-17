@@ -12,9 +12,9 @@
 #include <drivers/LedDriver.hpp>
 #include <mqtt/MqttRoot.hpp>
 
+#include <NetworkConfig.hpp>
 #include <devices/DeviceConfiguration.hpp>
 #include <devices/DeviceDefinition.hpp>
-#include <NetworkConfig.hpp>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::devices;

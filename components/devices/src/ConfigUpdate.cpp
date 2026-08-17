@@ -1,6 +1,18 @@
-#include <Log.hpp>
+#include <ArduinoJson.h>
+#include "ArduinoJson/Object/JsonObjectConst.hpp"
+#include "functions/Function.hpp"
+#include "config/ConfigStateStore.hpp"
+#include "NvsStore.hpp"
+#include "mqtt/MqttRoot.hpp"
+#include "Concurrent.hpp"
+#include "mqtt/MqttDriver.hpp"
+#include "ArduinoJson/Object/JsonObject.hpp"
 #include <ConfigUpdate.hpp>
+#include <Log.hpp>
 
+#include <string>
+#include <memory>
+#include <exception>
 #include <unordered_map>
 
 #include <esp_app_desc.h>
@@ -12,7 +24,6 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 
 #include <Restart.hpp>
 #include <UpdateFilter.hpp>
-#include <config/ConfigEnvelope.hpp>
 #include <config/ConfigBootPlan.hpp>
 #include <config/ConfigStaging.hpp>
 #include <config/ConfigState.hpp>

@@ -8,6 +8,7 @@
 #include <mqtt/MqttDriver.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
+using namespace cornucopia::ugly_duckling::kernel::mqtt;
 
 /**
  * @brief Network configuration: MQTT broker settings, NTP, plus device instance and location.

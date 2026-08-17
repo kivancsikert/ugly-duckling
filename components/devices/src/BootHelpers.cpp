@@ -1,10 +1,31 @@
-#include <Log.hpp>
+#include "drivers/LedDriver.hpp"
+#include "Task.hpp"
+#include "drivers/BatteryDriver.hpp"
+#include "devices/DeviceDefinition.hpp"
+#include "I2CManager.hpp"
+#include "esp_log.h"
+#include "BatteryManager.hpp"
+#include "esp_err.h"
+#include "nvs.h"
+#include "Watchdog.hpp"
+#include "esp_system.h"
+#include "KernelStatus.hpp"
+#include "NetworkConfig.hpp"
+#include "State.hpp"
+#include "drivers/BleDriver.hpp"
+#include "devices/DeviceConfiguration.hpp"
+#include "NvsStore.hpp"
 #include <BootHelpers.hpp>
+#include <Log.hpp>
 
-#include <esp_wifi.h>
-#include <nvs_flash.h>
+#include <bits/chrono.h>
+#include <chrono>
 #include <Restart.hpp>
+#include <memory>
+#include <esp_wifi.h>
 #include <mqtt/MqttDriver.hpp>
+#include <nvs_flash.h>
+#include <string>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::devices;

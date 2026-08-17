@@ -1,7 +1,17 @@
+#include <ArduinoJson.h>
+#include "mqtt/MqttRoot.hpp"
+#include "ArduinoJson/Object/JsonObject.hpp"
+#include "NvsStore.hpp"
+#include "ArduinoJson/Array/JsonArray.hpp"
+#include "ArduinoJson/Document/JsonDocument.hpp"
+#include "ArduinoJson/Variant/JsonVariant.hpp"
 #include <Log.hpp>
 #include <MqttCommands.hpp>
 
 #include <chrono>
+#include <memory>
+#include <cstdio>
+#include <cstdint>
 #include <string>
 
 #include <esp_app_desc.h>

@@ -1,9 +1,26 @@
-#include <Log.hpp>
+#include <ArduinoJson.h>
+#include "mqtt/MqttRoot.hpp"
+#include "esp_system.h"
+#include "NetworkConfig.hpp"
+#include "ArduinoJson/Array/JsonArray.hpp"
+#include "PowerManager.hpp"
+#include "devices/DeviceDefinition.hpp"
+#include "HardwareVersion.hpp"
+#include "config/ConfigState.hpp"
+#include "FirmwareRollback.hpp"
+#include "ArduinoJson/Object/JsonObject.hpp"
+#include "esp_sleep.h"
+#include "mqtt/MqttDriver.hpp"
 #include <BootMessage.hpp>
 
+#include <chrono>
+#include <bits/chrono.h>
 #include <esp_app_desc.h>
 
 #include <KernelStatus.hpp>
+#include <memory>
+#include <string>
+#include <optional>
 
 // CrashManager.hpp references firmwareVersion inline, so it must be defined before the include
 static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app_get_description()->version);

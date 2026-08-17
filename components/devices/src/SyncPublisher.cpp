@@ -1,6 +1,16 @@
-#include <Log.hpp>
+#include "mqtt/MqttRoot.hpp"
+#include "functions/Function.hpp"
+#include "functions/FunctionConfigTracker.hpp"
+#include "config/ConfigState.hpp"
+#include "ArduinoJson/Object/JsonObject.hpp"
+#include "mqtt/MqttDriver.hpp"
+#include "Concurrent.hpp"
+#include "KernelStatus.hpp"
+#include "Task.hpp"
 #include <SyncPublisher.hpp>
 #include <UpdateFilter.hpp>
+#include <memory>
+#include <optional>
 
 using namespace cornucopia::ugly_duckling::functions;
 using namespace cornucopia::ugly_duckling::kernel;

@@ -5,6 +5,8 @@
 
 #include <esp_mac.h>
 
+#include <EspException.hpp>
+
 namespace cornucopia::ugly_duckling::kernel {
 
 constexpr size_t MAC_ADDRESS_LENGTH = 6;

@@ -11,8 +11,8 @@
 #include <PowerManager.hpp>
 #include <config/ConfigState.hpp>
 
-#include <devices/DeviceDefinition.hpp>
 #include <NetworkConfig.hpp>
+#include <devices/DeviceDefinition.hpp>
 #include <mqtt/MqttRoot.hpp>
 
 using namespace std::chrono;

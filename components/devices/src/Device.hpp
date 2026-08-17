@@ -25,19 +25,18 @@ static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app
 #include <Log.hpp>
 #include <ShutdownManager.hpp>
 #include <Strings.hpp>
-#include <UpdateFilter.hpp>
 #include <config/ConfigBootPlan.hpp>
 #include <config/NvsConfiguration.hpp>
-#include <drivers/WiFiDriver.hpp>
 #include <mqtt/MqttLog.hpp>
 
-#include <devices/DeviceConfiguration.hpp>
 #include <devices/DeviceDefinition.hpp>
-#include <peripherals/Peripheral.hpp>
 
+#include <BootConfig.hpp>
 #include <BootHelpers.hpp>
 #include <BootMessage.hpp>
 #include <ConfigUpdate.hpp>
+#include <Connectivity.hpp>
+#include <DeviceInit.hpp>
 #include <HeapTrace.hpp>
 #include <MqttCommands.hpp>
 #include <NetworkConfig.hpp>
@@ -82,57 +81,13 @@ static void startDevice() {
     JsonDocument networkConfigRaw;
     auto networkConfig = loadConfigFromNvs<NetworkConfig>(configNvs, "network-config", networkConfigRaw);
 
-    // Two-slot confirmed/requested atomicity (docs/Configuration.md, "The confirmed/requested state
-    // machine"). A device-changed UPDATE (registerUpdateHandler below) is what populates
-    // `requested`, staging a self-contained set into the free slot; the strict/revert machinery
-    // here is what boots it. `configStateStore` is a shared_ptr so registerUpdateHandler's
-    // subscription closure can load/save it live, long after this function's locals would
-    // otherwise have gone out of scope (startDevice() never returns).
-    auto configStateNvs = std::make_shared<NvsStore>("config-state");
-    auto configStateStore = std::make_shared<ConfigStateStore>(configStateNvs);
-    ConfigState configState = configStateStore->load();
-    BootPlan bootPlan = decideBootPlan(configState);
-
-    LOGD("Booting from slot '%s', strict: %s, crash recovery checkpoint to persist: %s",
-        bootPlan.slotToLoad ? toString(*bootPlan.slotToLoad).c_str() : "(none)",
-        bootPlan.strict ? "true" : "false",
-        bootPlan.crashRecoveryCheckpoint ? "true": "false");
-
-    if (bootPlan.crashRecoveryCheckpoint) {
-        configStateStore->save(*bootPlan.crashRecoveryCheckpoint);
-        configState = *bootPlan.crashRecoveryCheckpoint;
-    }
-
-    // Device configuration is stored as a verbatim envelope like any other reconciled
-    // configuration (docs/Configuration.md, "Storage: envelopes and slots"), so its fingerprint is
-    // available to the `update` handler below without recomputing anything. There is no flat/unslotted
-    // storage any more: a device with no confirmed slot (a freshly minted device, or one migrating
-    // from before this firmware) boots exactly like an empty slot -- defaults, no functions -- and
-    // reconciles from scratch via an empty SYNC prompting the server to re-push everything (see
-    // docs/specs/config-reconciliation.md, "Migration" -> "A missing/absent confirmed slot is the
-    // one bootstrap path").
-    std::shared_ptr<NvsStore> deviceConfigNvs;
-    if (bootPlan.slotToLoad) {
-        deviceConfigNvs = std::make_shared<NvsStore>("config-" + toString(*bootPlan.slotToLoad));
-    }
-    auto deviceConfig = std::make_shared<DeviceConfiguration>();
-    std::string deviceConfirmedFingerprint;
-    std::string deviceConfirmedRequestedAt;
-    if (deviceConfigNvs) {
-        StoredConfig deviceStoredConfig(deviceConfigNvs, DEVICE_CONFIGURATION_NAME);
-        if (deviceStoredConfig.hasValue()) {
-            JsonDocument deviceConfigRaw = deviceStoredConfig.data();
-            deviceConfig->load(deviceConfigRaw.as<JsonObject>());
-            deviceConfirmedFingerprint = deviceStoredConfig.fingerprint();
-            deviceConfirmedRequestedAt = deviceStoredConfig.requestedAt();
-        }
-    }
+    auto boot = loadDeviceBootConfig(configNvs);
 
     const std::string modelWithRevision = deviceDefinition->model + " (rev" + std::to_string(deviceDefinition->revision) + ")";
 
-    auto watchdog = initWatchdog(deviceConfig->watchdogTimeout.get());
+    auto watchdog = initWatchdog(boot.deviceConfig->watchdogTimeout.get());
 
-    auto powerManager = std::make_shared<PowerManager>(deviceConfig->sleepWhenIdle.get());
+    auto powerManager = std::make_shared<PowerManager>(boot.deviceConfig->sleepWhenIdle.get());
 
     auto logRecords = std::make_shared<Queue<LogRecord>>("logs",
 #ifdef UD_DEBUG
@@ -141,7 +96,7 @@ static void startDevice() {
         32
 #endif
     );
-    ConsoleProvider::init(logRecords, deviceConfig->publishLogs.get());
+    ConsoleProvider::init(logRecords, boot.deviceConfig->publishLogs.get());
 
     const auto& macAddress = getMacAddress();
     const auto& hardwareVersion = getHardwareVersion();
@@ -165,14 +120,7 @@ static void startDevice() {
     auto states = std::make_shared<ModuleStates>();
     KernelStatusTask::init(statusLed, states);
 
-    auto ble = initBle(deviceConfig, networkConfig->getHostname(), "Ugly Duckling " + modelWithRevision, firmwareVersion, macAddress);
-
-    // Init WiFi
-    auto wifi = std::make_shared<WiFiDriver>(
-        states->networkConnecting,
-        states->networkReady,
-        states->configPortalRunning,
-        networkConfig->getHostname());
+    auto ble = initBle(boot.deviceConfig, networkConfig->getHostname(), "Ugly Duckling " + modelWithRevision, firmwareVersion, macAddress);
 
     auto telemetryPublishQueue = std::make_shared<CopyQueue<bool>>("telemetry-publish", 1);
     auto telemetryPublisher = std::make_shared<TelemetryPublisher>(telemetryPublishQueue);
@@ -209,36 +157,17 @@ static void startDevice() {
         LOGD("No battery configured");
     }
 
+    auto connectivity = initConnectivity(states, networkConfig, ble);
+    auto& wifi = connectivity.wifi;
+
 #ifdef UD_DEBUG
     new DebugConsole(batteryManager, wifi, ble);
 #endif
 
-    // Init real time clock
-    auto rtc = std::make_shared<RtcDriver>(wifi->getNetworkReady(), networkConfig->ntp.get(), states->rtcInSync);
-    ble->setOnTimeReceived([rtc](time_t utcTime) { rtc->setTime(utcTime); });
-    ble->setOnWifiScanRequested([wifi, ble]() {
-        wifi->startWifiScan([ble](const std::vector<WifiApRecord>& records) {
-            ble->setScanResults(records);
-        });
-    });
-    ble->setOnWifiCredentialsReceived([wifi](const std::string& ssid, const std::string& password) {
-        wifi->setCredentials(ssid, password);
-    });
-    ble->setOnWifiControlReceived([wifi](const std::string& cmd) {
-        if (cmd == "disconnect") {
-            wifi->disconnect();
-        } else if (cmd == "disable") {
-            wifi->disable();
-        }
-    });
-    wifi->setOnStatusChanged([ble](const std::string& status) {
-        ble->setWifiStatus(status);
-    });
-
     // Init MQTT connection
     auto clientId = "ugly-duckling-" + macAddress;
     auto mqttRoot = initMqtt(states, clientId, networkConfig, states->mqttReady);
-    MqttLog::init(deviceConfig->publishLogs.get(), logRecords, mqttRoot);
+    MqttLog::init(boot.deviceConfig->publishLogs.get(), logRecords, mqttRoot);
     registerBasicCommands(mqttRoot);
     registerNvsCommands(mqttRoot);
 
@@ -280,49 +209,6 @@ static void startDevice() {
         *pendingFirmwareRejection = firmwareDownloadRejection;
     }
 
-    auto peripheralsNvs = std::make_shared<NvsStore>("perf-state");
-    auto pulseCounterManager = std::make_shared<PulseCounterManager>();
-    auto pwm = std::make_shared<PwmManager>();
-    auto telemetryCollector = std::make_shared<TelemetryCollector>();
-
-    // Init peripherals
-    auto peripheralServices = PeripheralServices {
-        .i2c = i2c,
-        .mqttDeviceRoot = mqttRoot,
-        .nvs = peripheralsNvs,
-        .pulseCounterManager = pulseCounterManager,
-        .pwmManager = pwm,
-        .switches = switches,
-        .telemetryPublisher = telemetryPublisher,
-    };
-    auto peripheralManager = std::make_shared<PeripheralManager>(telemetryCollector, peripheralServices);
-    shutdownManager->registerShutdownListener([peripheralManager]() {
-        peripheralManager->shutdown();
-    });
-    deviceDefinition->registerPeripheralFactories(peripheralManager, peripheralServices, deviceConfig);
-
-    // Init functions
-    auto functionServices = FunctionServices {
-        .peripherals = peripheralManager,
-        .telemetryPublisher = telemetryPublisher,
-    };
-    // Function configuration lives in the same namespace as the device document (deviceConfigNvs,
-    // "config-<slot>") -- there is no separate function-cfg namespace any more (docs/Configuration.md,
-    // "Storage: envelopes and slots"). Null only when there's no confirmed slot at all, in which case
-    // deviceConfig->functions is empty too, so no function is ever created against it.
-    auto functionRegistry = std::make_shared<FunctionRegistry>(deviceConfigNvs, functionServices);
-    shutdownManager->registerShutdownListener([functionRegistry]() {
-        functionRegistry->shutdown();
-    });
-    deviceDefinition->registerFunctionFactories(functionRegistry);
-    FunctionManifestEntry deviceManifestEntry {
-        .fingerprint = deviceConfirmedFingerprint,
-        .requestedAt = deviceConfirmedRequestedAt,
-    };
-    registerUpdateHandler(mqttRoot, deviceConfirmedFingerprint, functionRegistry, configStateStore, syncTriggerQueue, configNvs, firmwareVersion);
-    initSyncTask(mqttRoot, syncTriggerQueue, states, functionRegistry, deviceManifestEntry, pendingConfigRejection, pendingFirmwareRejection, firmwareVersion);
-
-    // Init telemetry
     mqttRoot->registerCommand("ping", [telemetryPublisher](const JsonObject&, JsonObject& response) {
         telemetryPublisher->requestTelemetryPublishing();
         response["pong"] = duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count();
@@ -331,43 +217,12 @@ static void startDevice() {
     // We want RTC to be in sync before we start setting up peripherals
     states->rtcInSync.awaitSet();
 
-    InitState initState = InitState::Success;
+    auto runtime = initDeviceRuntime(i2c, mqttRoot, switches, telemetryPublisher,
+        deviceDefinition, boot.deviceConfig, boot.deviceConfigNvs, shutdownManager,
+        boot.confirmedFingerprint, boot.confirmedRequestedAt);
 
-    // Init peripherals
-    JsonDocument peripheralsInitDoc;
-    auto peripheralsInitJson = peripheralsInitDoc.to<JsonArray>();
-
-    auto builtInPeripheralsSettings = deviceDefinition->getBuiltInPeripherals();
-    LOGD("Loading configuration for %d built-in peripherals",
-        builtInPeripheralsSettings.size());
-    for (auto& builtInPeripheralSettings : builtInPeripheralsSettings) {
-        if (!peripheralManager->createPeripheral(builtInPeripheralSettings, peripheralsInitJson)) {
-            initState = InitState::PeripheralError;
-        }
-    }
-
-    const auto& peripheralsSettings = deviceConfig->peripherals.get();
-    LOGI("Loading configuration for %d user-configured peripherals",
-        peripheralsSettings.size());
-    for (const auto& peripheralSettings : peripheralsSettings) {
-        if (!peripheralManager->createPeripheral(peripheralSettings.get(), peripheralsInitJson)) {
-            initState = InitState::PeripheralError;
-        }
-    }
-
-    // Start ULP pulse counter after all channels have been registered by peripherals above.
-    pulseCounterManager->start();
-
-    JsonDocument functionsInitDoc;
-    auto functionsInitJson = functionsInitDoc.to<JsonArray>();
-    const auto& functionsSettings = deviceConfig->functions.get();
-    LOGI("Loading configuration for %d user-configured functions",
-        functionsSettings.size());
-    for (const auto& functionSettings : functionsSettings) {
-        if (!functionRegistry->createFunction(functionSettings.get(), functionsInitJson)) {
-            initState = InitState::FunctionError;
-        }
-    }
+    registerUpdateHandler(mqttRoot, boot.confirmedFingerprint, runtime.functionRegistry, boot.configStateStore, syncTriggerQueue, configNvs, firmwareVersion);
+    initSyncTask(mqttRoot, syncTriggerQueue, states, runtime.functionRegistry, runtime.deviceManifestEntry, pendingConfigRejection, pendingFirmwareRejection, firmwareVersion);
 
     // Booting a `requested` set is strict (docs/Configuration.md, "The confirmed/requested state
     // machine"): unlike `confirmed` (or the empty-slot default), which boots best-effort regardless
@@ -375,19 +230,19 @@ static void startDevice() {
     // reboot immediately, never reaching the `boot`/`sync` publishes below for this failed attempt.
     // A hard crash before reaching this point is caught on the *next* boot instead, since the
     // pending -> attempted transition was already persisted above, before this attempt started.
-    if (bootPlan.strict) {
-        bool success = (initState == InitState::Success);
-        ConfigState outcome = recordStrictBootOutcome(configState, *bootPlan.slotToLoad, success, RejectionCode::Internal);
-        configStateStore->save(outcome);
+    if (boot.bootPlan.strict) {
+        bool success = (runtime.initState == InitState::Success);
+        ConfigState outcome = recordStrictBootOutcome(boot.configState, *boot.bootPlan.slotToLoad, success, RejectionCode::Internal);
+        boot.configStateStore->save(outcome);
         if (!success) {
             LOGE("Requested configuration failed to apply (state=%d); reverting and rebooting",
-                static_cast<int>(initState));
+                static_cast<int>(runtime.initState));
             delayedRestart();
             return;
         }
-        configState = outcome;
+        boot.configState = outcome;
         LOGI("Requested configuration applied successfully; committed slot '%s' as confirmed",
-            toString(*bootPlan.slotToLoad).c_str());
+            toString(*boot.bootPlan.slotToLoad).c_str());
     }
 
     // A rejection recorded by this boot's revert (or an earlier one still unreported) is echoed on
@@ -398,20 +253,23 @@ static void startDevice() {
     // (not after confirmed delivery), matching this system's existing no-delivery-guarantees
     // posture; `pendingConfigRejection` carries the in-memory copy to the SYNC task, which consumes
     // it after its first publish so later SYNCs in this boot session don't repeat it.
-    std::optional<RejectionCode> rejectionToReport = configState.rejection;
+    std::optional<RejectionCode> rejectionToReport = boot.configState.rejection;
     if (rejectionToReport) {
-        ConfigState cleared = configState;
+        ConfigState cleared = boot.configState;
         cleared.rejection.reset();
-        configStateStore->save(cleared);
+        boot.configStateStore->save(cleared);
     }
     *pendingConfigRejection = rejectionToReport;
 
-    initTelemetryPublishTask(deviceConfig->publishInterval.get(), watchdog, mqttRoot, batteryManager, powerManager, wifi, ble, telemetryCollector, telemetryPublishQueue);
+    auto peripheralsInitJson = runtime.peripheralsInitDoc.template as<JsonArray>();
+    auto functionsInitJson = runtime.functionsInitDoc.template as<JsonArray>();
+
+    initTelemetryPublishTask(boot.deviceConfig->publishInterval.get(), watchdog, mqttRoot, batteryManager, powerManager, wifi, ble, runtime.telemetryCollector, telemetryPublishQueue);
 
     // Enable power saving once we are done initializing
-    WiFiDriver::setPowerSaveMode(deviceConfig->sleepWhenIdle.get());
+    WiFiDriver::setPowerSaveMode(boot.deviceConfig->sleepWhenIdle.get());
 
-    publishBootMessage(mqttRoot, resetReason, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson,
+    publishBootMessage(mqttRoot, resetReason, macAddress, networkConfig, runtime.initState, peripheralsInitJson, functionsInitJson,
         powerManager, deviceDefinition, hardwareVersion, rejectionToReport, firmwareDownloadRejection, rollback);
 
     states->kernelReady.set();

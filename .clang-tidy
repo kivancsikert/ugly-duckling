@@ -59,14 +59,6 @@ Checks:
 
 CheckOptions:
   readability-function-cognitive-complexity.Threshold: 500
-  # Raised past the default (800) to accommodate startDevice() in Device.hpp (844 statements as of
-  # writing). Temporary: drop back to default once that function is split up.
-  # google-readability-function-size and hicpp-function-size are aliases that register the same
-  # check under their own names, so each needs its own StatementThreshold override; only setting
-  # readability-function-size.StatementThreshold leaves the other two at the default of 800.
-  readability-function-size.StatementThreshold: 900
-  google-readability-function-size.StatementThreshold: 900
-  hicpp-function-size.StatementThreshold: 900
   cppcoreguidelines-avoid-do-while.IgnoreMacros: true
   hicpp-signed-bitwise.IgnorePositiveIntegerLiterals: true
 
