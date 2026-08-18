@@ -1,4 +1,4 @@
-#include <ArduinoJson.h>
+#include "esp_attr.h"
 #include "mqtt/MqttRoot.hpp"
 #include "esp_system.h"
 #include "NetworkConfig.hpp"
@@ -13,19 +13,18 @@
 #include "mqtt/MqttDriver.hpp"
 #include <BootMessage.hpp>
 
-#include <chrono>
 #include <bits/chrono.h>
+#include <chrono>
 #include <esp_app_desc.h>
 
-#include <KernelStatus.hpp>
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 static RTC_DATA_ATTR int bootCount = 0;
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 
 #include <memory>
-#include <string>
 #include <optional>
+#include <string>
 
 // CrashManager.hpp references firmwareVersion inline, so it must be defined before the include
 static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app_get_description()->version);

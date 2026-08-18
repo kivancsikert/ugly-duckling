@@ -1,8 +1,16 @@
+#include "NvsStore.hpp"
+#include "config/ConfigStateStore.hpp"
+#include "config/ConfigState.hpp"
+#include "config/ConfigBootPlan.hpp"
+#include "devices/DeviceConfiguration.hpp"
+#include "ArduinoJson/Document/JsonDocument.hpp"
+#include "ArduinoJson/Object/JsonObject.hpp"
 #include <BootConfig.hpp>
 
 #include <Log.hpp>
 #include <UpdateFilter.hpp>
 #include <config/StoredConfig.hpp>
+#include <memory>
 
 using namespace cornucopia::ugly_duckling::devices;
 using namespace cornucopia::ugly_duckling::kernel;
@@ -16,7 +24,7 @@ using namespace cornucopia::ugly_duckling::kernel::config;
  * can load/save it live, long after startDevice()'s locals would otherwise have gone out of
  * scope (startDevice() never returns).
  */
-DeviceBootConfig loadDeviceBootConfig(const std::shared_ptr<NvsStore>& configNvs) {
+DeviceBootConfig loadDeviceBootConfig() {
     auto configStateNvs = std::make_shared<NvsStore>("config-state");
     auto configStateStore = std::make_shared<ConfigStateStore>(configStateNvs);
     ConfigState configState = configStateStore->load();

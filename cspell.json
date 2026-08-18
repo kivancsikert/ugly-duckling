@@ -29,6 +29,7 @@
     "FLASHSIZE",
     "freertos",
     "FreeRTOS",
+    "GPOUT",
     "i2cdev",
     "IFLOWA",
     "IFLOWB",

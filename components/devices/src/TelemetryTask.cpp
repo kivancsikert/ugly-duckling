@@ -1,4 +1,3 @@
-#include <ArduinoJson.h>
 #include "Watchdog.hpp"
 #include "mqtt/MqttRoot.hpp"
 #include "BatteryManager.hpp"
@@ -13,9 +12,9 @@
 #include "mqtt/MqttDriver.hpp"
 #include <TelemetryTask.hpp>
 
+#include <bits/chrono.h>
 #include <chrono>
 #include <cstdint>
-#include <bits/chrono.h>
 #include <esp_heap_caps.h>
 #include <memory>
 

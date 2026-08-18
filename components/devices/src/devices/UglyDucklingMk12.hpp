@@ -13,7 +13,6 @@
 
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/door/Door.hpp>
-#include <peripherals/environment/SpadefootToadSensor.hpp>
 #include <peripherals/valve/ValveFactory.hpp>
 
 #include <devices/DeviceDefinition.hpp>
@@ -50,7 +49,7 @@ public:
     }
 
     void handleShortButtonPress(milliseconds duration) override {
-        if (duration >= 200ms) {
+        if (buzzer && duration >= 200ms) {
             buzzer->buzz(1s, 0.1);
         }
     }
@@ -88,7 +87,7 @@ protected:
     // Flow meter B
     DEFINE_PIN(GPIO_NUM_3, IFLOWB)
 
-    // Flow meter B
+    // BQ27220 GPOUT
     DEFINE_PIN(GPIO_NUM_4, BAT_GPOUT)
 
     // Flow meter A

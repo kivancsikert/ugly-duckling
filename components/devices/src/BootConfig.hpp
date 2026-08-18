@@ -33,4 +33,4 @@ struct DeviceBootConfig {
  * @brief Resolves the boot plan from the persisted config state, applies any crash-recovery
  * checkpoint, and loads the device configuration from the appropriate slot.
  */
-DeviceBootConfig loadDeviceBootConfig(const std::shared_ptr<NvsStore>& configNvs);
+DeviceBootConfig loadDeviceBootConfig();

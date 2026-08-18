@@ -83,7 +83,7 @@ static void startDevice() {
     JsonDocument networkConfigRaw;
     auto networkConfig = loadConfigFromNvs<NetworkConfig>(configNvs, "network-config", networkConfigRaw);
 
-    auto boot = loadDeviceBootConfig(configNvs);
+    auto boot = loadDeviceBootConfig();
 
     const std::string modelWithRevision = deviceDefinition->model + " (rev" + std::to_string(deviceDefinition->revision) + ")";
 

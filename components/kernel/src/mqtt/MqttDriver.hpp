@@ -12,11 +12,11 @@
 #include <mqtt_client.h>
 
 #include <Concurrent.hpp>
+#include <Log.hpp>
 #include <Overloaded.hpp>
 #include <State.hpp>
 #include <Task.hpp>
 #include <config/Configuration.hpp>
-#include <Log.hpp>
 #include <mqtt/PendingMessages.hpp>
 
 using namespace std::chrono;

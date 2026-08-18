@@ -1,4 +1,14 @@
+#include "KernelStatus.hpp"
+#include "NetworkConfig.hpp"
+#include "drivers/BleDriver.hpp"
+#include "drivers/WiFiDriver.hpp"
+#include "drivers/RtcDriver.hpp"
+#include "drivers/WifiApRecord.hpp"
 #include <Connectivity.hpp>
+#include <memory>
+#include <ctime>
+#include <vector>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::kernel;
 
