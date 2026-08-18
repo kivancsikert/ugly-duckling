@@ -1,10 +1,9 @@
 #pragma once
 
 #include <chrono>
+#include <mutex>
 
 #include <ArduinoJson.h>
-
-#include <Concurrent.hpp>
 #include <PulseCounter.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>
@@ -64,7 +63,7 @@ public:
                 uint32_t pulses = counter->reset();
 
                 if (pulses > 0) {
-                    Lock lock(updateMutex);
+                    std::lock_guard<std::mutex> lock(updateMutex);
                     double currentVolume = pulses / this->qFactor / 60.0F;
                     LOGV("Counted %" PRIu32 " pulses, %.2f l/min, %.2f l",
                         pulses, currentVolume / (elapsed.count() / 1000.0F / 60.0F), currentVolume);
@@ -77,12 +76,12 @@ public:
     }
 
     double getVolume() override {
-        Lock lock(updateMutex);
+        std::lock_guard<std::mutex> lock(updateMutex);
         return getVolumeAndReset();
     }
 
     void populateTelemetry(JsonObject& json) {
-        Lock lock(updateMutex);
+        std::lock_guard<std::mutex> lock(updateMutex);
         populateTelemetryUnderLock(json);
     }
 
@@ -118,7 +117,7 @@ private:
     double volume = 0.0;
     double unpublishedVolume = 0.0;
 
-    Mutex updateMutex;
+    std::mutex updateMutex;
 };
 
 inline PeripheralFactory makeFactory() {

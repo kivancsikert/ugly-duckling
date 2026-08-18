@@ -1,9 +1,10 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
 #include <unordered_map>
 
-#include <Concurrent.hpp>
+#include <Queue.hpp>
 
 namespace cornucopia::ugly_duckling::kernel::mqtt {
 
@@ -76,7 +77,7 @@ public:
             return;
         }
 
-        Lock lock(mutex);
+        std::lock_guard<std::mutex> lock(mutex);
         messages[messageId] = pending;
     }
 
@@ -87,7 +88,7 @@ public:
 
         PendingMessagePtr pending;
         {
-            Lock lock(mutex);
+            std::lock_guard<std::mutex> lock(mutex);
             auto it = messages.find(messageId);
             if (it == messages.end()) {
                 return false;
@@ -102,7 +103,7 @@ public:
     void clear() {
         std::unordered_map<int, PendingMessagePtr> abandoned;
         {
-            Lock lock(mutex);
+            std::lock_guard<std::mutex> lock(mutex);
             abandoned = std::move(messages);
             messages.clear();
         }
@@ -112,7 +113,7 @@ public:
     }
 
 private:
-    Mutex mutex;
+    std::mutex mutex;
     std::unordered_map<int, PendingMessagePtr> messages;
 };
 

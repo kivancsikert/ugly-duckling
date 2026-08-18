@@ -2,13 +2,14 @@
 
 #include <chrono>
 #include <functional>
+#include <mutex>
 #include <utility>
 
 #include <driver/gpio.h>
 #include <hal/gpio_types.h>
 
-#include <Concurrent.hpp>
 #include <Pin.hpp>
+#include <Queue.hpp>
 #include <Task.hpp>
 
 using namespace std::chrono;
@@ -65,7 +66,7 @@ public:
             SwitchStateChange stateChange = switchStateInterrupts.take();
             std::shared_ptr<SwitchState> state;
             {
-                Lock lock(switchStatesMutex);
+                std::lock_guard<std::mutex> lock(switchStatesMutex);
                 auto it = switchStates.find(stateChange.gpio);
                 if (it == switchStates.end()) {
                     LOGTE(SWITCH, "Switch state change for unknown GPIO %d", stateChange.gpio);
@@ -117,7 +118,7 @@ public:
             config.onDisengaged,
             config.debounceTime);
         {
-            Lock lock(switchStatesMutex);
+            std::lock_guard<std::mutex> lock(switchStatesMutex);
             switchStates.emplace(config.pin->getGpio(), switchState);
         }
 
@@ -173,7 +174,7 @@ private:
         friend void handleSwitchInterrupt(void* arg);
     };
 
-    Mutex switchStatesMutex;
+    std::mutex switchStatesMutex;
     std::unordered_map<gpio_num_t, std::shared_ptr<SwitchState>> switchStates;
 
     CopyQueue<SwitchStateChange> switchStateInterrupts { "switchState-state-interrupts", 1 };

@@ -103,9 +103,10 @@ public:
         registerDeviceSpecificPeripheralFactories(peripheralManager, services, deviceConfig);
     }
 
-    static void registerFunctionFactories(const std::shared_ptr<FunctionRegistry>& functionRegistry) {
+    void registerFunctionFactories(const std::shared_ptr<FunctionRegistry>& functionRegistry) {
         functionRegistry->registerFactory(plot_controller::makeFactory());
         functionRegistry->registerFactory(chicken_door::makeFactory());
+        registerDeviceSpecificFunctionFactories(functionRegistry);
     }
 
     /**
@@ -129,6 +130,9 @@ public:
 
 protected:
     virtual void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<DeviceConfiguration>& _deviceConfig) {
+    }
+
+    virtual void registerDeviceSpecificFunctionFactories(const std::shared_ptr<FunctionRegistry>& _functionRegistry) {
     }
 };
 

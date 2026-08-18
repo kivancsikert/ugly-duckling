@@ -14,7 +14,7 @@ struct Converter<Level> {
     }
 
     static Level fromJson(JsonVariantConst src) {
-        return static_cast<Level>(src.as<int>());
+        return static_cast<Level>(src.as<std::uint8_t>());
     }
 
     static bool checkJson(JsonVariantConst src) {

@@ -6,8 +6,8 @@
 
 #include <ArduinoJson.h>
 
-#include <Concurrent.hpp>
 #include <Log.hpp>
+#include <Queue.hpp>
 
 namespace cornucopia::ugly_duckling::kernel {
 

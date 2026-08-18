@@ -1,5 +1,6 @@
 #pragma once
 
+#include <LogJson.hpp>
 #include <Pin.hpp>
 #include <config/Configuration.hpp>
 

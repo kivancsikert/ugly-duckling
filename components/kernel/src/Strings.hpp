@@ -7,7 +7,7 @@ namespace cornucopia::ugly_duckling::kernel {
 
 static constexpr const char* DIGITS = "0123456789abcdef";
 
-std::string toHexString(uint64_t value) {
+inline std::string toHexString(uint64_t value) {
     char buffer[17] = { 0 };
 
     for (int i = 15; i >= 0; --i) {
@@ -23,7 +23,7 @@ std::string toHexString(uint64_t value) {
     return std::string("0x") + start;
 }
 
-std::string toStringWithPrecision(double value, int precision) {
+inline std::string toStringWithPrecision(double value, int precision) {
     char buffer[32];
     (void) std::snprintf(buffer, sizeof(buffer), "%.*f", precision, value);
     return { buffer };

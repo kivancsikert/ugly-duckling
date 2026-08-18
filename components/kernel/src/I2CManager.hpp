@@ -2,13 +2,12 @@
 
 #include <exception>
 #include <memory>
+#include <mutex>
 #include <vector>
 
 #include <driver/i2c_master.h>
 
 #include <i2cdev.h>
-
-#include <Concurrent.hpp>
 #include <EspException.hpp>
 #include <Pin.hpp>
 #include <Strings.hpp>
@@ -174,7 +173,7 @@ public:
     }
 
     std::shared_ptr<I2CBus> getBusFor(const InternalPinPtr& sda, const InternalPinPtr& scl) {
-        Lock lock(mutex);
+        std::lock_guard<std::mutex> lock(mutex);
         for (auto bus : buses) {
             if (bus->sda == sda && bus->scl == scl) {
                 LOGTV(I2C, "Using previously registered I2C bus #%d for SDA: %s, SCL: %s",
@@ -191,7 +190,7 @@ public:
     }
 
 private:
-    Mutex mutex;
+    std::mutex mutex;
     std::vector<std::shared_ptr<I2CBus>> buses;
 
     // On chips with LP_I2C (ESP32-C6): LP_I2C_NUM_0 is pin-locked to GPIO6/GPIO7; the single HP bus is I2C_NUM_0.

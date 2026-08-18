@@ -31,7 +31,7 @@ public:
         });
     }
 
-    static std::optional<config::RejectionCode> performPendingHttpUpdateIfNecessary(const std::shared_ptr<NvsStore>& nvs, const std::shared_ptr<WiFiDriver>& wifi, std::shared_ptr<Watchdog> watchdog) {
+    static std::optional<config::RejectionCode> performPendingHttpUpdateIfNecessary(const std::shared_ptr<NvsStore>& nvs, const std::shared_ptr<WiFiDriver>& wifi, std::shared_ptr<Watchdog> watchdog, const std::string& firmwareVersion) {
         // Do we need to update?
         if (!nvs->contains(UPDATE_KEY)) {
             LOGTV(UPDATE, "No pending update found, not updating");
@@ -50,20 +50,21 @@ public:
             return config::RejectionCode::Internal;
         }
 
-        HttpUpdater updater(std::move(watchdog));
+        HttpUpdater updater(std::move(watchdog), firmwareVersion);
         return updater.performPendingHttpUpdate(url, wifi);
     }
 
     static constexpr const char* UPDATE_KEY = "pending-update";
 
 private:
-    HttpUpdater(std::shared_ptr<Watchdog> watchdog)
-        : watchdog(std::move(watchdog)) {
+    HttpUpdater(std::shared_ptr<Watchdog> watchdog, const std::string& firmwareVersion)
+        : watchdog(std::move(watchdog))
+        , firmwareVersion(firmwareVersion) {
     }
 
     std::optional<config::RejectionCode> performPendingHttpUpdate(const std::string& url, const std::shared_ptr<WiFiDriver>& wifi) {
         LOGTI(UPDATE, "Updating from version %s via URL %s",
-            firmwareVersion, url.c_str());
+            firmwareVersion.c_str(), url.c_str());
 
         LOGTD(UPDATE, "Waiting for network...");
         if (!wifi->getNetworkReady().awaitSet(15s)) {
@@ -148,6 +149,7 @@ private:
     }
 
     const std::shared_ptr<Watchdog> watchdog;
+    const std::string firmwareVersion;
     size_t downloaded = 0;
 
     static constexpr const size_t DOWNLOAD_NOTIFICATION_BATCH = 128 * 1024;

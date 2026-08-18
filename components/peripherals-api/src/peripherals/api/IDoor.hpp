@@ -61,7 +61,7 @@ struct Converter<DoorState> {
     }
 
     static DoorState fromJson(JsonVariantConst src) {
-        return static_cast<DoorState>(src.as<int>());
+        return static_cast<DoorState>(src.as<std::int8_t>());
     }
 
     static bool checkJson(JsonVariantConst src) {

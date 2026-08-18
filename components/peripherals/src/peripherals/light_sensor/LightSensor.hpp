@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <memory>
+#include <mutex>
 #include <utility>
 
 #include <I2CManager.hpp>
@@ -36,7 +37,7 @@ public:
     }
 
     Lux getLightLevel() override {
-        Lock lock(updateAverageMutex);
+        std::lock_guard<std::mutex> lock(updateAverageMutex);
         return level.getAverage();
     }
 
@@ -51,7 +52,7 @@ protected:
         Task::loop(name, 3072, [this](Task& task) {
             auto currentLevel = readLightLevel();
             {
-                Lock lock(updateAverageMutex);
+                std::lock_guard<std::mutex> lock(updateAverageMutex);
                 level.record(currentLevel);
             }
             task.delayUntil(measurementFrequency);
@@ -60,7 +61,7 @@ protected:
 
 private:
     const seconds measurementFrequency;
-    Mutex updateAverageMutex;
+    std::mutex updateAverageMutex;
     MovingAverage<double> level;
 };
 

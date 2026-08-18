@@ -4,11 +4,11 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
-
-#include <Concurrent.hpp>
+#include <Log.hpp>
 #include <config/Configuration.hpp>
 
 namespace cornucopia::ugly_duckling::kernel {
@@ -111,7 +111,7 @@ public:
 
     template <typename T>
     std::shared_ptr<T> getInstance(const std::string& name) const {
-        Lock lock(mutex);
+        std::lock_guard<std::recursive_mutex> lock(mutex);
         auto it = instances.find(name);
         if (it != instances.end()) {
             auto instance = it->second.template tryGet<T>();
@@ -124,7 +124,7 @@ public:
     }
 
     void shutdown() {
-        Lock lock(mutex);
+        std::lock_guard<std::recursive_mutex> lock(mutex);
         if (state == State::Stopped) {
             return;
         }
@@ -148,7 +148,7 @@ public:
         const std::string& name,
         const std::string& type,
         const std::function<Handle(const FactoryT&)>& make) {
-        Lock lock(mutex);
+        std::lock_guard<std::recursive_mutex> lock(mutex);
         if (state == State::Stopped) {
             throw std::runtime_error("Not creating " + managed + " because the manager is stopped");
         }
@@ -169,7 +169,7 @@ protected:
 
 private:
     std::map<std::string, FactoryT> factories;
-    mutable RecursiveMutex mutex;
+    mutable std::recursive_mutex mutex;
     std::unordered_map<std::string, Handle> instances;
 
     enum class State : uint8_t {

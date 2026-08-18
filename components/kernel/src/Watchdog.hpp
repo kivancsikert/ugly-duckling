@@ -4,6 +4,7 @@
 #include <functional>
 
 #include <esp_check.h>
+#include <esp_system.h>
 #include <esp_timer.h>
 
 #include <Log.hpp>

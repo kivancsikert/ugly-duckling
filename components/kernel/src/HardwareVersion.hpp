@@ -38,7 +38,7 @@ struct HardwareVersion {
 
 // Returns std::nullopt if the eFuse record is unburned (expected for MK10 and
 // earlier), unreadable, or fails its magic/format check.
-static const std::optional<HardwareVersion>& getHardwareVersion() {
+inline const std::optional<HardwareVersion>& getHardwareVersion() {
     static bool queried = false;
     static std::optional<HardwareVersion> version;
     if (queried) {

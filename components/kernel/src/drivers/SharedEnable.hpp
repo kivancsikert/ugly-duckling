@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -24,16 +25,14 @@ public:
 
         Handle(Handle&& other) noexcept
             : parent(std::move(other.parent))
-            , acquired(other.acquired) {
-            other.acquired = false;
+            , acquired(other.acquired.exchange(false)) {
         }
 
         Handle& operator=(Handle&& other) noexcept {
             if (this != &other) {
                 release();
                 parent = std::move(other.parent);
-                acquired = other.acquired;
-                other.acquired = false;
+                acquired.store(other.acquired.exchange(false));
             }
             return *this;
         }
@@ -43,27 +42,27 @@ public:
         }
 
         /**
-         * @brief Mark this handle as active; idempotent.
+         * @brief Mark this handle as active; idempotent and thread-safe.
          */
         void acquire() {
-            if (!acquired && parent) {
-                acquired = true;
+            bool expected = false;
+            if (parent && acquired.compare_exchange_strong(expected, true)) {
                 parent->handleAcquired();
             }
         }
 
         /**
-         * @brief Mark this handle as inactive; idempotent.
+         * @brief Mark this handle as inactive; idempotent and thread-safe.
          */
         void release() {
-            if (acquired && parent) {
-                acquired = false;
+            bool expected = true;
+            if (parent && acquired.compare_exchange_strong(expected, false)) {
                 parent->handleReleased();
             }
         }
 
         bool isAcquired() const {
-            return acquired;
+            return acquired.load();
         }
 
     private:
@@ -74,7 +73,7 @@ public:
         }
 
         std::shared_ptr<SharedEnable> parent;
-        bool acquired = false;
+        std::atomic<bool> acquired = false;
     };
 
     using Actuator = std::function<void(bool)>;

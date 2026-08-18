@@ -5,8 +5,8 @@
 #include <memory>
 #include <string>
 
-#include <Concurrent.hpp>
 #include <Log.hpp>
+#include <Queue.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>
 #include <Time.hpp>

@@ -3,6 +3,7 @@
 #include <atomic>
 #include <chrono>
 #include <functional>
+#include <mutex>
 #include <string>
 #include <variant>
 #include <vector>
@@ -14,8 +15,8 @@
 
 #include "WifiApRecord.hpp"
 #include <ArduinoJson.h>
-#include <Concurrent.hpp>
 #include <Overloaded.hpp>
+#include <Queue.hpp>
 #include <State.hpp>
 #include <StateManager.hpp>
 #include <Task.hpp>
@@ -71,12 +72,12 @@ public:
     }
 
     std::optional<std::string> getSsid() {
-        Lock lock(metadataMutex);
+        std::lock_guard<std::mutex> lock(metadataMutex);
         return ssid;
     }
 
     std::optional<std::string> getIp() {
-        Lock lock(metadataMutex);
+        std::lock_guard<std::mutex> lock(metadataMutex);
         return ip.transform([](const esp_ip4_addr_t& ip) {
             char ipString[16];
             esp_ip4addr_ntoa(&ip, ipString, sizeof(ipString));
@@ -231,7 +232,7 @@ private:
                 auto* event = static_cast<wifi_event_sta_connected_t*>(eventData);
                 std::string newSsid(reinterpret_cast<const char*>(event->ssid), event->ssid_len);
                 {
-                    Lock lock(metadataMutex);
+                    std::lock_guard<std::mutex> lock(metadataMutex);
                     ssid = newSsid;
                 }
                 LOGTD(WIFI, "Connected to the AP %s",
@@ -242,7 +243,7 @@ private:
                 auto* event = static_cast<wifi_event_sta_disconnected_t*>(eventData);
                 networkReady.clear();
                 {
-                    Lock lock(metadataMutex);
+                    std::lock_guard<std::mutex> lock(metadataMutex);
                     ssid.reset();
                 }
                 eventQueue.offer(EvDisconnected { event->reason });
@@ -269,7 +270,7 @@ private:
                 auto* event = static_cast<ip_event_got_ip_t*>(eventData);
                 networkReady.set();
                 {
-                    Lock lock(metadataMutex);
+                    std::lock_guard<std::mutex> lock(metadataMutex);
                     ip = event->ip_info.ip;
                 }
                 eventQueue.offer(EvGotIp { });
@@ -280,7 +281,7 @@ private:
             case IP_EVENT_STA_LOST_IP: {
                 networkReady.clear();
                 {
-                    Lock lock(metadataMutex);
+                    std::lock_guard<std::mutex> lock(metadataMutex);
                     ip.reset();
                 }
                 eventQueue.offer(EvLostIp { });
@@ -621,7 +622,7 @@ private:
     static constexpr milliseconds WIFI_CONNECTION_TIMEOUT = 1min;
     static constexpr milliseconds WIFI_CHECK_INTERVAL = 1min;
 
-    Mutex metadataMutex;
+    std::mutex metadataMutex;
     std::optional<std::string> ssid;
     std::optional<esp_ip4_addr_t> ip;
 

@@ -15,7 +15,7 @@ namespace cornucopia::ugly_duckling::kernel {
  *
  * Pure decision function, no NVS/MQTT — unit-testable natively, mirroring UpdateFilter.hpp.
  */
-inline std::optional<std::string> parseFirmwareUpdate(JsonObjectConst firmware, const char* currentVersion) {
+inline std::optional<std::string> parseFirmwareUpdate(JsonObjectConst firmware, const std::string& currentVersion) {
     if (firmware.isNull()) {
         return std::nullopt;
     }

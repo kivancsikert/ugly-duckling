@@ -22,7 +22,7 @@
 #include <ulp_common.h>
 #include <ulp_riscv.h>
 #ifdef UD_DEBUG
-#include <bits/chrono.h>
+#include <chrono>
 #include <soc/rtc_cntl_reg.h>
 #include <soc/sens_reg.h>
 #include <soc/soc.h>

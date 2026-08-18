@@ -5,6 +5,7 @@ Checks:
   - -cert-err58-cpp
   - -cert-dcl58-cpp
   - clang-analyzer-*
+  - -clang-analyzer-cplusplus.NewDeleteLeaks # False positives from ArduinoJson placement new and std::function internals
   - concurrency-*
   - cppcoreguidelines-*
   - -cppcoreguidelines-avoid-c-arrays
@@ -38,6 +39,7 @@ Checks:
   - -hicpp-vararg
   - llvm-*
   - -llvm-header-guard
+  - -llvm-include-order # We are managing include order via clang-format instead
   - misc-*
   - -misc-const-correctness
   - -misc-definitions-in-headers
@@ -59,16 +61,12 @@ Checks:
 
 CheckOptions:
   readability-function-cognitive-complexity.Threshold: 500
-  # Raised past the default (800) to accommodate startDevice() in Device.hpp (844 statements as of
-  # writing). Temporary: drop back to default once that function is split up.
-  # google-readability-function-size and hicpp-function-size are aliases that register the same
-  # check under their own names, so each needs its own StatementThreshold override; only setting
-  # readability-function-size.StatementThreshold leaves the other two at the default of 800.
-  readability-function-size.StatementThreshold: 900
-  google-readability-function-size.StatementThreshold: 900
-  hicpp-function-size.StatementThreshold: 900
   cppcoreguidelines-avoid-do-while.IgnoreMacros: true
   hicpp-signed-bitwise.IgnorePositiveIntegerLiterals: true
+  # misc-include-cleaner suggests internal headers (ArduinoJson/Document/JsonDocument.hpp,
+  # bits/chrono.h, etc.) instead of the public umbrella headers (ArduinoJson.h, <chrono>)
+  # because neither library carries IWYU export pragmas. Ignore the internal trees.
+  misc-include-cleaner.IgnoreHeaders: "ArduinoJson/.*|bits/.*"
 
 # Used by clangd (VS Code). The CLI overrides this with --header-filter="$(pwd)/(main|components)/"
 # to get an absolute path, which avoids matching ESP-IDF's components/ tree.
