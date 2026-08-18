@@ -1,5 +1,6 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
+  "C_Cpp.clang_format_path": "${workspaceFolder}/tools/clang-format.sh",
   "editor.formatOnSave": true,
   "idf.customExtraVars": {
     "IDF_TARGET": "esp32c6"
