@@ -15,7 +15,7 @@
 
 #include <esp_app_desc.h>
 
-static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app_get_description()->version);
+static const std::string firmwareVersion(esp_app_get_description()->version);
 
 #include <Console.hpp>
 #include <DebugConsole.hpp>
@@ -110,9 +110,9 @@ static void startDevice() {
          "  | |_| | (_| | | |_| | | |_| | |_| | (__|   <| | | | | | (_| |\n"
          "   \\___/ \\__, |_|\\__, | |____/ \\__,_|\\___|_|\\_\\_|_|_| |_|\\__, |\n"
          "         |___/   |___/                                    |___/ %s\n",
-        firmwareVersion);
+        firmwareVersion.c_str());
     LOGI("Initializing ugly duckling firmware version %s on %s instance '%s' with hostname '%s' and MAC address %s",
-        firmwareVersion,
+        firmwareVersion.c_str(),
         modelWithRevision.c_str(),
         networkConfig->instance.get().c_str(),
         networkConfig->getHostname().c_str(),
@@ -196,7 +196,7 @@ static void startDevice() {
 
     // Handle any pending HTTP update (will reboot if update was required and was successful)
     registerHttpUpdateCommand(mqttRoot, configNvs);
-    auto firmwareDownloadRejection = HttpUpdater::performPendingHttpUpdateIfNecessary(configNvs, wifi, watchdog);
+    auto firmwareDownloadRejection = HttpUpdater::performPendingHttpUpdateIfNecessary(configNvs, wifi, watchdog, firmwareVersion);
 
     // Detect whether the bootloader rolled back from a failed OTA partition. This and a failed
     // download cannot co-occur: a failed download never writes a new partition, so there's nothing
@@ -271,7 +271,7 @@ static void startDevice() {
     // Enable power saving once we are done initializing
     WiFiDriver::setPowerSaveMode(boot.deviceConfig->sleepWhenIdle.get());
 
-    publishBootMessage(mqttRoot, resetReason, macAddress, networkConfig, runtime.initState, peripheralsInitJson, functionsInitJson,
+    publishBootMessage(mqttRoot, resetReason, firmwareVersion, macAddress, networkConfig, runtime.initState, peripheralsInitJson, functionsInitJson,
         powerManager, deviceDefinition, hardwareVersion, rejectionToReport, firmwareDownloadRejection, rollback);
 
     states->kernelReady.set();
@@ -283,7 +283,7 @@ static void startDevice() {
 
     LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
         duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count() / 1000.0,
-        firmwareVersion,
+        firmwareVersion.c_str(),
         modelWithRevision.c_str(),
         networkConfig->instance.get().c_str(),
         networkConfig->getHostname().c_str(),

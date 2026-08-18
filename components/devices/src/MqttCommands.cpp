@@ -1,9 +1,5 @@
 #include "mqtt/MqttRoot.hpp"
-#include "ArduinoJson/Object/JsonObject.hpp"
 #include "NvsStore.hpp"
-#include "ArduinoJson/Array/JsonArray.hpp"
-#include "ArduinoJson/Document/JsonDocument.hpp"
-#include "ArduinoJson/Variant/JsonVariant.hpp"
 #include <Log.hpp>
 #include <MqttCommands.hpp>
 
@@ -13,11 +9,8 @@
 #include <memory>
 #include <string>
 
-#include <esp_app_desc.h>
 #include <esp_sleep.h>
 
-// HttpUpdate.hpp references firmwareVersion inline, so it must be defined before the include
-static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app_get_description()->version);
 #include <HttpUpdate.hpp>
 
 #include <Restart.hpp>

@@ -27,7 +27,7 @@ public:
      *                     is attributed to firmwareVersion (the normal case: the currently running
      *                     firmware crashed on a previous boot and then recovered on this one).
      */
-    static void handleCrashReport(JsonObject& json, const std::optional<std::string>& rolledBackFromVersion = std::nullopt) {
+    static void handleCrashReport(JsonObject& json, const std::string& firmwareVersion, const std::optional<std::string>& rolledBackFromVersion = std::nullopt) {
         switch (getCoreDumpStatus()) {
             case CoreDumpStatus::NoDump: {
                 break;
@@ -42,7 +42,7 @@ public:
                 // version from the failed partition eliminates the NVS round-trip entirely.
                 const std::string& crashedVersion = rolledBackFromVersion.has_value()
                     ? *rolledBackFromVersion
-                    : std::string(firmwareVersion);
+                    : firmwareVersion;
                 reportPreviousCrash(json, crashedVersion);
                 ESP_ERROR_CHECK_WITHOUT_ABORT(esp_core_dump_image_erase());
                 break;

@@ -2,20 +2,17 @@
 #include "mqtt/MqttRoot.hpp"
 #include "esp_system.h"
 #include "NetworkConfig.hpp"
-#include "ArduinoJson/Array/JsonArray.hpp"
 #include "PowerManager.hpp"
 #include "devices/DeviceDefinition.hpp"
 #include "HardwareVersion.hpp"
 #include "config/ConfigState.hpp"
 #include "FirmwareRollback.hpp"
-#include "ArduinoJson/Object/JsonObject.hpp"
 #include "esp_sleep.h"
 #include "mqtt/MqttDriver.hpp"
 #include <BootMessage.hpp>
 
 #include <bits/chrono.h>
 #include <chrono>
-#include <esp_app_desc.h>
 
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
@@ -26,8 +23,6 @@ static RTC_DATA_ATTR int bootCount = 0;
 #include <optional>
 #include <string>
 
-// CrashManager.hpp references firmwareVersion inline, so it must be defined before the include
-static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app_get_description()->version);
 #include <CrashManager.hpp>
 
 using namespace std::chrono;
@@ -45,6 +40,7 @@ using namespace cornucopia::ugly_duckling::kernel;
 void publishBootMessage(
     const std::shared_ptr<MqttRoot>& mqttRoot,
     esp_reset_reason_t resetReason,
+    const std::string& firmwareVersion,
     const std::string& macAddress,
     const std::shared_ptr<NetworkConfig>& networkConfig,
     InitState initState,
@@ -58,7 +54,7 @@ void publishBootMessage(
     const std::optional<RollbackDetection>& rollback) {
     mqttRoot->publish(
         "boot",
-        [resetReason, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion, rejectionToReport, firmwareDownloadRejection, rollback](JsonObject& json) {
+        [resetReason, firmwareVersion, macAddress, networkConfig, initState, peripheralsInitJson, functionsInitJson, powerManager, deviceDefinition, hardwareVersion, rejectionToReport, firmwareDownloadRejection, rollback](JsonObject& json) {
             json["model"] = deviceDefinition->model;
             json["revision"] = deviceDefinition->revision;
             json["platform"] = UD_PLATFORM;
@@ -98,7 +94,7 @@ void publishBootMessage(
             if (rollback) {
                 rolledBackFromVersion = rollback->failedVersion;
             }
-            CrashManager::handleCrashReport(json, rolledBackFromVersion);
+            CrashManager::handleCrashReport(json, firmwareVersion, rolledBackFromVersion);
         },
         Retention::NoRetain, QoS::ExactlyOnce, 5s);
 }

@@ -7,8 +7,6 @@
 #include "Telemetry.hpp"
 #include "Concurrent.hpp"
 #include "Task.hpp"
-#include "ArduinoJson/Object/JsonObject.hpp"
-#include "ArduinoJson/Array/JsonArray.hpp"
 #include "mqtt/MqttDriver.hpp"
 #include <TelemetryTask.hpp>
 

@@ -105,7 +105,7 @@ std::shared_ptr<BleDriver> initBle(
     const std::shared_ptr<DeviceConfiguration>& deviceConfig,
     const std::string& hostname,
     const std::string& deviceDescription,
-    const char* firmwareVersion,
+    const std::string& firmwareVersion,
     const std::string& macAddress) {
 #ifdef CONFIG_BT_NIMBLE_ENABLED
     if (deviceConfig->bleEnabled.get()) {

@@ -3,8 +3,6 @@
 #include "config/ConfigState.hpp"
 #include "config/ConfigBootPlan.hpp"
 #include "devices/DeviceConfiguration.hpp"
-#include "ArduinoJson/Document/JsonDocument.hpp"
-#include "ArduinoJson/Object/JsonObject.hpp"
 #include <BootConfig.hpp>
 
 #include <Log.hpp>

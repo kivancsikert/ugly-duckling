@@ -1,4 +1,3 @@
-#include "ArduinoJson/Object/JsonObject.hpp"
 #include "Concurrent.hpp"
 #include "KernelStatus.hpp"
 #include "Task.hpp"
@@ -35,7 +34,7 @@ void publishSync(
     const FunctionManifestEntry& deviceManifestEntry,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingConfigRejection,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingFirmwareRejection,
-    const char* firmwareVersion) {
+    const std::string& firmwareVersion) {
     std::optional<RejectionCode> configRejection = *pendingConfigRejection;
     *pendingConfigRejection = std::nullopt;
     std::optional<RejectionCode> firmwareRejection = *pendingFirmwareRejection;
@@ -84,7 +83,7 @@ void initSyncTask(
     const FunctionManifestEntry& deviceManifestEntry,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingConfigRejection,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingFirmwareRejection,
-    const char* firmwareVersion) {
+    const std::string& firmwareVersion) {
     Task::loop("sync", 4096, [mqttRoot, syncTriggerQueue, states, functionRegistry, deviceManifestEntry, pendingConfigRejection, pendingFirmwareRejection, firmwareVersion](Task&) {
         syncTriggerQueue->take();
         states->kernelReady.awaitSet();

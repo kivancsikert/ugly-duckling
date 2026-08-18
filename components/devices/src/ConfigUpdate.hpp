@@ -45,4 +45,4 @@ void registerUpdateHandler(
     const std::shared_ptr<ConfigStateStore>& configStateStore,
     const std::shared_ptr<CopyQueue<bool>>& syncTriggerQueue,
     const std::shared_ptr<NvsStore>& nvs,
-    const char* firmwareVersion);
+    const std::string& firmwareVersion);

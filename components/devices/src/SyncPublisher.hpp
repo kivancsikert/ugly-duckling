@@ -24,7 +24,7 @@ void publishSync(
     const FunctionManifestEntry& deviceManifestEntry,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingConfigRejection,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingFirmwareRejection,
-    const char* firmwareVersion);
+    const std::string& firmwareVersion);
 
 /**
  * @brief Dedicated task that publishes SYNC whenever triggered via syncTriggerQueue.
@@ -37,4 +37,4 @@ void initSyncTask(
     const FunctionManifestEntry& deviceManifestEntry,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingConfigRejection,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingFirmwareRejection,
-    const char* firmwareVersion);
+    const std::string& firmwareVersion);

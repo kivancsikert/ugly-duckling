@@ -1,11 +1,9 @@
-#include "ArduinoJson/Object/JsonObjectConst.hpp"
 #include "functions/Function.hpp"
 #include "config/ConfigStateStore.hpp"
 #include "NvsStore.hpp"
 #include "mqtt/MqttRoot.hpp"
 #include "Concurrent.hpp"
 #include "mqtt/MqttDriver.hpp"
-#include "ArduinoJson/Object/JsonObject.hpp"
 #include <ConfigUpdate.hpp>
 #include <Log.hpp>
 
@@ -14,11 +12,7 @@
 #include <string>
 #include <unordered_map>
 
-#include <esp_app_desc.h>
-
 #include <FirmwareUpdateDecision.hpp>
-// HttpUpdate.hpp references firmwareVersion inline, so it must be defined before the include
-static const char* const firmwareVersion = reinterpret_cast<const char*>(esp_app_get_description()->version);
 #include <HttpUpdate.hpp>
 
 #include <Restart.hpp>
@@ -159,7 +153,7 @@ void registerUpdateHandler(
     const std::shared_ptr<ConfigStateStore>& configStateStore,
     const std::shared_ptr<CopyQueue<bool>>& syncTriggerQueue,
     const std::shared_ptr<NvsStore>& nvs,
-    const char* firmwareVersion) {
+    const std::string& firmwareVersion) {
     mqttRoot->subscribe("update", QoS::ExactlyOnce, [deviceConfirmedFingerprint, functionRegistry, configStateStore, syncTriggerQueue, nvs, firmwareVersion](const std::string&, const JsonObject& request) {
         auto firmwareUrl = parseFirmwareUpdate(request["firmware"], firmwareVersion);
         if (firmwareUrl) {

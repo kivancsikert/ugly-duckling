@@ -12,8 +12,6 @@
 #include "functions/Function.hpp"
 #include "functions/FunctionConfigTracker.hpp"
 #include "BootMessage.hpp"
-#include "ArduinoJson/Document/JsonDocument.hpp"
-#include "ArduinoJson/Array/JsonArray.hpp"
 #include <DeviceInit.hpp>
 
 #include <Log.hpp>
