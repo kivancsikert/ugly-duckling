@@ -8,6 +8,9 @@ categories:
   - title: 🔧 Hardware changes
     labels:
       - hardware
+  - title: 📡 Protocol changes
+    labels:
+      - protocol
   - title: 🐛 Bug Fixes
     labels:
       - bug
@@ -25,4 +28,4 @@ exclude-labels:
   - wontfix
 
 template: |
-    $CHANGES
+  $CHANGES
