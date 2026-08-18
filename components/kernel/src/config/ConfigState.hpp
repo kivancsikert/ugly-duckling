@@ -133,11 +133,15 @@ struct Converter<RejectionCode> {
     }
 
     static RejectionCode fromJson(JsonVariantConst src) {
-        return static_cast<RejectionCode>(src.as<std::int32_t>());
+        auto value = src.as<std::uint8_t>();
+        if (value == 0) {
+            return RejectionCode::Internal;
+        }
+        return static_cast<RejectionCode>(value);
     }
 
     static bool checkJson(JsonVariantConst src) {
-        return src.is<std::int32_t>();
+        return src.is<std::uint8_t>();
     }
 };
 

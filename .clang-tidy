@@ -5,6 +5,7 @@ Checks:
   - -cert-err58-cpp
   - -cert-dcl58-cpp
   - clang-analyzer-*
+  - -clang-analyzer-cplusplus.NewDeleteLeaks # False positives from ArduinoJson placement new and std::function internals
   - concurrency-*
   - cppcoreguidelines-*
   - -cppcoreguidelines-avoid-c-arrays
@@ -62,6 +63,10 @@ CheckOptions:
   readability-function-cognitive-complexity.Threshold: 500
   cppcoreguidelines-avoid-do-while.IgnoreMacros: true
   hicpp-signed-bitwise.IgnorePositiveIntegerLiterals: true
+  # misc-include-cleaner suggests internal headers (ArduinoJson/Document/JsonDocument.hpp,
+  # bits/chrono.h, etc.) instead of the public umbrella headers (ArduinoJson.h, <chrono>)
+  # because neither library carries IWYU export pragmas. Ignore the internal trees.
+  misc-include-cleaner.IgnoreHeaders: "ArduinoJson/.*|bits/.*"
 
 # Used by clangd (VS Code). The CLI overrides this with --header-filter="$(pwd)/(main|components)/"
 # to get an absolute path, which avoids matching ESP-IDF's components/ tree.

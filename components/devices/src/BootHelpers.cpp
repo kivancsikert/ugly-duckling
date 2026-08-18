@@ -2,7 +2,6 @@
 #include "I2CManager.hpp"
 #include "KernelStatus.hpp"
 #include "NetworkConfig.hpp"
-#include "NvsStore.hpp"
 #include "State.hpp"
 #include "Task.hpp"
 #include "Watchdog.hpp"
@@ -18,8 +17,11 @@
 #include <BootHelpers.hpp>
 #include <Log.hpp>
 
+#ifdef CONFIG_BT_NIMBLE_ENABLED
+#include "NvsStore.hpp"
+#endif
+
 #include <Restart.hpp>
-#include <bits/chrono.h>
 #include <chrono>
 #include <esp_wifi.h>
 #include <memory>

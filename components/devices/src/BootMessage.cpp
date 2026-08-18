@@ -14,10 +14,11 @@
 #include <bits/chrono.h>
 #include <chrono>
 
-
+namespace {
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
-static RTC_DATA_ATTR int bootCount = 0;
+RTC_DATA_ATTR int bootCount = 0;
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
+}    // namespace
 
 #include <memory>
 #include <optional>

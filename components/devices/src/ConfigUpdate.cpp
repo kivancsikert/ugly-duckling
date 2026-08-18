@@ -115,13 +115,13 @@ ConfigUpdateResult applyConfigUpdate(
         }
     }
 
-    // GCC 15 can't prove the optional payload inside `attempted` is engaged at the
-    // copy inside recordStrictBootOutcome, even though the has_value() guard above
-    // guarantees it — suppress the false positive (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80635).
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+    // Redundant guard: stageDeviceUpdate() unconditionally populates `requested`, and the
+    // has_value() check above already returned FunctionsFailed. Repeated here to silence a
+    // GCC 15 false positive (-Wmaybe-uninitialized, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=80635).
+    if (!attempted.requested.has_value()) {
+        return ConfigUpdateResult::FunctionsFailed;
+    }
     ConfigState outcome = recordStrictBootOutcome(attempted, staged.slot, success, RejectionCode::Internal);
-#pragma GCC diagnostic pop
     configStateStore->save(outcome);
 
     if (!success) {

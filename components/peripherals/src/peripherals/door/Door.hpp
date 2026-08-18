@@ -415,7 +415,7 @@ struct Converter<OperationState> {
     }
 
     static OperationState fromJson(JsonVariantConst src) {
-        return static_cast<OperationState>(src.as<int>());
+        return static_cast<OperationState>(src.as<std::uint8_t>());
     }
 
     static bool checkJson(JsonVariantConst src) {
