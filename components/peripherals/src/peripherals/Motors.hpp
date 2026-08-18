@@ -1,10 +1,10 @@
 #pragma once
 
+#include <drivers/MotorDriver.hpp>
+
 #include <map>
 #include <memory>
 #include <string>
-
-#include <drivers/MotorDriver.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel::drivers;
 

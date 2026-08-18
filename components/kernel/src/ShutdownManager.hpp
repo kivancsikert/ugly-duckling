@@ -1,9 +1,9 @@
 #pragma once
 
+#include <Task.hpp>
+
 #include <functional>
 #include <vector>
-
-#include <Task.hpp>
 
 namespace cornucopia::ugly_duckling::kernel {
 

@@ -1,17 +1,18 @@
-#include "esp_attr.h"
-#include "mqtt/MqttRoot.hpp"
-#include "esp_system.h"
+#include "FirmwareRollback.hpp"
+#include "HardwareVersion.hpp"
 #include "NetworkConfig.hpp"
 #include "PowerManager.hpp"
-#include "devices/DeviceDefinition.hpp"
-#include "HardwareVersion.hpp"
 #include "config/ConfigState.hpp"
-#include "FirmwareRollback.hpp"
-#include "esp_sleep.h"
+#include "devices/DeviceDefinition.hpp"
 #include "mqtt/MqttDriver.hpp"
+#include "mqtt/MqttRoot.hpp"
 #include <BootMessage.hpp>
 
+#include "esp_attr.h"
+#include "esp_sleep.h"
+#include "esp_system.h"
 #include <bits/chrono.h>
+
 #include <chrono>
 
 namespace {
@@ -20,11 +21,11 @@ RTC_DATA_ATTR int bootCount = 0;
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
 }    // namespace
 
+#include <CrashManager.hpp>
+
 #include <memory>
 #include <optional>
 #include <string>
-
-#include <CrashManager.hpp>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::kernel;

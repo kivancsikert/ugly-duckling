@@ -1,5 +1,17 @@
 #pragma once
 
+#include <Named.hpp>
+#include <Overloaded.hpp>
+#include <Queue.hpp>
+#include <Task.hpp>
+#include <Telemetry.hpp>
+#include <Watchdog.hpp>
+#include <drivers/MotorDriver.hpp>
+#include <drivers/SwitchManager.hpp>
+#include <peripherals/Motors.hpp>
+#include <peripherals/Peripheral.hpp>
+#include <peripherals/api/IDoor.hpp>
+
 #include <chrono>
 #include <concepts>
 #include <limits>
@@ -7,20 +19,6 @@
 #include <mutex>
 #include <utility>
 #include <variant>
-
-#include <Named.hpp>
-#include <Overloaded.hpp>
-#include <Queue.hpp>
-#include <Task.hpp>
-#include <Telemetry.hpp>
-#include <Watchdog.hpp>
-
-#include <drivers/MotorDriver.hpp>
-#include <drivers/SwitchManager.hpp>
-
-#include <peripherals/Motors.hpp>
-#include <peripherals/Peripheral.hpp>
-#include <peripherals/api/IDoor.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::drivers;
@@ -177,7 +175,7 @@ public:
 
     void shutdown(const ShutdownParameters& _params) override {
         if (operationState == OperationState::Running) {
-            updateQueue.put(ShutdownSpec { });
+            updateQueue.put(ShutdownSpec {});
         }
     }
 
@@ -315,7 +313,7 @@ private:
             case WatchdogState::TimedOut:
                 LOGTV(DOOR, "Watchdog timed out");
                 sleepLock.reset();
-                updateQueue.put(WatchdogTimeout { });
+                updateQueue.put(WatchdogTimeout {});
                 break;
         }
     }

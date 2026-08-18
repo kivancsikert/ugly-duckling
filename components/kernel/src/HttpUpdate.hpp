@@ -1,20 +1,19 @@
 #pragma once
 
-#include <optional>
-#include <string>
-
-#include <ArduinoJson.h>
-
-#include <esp_crt_bundle.h>
-#include <esp_http_client.h>
-#include <esp_https_ota.h>
-
 #include <Log.hpp>
 #include <NvsStore.hpp>
 #include <Restart.hpp>
 #include <Watchdog.hpp>
 #include <config/ConfigState.hpp>
 #include <drivers/WiFiDriver.hpp>
+
+#include <ArduinoJson.h>
+#include <esp_crt_bundle.h>
+#include <esp_http_client.h>
+#include <esp_https_ota.h>
+
+#include <optional>
+#include <string>
 #include <utility>
 
 namespace cornucopia::ugly_duckling::kernel {

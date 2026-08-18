@@ -1,8 +1,5 @@
 #pragma once
 
-#include <chrono>
-#include <memory>
-
 #include <BatteryManager.hpp>
 #include <PowerManager.hpp>
 #include <Queue.hpp>
@@ -11,6 +8,9 @@
 #include <drivers/BleDriver.hpp>
 #include <drivers/WiFiDriver.hpp>
 #include <mqtt/MqttRoot.hpp>
+
+#include <chrono>
+#include <memory>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::kernel;

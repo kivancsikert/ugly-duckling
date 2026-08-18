@@ -1,19 +1,18 @@
 #pragma once
 
-#include <chrono>
-#include <memory>
-#include <utility>
-
 #include <Named.hpp>
 #include <config/Configuration.hpp>
 #include <functions/Function.hpp>
 #include <functions/ScheduledTransitionLoop.hpp>
-
 #include <peripherals/api/IDoor.hpp>
 #include <scheduling/CompositeScheduler.hpp>
 #include <scheduling/DelayScheduler.hpp>
 #include <scheduling/LightSensorScheduler.hpp>
 #include <scheduling/OverrideScheduler.hpp>
+
+#include <chrono>
+#include <memory>
+#include <utility>
 
 using namespace cornucopia::ugly_duckling::peripherals::api;
 using namespace cornucopia::ugly_duckling::utils::scheduling;

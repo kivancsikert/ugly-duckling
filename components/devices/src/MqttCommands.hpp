@@ -1,10 +1,10 @@
 #pragma once
 
-#include <memory>
-
 #include <NvsStore.hpp>
 #include <drivers/LedDriver.hpp>
 #include <mqtt/MqttRoot.hpp>
+
+#include <memory>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::mqtt;

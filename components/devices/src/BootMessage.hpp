@@ -1,19 +1,18 @@
 #pragma once
 
+#include <FirmwareRollback.hpp>
+#include <HardwareVersion.hpp>
+#include <NetworkConfig.hpp>
+#include <PowerManager.hpp>
+#include <config/ConfigState.hpp>
+#include <devices/DeviceDefinition.hpp>
+#include <mqtt/MqttRoot.hpp>
+
 #include <chrono>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
-
-#include <FirmwareRollback.hpp>
-#include <HardwareVersion.hpp>
-#include <PowerManager.hpp>
-#include <config/ConfigState.hpp>
-
-#include <NetworkConfig.hpp>
-#include <devices/DeviceDefinition.hpp>
-#include <mqtt/MqttRoot.hpp>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::devices;

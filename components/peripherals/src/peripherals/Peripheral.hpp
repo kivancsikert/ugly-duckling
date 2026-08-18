@@ -1,12 +1,6 @@
 #pragma once
 
-#include <concepts>
-#include <functional>
-#include <map>
-#include <memory>
-#include <type_traits>
-#include <vector>
-
+#include "PeripheralException.hpp"
 #include <EspException.hpp>
 #include <I2CManager.hpp>
 #include <Manager.hpp>
@@ -17,10 +11,14 @@
 #include <config/Configuration.hpp>
 #include <drivers/SwitchManager.hpp>
 #include <mqtt/MqttRoot.hpp>
-
 #include <peripherals/api/IPeripheral.hpp>
 
-#include "PeripheralException.hpp"
+#include <concepts>
+#include <functional>
+#include <map>
+#include <memory>
+#include <type_traits>
+#include <vector>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::drivers;
@@ -95,11 +93,8 @@ template <
     typename Impl,
     std::derived_from<ConfigurationSection> TSettings,
     typename... RegisterAs>
-    requires (sizeof...(RegisterAs) == 0 || (std::derived_from<Impl, RegisterAs> && ...))
-PeripheralFactory makePeripheralFactory(const std::string& factoryType,
-    const std::string& peripheralType,
-    std::function<std::shared_ptr<Impl>(PeripheralInitParameters&, const std::shared_ptr<TSettings>&)> makeImpl,
-    std::function<std::shared_ptr<TSettings>()> makeSettings = [] { return std::make_shared<TSettings>(); }) {
+    requires(sizeof...(RegisterAs) == 0 || (std::derived_from<Impl, RegisterAs> && ...))
+PeripheralFactory makePeripheralFactory(const std::string& factoryType, const std::string& peripheralType, std::function<std::shared_ptr<Impl>(PeripheralInitParameters&, const std::shared_ptr<TSettings>&)> makeImpl, std::function<std::shared_ptr<TSettings>()> makeSettings = [] { return std::make_shared<TSettings>(); }) {
 
     // Build the factory using designated initializers (C++20+)
     auto effectiveType = peripheralType.empty() ? factoryType : peripheralType;

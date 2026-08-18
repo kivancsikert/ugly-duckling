@@ -1,10 +1,10 @@
 #pragma once
 
-#include <cstdio>
+#include <Task.hpp>
 
 #include <esp_system.h>
 
-#include <Task.hpp>
+#include <cstdio>
 
 namespace cornucopia::ugly_duckling::kernel {
 

@@ -1,8 +1,5 @@
 #pragma once
 
-#include <chrono>
-#include <utility>
-
 #include <Log.hpp>
 #include <MovingAverage.hpp>
 #include <Named.hpp>
@@ -12,6 +9,9 @@
 #include <config/Configuration.hpp>
 #include <mqtt/MqttDriver.hpp>
 #include <peripherals/Peripheral.hpp>
+
+#include <chrono>
+#include <utility>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;

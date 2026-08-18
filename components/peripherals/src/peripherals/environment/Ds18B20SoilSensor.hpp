@@ -1,18 +1,16 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <utility>
-
-#include <ds18x20.h>
-
+#include "Environment.hpp"
 #include <config/Configuration.hpp>
-
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ITemperatureSensor.hpp>
 #include <utils/DebouncedMeasurement.hpp>
 
-#include "Environment.hpp"
+#include <ds18x20.h>
+
+#include <memory>
+#include <optional>
+#include <utility>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::mqtt;

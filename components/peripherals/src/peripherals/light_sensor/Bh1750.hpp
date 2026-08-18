@@ -1,19 +1,17 @@
 #pragma once
 
-#include <chrono>
-#include <memory>
-
-#include <esp_system.h>
-
-#include <bh1750.h>
-
 #include <I2CManager.hpp>
 #include <Telemetry.hpp>
 #include <config/Configuration.hpp>
-
 #include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/light_sensor/LightSensor.hpp>
+
+#include <bh1750.h>
+#include <esp_system.h>
+
+#include <chrono>
+#include <memory>
 #include <utility>
 
 using namespace std::chrono;

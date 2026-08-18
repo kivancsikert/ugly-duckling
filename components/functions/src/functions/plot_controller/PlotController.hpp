@@ -1,9 +1,5 @@
 #pragma once
 
-#include <chrono>
-#include <memory>
-#include <utility>
-
 #include <Log.hpp>
 #include <Named.hpp>
 #include <config/Configuration.hpp>
@@ -18,6 +14,10 @@
 #include <scheduling/OverrideScheduler.hpp>
 #include <scheduling/TimeBasedScheduler.hpp>
 #include <utils/Chrono.hpp>
+
+#include <chrono>
+#include <memory>
+#include <utility>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::kernel::mqtt;

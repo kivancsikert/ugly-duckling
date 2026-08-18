@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>
-
 #include <ArduinoJson.h>
+
+#include <string>
 
 namespace cornucopia::ugly_duckling::kernel::config {
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <optional>
-
 #include "ConfigState.hpp"
+
+#include <optional>
 
 namespace cornucopia::ugly_duckling::kernel::config {
 

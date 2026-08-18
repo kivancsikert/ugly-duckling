@@ -1,13 +1,13 @@
 #pragma once
 
-#include <chrono>
-#include <functional>
+#include <Log.hpp>
 
 #include <esp_check.h>
 #include <esp_system.h>
 #include <esp_timer.h>
 
-#include <Log.hpp>
+#include <chrono>
+#include <functional>
 #include <utility>
 
 using namespace std::chrono;

@@ -1,15 +1,13 @@
 #pragma once
 
-#include <cmath>
-
 #include <Log.hpp>
 #include <Pin.hpp>
 #include <config/Configuration.hpp>
-
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ITemperatureSensor.hpp>
-
 #include <utils/DebouncedMeasurement.hpp>
+
+#include <cmath>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::peripherals::api;

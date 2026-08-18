@@ -1,19 +1,17 @@
-#include "mqtt/MqttRoot.hpp"
 #include "NvsStore.hpp"
+#include "mqtt/MqttRoot.hpp"
+#include <HttpUpdate.hpp>
 #include <Log.hpp>
 #include <MqttCommands.hpp>
+#include <Restart.hpp>
+
+#include <esp_sleep.h>
 
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <memory>
 #include <string>
-
-#include <esp_sleep.h>
-
-#include <HttpUpdate.hpp>
-
-#include <Restart.hpp>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::kernel;

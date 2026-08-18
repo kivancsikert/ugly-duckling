@@ -1,12 +1,13 @@
-#include <iomanip>
-#include <iostream>
-#include <stdio.h>
-#include <string_view>
-
 #include <catch2/catch_session.hpp>
 #include <catch2/catch_test_case_info.hpp>
 #include <catch2/reporters/catch_reporter_event_listener.hpp>
 #include <catch2/reporters/catch_reporter_registrars.hpp>
+
+#include <stdio.h>
+
+#include <iomanip>
+#include <iostream>
+#include <string_view>
 
 inline std::string_view filenameFromPath(const char* path) {
     if (!path) {
@@ -42,14 +43,14 @@ CATCH_REGISTER_LISTENER(testRunListener)
 int main(int argc, char* argv[]) {
     Catch::Session session;
     session.configData().rngSeed = 12345;
-    
+
     int result = session.run(argc, argv);
-    
+
     if (result != 0) {
         printf("Test failed with result %d\n", result);
     } else {
         printf("Test passed.\n");
     }
-    
+
     return result;
 }

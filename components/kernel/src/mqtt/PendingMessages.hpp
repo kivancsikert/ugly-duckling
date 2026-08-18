@@ -1,10 +1,10 @@
 #pragma once
 
+#include <Queue.hpp>
+
 #include <memory>
 #include <mutex>
 #include <unordered_map>
-
-#include <Queue.hpp>
 
 namespace cornucopia::ugly_duckling::kernel::mqtt {
 

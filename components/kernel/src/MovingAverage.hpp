@@ -5,7 +5,7 @@
 namespace cornucopia::ugly_duckling::kernel {
 
 template <typename M, typename T = M>
-requires std::is_arithmetic_v<M> && std::is_arithmetic_v<T>
+    requires std::is_arithmetic_v<M> && std::is_arithmetic_v<T>
 class MovingAverage {
 public:
     MovingAverage(std::size_t maxMeasurements)
@@ -36,8 +36,8 @@ public:
 private:
     const std::size_t maxMeasurements;
     std::vector<M> measurements;
-    std::size_t currentIndex{0};
-    std::size_t count{0};
+    std::size_t currentIndex { 0 };
+    std::size_t count { 0 };
     T sum;
     T average;
 };

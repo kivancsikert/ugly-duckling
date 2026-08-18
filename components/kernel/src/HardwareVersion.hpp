@@ -1,13 +1,13 @@
 #pragma once
 
-#include <cstdint>
-#include <cstring>
-#include <optional>
+#include <Log.hpp>
 
 #include <esp_efuse.h>
 #include <esp_efuse_table.h>
 
-#include <Log.hpp>
+#include <cstdint>
+#include <cstring>
+#include <optional>
 
 namespace cornucopia::ugly_duckling::kernel {
 

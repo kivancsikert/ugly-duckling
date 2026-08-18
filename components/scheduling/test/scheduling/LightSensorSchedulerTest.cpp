@@ -1,15 +1,12 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "TestHelpers.hpp"
-
-#include <chrono>
-#include <memory>
-
 #include <FakeLog.hpp>
-
+#include <catch2/catch_test_macros.hpp>
 #include <peripherals/api/ILightSensor.hpp>
 #include <peripherals/api/TargetState.hpp>
 #include <scheduling/LightSensorScheduler.hpp>
+
+#include <chrono>
+#include <memory>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;

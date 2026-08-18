@@ -18,4 +18,4 @@ inline static ticks clampTicks(std::chrono::milliseconds duration) {
     return std::chrono::duration_cast<ticks>(duration);
 }
 
-} // namespace cornucopia::ugly_duckling::kernel
+}    // namespace cornucopia::ugly_duckling::kernel

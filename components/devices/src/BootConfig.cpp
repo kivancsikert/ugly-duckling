@@ -1,13 +1,13 @@
 #include "NvsStore.hpp"
-#include "config/ConfigStateStore.hpp"
-#include "config/ConfigState.hpp"
 #include "config/ConfigBootPlan.hpp"
+#include "config/ConfigState.hpp"
+#include "config/ConfigStateStore.hpp"
 #include "devices/DeviceConfiguration.hpp"
 #include <BootConfig.hpp>
-
 #include <Log.hpp>
 #include <UpdateFilter.hpp>
 #include <config/StoredConfig.hpp>
+
 #include <memory>
 
 using namespace cornucopia::ugly_duckling::devices;

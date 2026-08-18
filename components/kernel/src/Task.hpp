@@ -1,13 +1,13 @@
 #pragma once
 
-#include <chrono>
-#include <functional>
+#include <Log.hpp>
+#include <Time.hpp>
 
 #include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle)
 #include <freertos/task.h>        // NOLINT(misc-header-include-cycle)
 
-#include <Log.hpp>
-#include <Time.hpp>
+#include <chrono>
+#include <functional>
 #include <utility>
 
 using namespace std::chrono;

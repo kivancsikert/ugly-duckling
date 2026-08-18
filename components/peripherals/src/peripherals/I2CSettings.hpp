@@ -1,9 +1,9 @@
 #pragma once
 
-#include <chrono>
-
 #include <I2CManager.hpp>
 #include <config/Configuration.hpp>
+
+#include <chrono>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::kernel;

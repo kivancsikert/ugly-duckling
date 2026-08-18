@@ -1,9 +1,9 @@
 #pragma once
 
+#include <ArduinoJson.h>
+
 #include <optional>
 #include <string>
-
-#include <ArduinoJson.h>
 
 namespace cornucopia::ugly_duckling::kernel {
 

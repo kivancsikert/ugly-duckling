@@ -1,6 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include <MovingAverage.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
 

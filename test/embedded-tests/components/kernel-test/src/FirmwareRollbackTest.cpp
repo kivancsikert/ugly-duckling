@@ -1,6 +1,5 @@
+#include <FirmwareRollback.hpp>
 #include <catch2/catch_test_macros.hpp>
-
-#include <cstring>
 
 #include <esp_app_desc.h>
 #include <esp_app_format.h>
@@ -9,7 +8,7 @@
 #include <esp_partition.h>
 #include <esp_rom_crc.h>
 
-#include <FirmwareRollback.hpp>
+#include <cstring>
 
 using namespace cornucopia::ugly_duckling::kernel;
 

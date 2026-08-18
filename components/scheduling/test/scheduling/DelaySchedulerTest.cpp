@@ -1,15 +1,12 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "TestHelpers.hpp"
-
-#include <chrono>
-#include <memory>
-
 #include <FakeLog.hpp>
-
+#include <catch2/catch_test_macros.hpp>
 #include <peripherals/api/TargetState.hpp>
 #include <scheduling/DelayScheduler.hpp>
 #include <scheduling/IScheduler.hpp>
+
+#include <chrono>
+#include <memory>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -239,7 +236,7 @@ TEST_CASE("DelayScheduler: different delays for open and close") {
 
     // Request close - should take 8s
     mockScheduler->setTarget(TargetState::Closed);
-    REQUIRE(delayScheduler.tick(T1) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 8s });    // Stay open
-    REQUIRE(delayScheduler.tick(T1 + 5s) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 3s });    // Still open after 5s
+    REQUIRE(delayScheduler.tick(T1) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 8s });                       // Stay open
+    REQUIRE(delayScheduler.tick(T1 + 5s) == ScheduleResult { .targetState = TargetState::Open, .nextDeadline = 3s });                  // Still open after 5s
     REQUIRE(delayScheduler.tick(T1 + 8s) == ScheduleResult { .targetState = TargetState::Closed, .shouldPublishTelemetry = true });    // Now closed
 }

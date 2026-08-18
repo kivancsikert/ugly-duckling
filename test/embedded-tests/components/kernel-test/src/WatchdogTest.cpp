@@ -1,10 +1,9 @@
+#include <Watchdog.hpp>
 #include <catch2/catch_test_macros.hpp>
-
-#include <optional>
 
 #include <freertos/FreeRTOS.h>
 
-#include <Watchdog.hpp>
+#include <optional>
 
 using namespace cornucopia::ugly_duckling::kernel;
 

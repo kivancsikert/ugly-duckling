@@ -2,11 +2,11 @@
 #include <cstdio>
 #endif
 
-#include <esp_log.h>
-
 #include <Device.hpp>
 #include <HardwareVersion.hpp>
 #include <MacAddress.hpp>
+
+#include <esp_log.h>
 
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
 

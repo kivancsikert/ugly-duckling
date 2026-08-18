@@ -1,14 +1,14 @@
 #pragma once
 
-#include <memory>
-
-#include <esp_sleep.h>
-
 #include <MovingAverage.hpp>
 #include <ShutdownManager.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>
 #include <drivers/BatteryDriver.hpp>
+
+#include <esp_sleep.h>
+
+#include <memory>
 #include <utility>
 
 using namespace cornucopia::ugly_duckling::kernel::drivers;
@@ -63,7 +63,7 @@ public:
 
 private:
     void checkBatteryVoltage(Task& task) {
-                auto currentVoltage = battery->getVoltage();
+        auto currentVoltage = battery->getVoltage();
         batteryVoltage.record(currentVoltage);
         auto voltage = batteryVoltage.getAverage();
 

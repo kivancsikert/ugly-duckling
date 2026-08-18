@@ -1,15 +1,14 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "TestHelpers.hpp"
+#include <catch2/catch_test_macros.hpp>
+#include <peripherals/api/IValve.hpp>
+#include <scheduling/TimeBasedScheduler.hpp>
+
+#include <time.h>
 
 #include <chrono>
 #include <cstdio>
 #include <ctime>
 #include <iomanip>
-#include <time.h>
-
-#include <peripherals/api/IValve.hpp>
-#include <scheduling/TimeBasedScheduler.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;

@@ -1,14 +1,13 @@
 #pragma once
 
-#include <chrono>
-#include <vector>
-
 #include <PulseCounter.hpp>
 #include <Queue.hpp>
 #include <Telemetry.hpp>
-
 #include <peripherals/Peripheral.hpp>
+
+#include <chrono>
 #include <utility>
+#include <vector>
 
 using namespace std::chrono_literals;
 using namespace cornucopia::ugly_duckling::kernel;

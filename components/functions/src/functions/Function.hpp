@@ -5,7 +5,6 @@
 #include <Telemetry.hpp>
 #include <config/ConfigEnvelope.hpp>
 #include <config/StoredConfig.hpp>
-
 #include <functions/FunctionConfigTracker.hpp>
 #include <peripherals/Peripheral.hpp>
 

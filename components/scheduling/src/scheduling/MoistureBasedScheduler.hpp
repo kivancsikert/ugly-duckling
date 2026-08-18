@@ -1,4 +1,8 @@
 #pragma once
+#include <peripherals/api/IFlowMeter.hpp>
+#include <peripherals/api/ISoilMoistureSensor.hpp>
+#include <scheduling/IScheduler.hpp>
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -9,11 +13,6 @@
 #include <stdexcept>
 #include <string_view>
 #include <utility>
-
-#include <peripherals/api/IFlowMeter.hpp>
-#include <peripherals/api/ISoilMoistureSensor.hpp>
-
-#include <scheduling/IScheduler.hpp>
 
 using namespace std::chrono_literals;
 using namespace cornucopia::ugly_duckling::peripherals::api;

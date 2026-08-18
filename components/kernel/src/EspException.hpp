@@ -1,6 +1,7 @@
 #pragma once
 
 #include <esp_err.h>
+
 #include <exception>
 
 namespace cornucopia::ugly_duckling::kernel {

@@ -2,6 +2,7 @@
 
 #include <Pin.hpp>
 #include <config/Configuration.hpp>
+
 #include <utility>
 
 namespace cornucopia::ugly_duckling::peripherals::multiplexer {

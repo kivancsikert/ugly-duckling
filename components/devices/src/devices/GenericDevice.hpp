@@ -1,11 +1,9 @@
 #pragma once
 
 #include <Pin.hpp>
-#include <drivers/LedDriver.hpp>
-
-#include <peripherals/Peripheral.hpp>
-
 #include <devices/DeviceDefinition.hpp>
+#include <drivers/LedDriver.hpp>
+#include <peripherals/Peripheral.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
 

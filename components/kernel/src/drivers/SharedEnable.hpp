@@ -1,12 +1,12 @@
 #pragma once
 
+#include <Log.hpp>
+#include <Pin.hpp>
+
 #include <atomic>
 #include <functional>
 #include <memory>
 #include <mutex>
-
-#include <Log.hpp>
-#include <Pin.hpp>
 
 namespace cornucopia::ugly_duckling::kernel::drivers {
 
@@ -86,7 +86,7 @@ public:
      * @brief Create a SharedEnable that does nothing on state changes.
      */
     static std::shared_ptr<SharedEnable> noOp() {
-        return std::make_shared<SharedEnable>([](bool) {});
+        return std::make_shared<SharedEnable>([](bool) { });
     }
 
     /**

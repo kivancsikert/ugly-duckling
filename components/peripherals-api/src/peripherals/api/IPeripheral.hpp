@@ -10,4 +10,4 @@ struct IPeripheral {
     virtual const std::string& getName() const = 0;
 };
 
-} // namespace cornucopia::ugly_duckling::peripherals::api
+}    // namespace cornucopia::ugly_duckling::peripherals::api

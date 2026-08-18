@@ -1,18 +1,17 @@
 #pragma once
 
-#include <chrono>
-#include <memory>
-#include <mutex>
-#include <utility>
-
 #include <I2CManager.hpp>
 #include <MovingAverage.hpp>
 #include <Named.hpp>
 #include <config/Configuration.hpp>
-
 #include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ILightSensor.hpp>
+
+#include <chrono>
+#include <memory>
+#include <mutex>
+#include <utility>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;

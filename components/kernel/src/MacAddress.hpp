@@ -1,11 +1,11 @@
 #pragma once
 
-#include <string>
-#include <vector>
+#include <EspException.hpp>
 
 #include <esp_mac.h>
 
-#include <EspException.hpp>
+#include <string>
+#include <vector>
 
 namespace cornucopia::ugly_duckling::kernel {
 

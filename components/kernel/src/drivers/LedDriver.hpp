@@ -1,12 +1,12 @@
 #pragma once
 
-#include <atomic>
-#include <chrono>
-#include <vector>
-
 #include <Pin.hpp>
 #include <Queue.hpp>
 #include <Task.hpp>
+
+#include <atomic>
+#include <chrono>
+#include <vector>
 
 using namespace std::chrono;
 

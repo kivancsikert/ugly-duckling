@@ -1,13 +1,13 @@
 #pragma once
 
+#include <Time.hpp>
+
+#include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle)
+
 #include <chrono>
 #include <functional>
 #include <memory>
 #include <optional>
-
-#include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle)
-
-#include <Time.hpp>
 #include <utility>
 
 using namespace std::chrono;
@@ -57,7 +57,8 @@ public:
         while (!std::apply([this](auto&&... unpackedArgs) {
             // Note: without 'this->' Clang Tidy complains about unnecessarily captured 'this'
             return this->offerIn(ticks::max(), std::forward<decltype(unpackedArgs)>(unpackedArgs)...);
-        }, innerArgs)) { }
+        },
+            innerArgs)) { }
     }
 
     template <typename... Args>
@@ -225,6 +226,5 @@ public:
         xQueueReset(getQueueHandle());
     }
 };
-
 
 }    // namespace cornucopia::ugly_duckling::kernel

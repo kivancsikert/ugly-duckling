@@ -1,12 +1,12 @@
 #pragma once
 
+#include <ArduinoJson.h>
+
 #include <functional>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <utility>
-
-#include <ArduinoJson.h>
 
 namespace cornucopia::ugly_duckling::functions {
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <list>
-
 #include <driver/ledc.h>
+
+#include <list>
 
 namespace cornucopia::ugly_duckling::kernel {
 
@@ -62,7 +62,7 @@ public:
             .gpio_num = pin->getGpio(),
             .speed_mode = timer.speedMode,
             .channel = channel,
-            .intr_type = {}, // NOLINT(clang-diagnostic-deprecated-declarations)
+            .intr_type = {},    // NOLINT(clang-diagnostic-deprecated-declarations)
             .timer_sel = timer.timerNum,
             .duty = 0,    // Set duty to 0%
             .hpoint = 0,

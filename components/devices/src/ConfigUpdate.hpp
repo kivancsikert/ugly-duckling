@@ -1,9 +1,5 @@
 #pragma once
 
-#include <cstdint>
-#include <memory>
-#include <string>
-
 #include <NvsStore.hpp>
 #include <Queue.hpp>
 #include <config/ConfigStateStore.hpp>
@@ -11,16 +7,20 @@
 #include <functions/Function.hpp>
 #include <mqtt/MqttRoot.hpp>
 
+#include <cstdint>
+#include <memory>
+#include <string>
+
 using namespace cornucopia::ugly_duckling::functions;
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::config;
 using namespace cornucopia::ugly_duckling::kernel::mqtt;
 
 enum class ConfigUpdateResult : std::uint8_t {
-    NoChanges,          // configurations absent or nothing differs from what's held
-    DeviceChanged,      // staged into free slot, needs reboot to apply
-    FunctionsApplied,   // hot-reloaded live, succeeded and committed
-    FunctionsFailed,    // hot-reload failed, needs reboot to revert
+    NoChanges,           // configurations absent or nothing differs from what's held
+    DeviceChanged,       // staged into free slot, needs reboot to apply
+    FunctionsApplied,    // hot-reloaded live, succeeded and committed
+    FunctionsFailed,     // hot-reload failed, needs reboot to revert
 };
 
 /**

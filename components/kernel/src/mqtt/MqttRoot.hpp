@@ -1,12 +1,12 @@
 #pragma once
 
+#include <mqtt/MqttDriver.hpp>
+
 #include <chrono>
 #include <memory>
 #include <unordered_map>
-#include <vector>
-
-#include <mqtt/MqttDriver.hpp>
 #include <utility>
+#include <vector>
 
 namespace cornucopia::ugly_duckling::kernel::mqtt {
 

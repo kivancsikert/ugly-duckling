@@ -2,6 +2,7 @@
 
 #include <Log.hpp>
 #include <Queue.hpp>
+
 #include <utility>
 
 namespace cornucopia::ugly_duckling::kernel {

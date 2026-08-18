@@ -1,26 +1,24 @@
-#include "functions/Function.hpp"
-#include "config/ConfigStateStore.hpp"
 #include "NvsStore.hpp"
-#include "mqtt/MqttRoot.hpp"
 #include "Queue.hpp"
+#include "config/ConfigStateStore.hpp"
+#include "functions/Function.hpp"
 #include "mqtt/MqttDriver.hpp"
+#include "mqtt/MqttRoot.hpp"
 #include <ConfigUpdate.hpp>
-#include <Log.hpp>
-
-#include <exception>
-#include <memory>
-#include <string>
-#include <unordered_map>
-
 #include <FirmwareUpdateDecision.hpp>
 #include <HttpUpdate.hpp>
-
+#include <Log.hpp>
 #include <Restart.hpp>
 #include <UpdateFilter.hpp>
 #include <config/ConfigBootPlan.hpp>
 #include <config/ConfigStaging.hpp>
 #include <config/ConfigState.hpp>
 #include <config/StoredConfig.hpp>
+
+#include <exception>
+#include <memory>
+#include <string>
+#include <unordered_map>
 
 using namespace cornucopia::ugly_duckling::functions;
 using namespace cornucopia::ugly_duckling::kernel;

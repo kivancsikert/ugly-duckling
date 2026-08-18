@@ -1,15 +1,14 @@
 #pragma once
 
-#include <functional>
-#include <string>
-#include <vector>
+#include <Log.hpp>
 
+#include <ArduinoJson.h>
 #include <nvs.h>
 #include <nvs_flash.h>
 
-#include <ArduinoJson.h>
-
-#include <Log.hpp>
+#include <functional>
+#include <string>
+#include <vector>
 
 namespace cornucopia::ugly_duckling::kernel {
 

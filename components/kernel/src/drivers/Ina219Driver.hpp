@@ -1,8 +1,8 @@
 #pragma once
 
-#include <ina219.h>
-
 #include <I2CManager.hpp>
+
+#include <ina219.h>
 
 using namespace cornucopia::ugly_duckling::kernel;
 

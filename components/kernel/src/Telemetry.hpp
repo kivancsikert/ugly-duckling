@@ -1,13 +1,13 @@
 #pragma once
 
-#include <memory>
-#include <utility>
-#include <vector>
+#include <Log.hpp>
+#include <Queue.hpp>
 
 #include <ArduinoJson.h>
 
-#include <Log.hpp>
-#include <Queue.hpp>
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace cornucopia::ugly_duckling::kernel {
 
@@ -47,7 +47,8 @@ private:
 class TelemetryPublisher {
 public:
     TelemetryPublisher(const std::shared_ptr<CopyQueue<bool>>& telemetryPublishQueue)
-        : telemetryPublishQueue(telemetryPublishQueue) {}
+        : telemetryPublishQueue(telemetryPublishQueue) {
+    }
 
     void requestTelemetryPublishing() {
         telemetryPublishQueue->overwrite(true);

@@ -8,6 +8,7 @@
 #include "mqtt/MqttRoot.hpp"
 #include <SyncPublisher.hpp>
 #include <UpdateFilter.hpp>
+
 #include <memory>
 #include <optional>
 #include <string>

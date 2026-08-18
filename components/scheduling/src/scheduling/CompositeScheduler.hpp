@@ -1,11 +1,10 @@
 #pragma once
 
-#include <concepts>
-#include <vector>
-
+#include "IScheduler.hpp"
 #include <utils/Chrono.hpp>
 
-#include "IScheduler.hpp"
+#include <concepts>
+#include <vector>
 
 namespace cornucopia::ugly_duckling::utils::scheduling {
 

@@ -1,7 +1,8 @@
 #pragma once
 
-#include <ArduinoJson.h>
 #include <Log.hpp>
+
+#include <ArduinoJson.h>
 
 namespace ArduinoJson {
 

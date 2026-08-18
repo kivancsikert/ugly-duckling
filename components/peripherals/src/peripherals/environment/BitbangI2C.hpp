@@ -195,11 +195,11 @@ private:
 
 #ifdef ESP_PLATFORM
 
+#include <Pin.hpp>
+
 #include <esp_rom_sys.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/portmacro.h>
-
-#include <Pin.hpp>
 
 namespace cornucopia::ugly_duckling::peripherals::environment {
 

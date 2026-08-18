@@ -1,21 +1,19 @@
 #pragma once
 
-#include <memory>
-
-#include <soc/rtc.h>
-
 #include <MacAddress.hpp>
 #include <Pin.hpp>
+#include <devices/DeviceDefinition.hpp>
 #include <drivers/Bq27220Driver.hpp>
 #include <drivers/BuzzerDriver.hpp>
 #include <drivers/Drv8848Driver.hpp>
 #include <drivers/LedDriver.hpp>
-
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/door/Door.hpp>
 #include <peripherals/valve/ValveFactory.hpp>
 
-#include <devices/DeviceDefinition.hpp>
+#include <soc/rtc.h>
+
+#include <memory>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::drivers;

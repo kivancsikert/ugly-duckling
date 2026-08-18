@@ -1,11 +1,11 @@
 #include "Pin.hpp"
 
+#include <esp_adc/adc_oneshot.h>
+#include <soc/gpio_num.h>
+
 #include <map>
 #include <string>
 #include <vector>
-
-#include <esp_adc/adc_oneshot.h>
-#include <soc/gpio_num.h>
 
 namespace cornucopia::ugly_duckling::kernel {
 

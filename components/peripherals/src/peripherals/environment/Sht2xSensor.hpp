@@ -1,16 +1,14 @@
 #pragma once
 
-#include <limits>
-#include <utility>
-
-#include <si7021.h>
-
+#include "Environment.hpp"
 #include <I2CManager.hpp>
-
 #include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>
 
-#include "Environment.hpp"
+#include <si7021.h>
+
+#include <limits>
+#include <utility>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::peripherals;

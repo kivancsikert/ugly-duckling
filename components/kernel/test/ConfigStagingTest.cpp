@@ -1,9 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
+#include <config/ConfigStaging.hpp>
 
 #include <string>
 #include <unordered_map>
-
-#include <config/ConfigStaging.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::config;

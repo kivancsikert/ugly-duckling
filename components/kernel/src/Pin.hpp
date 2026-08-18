@@ -1,12 +1,9 @@
 #pragma once
 
-#include <exception>
-#include <map>
-#include <memory>
-#include <optional>
-#include <utility>
-#include <vector>
+#include <EspException.hpp>
+#include <Log.hpp>
 
+#include <ArduinoJson.h>
 #include <driver/gpio.h>
 #include <driver/gpio_filter.h>
 #include <esp_adc/adc_cali.h>
@@ -14,10 +11,12 @@
 #include <esp_adc/adc_oneshot.h>
 #include <hal/adc_types.h>
 
-#include <ArduinoJson.h>
-
-#include <EspException.hpp>
-#include <Log.hpp>
+#include <exception>
+#include <map>
+#include <memory>
+#include <optional>
+#include <utility>
+#include <vector>
 
 namespace cornucopia::ugly_duckling::kernel {
 
@@ -323,7 +322,6 @@ private:
     adc_oneshot_unit_handle_t handle;
     adc_cali_handle_t caliHandle = nullptr;
 };
-
 
 }    // namespace cornucopia::ugly_duckling::kernel
 

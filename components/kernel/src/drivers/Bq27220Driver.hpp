@@ -1,14 +1,14 @@
 #pragma once
 
+#include <I2CManager.hpp>
+#include <drivers/BatteryDriver.hpp>
+
+#include <bq27220.h>
+
 #include <chrono>
 #include <memory>
 #include <optional>
 #include <string>
-
-#include <bq27220.h>
-
-#include <I2CManager.hpp>
-#include <drivers/BatteryDriver.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
 

@@ -1,14 +1,13 @@
 #pragma once
 
-#include <optional>
-#include <string>
+#include <Strings.hpp>
 
+#include <ArduinoJson.h>
 #include <esp_core_dump.h>
 #include <mbedtls/base64.h>
 
-#include <ArduinoJson.h>
-
-#include <Strings.hpp>
+#include <optional>
+#include <string>
 
 namespace cornucopia::ugly_duckling::kernel {
 

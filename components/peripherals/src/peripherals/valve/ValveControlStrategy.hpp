@@ -1,12 +1,11 @@
 #pragma once
 
-#include <chrono>
-#include <cstdint>
-
 #include <Task.hpp>
 #include <drivers/MotorDriver.hpp>
-
 #include <peripherals/api/IValve.hpp>
+
+#include <chrono>
+#include <cstdint>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::kernel::drivers;

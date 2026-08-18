@@ -1,14 +1,13 @@
 #pragma once
 
-#include <memory>
-#include <utility>
+#include "ConfigState.hpp"
+#include <Log.hpp>
+#include <NvsStore.hpp>
 
 #include <ArduinoJson.h>
 
-#include <Log.hpp>
-
-#include "ConfigState.hpp"
-#include <NvsStore.hpp>
+#include <memory>
+#include <utility>
 
 namespace cornucopia::ugly_duckling::kernel::config {
 
