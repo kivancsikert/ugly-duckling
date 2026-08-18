@@ -2,13 +2,11 @@
 
 #include <chrono>
 #include <functional>
+#include <mutex>
 #include <optional>
-
-#include <Concurrent.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
-using namespace cornucopia::ugly_duckling::kernel;
 
 namespace cornucopia::ugly_duckling::utils {
 
@@ -31,7 +29,7 @@ public:
     }
 
     void updateIfNecessary() {
-        Lock lock(mutex);
+        std::lock_guard<std::recursive_mutex> lock(mutex);
         auto now = steady_clock::now();
         if (lastMeasurement && now - *lastMeasurement < interval) {
             return;
@@ -58,7 +56,7 @@ private:
     T value;
     std::optional<std::chrono::steady_clock::time_point> lastMeasurement;
 
-    Mutex mutex;
+    std::recursive_mutex mutex;
 };
 
 }    // namespace cornucopia::ugly_duckling::utils
