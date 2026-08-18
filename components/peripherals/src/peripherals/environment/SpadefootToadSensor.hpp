@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 /*
  * Two flavors of Spadefoot Toad soil sensor live in this file:

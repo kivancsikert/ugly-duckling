@@ -1,12 +1,12 @@
 // fakes.hpp
 #pragma once
-
 #include <peripherals/api/IFlowMeter.hpp>
 #include <peripherals/api/ISoilMoistureSensor.hpp>
 #include <scheduling/MoistureBasedScheduler.hpp>
 
 #include <cmath>
 #include <deque>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::peripherals::api;
 

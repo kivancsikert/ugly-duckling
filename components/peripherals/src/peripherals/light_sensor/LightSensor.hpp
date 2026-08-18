@@ -1,5 +1,4 @@
 #pragma once
-
 #include <I2CManager.hpp>
 #include <MovingAverage.hpp>
 #include <Named.hpp>
@@ -11,6 +10,7 @@
 #include <chrono>
 #include <memory>
 #include <mutex>
+#include <string>
 #include <utility>
 
 using namespace std::chrono;

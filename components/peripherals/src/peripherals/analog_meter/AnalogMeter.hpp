@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Log.hpp>
 #include <MovingAverage.hpp>
 #include <Named.hpp>
@@ -11,6 +10,8 @@
 #include <peripherals/Peripheral.hpp>
 
 #include <chrono>
+#include <memory>
+#include <string>
 #include <utility>
 
 using namespace std::chrono;

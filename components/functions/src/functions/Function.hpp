@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Manager.hpp>
 #include <NvsStore.hpp>
 #include <Telemetry.hpp>
@@ -7,6 +6,10 @@
 #include <config/StoredConfig.hpp>
 #include <functions/FunctionConfigTracker.hpp>
 #include <peripherals/Peripheral.hpp>
+
+#include <functional>
+#include <memory>
+#include <string>
 
 using cornucopia::ugly_duckling::kernel::config::ConfigEnvelope;
 using cornucopia::ugly_duckling::kernel::config::StoredConfig;

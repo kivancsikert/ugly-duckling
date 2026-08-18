@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Task.hpp>
 #include <Telemetry.hpp>
 #include <config/Configuration.hpp>
@@ -14,6 +13,7 @@
 
 #include <chrono>
 #include <memory>
+#include <string>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;

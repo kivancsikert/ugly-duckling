@@ -1,8 +1,9 @@
 #pragma once
-
 #include <driver/ledc.h>
 
 #include <list>
+#include <stdexcept>
+#include <string>
 
 namespace cornucopia::ugly_duckling::kernel {
 

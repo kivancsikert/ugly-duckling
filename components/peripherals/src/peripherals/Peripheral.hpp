@@ -1,5 +1,4 @@
 #pragma once
-
 #include "PeripheralException.hpp"
 #include <EspException.hpp>
 #include <I2CManager.hpp>
@@ -17,6 +16,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <string>
 #include <type_traits>
 #include <vector>
 

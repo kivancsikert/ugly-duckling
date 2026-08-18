@@ -1,10 +1,10 @@
 #pragma once
-
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ISoilMoistureSensor.hpp>
 #include <utils/DebouncedMeasurement.hpp>
 
 #include <memory>
+#include <string>
 #include <utility>
 
 using namespace cornucopia::ugly_duckling::kernel;

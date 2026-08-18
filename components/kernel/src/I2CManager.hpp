@@ -1,5 +1,4 @@
 #pragma once
-
 #include <EspException.hpp>
 #include <Pin.hpp>
 #include <Strings.hpp>
@@ -10,6 +9,8 @@
 #include <exception>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
+#include <string>
 #include <utility>
 #include <vector>
 

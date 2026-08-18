@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Pin.hpp>
 #include <devices/DeviceDefinition.hpp>
 #include <drivers/Bq27220Driver.hpp>
@@ -8,6 +7,9 @@
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/door/Door.hpp>
 #include <peripherals/valve/ValveFactory.hpp>
+
+#include <memory>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::peripherals::door;

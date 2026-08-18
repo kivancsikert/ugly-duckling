@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Pin.hpp>
 #include <Queue.hpp>
 #include <Task.hpp>
@@ -9,7 +8,9 @@
 
 #include <chrono>
 #include <functional>
+#include <memory>
 #include <mutex>
+#include <string>
 #include <utility>
 
 using namespace std::chrono;

@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Log.hpp>
 #include <config/Configuration.hpp>
 
@@ -8,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <unordered_map>

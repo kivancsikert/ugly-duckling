@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Log.hpp>
 
 #include <esp_check.h>
@@ -8,6 +7,7 @@
 
 #include <chrono>
 #include <functional>
+#include <string>
 #include <utility>
 
 using namespace std::chrono;

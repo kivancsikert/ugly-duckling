@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Log.hpp>
 #include <Named.hpp>
 #include <config/Configuration.hpp>
@@ -17,6 +16,7 @@
 
 #include <chrono>
 #include <memory>
+#include <string>
 #include <utility>
 
 using namespace std::chrono;

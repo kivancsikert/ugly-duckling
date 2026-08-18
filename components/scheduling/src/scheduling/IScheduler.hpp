@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Log.hpp>
 #include <peripherals/api/TargetState.hpp>
 
 #include <ArduinoJson.h>

@@ -1,5 +1,4 @@
 #pragma once
-
 #include <I2CManager.hpp>
 #include <Telemetry.hpp>
 #include <config/Configuration.hpp>
@@ -12,6 +11,7 @@
 
 #include <chrono>
 #include <memory>
+#include <string>
 #include <utility>
 
 using namespace std::chrono;

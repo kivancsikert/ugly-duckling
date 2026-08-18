@@ -1,10 +1,10 @@
 #pragma once
-
 #include "IScheduler.hpp"
 #include <peripherals/api/ILightSensor.hpp>
 #include <utils/Chrono.hpp>
 
 #include <chrono>
+#include <memory>
 #include <optional>
 
 using namespace std::chrono;

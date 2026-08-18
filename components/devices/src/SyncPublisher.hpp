@@ -1,5 +1,4 @@
 #pragma once
-
 #include <KernelStatus.hpp>
 #include <Queue.hpp>
 #include <config/ConfigState.hpp>
@@ -8,6 +7,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::functions;
 using namespace cornucopia::ugly_duckling::kernel;

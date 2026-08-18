@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Configuration.hpp"
 #include <NvsStore.hpp>
 
@@ -7,6 +6,7 @@
 
 #include <functional>
 #include <memory>
+#include <string>
 
 namespace cornucopia::ugly_duckling::kernel::config {
 

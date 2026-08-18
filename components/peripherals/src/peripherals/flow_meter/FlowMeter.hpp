@@ -1,5 +1,4 @@
 #pragma once
-
 #include <PulseCounter.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>
@@ -10,7 +9,9 @@
 #include <ArduinoJson.h>
 
 #include <chrono>
+#include <memory>
 #include <mutex>
+#include <string>
 #include <utility>
 
 using namespace std::chrono;

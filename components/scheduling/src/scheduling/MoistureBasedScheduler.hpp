@@ -9,6 +9,7 @@
 #include <concepts>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string_view>

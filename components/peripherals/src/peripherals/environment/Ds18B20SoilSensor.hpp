@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Environment.hpp"
 #include <config/Configuration.hpp>
 #include <peripherals/Peripheral.hpp>
@@ -10,6 +9,7 @@
 
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 
 using namespace cornucopia::ugly_duckling::kernel;

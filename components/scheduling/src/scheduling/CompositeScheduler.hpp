@@ -1,9 +1,9 @@
 #pragma once
-
 #include "IScheduler.hpp"
 #include <utils/Chrono.hpp>
 
 #include <concepts>
+#include <memory>
 #include <vector>
 
 namespace cornucopia::ugly_duckling::utils::scheduling {

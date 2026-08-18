@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Environment.hpp"
 #include <I2CManager.hpp>
 #include <peripherals/I2CSettings.hpp>
@@ -10,6 +9,7 @@
 
 #include <limits>
 #include <memory>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::peripherals;

@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Log.hpp>
 #include <Pin.hpp>
 #include <config/Configuration.hpp>
@@ -8,6 +7,8 @@
 #include <utils/DebouncedMeasurement.hpp>
 
 #include <cmath>
+#include <memory>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::peripherals::api;

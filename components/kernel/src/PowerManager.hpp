@@ -1,5 +1,4 @@
 #pragma once
-
 #include <EspException.hpp>
 #include <Log.hpp>
 #include <Queue.hpp>
@@ -12,6 +11,7 @@
 
 #include <array>
 #include <chrono>
+#include <string>
 
 #if defined(CONFIG_IDF_TARGET_ESP32S2)
 // Apparently on ESP32S2 things start to break down if we go below 80 MHz

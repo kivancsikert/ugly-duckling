@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Time.hpp>
 
 #include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle)
@@ -8,6 +7,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 
 using namespace std::chrono;

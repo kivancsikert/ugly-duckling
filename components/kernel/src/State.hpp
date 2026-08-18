@@ -1,11 +1,11 @@
 #pragma once
-
 #include <Time.hpp>
 
 #include <freertos/FreeRTOS.h>        // NOLINT(misc-header-include-cycle)
 #include <freertos/event_groups.h>    // NOLINT(misc-header-include-cycle)
 
 #include <chrono>
+#include <string>
 
 using namespace std::chrono;
 

@@ -1,6 +1,6 @@
 #pragma once
-
 #include <stdexcept>
+#include <string>
 
 namespace cornucopia::ugly_duckling::peripherals {
 

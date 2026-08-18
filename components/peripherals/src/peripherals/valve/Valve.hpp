@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Named.hpp>
 #include <NvsStore.hpp>
 #include <Task.hpp>
@@ -14,6 +13,7 @@
 #include <atomic>
 #include <chrono>
 #include <memory>
+#include <string>
 #include <utility>
 #include <variant>
 

@@ -1,5 +1,4 @@
 #pragma once
-
 #include "Environment.hpp"
 #include <config/Configuration.hpp>
 #include <peripherals/Peripheral.hpp>
@@ -9,6 +8,7 @@
 
 #include <chrono>
 #include <memory>
+#include <string>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::utils::scheduling;

@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Log.hpp>
 #include <NvsStore.hpp>
 #include <Restart.hpp>
@@ -12,6 +11,7 @@
 #include <esp_http_client.h>
 #include <esp_https_ota.h>
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>

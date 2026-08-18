@@ -1,8 +1,9 @@
 #pragma once
-
 #include <Pin.hpp>
 #include <config/Configuration.hpp>
 
+#include <memory>
+#include <string>
 #include <utility>
 
 namespace cornucopia::ugly_duckling::peripherals::multiplexer {

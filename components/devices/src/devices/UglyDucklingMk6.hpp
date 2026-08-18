@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Pin.hpp>
 #include <devices/DeviceDefinition.hpp>
 #include <drivers/BatteryDriver.hpp>
@@ -11,6 +10,7 @@
 
 #include <map>
 #include <memory>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::peripherals::door;

@@ -1,11 +1,12 @@
 #pragma once
-
 #include <Log.hpp>
 #include <Queue.hpp>
 
 #include <ArduinoJson.h>
 
+#include <functional>
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 

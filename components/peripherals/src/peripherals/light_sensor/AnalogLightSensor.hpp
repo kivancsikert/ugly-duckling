@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Pin.hpp>
 #include <Telemetry.hpp>
 #include <config/Configuration.hpp>
@@ -11,6 +10,7 @@
 
 #include <chrono>
 #include <memory>
+#include <string>
 #include <utility>
 
 using namespace std::chrono;

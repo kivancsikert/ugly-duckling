@@ -1,5 +1,4 @@
 #pragma once
-
 #include <I2CManager.hpp>
 #include <PowerManager.hpp>
 #include <StateManager.hpp>
@@ -16,6 +15,7 @@
 #include <chrono>
 #include <concepts>
 #include <functional>
+#include <memory>
 #include <optional>
 
 using namespace std::chrono;

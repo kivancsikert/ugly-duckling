@@ -1,8 +1,10 @@
 #pragma once
-
 #include <LogJson.hpp>
 #include <Task.hpp>
 #include <mqtt/MqttRoot.hpp>
+
+#include <memory>
+#include <string>
 
 namespace cornucopia::ugly_duckling::kernel::mqtt {
 

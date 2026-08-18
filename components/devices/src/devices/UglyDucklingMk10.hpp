@@ -1,5 +1,4 @@
 #pragma once
-
 #include <MacAddress.hpp>
 #include <Pin.hpp>
 #include <devices/DeviceDefinition.hpp>
@@ -13,6 +12,7 @@
 #include <peripherals/valve/ValveFactory.hpp>
 
 #include <memory>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::drivers;

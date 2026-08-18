@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Named.hpp>
 #include <config/Configuration.hpp>
 #include <functions/Function.hpp>
@@ -12,6 +11,7 @@
 
 #include <chrono>
 #include <memory>
+#include <string>
 #include <utility>
 
 using namespace cornucopia::ugly_duckling::peripherals::api;
