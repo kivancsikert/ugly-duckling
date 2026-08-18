@@ -1,8 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
+#include <config/ConfigEnvelope.hpp>
 
 #include <string>
-
-#include <config/ConfigEnvelope.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::config;

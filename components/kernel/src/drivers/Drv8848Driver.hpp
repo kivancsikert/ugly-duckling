@@ -13,4 +13,4 @@ namespace cornucopia::ugly_duckling::kernel::drivers {
  */
 using Drv8848Driver = Drv8833Driver;
 
-} // namespace cornucopia::ugly_duckling::kernel::drivers
+}    // namespace cornucopia::ugly_duckling::kernel::drivers

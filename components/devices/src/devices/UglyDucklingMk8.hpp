@@ -1,19 +1,17 @@
 #pragma once
-
-#include <memory>
-
 #include <MacAddress.hpp>
 #include <Pin.hpp>
+#include <devices/DeviceDefinition.hpp>
 #include <drivers/Bq27220Driver.hpp>
 #include <drivers/Drv8848Driver.hpp>
 #include <drivers/Ina219Driver.hpp>
 #include <drivers/LedDriver.hpp>
-
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/door/Door.hpp>
 #include <peripherals/valve/ValveFactory.hpp>
 
-#include <devices/DeviceDefinition.hpp>
+#include <memory>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::drivers;
@@ -112,7 +110,9 @@ protected:
 // MAC prefix 0x98:0xa3:0x16:0x1a — INA219 omitted due to hardware fault on these units
 class UglyDucklingMk8Rev1 : public UglyDucklingMk8Base {
 public:
-    UglyDucklingMk8Rev1() : UglyDucklingMk8Base(1) {}
+    UglyDucklingMk8Rev1()
+        : UglyDucklingMk8Base(1) {
+    }
 
 protected:
     void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<DeviceConfiguration>& _deviceConfig) override {
@@ -123,7 +123,10 @@ protected:
 // All other known MK8 MAC ranges — INA219 included
 class UglyDucklingMk8Rev2 : public UglyDucklingMk8Base {
 public:
-    UglyDucklingMk8Rev2() : UglyDucklingMk8Base(2) {}
+    UglyDucklingMk8Rev2()
+        : UglyDucklingMk8Base(2) {
+    }
+
 protected:
     void registerDeviceSpecificPeripheralFactories(const std::shared_ptr<PeripheralManager>& peripheralManager, const PeripheralServices& services, const std::shared_ptr<DeviceConfiguration>& _deviceConfig) override {
         registerMotorAndValves(peripheralManager, services);

@@ -1,18 +1,17 @@
 #pragma once
 
-#include <chrono>
-#include <functional>
-#include <memory>
-#include <string>
-
 #include <Log.hpp>
 #include <Queue.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>
 #include <Time.hpp>
-
 #include <peripherals/api/TargetState.hpp>
 #include <scheduling/IScheduler.hpp>
+
+#include <chrono>
+#include <functional>
+#include <memory>
+#include <string>
 
 using namespace std::chrono_literals;
 using namespace cornucopia::ugly_duckling::kernel;

@@ -1,18 +1,17 @@
 #pragma once
-
-#include <limits>
-#include <utility>
+#include "Environment.hpp"
+#include <I2CManager.hpp>
+#include <peripherals/I2CSettings.hpp>
+#include <peripherals/Peripheral.hpp>
+#include <utils/DebouncedMeasurement.hpp>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include <I2CManager.hpp>
-#include <utils/DebouncedMeasurement.hpp>
-
-#include <peripherals/I2CSettings.hpp>
-#include <peripherals/Peripheral.hpp>
-
-#include "Environment.hpp"
+#include <limits>
+#include <memory>
+#include <string>
+#include <utility>
 
 using namespace cornucopia::ugly_duckling::peripherals;
 
@@ -63,11 +62,11 @@ private:
                 uint8_t buf[4];
                 device->readReg(0x00, buf, 4);
                 uint16_t rawTemp = static_cast<uint16_t>(buf[0]) | (static_cast<uint16_t>(buf[1]) << 8);
-                uint16_t rawHum  = static_cast<uint16_t>(buf[2]) | (static_cast<uint16_t>(buf[3]) << 8);
+                uint16_t rawHum = static_cast<uint16_t>(buf[2]) | (static_cast<uint16_t>(buf[3]) << 8);
                 // Datasheet §8.3.4: maps 0–65535 to -40…+125 °C (range = 165 °C)
                 double temp = (static_cast<double>(rawTemp) / 65536.0 * 165.0) - 40.0;
                 // Datasheet §8.3.4: maps 0–65535 to 0…100 %RH
-                double hum  = static_cast<double>(rawHum)  / 65536.0 * 100.0;
+                double hum = static_cast<double>(rawHum) / 65536.0 * 100.0;
                 LOGTV(ENV, "Measured temperature: %.2f °C, humidity: %.2f %%", temp, hum);
                 return Reading { temp, hum };
             } catch (const std::exception& e) {

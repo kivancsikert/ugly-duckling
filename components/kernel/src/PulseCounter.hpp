@@ -1,17 +1,17 @@
 #pragma once
 
-#include <atomic>
-#include <chrono>
-#include <memory>
-#include <vector>
-
-#include <driver/gpio.h>
-#include <esp_sleep.h>
-
 #include <EspException.hpp>
 #include <Log.hpp>
 #include <Pin.hpp>
 #include <Queue.hpp>
+
+#include <driver/gpio.h>
+#include <esp_sleep.h>
+
+#include <atomic>
+#include <chrono>
+#include <memory>
+#include <vector>
 
 using namespace std::chrono;
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <optional>
-
 #include <ArduinoJson.h>
+
+#include <optional>
 
 namespace cornucopia::ugly_duckling::peripherals::api {
 

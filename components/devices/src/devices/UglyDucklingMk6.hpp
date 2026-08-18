@@ -1,18 +1,16 @@
 #pragma once
-
-#include <map>
-#include <memory>
-
 #include <Pin.hpp>
+#include <devices/DeviceDefinition.hpp>
 #include <drivers/BatteryDriver.hpp>
 #include <drivers/Drv8833Driver.hpp>
 #include <drivers/LedDriver.hpp>
-
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/door/Door.hpp>
 #include <peripherals/valve/ValveFactory.hpp>
 
-#include <devices/DeviceDefinition.hpp>
+#include <map>
+#include <memory>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::peripherals::door;
@@ -62,7 +60,6 @@ protected:
         peripheralManager->registerFactory(door::makeFactory(motors));
     }
 
-
     DEFINE_PIN(GPIO_NUM_1, BATTERY)
     DEFINE_PIN(GPIO_NUM_4, STATUS2)
     DEFINE_PIN(GPIO_NUM_5, IOB1, "B1")
@@ -102,7 +99,9 @@ protected:
 // MAC prefix 0x34:0x85:0x18
 class UglyDucklingMk6Rev1 : public UglyDucklingMk6Base {
 public:
-    UglyDucklingMk6Rev1() : UglyDucklingMk6Base(1) {}
+    UglyDucklingMk6Rev1()
+        : UglyDucklingMk6Base(1) {
+    }
 
 protected:
     PinPtr motorNSleepPin() const override {
@@ -113,7 +112,9 @@ protected:
 // MAC prefix 0xec:0xda:0x3b:0x5b
 class UglyDucklingMk6Rev2 : public UglyDucklingMk6Base {
 public:
-    UglyDucklingMk6Rev2() : UglyDucklingMk6Base(2) {}
+    UglyDucklingMk6Rev2()
+        : UglyDucklingMk6Base(2) {
+    }
 
 protected:
     PinPtr motorNSleepPin() const override {
@@ -124,7 +125,9 @@ protected:
 // All other known MK6 MAC ranges
 class UglyDucklingMk6Rev3 : public UglyDucklingMk6Base {
 public:
-    UglyDucklingMk6Rev3() : UglyDucklingMk6Base(3) {}
+    UglyDucklingMk6Rev3()
+        : UglyDucklingMk6Base(3) {
+    }
 
 protected:
     PinPtr motorNSleepPin() const override {

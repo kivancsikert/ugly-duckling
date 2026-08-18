@@ -1,14 +1,13 @@
 #pragma once
 
-#include <memory>
-#include <string>
-
 #include <NvsStore.hpp>
 #include <config/ConfigBootPlan.hpp>
 #include <config/ConfigState.hpp>
 #include <config/ConfigStateStore.hpp>
-
 #include <devices/DeviceConfiguration.hpp>
+
+#include <memory>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::devices;
 using namespace cornucopia::ugly_duckling::kernel;

@@ -1,13 +1,13 @@
 #pragma once
 
+#include <config/ConfigEnvelope.hpp>
+
+#include <ArduinoJson.h>
+
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#include <ArduinoJson.h>
-
-#include <config/ConfigEnvelope.hpp>
 
 namespace cornucopia::ugly_duckling::kernel {
 

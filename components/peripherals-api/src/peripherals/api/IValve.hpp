@@ -1,9 +1,9 @@
 #pragma once
 
-#include <ArduinoJson.h>
-
 #include "IPeripheral.hpp"
 #include "TargetState.hpp"
+
+#include <ArduinoJson.h>
 
 namespace cornucopia::ugly_duckling::peripherals::api {
 

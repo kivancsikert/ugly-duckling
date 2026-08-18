@@ -1,10 +1,9 @@
 #pragma once
 
+#include <esp_log.h>
 #include <string.h>
 
 #include <string>
-
-#include <esp_log.h>
 
 namespace cornucopia::ugly_duckling::kernel {
 
@@ -52,17 +51,17 @@ inline bool loggingTagInList(const char* tag, const char* list) {
 }
 
 // LOGGING_TAG(varName, "tagname")
-#define LOGGING_TAG(varName, name)                              \
+#define LOGGING_TAG(varName, name)                        \
     inline constexpr const char* varName = "ud:" name;    \
-    struct varName##_LoggerInit {                              \
-        varName##_LoggerInit() {                               \
+    struct varName##_LoggerInit {                         \
+        varName##_LoggerInit() {                          \
             esp_log_level_t lvl = UD_LOG_LEVEL;           \
             if (loggingTagInList(name, UD_LOG_VERBOSE)) { \
-                lvl = ESP_LOG_VERBOSE;                         \
-            }                                                  \
-            esp_log_level_set(varName, lvl);                   \
-        }                                                      \
-    };                                                         \
+                lvl = ESP_LOG_VERBOSE;                    \
+            }                                             \
+            esp_log_level_set(varName, lvl);              \
+        }                                                 \
+    };                                                    \
     inline const varName##_LoggerInit varName##_logger_init;
 
 LOGGING_TAG(GLOBAL, "global")

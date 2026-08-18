@@ -1,12 +1,12 @@
 #pragma once
 
-#include <memory>
-
 #include <Log.hpp>
 #include <Pin.hpp>
 #include <PwmManager.hpp>
 #include <drivers/MotorDriver.hpp>
 #include <drivers/SharedEnable.hpp>
+
+#include <memory>
 
 namespace cornucopia::ugly_duckling::kernel::drivers {
 

@@ -1,18 +1,15 @@
 #pragma once
-
-#include <limits>
-#include <memory>
-
+#include "Environment.hpp"
 #include <I2CManager.hpp>
-
 #include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ISoilMoistureSensor.hpp>
 #include <peripherals/api/ITemperatureSensor.hpp>
-
 #include <utils/DebouncedMeasurement.hpp>
 
-#include "Environment.hpp"
+#include <limits>
+#include <memory>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::peripherals;

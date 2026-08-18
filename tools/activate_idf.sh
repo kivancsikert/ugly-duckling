@@ -33,3 +33,6 @@ case ":${PATH}:" in
     *":${IDF_PATH}/tools:"*) ;;
     *) export PATH="${IDF_PATH}/tools:${PATH}" ;;
 esac
+
+# Use project-local Git hooks (.githooks/) for clang-format pre-commit etc.
+git config core.hooksPath .githooks 2>/dev/null

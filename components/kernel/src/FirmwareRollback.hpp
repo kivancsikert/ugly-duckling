@@ -1,12 +1,12 @@
 #pragma once
 
-#include <optional>
-#include <string>
+#include <Log.hpp>
+#include <config/ConfigState.hpp>
 
 #include <esp_ota_ops.h>
 
-#include <Log.hpp>
-#include <config/ConfigState.hpp>
+#include <optional>
+#include <string>
 
 namespace cornucopia::ugly_duckling::kernel {
 

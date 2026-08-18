@@ -1,22 +1,26 @@
 #pragma once
 
+#include "WifiApRecord.hpp"
+#include <Log.hpp>
+#include <NvsStore.hpp>
+
+#include <time.h>
+
 #include <array>
 #include <chrono>
 #include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <time.h>
-
-#include "WifiApRecord.hpp"
-#include <Log.hpp>
-#include <NvsStore.hpp>
 
 // NimBleDriver and everything it needs from the "bt" component are only available when
 // CONFIG_BT_NIMBLE_ENABLED is set. Spinach (pre-MK10 devices) disables CONFIG_BT_ENABLED
 // entirely — see docs/specs/Bluetooth.md ("Platform support decision") — which drops the
 // bt component's nimble/host include paths, so these headers wouldn't even resolve there.
 #ifdef CONFIG_BT_NIMBLE_ENABLED
+#include <EspException.hpp>
+
+#include <ArduinoJson.h>
 #include <esp_random.h>
 #include <host/ble_gatt.h>
 #include <host/ble_hs.h>    // NOLINT(misc-header-include-cycle) -- ble_hs.h and ble_gap.h include each other; cycle is in ESP-IDF, not our code
@@ -29,9 +33,6 @@
 #include <services/dis/ble_svc_dis.h>
 #include <services/gap/ble_svc_gap.h>
 #include <services/gatt/ble_svc_gatt.h>
-
-#include <ArduinoJson.h>
-#include <EspException.hpp>
 #endif
 
 using namespace std::chrono;
@@ -54,14 +55,23 @@ enum class BleStatus : std::uint8_t {
 class BleDriver {
 public:
     virtual ~BleDriver() = default;
-    virtual BleStatus getStatus() { return BleStatus::Disabled; }
-    virtual void setBatteryLevel(uint8_t /*unused*/) {}
-    virtual void setOnTimeReceived(const std::function<void(time_t)>& /*unused*/) {}
-    virtual void setOnWifiScanRequested(const std::function<void()>& /*unused*/) {}
-    virtual void setOnWifiCredentialsReceived(const std::function<void(std::string, std::string)>& /*unused*/) {}
-    virtual void setOnWifiControlReceived(const std::function<void(std::string)>& /*unused*/) {}
-    virtual void setWifiStatus(const std::string& /*unused*/) {}
-    virtual void setScanResults(const std::vector<WifiApRecord>& /*unused*/) {}
+    virtual BleStatus getStatus() {
+        return BleStatus::Disabled;
+    }
+    virtual void setBatteryLevel(uint8_t /*unused*/) {
+    }
+    virtual void setOnTimeReceived(const std::function<void(time_t)>& /*unused*/) {
+    }
+    virtual void setOnWifiScanRequested(const std::function<void()>& /*unused*/) {
+    }
+    virtual void setOnWifiCredentialsReceived(const std::function<void(std::string, std::string)>& /*unused*/) {
+    }
+    virtual void setOnWifiControlReceived(const std::function<void(std::string)>& /*unused*/) {
+    }
+    virtual void setWifiStatus(const std::string& /*unused*/) {
+    }
+    virtual void setScanResults(const std::vector<WifiApRecord>& /*unused*/) {
+    }
 };
 
 #ifdef CONFIG_BT_NIMBLE_ENABLED
@@ -261,7 +271,7 @@ private:
     }
 
     static std::array<uint8_t, 6> loadOrGenerateAddress(NvsStore& nvs) {
-        std::array<uint8_t, 6> addr { };
+        std::array<uint8_t, 6> addr {};
         JsonDocument doc;
         if (nvs.getJson("addr", doc) && doc.is<JsonArray>() && doc.as<JsonArray>().size() == 6) {
             auto arr = doc.as<JsonArray>();
@@ -399,7 +409,7 @@ private:
 
     static int ctsGetRefTimeInfo(struct ble_svc_cts_reference_time_info* rti) {
         rti->time_source = TIME_SOURCE_UNKNOWN;
-        rti->time_accuracy = 254;           // unknown
+        rti->time_accuracy = 254;    // unknown
         rti->days_since_update = 0;
         rti->hours_since_update = 0;
         return 0;
@@ -519,7 +529,7 @@ private:
     // old legacy-advertising implementation there's no need to split fields between a primary ad
     // and a separate scan response). Returns false (and sets status = Error) on failure.
     bool configureAndSetData(uint8_t instance) {
-        struct ble_gap_ext_adv_params params = { };
+        struct ble_gap_ext_adv_params params = {};
         params.connectable = 1;    // must accept CONNECT_IND for phone-based WiFi provisioning
         params.own_addr_type = BLE_OWN_ADDR_RANDOM;
         params.primary_phy = BLE_HCI_LE_PHY_1M;
@@ -546,7 +556,7 @@ private:
         } };
 
         const char* name = ble_svc_gap_device_name();
-        struct ble_hs_adv_fields adFields = { };
+        struct ble_hs_adv_fields adFields = {};
         adFields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
         adFields.name = reinterpret_cast<const uint8_t*>(name);
         adFields.name_len = static_cast<uint8_t>(strlen(name));
@@ -601,7 +611,7 @@ private:
     int connHandle { -1 };
     bool scanInProgress { false };
     std::string wifiStatus;
-    struct ble_npl_callout advRestartCallout { };
+    struct ble_npl_callout advRestartCallout {};
     bool advConfigured { false };    // see startAdvertising(): configure/set-data only needed once
 
     // Ugly Duckling Service — UUID: 100D32C7-A4E6-4F72-8D7A-A61871CE4FD6
@@ -655,22 +665,22 @@ private:
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     inline static ble_gatt_dsc_def scanResultsDscs[] = {
         { .uuid = &userDescUuid.u, .att_flags = BLE_ATT_F_READ, .min_key_size = 0, .access_cb = userDescAccessCallback, .arg = scanResultsLabel },
-        { },
+        {},
     };
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     inline static ble_gatt_dsc_def wifiStatusDscs[] = {
         { .uuid = &userDescUuid.u, .att_flags = BLE_ATT_F_READ, .min_key_size = 0, .access_cb = userDescAccessCallback, .arg = wifiStatusLabel },
-        { },
+        {},
     };
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     inline static ble_gatt_dsc_def wifiCredentialsDscs[] = {
         { .uuid = &userDescUuid.u, .att_flags = BLE_ATT_F_READ, .min_key_size = 0, .access_cb = userDescAccessCallback, .arg = wifiCredentialsLabel },
-        { },
+        {},
     };
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     inline static ble_gatt_dsc_def wifiControlDscs[] = {
         { .uuid = &userDescUuid.u, .att_flags = BLE_ATT_F_READ, .min_key_size = 0, .access_cb = userDescAccessCallback, .arg = wifiControlLabel },
-        { },
+        {},
     };
 
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
@@ -715,7 +725,7 @@ private:
             .val_handle = nullptr,
             .cpfd = nullptr,
         },
-        { },    // terminator
+        {},    // terminator
     };
 
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
@@ -726,7 +736,7 @@ private:
             .includes = nullptr,
             .characteristics = uglyDucklingChrs,
         },
-        { },    // terminator
+        {},    // terminator
     };
 
     // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)

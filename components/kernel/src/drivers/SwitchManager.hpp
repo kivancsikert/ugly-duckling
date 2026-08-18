@@ -1,16 +1,17 @@
 #pragma once
-
-#include <chrono>
-#include <functional>
-#include <mutex>
-#include <utility>
+#include <Pin.hpp>
+#include <Queue.hpp>
+#include <Task.hpp>
 
 #include <driver/gpio.h>
 #include <hal/gpio_types.h>
 
-#include <Pin.hpp>
-#include <Queue.hpp>
-#include <Task.hpp>
+#include <chrono>
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <utility>
 
 using namespace std::chrono;
 

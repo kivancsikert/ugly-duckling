@@ -8,42 +8,39 @@
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
+#include <esp_app_desc.h>
+
 #include <chrono>
 #include <concepts>
 #include <memory>
 #include <string>
 
-#include <esp_app_desc.h>
-
 static const std::string firmwareVersion(esp_app_get_description()->version);
-
-#include <Console.hpp>
-#include <DebugConsole.hpp>
-#include <FirmwareRollback.hpp>
-#include <HardwareVersion.hpp>
-#include <HttpUpdate.hpp>
-#include <Log.hpp>
-#include <ShutdownManager.hpp>
-#include <Strings.hpp>
-#include <config/ConfigBootPlan.hpp>
-#include <config/NvsConfiguration.hpp>
-#include <mqtt/MqttLog.hpp>
-
-#include <devices/DeviceDefinition.hpp>
-
-#include <MacAddress.hpp>
 
 #include <BootConfig.hpp>
 #include <BootHelpers.hpp>
 #include <BootMessage.hpp>
 #include <ConfigUpdate.hpp>
 #include <Connectivity.hpp>
+#include <Console.hpp>
+#include <DebugConsole.hpp>
 #include <DeviceInit.hpp>
+#include <FirmwareRollback.hpp>
+#include <HardwareVersion.hpp>
 #include <HeapTrace.hpp>
+#include <HttpUpdate.hpp>
+#include <Log.hpp>
+#include <MacAddress.hpp>
 #include <MqttCommands.hpp>
 #include <NetworkConfig.hpp>
+#include <ShutdownManager.hpp>
+#include <Strings.hpp>
 #include <SyncPublisher.hpp>
 #include <TelemetryTask.hpp>
+#include <config/ConfigBootPlan.hpp>
+#include <config/NvsConfiguration.hpp>
+#include <devices/DeviceDefinition.hpp>
+#include <mqtt/MqttLog.hpp>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::devices;
@@ -129,7 +126,7 @@ static void startDevice() {
 
     // Init switch and button handling
     auto switches = std::make_shared<SwitchManager>();
-    switches->registerSwitch({
+    switches->registerSwitch({ //
         .name = "factory-reset",
         .pin = deviceDefinition->bootPin,
         .mode = SwitchMode::PullUp,

@@ -1,15 +1,16 @@
 #pragma once
+#include <Log.hpp>
+#include <config/Configuration.hpp>
 
 #include <concepts>
 #include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <unordered_map>
-#include <Log.hpp>
-#include <config/Configuration.hpp>
 
 namespace cornucopia::ugly_duckling::kernel {
 
@@ -48,7 +49,8 @@ public:
             h.entries.push_back({ &TypeTokenVar<Impl>, std::static_pointer_cast<void>(impl) });
         } else {
             (h.entries.push_back({ &TypeTokenVar<Interfaces>,
-                std::static_pointer_cast<void>(std::static_pointer_cast<Interfaces>(impl)) }), ...);
+                 std::static_pointer_cast<void>(std::static_pointer_cast<Interfaces>(impl)) }),
+                ...);
         }
 
         // If implementation supports shutdown, register it with the manager now

@@ -1,16 +1,4 @@
 #pragma once
-
-#include <atomic>
-#include <chrono>
-#include <memory>
-#include <optional>
-#include <utility>
-#include <variant>
-#include <vector>
-
-#include <esp_event.h>
-#include <mqtt_client.h>
-
 #include <Log.hpp>
 #include <Overloaded.hpp>
 #include <Queue.hpp>
@@ -19,12 +7,27 @@
 #include <config/Configuration.hpp>
 #include <mqtt/PendingMessages.hpp>
 
+#include <esp_event.h>
+#include <mqtt_client.h>
+
+#include <atomic>
+#include <chrono>
+#include <functional>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
+
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace cornucopia::ugly_duckling::kernel;
 
 // Forward-declare the drivers namespace so the using directive works regardless of include order
-namespace cornucopia::ugly_duckling::kernel::drivers {}
+namespace cornucopia::ugly_duckling::kernel::drivers {
+}    // namespace cornucopia::ugly_duckling::kernel::drivers
 using namespace cornucopia::ugly_duckling::kernel::drivers;
 
 namespace cornucopia::ugly_duckling::kernel::mqtt {
@@ -82,7 +85,7 @@ public:
         , incomingQueue("mqtt-incoming", config->queueSize.get()) {
 
         Task::run("mqtt", 5120, [this](Task& task) {
-            esp_mqtt_client_config_t mqttConfig = { };
+            esp_mqtt_client_config_t mqttConfig = {};
             client = esp_mqtt_client_init(&mqttConfig);
 
             ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, handleMqttEventCallback, this));
@@ -142,17 +145,17 @@ public:
                     .path = nullptr,
                     .port = port,
                 },
-                .verification { },
+                .verification {},
             },
             .credentials {
                 .username = nullptr,
                 .client_id = clientId.c_str(),
                 .set_null_client_id = false,
-                .authentication { },
+                .authentication {},
             },
             // TODO Configure last will
             .session {
-                .last_will { },
+                .last_will {},
                 .disable_clean_session = false,
                 .keepalive = duration_cast<seconds>(MQTT_SESSION_KEEP_ALIVE).count(),
                 .disable_keepalive = false,
@@ -164,16 +167,16 @@ public:
                 .timeout_ms = duration_cast<milliseconds>(MQTT_NETWORK_TIMEOUT).count(),
                 .refresh_connection_after_ms = 0,    // No need to refresh connection
                 .disable_auto_reconnect = false,
-                .tcp_keep_alive_cfg = { },
+                .tcp_keep_alive_cfg = {},
                 .transport = nullptr,    // Use default transport
                 .if_name = nullptr,      // Use default interface
             },
-            .task { },
+            .task {},
             .buffer {
                 .size = 8192,
                 .out_size = 4096,
             },
-            .outbox { },
+            .outbox {},
         };
 
         LOGTD(MQTT, "server: %s:%" PRIu32 ", client ID is '%s'",
@@ -456,7 +459,7 @@ private:
 
         stopClient();
 
-        esp_mqtt_client_config_t mqttConfig { };
+        esp_mqtt_client_config_t mqttConfig {};
         try {
             configMqttClient(mqttConfig);
         } catch (const std::exception& e) {
@@ -518,7 +521,7 @@ private:
             case MQTT_EVENT_DISCONNECTED: {
                 LOGTD(MQTT, "Disconnected from MQTT server");
                 ready.clear();
-                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Disconnected { });
+                eventQueue.offerIn(MQTT_QUEUE_TIMEOUT, Disconnected {});
                 break;
             }
             case MQTT_EVENT_SUBSCRIBED: {
@@ -735,7 +738,7 @@ private:
     StateSource& ready;
 
     std::string hostname;
-    uint32_t port { };
+    uint32_t port {};
     esp_mqtt_client_handle_t client;
 
     using MqttEvent = std::variant<Connected, Disconnected, MessagePublished, Subscribed, OutgoingMessage, Subscription, ConnectedListenerRegistration>;

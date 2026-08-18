@@ -1,10 +1,10 @@
 #pragma once
 
 #ifdef CONFIG_HEAP_TRACING
-#include <string>
-
 #include <esp_heap_trace.h>
 #include <esp_system.h>
+
+#include <string>
 
 #define NUM_RECORDS 64
 static heap_trace_record_t trace_record[NUM_RECORDS];    // This buffer must be in internal RAM
@@ -24,9 +24,9 @@ public:
 #endif
 
 #ifdef CONFIG_HEAP_TASK_TRACKING
-#include <string>
-
 #include <esp_heap_task_info.h>
+
+#include <string>
 
 #define MAX_TASK_NUM 20     // Max number of per tasks info that it can store
 #define MAX_BLOCK_NUM 20    // Max number of per block info that it can store

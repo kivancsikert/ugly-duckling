@@ -1,17 +1,17 @@
 #pragma once
-
-#include <array>
-#include <chrono>
-
-#include <esp_pm.h>
-#include <esp_sleep.h>
-#include <esp_timer.h>
-
 #include <EspException.hpp>
 #include <Log.hpp>
 #include <Queue.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>
+
+#include <esp_pm.h>
+#include <esp_sleep.h>
+#include <esp_timer.h>
+
+#include <array>
+#include <chrono>
+#include <string>
 
 #if defined(CONFIG_IDF_TARGET_ESP32S2)
 // Apparently on ESP32S2 things start to break down if we go below 80 MHz
@@ -198,10 +198,9 @@ private:
     int lightSleepCount = 0;
 #ifdef UD_PM_DIAGNOSTICS
     // Per-wakeup-cause tally, indexed by esp_sleep_wakeup_cause_t bit position
-    std::array<unsigned long, 32> wakeupCauseCounts = { };
+    std::array<unsigned long, 32> wakeupCauseCounts = {};
 #endif
 #endif
 };
-
 
 }    // namespace cornucopia::ugly_duckling::kernel

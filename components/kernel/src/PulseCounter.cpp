@@ -1,5 +1,13 @@
 #include "PulseCounter.hpp"
 
+#include "Pin.hpp"
+
+#include <driver/gpio.h>
+#include <esp_err.h>
+#include <esp_pm.h>
+#include <freertos/task.h>
+#include <hal/rtc_io_types.h>
+
 #include <cinttypes>
 #include <cstddef>
 #include <cstdint>
@@ -7,27 +15,19 @@
 #include <stdexcept>
 #include <utility>
 
-#include <freertos/task.h>
-
-#include <driver/gpio.h>
-#include <esp_err.h>
-#include <esp_pm.h>
-#include <hal/rtc_io_types.h>
-
-#include "Pin.hpp"
-
 #ifdef CONFIG_ULP_COPROC_ENABLED
 #include <driver/rtc_io.h>
 #if defined(CONFIG_ULP_COPROC_TYPE_RISCV)
 #include <ulp_common.h>
 #include <ulp_riscv.h>
 #ifdef UD_DEBUG
-#include <chrono>
+#include <Task.hpp>
+
 #include <soc/rtc_cntl_reg.h>
 #include <soc/sens_reg.h>
 #include <soc/soc.h>
 
-#include <Task.hpp>
+#include <chrono>
 
 using namespace std::chrono_literals;
 #endif
@@ -39,8 +39,8 @@ using namespace std::chrono_literals;
 // channel_count → ulp_channel_count, gpio_num → ulp_gpio_num, etc.
 #include "ulp_pulse_counter.h"
 // Embedded ULP binary produced by CMake.
-extern const uint8_t ulp_pulse_counter_bin_start[] asm("_binary_ulp_pulse_counter_bin_start"); // NOLINT(hicpp-no-assembler)
-extern const uint8_t ulp_pulse_counter_bin_end[]   asm("_binary_ulp_pulse_counter_bin_end");   // NOLINT(hicpp-no-assembler)
+extern const uint8_t ulp_pulse_counter_bin_start[] asm("_binary_ulp_pulse_counter_bin_start");    // NOLINT(hicpp-no-assembler)
+extern const uint8_t ulp_pulse_counter_bin_end[] asm("_binary_ulp_pulse_counter_bin_end");        // NOLINT(hicpp-no-assembler)
 #endif
 
 #include <EspException.hpp>
@@ -181,7 +181,7 @@ void PulseCounterManager::start() {
 
     ulp_channel_count = ulpNextChannel;
     for (uint32_t i = 0; i < ulpNextChannel; i++) {
-        ulp_gpio_num[i]    = ulpChannelConfigs[i].gpioNum;
+        ulp_gpio_num[i] = ulpChannelConfigs[i].gpioNum;
         ulp_debounce_us[i] = ulpChannelConfigs[i].debounceUs;
         ulp_pulse_count[i] = 0;
     }
@@ -207,7 +207,7 @@ void PulseCounterManager::start() {
 #elif defined(CONFIG_ULP_COPROC_TYPE_LP_CORE)
     ulp_lp_core_cfg_t cfg = {
         .wakeup_source = ULP_LP_CORE_WAKEUP_SOURCE_HP_CPU,
-        .lp_timer_sleep_duration_us = 0, // Not used with HP CPU wakeup source
+        .lp_timer_sleep_duration_us = 0,    // Not used with HP CPU wakeup source
     };
     ESP_ERROR_THROW(ulp_lp_core_run(&cfg));
 #endif

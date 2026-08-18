@@ -1,8 +1,9 @@
 #pragma once
-
-#include <vector>
-
 #include <State.hpp>
+
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace cornucopia::ugly_duckling::kernel {
 

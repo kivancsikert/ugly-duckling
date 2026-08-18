@@ -1,22 +1,12 @@
 #pragma once
 
-#include <chrono>
-#include <memory>
-#include <string>
-#include <vector>
-
-#include <Pin.hpp>
-
-#include <ArduinoJson.h>
-
-#include <devices/DeviceConfiguration.hpp>
-
 #include <Log.hpp>
+#include <Pin.hpp>
 #include <PulseCounter.hpp>
 #include <PwmManager.hpp>
+#include <devices/DeviceConfiguration.hpp>
 #include <drivers/BatteryDriver.hpp>
 #include <drivers/LedDriver.hpp>
-
 #include <functions/chicken_door/ChickenDoor.hpp>
 #include <functions/plot_controller/PlotController.hpp>
 #include <peripherals/Peripheral.hpp>
@@ -37,6 +27,13 @@
 #include <peripherals/light_sensor/Bh1750.hpp>
 #include <peripherals/light_sensor/Tsl2591.hpp>
 #include <peripherals/multiplexer/Xl9535.hpp>
+
+#include <ArduinoJson.h>
+
+#include <chrono>
+#include <memory>
+#include <string>
+#include <vector>
 
 using namespace cornucopia::ugly_duckling::functions;
 using namespace cornucopia::ugly_duckling::kernel;

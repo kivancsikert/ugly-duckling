@@ -1,13 +1,12 @@
 #pragma once
 
-#include <memory>
-
 #include <KernelStatus.hpp>
+#include <NetworkConfig.hpp>
 #include <drivers/BleDriver.hpp>
 #include <drivers/RtcDriver.hpp>
 #include <drivers/WiFiDriver.hpp>
 
-#include <NetworkConfig.hpp>
+#include <memory>
 
 using namespace cornucopia::ugly_duckling::kernel;
 

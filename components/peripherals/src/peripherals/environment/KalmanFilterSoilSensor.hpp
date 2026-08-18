@@ -1,16 +1,14 @@
 #pragma once
-
-#include <chrono>
-#include <memory>
-
+#include "Environment.hpp"
 #include <config/Configuration.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/ISoilMoistureSensor.hpp>
 #include <peripherals/api/ITemperatureSensor.hpp>
-
 #include <scheduling/MoistureKalmanFilter.hpp>
 
-#include "Environment.hpp"
+#include <chrono>
+#include <memory>
+#include <string>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::utils::scheduling;
@@ -68,14 +66,14 @@ public:
         , rNormal(rNormal)
         , sensitivePeriodEnd(steady_clock::now() + sensitivePeriod) {
         LOGTI(ENV, "Initializing Kalman filter soil moisture sensor '%s' "
-             "wrapping moisture sensor '%s'"
-             " and temperature sensor '%s'"
-             "; initial moisture: %.1f%%"
-             ", initial beta: %.2f"
-             ", reference temp.: %.1f C"
-             ", process noise: %.2e (moisture) / %.2e (beta)"
-             ", measurement noise: %.2e (sensitive) / %.2e (normal)"
-             ", sensitive period: %lld s",
+                   "wrapping moisture sensor '%s'"
+                   " and temperature sensor '%s'"
+                   "; initial moisture: %.1f%%"
+                   ", initial beta: %.2f"
+                   ", reference temp.: %.1f C"
+                   ", process noise: %.2e (moisture) / %.2e (beta)"
+                   ", measurement noise: %.2e (sensitive) / %.2e (normal)"
+                   ", sensitive period: %lld s",
             name.c_str(),
             rawMoistureSensor->getName().c_str(),
             tempSensor->getName().c_str(),

@@ -1,12 +1,13 @@
 #pragma once
 
-#include <chrono>
-#include <optional>
-#include <time.h>
+#include <Log.hpp>
+#include <peripherals/api/TargetState.hpp>
 
 #include <ArduinoJson.h>
+#include <time.h>
 
-#include <peripherals/api/TargetState.hpp>
+#include <chrono>
+#include <optional>
 
 namespace cornucopia::ugly_duckling::utils::scheduling {
 
@@ -69,7 +70,8 @@ struct Converter<system_clock::time_point> {
         // Windows doesn't have strptime, use sscanf to parse ISO 8601
         int year, month, day, hour, min, sec;
         if (sscanf(src.as<const char*>(), "%d-%d-%dT%d:%d:%dZ",
-                   &year, &month, &day, &hour, &min, &sec) == 6) {
+                &year, &month, &day, &hour, &min, &sec)
+            == 6) {
             tm.tm_year = year - 1900;
             tm.tm_mon = month - 1;
             tm.tm_mday = day;

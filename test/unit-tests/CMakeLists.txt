@@ -34,6 +34,9 @@ FetchContent_MakeAvailable(ArduinoJson)
 set(COMPONENTS_DIR ${CMAKE_SOURCE_DIR}/../../components)
 
 include_directories(
+    # test-support first: its Log.hpp shim shadows kernel's real Log.hpp
+    # so that headers using LOGGING_TAG() compile without ESP-IDF
+    ${COMPONENTS_DIR}/test-support/src
     ${COMPONENTS_DIR}/functions/src
     ${COMPONENTS_DIR}/functions/test
     ${COMPONENTS_DIR}/kernel/src
@@ -44,7 +47,6 @@ include_directories(
     ${COMPONENTS_DIR}/scheduling/src
     ${COMPONENTS_DIR}/scheduling/test
     ${COMPONENTS_DIR}/utils/src
-    ${COMPONENTS_DIR}/test-support/src
 )
 
 # Collect all test source files

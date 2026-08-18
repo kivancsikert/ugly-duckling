@@ -1,5 +1,6 @@
 BasedOnStyle: WebKit
 AlignTrailingComments: true
+AllowShortEnumsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: None
 BreakBeforeBraces: Attach
 BreakBeforeTernaryOperators: true
@@ -10,3 +11,16 @@ CompactNamespaces: true
 FixNamespaceComments: true
 NamespaceIndentation: None
 PointerAlignment: Left
+
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Project headers (.hpp)
+  - Regex: '\.hpp[">]$'
+    Priority: 1
+  # ESP-IDF, third-party, and C headers (.h)
+  - Regex: '\.h[">]$'
+    Priority: 2
+  # C++ standard library (no extension)
+  - Regex: '.*'
+    Priority: 3

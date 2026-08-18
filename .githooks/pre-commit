@@ -1,0 +1,16 @@
+#!/bin/bash
+# Format staged C++ files with the project's clang-format before committing.
+# Installed automatically by tools/activate_idf.sh via core.hooksPath.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+FILES=$(git diff --cached --name-only --diff-filter=d | grep -E '\.(cpp|hpp)$')
+
+if [ -z "$FILES" ]; then
+    exit 0
+fi
+
+# Format and re-stage
+echo "$FILES" | xargs "$PROJECT_DIR/tools/clang-format.sh" -i
+echo "$FILES" | xargs git add

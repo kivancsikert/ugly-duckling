@@ -1,16 +1,17 @@
 #pragma once
-
-#include <chrono>
-#include <optional>
-#include <sys/time.h>
-#include <time.h>
-
-#include "esp_netif_sntp.h"
-#include "esp_sntp.h"
-
 #include <State.hpp>
 #include <Task.hpp>
 #include <config/Configuration.hpp>
+
+#include "esp_netif_sntp.h"
+#include "esp_sntp.h"
+#include <sys/time.h>
+#include <time.h>
+
+#include <chrono>
+#include <memory>
+#include <optional>
+#include <string>
 #include <utility>
 
 using namespace std::chrono;

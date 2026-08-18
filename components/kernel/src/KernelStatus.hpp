@@ -1,16 +1,4 @@
 #pragma once
-
-#include <chrono>
-#include <concepts>
-#include <functional>
-#include <optional>
-
-#include <esp_system.h>
-
-#include <nvs_flash.h>
-
-#include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle)
-
 #include <I2CManager.hpp>
 #include <PowerManager.hpp>
 #include <StateManager.hpp>
@@ -19,6 +7,16 @@
 #include <drivers/SwitchManager.hpp>
 #include <drivers/WiFiDriver.hpp>
 #include <mqtt/MqttDriver.hpp>
+
+#include <esp_system.h>
+#include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle)
+#include <nvs_flash.h>
+
+#include <chrono>
+#include <concepts>
+#include <functional>
+#include <memory>
+#include <optional>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;

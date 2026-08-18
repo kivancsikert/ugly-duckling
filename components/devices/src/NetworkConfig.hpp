@@ -1,11 +1,11 @@
 #pragma once
 
-#include <algorithm>
-#include <string>
-
 #include <MacAddress.hpp>
 #include <drivers/RtcDriver.hpp>
 #include <mqtt/MqttDriver.hpp>
+
+#include <algorithm>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::mqtt;

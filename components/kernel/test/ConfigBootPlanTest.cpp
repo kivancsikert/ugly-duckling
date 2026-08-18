@@ -1,5 +1,4 @@
 #include <catch2/catch_test_macros.hpp>
-
 #include <config/ConfigBootPlan.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;

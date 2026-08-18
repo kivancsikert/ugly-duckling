@@ -1,17 +1,16 @@
 #include <catch2/catch_test_macros.hpp>
-
-#include <memory>
-#include <string>
-#include <unordered_map>
-
-#include <nvs_flash.h>
-
 #include <config/ConfigBootPlan.hpp>
 #include <config/ConfigEnvelope.hpp>
 #include <config/ConfigStaging.hpp>
 #include <config/ConfigState.hpp>
 #include <config/ConfigStateStore.hpp>
 #include <config/StoredConfig.hpp>
+
+#include <nvs_flash.h>
+
+#include <memory>
+#include <string>
+#include <unordered_map>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::config;

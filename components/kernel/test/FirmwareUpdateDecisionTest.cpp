@@ -1,6 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include <FirmwareUpdateDecision.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
 

@@ -1,11 +1,11 @@
 #pragma once
 
+#include <ArduinoJson.h>
+
 #include <cstdint>
 #include <cstring>
 #include <optional>
 #include <string>
-
-#include <ArduinoJson.h>
 
 namespace cornucopia::ugly_duckling::kernel::config {
 
@@ -14,7 +14,10 @@ namespace cornucopia::ugly_duckling::kernel::config {
  * device holds in NVS at any time (docs/Configuration.md, "Storage: envelopes and slots").
  * `config-state` points `confirmed` (and, while staging, `requested`) at one of these.
  */
-enum class ConfigSlot : std::uint8_t { A, B };
+enum class ConfigSlot : std::uint8_t {
+    A,
+    B
+};
 
 inline std::string toString(ConfigSlot slot) {
     return slot == ConfigSlot::B ? "b" : "a";
@@ -29,7 +32,11 @@ inline ConfigSlot otherSlot(ConfigSlot slot) {
  * (docs/Configuration.md, "Storage: envelopes and slots" and "The confirmed/requested state
  * machine").
  */
-enum class RequestedConfigStatus : std::uint8_t { Pending, Attempted, Rejected };
+enum class RequestedConfigStatus : std::uint8_t {
+    Pending,
+    Attempted,
+    Rejected
+};
 
 /**
  * @brief The `google.rpc.Code` subset the firmware can emit (docs/Configuration.md,

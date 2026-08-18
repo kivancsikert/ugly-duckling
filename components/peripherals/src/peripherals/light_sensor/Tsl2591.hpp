@@ -1,17 +1,16 @@
 #pragma once
-
-#include <chrono>
-#include <memory>
-
-#include <tsl2591.h>
-
 #include <I2CManager.hpp>
 #include <Telemetry.hpp>
 #include <config/Configuration.hpp>
-
 #include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/light_sensor/LightSensor.hpp>
+
+#include <tsl2591.h>
+
+#include <chrono>
+#include <memory>
+#include <string>
 #include <utility>
 
 using namespace std::chrono;

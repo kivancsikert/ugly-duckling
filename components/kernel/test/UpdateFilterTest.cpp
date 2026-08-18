@@ -1,9 +1,8 @@
+#include <UpdateFilter.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <string>
 #include <unordered_map>
-
-#include <UpdateFilter.hpp>
 
 using namespace cornucopia::ugly_duckling::kernel;
 

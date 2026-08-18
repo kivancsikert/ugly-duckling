@@ -1,12 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
-
-#include <memory>
-#include <string>
+#include <config/ConfigEnvelope.hpp>
+#include <config/StoredConfig.hpp>
 
 #include <nvs_flash.h>
 
-#include <config/ConfigEnvelope.hpp>
-#include <config/StoredConfig.hpp>
+#include <memory>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::config;

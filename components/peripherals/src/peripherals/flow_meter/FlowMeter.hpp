@@ -1,17 +1,18 @@
 #pragma once
-
-#include <chrono>
-#include <mutex>
-
-#include <ArduinoJson.h>
 #include <PulseCounter.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>
 #include <mqtt/MqttDriver.hpp>
-#include <utility>
-
 #include <peripherals/Peripheral.hpp>
 #include <peripherals/api/IFlowMeter.hpp>
+
+#include <ArduinoJson.h>
+
+#include <chrono>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <utility>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::kernel::mqtt;

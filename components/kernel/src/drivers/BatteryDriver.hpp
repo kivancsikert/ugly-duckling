@@ -1,10 +1,10 @@
 #pragma once
 
-#include <chrono>
-#include <limits>
-
 #include <Pin.hpp>
 #include <Telemetry.hpp>
+
+#include <chrono>
+#include <limits>
 #include <utility>
 
 using cornucopia::ugly_duckling::kernel::PinPtr;
@@ -48,8 +48,7 @@ public:
         if (voltage < 0) {
             return -1.0;
         }
-        auto percentage = static_cast<double>(voltage - parameters.shutdownThreshold) /
-               (parameters.maximumVoltage - parameters.shutdownThreshold) * 100.0;
+        auto percentage = static_cast<double>(voltage - parameters.shutdownThreshold) / (parameters.maximumVoltage - parameters.shutdownThreshold) * 100.0;
         if (percentage < 0) {
             return 0.0;
         }

@@ -1,5 +1,20 @@
 #pragma once
 
+#include "WifiApRecord.hpp"
+#include <Overloaded.hpp>
+#include <Queue.hpp>
+#include <State.hpp>
+#include <StateManager.hpp>
+#include <Task.hpp>
+#include <Telemetry.hpp>
+
+#include <ArduinoJson.h>
+#include <esp_event.h>
+#include <esp_sleep.h>
+#include <esp_wifi.h>
+#include <network_provisioning/manager.h>
+#include <network_provisioning/scheme_softap.h>
+
 #include <atomic>
 #include <chrono>
 #include <functional>
@@ -7,20 +22,6 @@
 #include <string>
 #include <variant>
 #include <vector>
-
-#include <esp_event.h>
-#include <esp_wifi.h>
-#include <network_provisioning/manager.h>
-#include <network_provisioning/scheme_softap.h>
-
-#include "WifiApRecord.hpp"
-#include <ArduinoJson.h>
-#include <Overloaded.hpp>
-#include <Queue.hpp>
-#include <State.hpp>
-#include <StateManager.hpp>
-#include <Task.hpp>
-#include <Telemetry.hpp>
 
 using namespace std::chrono;
 using namespace std::chrono_literals;
@@ -97,12 +98,12 @@ public:
 
     // Drops the current connection; the driver will reconnect immediately.
     void disconnect() {
-        eventQueue.offer(EvDisconnectCmd { });
+        eventQueue.offer(EvDisconnectCmd {});
     }
 
     // Turns off WiFi; the driver will not reconnect until new credentials are set.
     void disable() {
-        eventQueue.offer(EvDisableCmd { });
+        eventQueue.offer(EvDisableCmd {});
     }
 
     // Starts a WiFi scan and calls onComplete with the discovered APs when done.
@@ -113,7 +114,7 @@ public:
 
     void populateTelemetry(JsonObject& json) {
         if (networkReady.isSet()) {
-            wifi_ap_record_t apInfo = { };
+            wifi_ap_record_t apInfo = {};
             esp_err_t err = esp_wifi_sta_get_ap_info(&apInfo);
             if (err == ESP_OK) {
                 json["rssi"] = apInfo.rssi;
@@ -148,12 +149,15 @@ private:
     }
 
     static uint8_t wifiGenFromRecord(const wifi_ap_record_t& r) {
-        if (r.phy_11ax) { return 6;
-}
-        if (r.phy_11n) { return 4;
-}
-        if (r.phy_11g) { return 3;
-}
+        if (r.phy_11ax) {
+            return 6;
+        }
+        if (r.phy_11n) {
+            return 4;
+        }
+        if (r.phy_11g) {
+            return 3;
+        }
         return 1;
     }
 
@@ -220,7 +224,7 @@ private:
             case WIFI_EVENT_STA_START: {
                 LOGTD(WIFI, "Started");
                 stationStarted.set();
-                eventQueue.offer(EvStarted { });
+                eventQueue.offer(EvStarted {});
                 break;
             }
             case WIFI_EVENT_STA_STOP: {
@@ -273,7 +277,7 @@ private:
                     std::lock_guard<std::mutex> lock(metadataMutex);
                     ip = event->ip_info.ip;
                 }
-                eventQueue.offer(EvGotIp { });
+                eventQueue.offer(EvGotIp {});
                 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-cstyle-cast)
                 LOGTD(WIFI, "Got IP - " IPSTR, IP2STR(&event->ip_info.ip));
                 break;
@@ -284,7 +288,7 @@ private:
                     std::lock_guard<std::mutex> lock(metadataMutex);
                     ip.reset();
                 }
-                eventQueue.offer(EvLostIp { });
+                eventQueue.offer(EvLostIp {});
                 LOGTD(WIFI, "Lost IP");
                 break;
             }
@@ -320,7 +324,7 @@ private:
             }
             case NETWORK_PROV_END: {
                 LOGTD(WIFI, "provisioning finished");
-                eventQueue.offer(EvProvisioningDone { });
+                eventQueue.offer(EvProvisioningDone {});
                 network_prov_mgr_deinit();
                 break;
             }
@@ -421,7 +425,7 @@ private:
                                 cb({});
                                 return;
                             }
-                            wifi_scan_config_t scanConfig = { };
+                            wifi_scan_config_t scanConfig = {};
                             scanTriggeredByProvisioning = false;
                             esp_err_t err = esp_wifi_scan_start(&scanConfig, false);
                             if (err != ESP_OK) {
@@ -441,7 +445,7 @@ private:
                                 setWifiStatusInternal("failed:password_too_long");
                                 return;
                             }
-                            wifi_config_t config = { };
+                            wifi_config_t config = {};
                             strncpy(reinterpret_cast<char*>(config.sta.ssid), ev.ssid.c_str(), sizeof(config.sta.ssid) - 1);
                             strncpy(reinterpret_cast<char*>(config.sta.password), ev.password.c_str(), sizeof(config.sta.password) - 1);
                             ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &config));
@@ -473,7 +477,7 @@ private:
 
 #ifdef WOKWI
         LOGTD(WIFI, "Skipping provisioning on Wokwi");
-        wifi_config_t wifiConfig = { };
+        wifi_config_t wifiConfig = {};
         strncpy(reinterpret_cast<char*>(wifiConfig.sta.ssid), "Wokwi-GUEST", sizeof(wifiConfig.sta.ssid) - 1);
         wifiConfig.sta.ssid[sizeof(wifiConfig.sta.ssid) - 1] = '\0';
         wifiConfig.sta.password[0] = '\0';

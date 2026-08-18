@@ -95,6 +95,17 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           ls -l build/*.bin build/bootloader/bootloader.bin build/partition_table/partition-table.bin
 
+      - name: clang-format
+        if: matrix.ud_debug == 0
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: ${{ env.ESP_IDF_VERSION }}
+          esp_idf_docker_image: lptr/esp-idf-clang
+          target: ${{ matrix.target }}
+          command: |
+            find main components -type f \( -name '*.cpp' -o -name '*.hpp' \) -not -path '*/test/*' -not -path '*/build/*' | xargs clang-format -i
+            git diff --exit-code --stat || { echo "::error::Files above need clang-format. Run: find main components -name '*.cpp' -o -name '*.hpp' | xargs clang-format -i"; exit 1; }
+
       - name: clang-tidy
         if: matrix.ud_debug == 0
         uses: espressif/esp-idf-ci-action@v1

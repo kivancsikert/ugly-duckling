@@ -1,17 +1,16 @@
 #pragma once
-
-#include <limits>
-#include <utility>
+#include "Environment.hpp"
+#include <I2CManager.hpp>
+#include <peripherals/I2CSettings.hpp>
+#include <peripherals/Peripheral.hpp>
+#include <utils/DebouncedMeasurement.hpp>
 
 #include <sht3x.h>
 
-#include <I2CManager.hpp>
-#include <utils/DebouncedMeasurement.hpp>
-
-#include <peripherals/I2CSettings.hpp>
-#include <peripherals/Peripheral.hpp>
-
-#include "Environment.hpp"
+#include <limits>
+#include <memory>
+#include <string>
+#include <utility>
 
 using namespace cornucopia::ugly_duckling::peripherals;
 

@@ -1,19 +1,20 @@
-#include "Watchdog.hpp"
-#include "mqtt/MqttRoot.hpp"
 #include "BatteryManager.hpp"
 #include "PowerManager.hpp"
 #include "Queue.hpp"
-#include "drivers/WiFiDriver.hpp"
-#include "drivers/BleDriver.hpp"
-#include "Telemetry.hpp"
 #include "Task.hpp"
+#include "Telemetry.hpp"
+#include "Watchdog.hpp"
+#include "drivers/BleDriver.hpp"
+#include "drivers/WiFiDriver.hpp"
 #include "mqtt/MqttDriver.hpp"
+#include "mqtt/MqttRoot.hpp"
 #include <TelemetryTask.hpp>
 
 #include <bits/chrono.h>
+#include <esp_heap_caps.h>
+
 #include <chrono>
 #include <cstdint>
-#include <esp_heap_caps.h>
 #include <memory>
 
 using namespace std::chrono;

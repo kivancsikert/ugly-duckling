@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 /*
  * Two flavors of Spadefoot Toad soil sensor live in this file:
@@ -21,30 +22,26 @@
  *   whether a general bitbang transport is warranted — do not copy this class.
  */
 
-#include <limits>
-#include <memory>
-#include <mutex>
-#include <stdexcept>
-#include <vector>
+#include "BitbangI2C.hpp"
+#include "Environment.hpp"
+#include <I2CManager.hpp>
+#include <Task.hpp>
+#include <peripherals/I2CSettings.hpp>
+#include <peripherals/Peripheral.hpp>
+#include <peripherals/api/ISoilMoistureSensor.hpp>
+#include <peripherals/api/ITemperatureSensor.hpp>
+#include <utils/DebouncedMeasurement.hpp>
 
 #include <driver/gpio.h>
 #include <esp_rom_sys.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include <I2CManager.hpp>
-#include <Task.hpp>
-
-#include "BitbangI2C.hpp"
-
-#include <peripherals/I2CSettings.hpp>
-#include <peripherals/Peripheral.hpp>
-#include <peripherals/api/ISoilMoistureSensor.hpp>
-#include <peripherals/api/ITemperatureSensor.hpp>
-
-#include <utils/DebouncedMeasurement.hpp>
-
-#include "Environment.hpp"
+#include <limits>
+#include <memory>
+#include <mutex>
+#include <stdexcept>
+#include <vector>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::peripherals;

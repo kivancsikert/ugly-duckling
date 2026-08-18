@@ -1,20 +1,20 @@
+#include "BootMessage.hpp"
 #include "I2CManager.hpp"
-#include "mqtt/MqttRoot.hpp"
-#include "drivers/SwitchManager.hpp"
-#include "Telemetry.hpp"
-#include "devices/DeviceDefinition.hpp"
-#include "devices/DeviceConfiguration.hpp"
 #include "NvsStore.hpp"
-#include "ShutdownManager.hpp"
 #include "PulseCounter.hpp"
 #include "PwmManager.hpp"
-#include "peripherals/Peripheral.hpp"
+#include "ShutdownManager.hpp"
+#include "Telemetry.hpp"
+#include "devices/DeviceConfiguration.hpp"
+#include "devices/DeviceDefinition.hpp"
+#include "drivers/SwitchManager.hpp"
 #include "functions/Function.hpp"
 #include "functions/FunctionConfigTracker.hpp"
-#include "BootMessage.hpp"
+#include "mqtt/MqttRoot.hpp"
+#include "peripherals/Peripheral.hpp"
 #include <DeviceInit.hpp>
-
 #include <Log.hpp>
+
 #include <memory>
 #include <string>
 #include <utility>

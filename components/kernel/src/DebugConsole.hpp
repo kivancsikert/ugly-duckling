@@ -1,14 +1,15 @@
 #pragma once
-
-#include <chrono>
-
-#include <esp_private/esp_clk.h>
-
 #include <BatteryManager.hpp>
 #include <Strings.hpp>
 #include <drivers/BleDriver.hpp>
 #include <drivers/RtcDriver.hpp>
 #include <drivers/WiFiDriver.hpp>
+
+#include <esp_private/esp_clk.h>
+
+#include <chrono>
+#include <memory>
+#include <string>
 
 using namespace std::chrono;
 

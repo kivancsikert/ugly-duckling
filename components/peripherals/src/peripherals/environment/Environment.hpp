@@ -1,13 +1,12 @@
 #pragma once
 
-#include <concepts>
-#include <memory>
-
 #include <I2CManager.hpp>
 #include <config/Configuration.hpp>
-
 #include <peripherals/I2CSettings.hpp>
 #include <peripherals/Peripheral.hpp>
+
+#include <concepts>
+#include <memory>
 #include <utility>
 
 using namespace cornucopia::ugly_duckling::kernel;

@@ -1,13 +1,13 @@
 #pragma once
 
+#include "ConfigEnvelope.hpp"
+#include "ConfigState.hpp"
+#include <UpdateFilter.hpp>
+
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#include "ConfigEnvelope.hpp"
-#include "ConfigState.hpp"
-#include <UpdateFilter.hpp>
 
 namespace cornucopia::ugly_duckling::kernel::config {
 

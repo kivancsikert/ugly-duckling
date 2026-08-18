@@ -1,5 +1,7 @@
 #pragma once
 
+#include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle) — for configTICK_RATE_HZ
+
 #include <chrono>
 
 using namespace std::chrono_literals;
@@ -18,4 +20,4 @@ inline static ticks clampTicks(std::chrono::milliseconds duration) {
     return std::chrono::duration_cast<ticks>(duration);
 }
 
-} // namespace cornucopia::ugly_duckling::kernel
+}    // namespace cornucopia::ugly_duckling::kernel

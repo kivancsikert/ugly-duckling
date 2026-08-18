@@ -1,20 +1,18 @@
 #pragma once
 
-#include <cstdint>
-#include <memory>
-#include <string>
-
+#include <BootMessage.hpp>
 #include <NvsStore.hpp>
 #include <ShutdownManager.hpp>
 #include <Telemetry.hpp>
+#include <devices/DeviceConfiguration.hpp>
+#include <devices/DeviceDefinition.hpp>
+#include <functions/Function.hpp>
 #include <mqtt/MqttRoot.hpp>
 #include <peripherals/Peripheral.hpp>
 
-#include <devices/DeviceConfiguration.hpp>
-#include <devices/DeviceDefinition.hpp>
-
-#include <BootMessage.hpp>
-#include <functions/Function.hpp>
+#include <cstdint>
+#include <memory>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::devices;
 using namespace cornucopia::ugly_duckling::functions;

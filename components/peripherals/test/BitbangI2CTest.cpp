@@ -1,10 +1,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_exception.hpp>
+#include <peripherals/environment/BitbangI2C.hpp>
 
 #include <deque>
 #include <vector>
-
-#include <peripherals/environment/BitbangI2C.hpp>
 
 using namespace cornucopia::ugly_duckling::peripherals::environment;
 

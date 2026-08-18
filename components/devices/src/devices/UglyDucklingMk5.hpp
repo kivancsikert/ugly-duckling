@@ -1,14 +1,14 @@
 #pragma once
-
 #include <Pin.hpp>
+#include <devices/DeviceDefinition.hpp>
 #include <drivers/BatteryDriver.hpp>
 #include <drivers/Drv8874Driver.hpp>
 #include <drivers/LedDriver.hpp>
-
 #include <peripherals/door/Door.hpp>
 #include <peripherals/valve/ValveFactory.hpp>
 
-#include <devices/DeviceDefinition.hpp>
+#include <memory>
+#include <string>
 
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::peripherals::door;

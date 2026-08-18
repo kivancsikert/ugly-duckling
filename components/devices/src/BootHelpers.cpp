@@ -10,23 +10,26 @@
 #include "drivers/BatteryDriver.hpp"
 #include "drivers/BleDriver.hpp"
 #include "drivers/LedDriver.hpp"
+#include <BootHelpers.hpp>
+#include <Log.hpp>
+
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "nvs.h"
-#include <BootHelpers.hpp>
-#include <Log.hpp>
 
 #ifdef CONFIG_BT_NIMBLE_ENABLED
 #include "NvsStore.hpp"
 #endif
 
 #include <Restart.hpp>
-#include <chrono>
-#include <esp_wifi.h>
-#include <memory>
 #include <mqtt/MqttDriver.hpp>
+
+#include <esp_wifi.h>
 #include <nvs_flash.h>
+
+#include <chrono>
+#include <memory>
 #include <string>
 
 using namespace std::chrono;

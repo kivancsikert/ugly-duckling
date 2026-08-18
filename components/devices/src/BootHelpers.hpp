@@ -1,20 +1,19 @@
 #pragma once
 
-#include <chrono>
-#include <memory>
-#include <string>
-
 #include <BatteryManager.hpp>
 #include <KernelStatus.hpp>
+#include <NetworkConfig.hpp>
 #include <NvsStore.hpp>
 #include <Watchdog.hpp>
+#include <devices/DeviceConfiguration.hpp>
+#include <devices/DeviceDefinition.hpp>
 #include <drivers/BleDriver.hpp>
 #include <drivers/LedDriver.hpp>
 #include <mqtt/MqttRoot.hpp>
 
-#include <NetworkConfig.hpp>
-#include <devices/DeviceConfiguration.hpp>
-#include <devices/DeviceDefinition.hpp>
+#include <chrono>
+#include <memory>
+#include <string>
 
 using namespace std::chrono;
 using namespace cornucopia::ugly_duckling::devices;

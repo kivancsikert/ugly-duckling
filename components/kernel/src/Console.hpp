@@ -1,7 +1,9 @@
 #pragma once
-
 #include <Log.hpp>
 #include <Queue.hpp>
+
+#include <memory>
+#include <string>
 #include <utility>
 
 namespace cornucopia::ugly_duckling::kernel {
