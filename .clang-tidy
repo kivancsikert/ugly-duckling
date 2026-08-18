@@ -38,6 +38,7 @@ Checks:
   - -hicpp-vararg
   - llvm-*
   - -llvm-header-guard
+  - -llvm-include-order # We are managing include order via clang-format instead
   - misc-*
   - -misc-const-correctness
   - -misc-definitions-in-headers
