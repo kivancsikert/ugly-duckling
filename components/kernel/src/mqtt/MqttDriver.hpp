@@ -27,7 +27,7 @@ using namespace cornucopia::ugly_duckling::kernel;
 
 // Forward-declare the drivers namespace so the using directive works regardless of include order
 namespace cornucopia::ugly_duckling::kernel::drivers {
-}
+}    // namespace cornucopia::ugly_duckling::kernel::drivers
 using namespace cornucopia::ugly_duckling::kernel::drivers;
 
 namespace cornucopia::ugly_duckling::kernel::mqtt {
