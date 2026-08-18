@@ -2,7 +2,7 @@
 
 #include <esp_err.h>
 
-#include <exception>
+#include <stdexcept>
 
 namespace cornucopia::ugly_duckling::kernel {
 

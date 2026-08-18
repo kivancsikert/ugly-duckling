@@ -1,5 +1,7 @@
 #pragma once
 
+#include <freertos/FreeRTOS.h>    // NOLINT(misc-header-include-cycle) — for configTICK_RATE_HZ
+
 #include <chrono>
 
 using namespace std::chrono_literals;

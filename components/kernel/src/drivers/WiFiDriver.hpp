@@ -10,6 +10,7 @@
 
 #include <ArduinoJson.h>
 #include <esp_event.h>
+#include <esp_sleep.h>
 #include <esp_wifi.h>
 #include <network_provisioning/manager.h>
 #include <network_provisioning/scheme_softap.h>
