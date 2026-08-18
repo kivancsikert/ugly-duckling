@@ -1,0 +1,10 @@
+{
+  "C_Cpp.intelliSenseEngine": "default",
+  "editor.formatOnSave": true,
+  "idf.customExtraVars": {
+    "IDF_TARGET": "esp32c6"
+  },
+  "idf.openOcdConfigs": [
+    "board/esp32c6-builtin.cfg"
+  ]
+}
