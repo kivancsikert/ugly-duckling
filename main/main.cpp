@@ -112,7 +112,7 @@ void startDeviceBasedOnHardware() {
     // Prefer the eFuse-burned hardware identity over MAC matching when it's
     // present — it's authoritative by construction, unlike MAC prefixes,
     // which can't reliably distinguish MK10 from newer MK11 batches. See
-    // docs/specs/Hardware-Version-in-eFuse.md. hw_rev is 1-indexed (1 = first
+    // docs/specs/done/Hardware-Version-in-eFuse.md. hw_rev is 1-indexed (1 = first
     // release of the generation), hence hw_rev == 1 for each *Rev1 class below.
     if (hardwareVersion.has_value()) {
         // MK10 Rev1

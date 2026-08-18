@@ -68,7 +68,7 @@ namespace cornucopia::ugly_duckling::kernel {
  *
  * PulseCounterManager::start() must be called after all channels are created.
  *
- * See docs/ULP-PulseCounter.md for full design rationale.
+ * See docs/specs/done/ULP-PulseCounter.md for full design rationale.
  */
 class UlpPulseCounter final : public PulseCounter {
 public:

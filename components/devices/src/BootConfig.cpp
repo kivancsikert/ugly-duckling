@@ -44,7 +44,7 @@ DeviceBootConfig loadDeviceBootConfig() {
     // storage any more: a device with no confirmed slot (a freshly minted device, or one migrating
     // from before this firmware) boots exactly like an empty slot -- defaults, no functions -- and
     // reconciles from scratch via an empty SYNC prompting the server to re-push everything (see
-    // docs/specs/config-reconciliation.md, "Migration" -> "A missing/absent confirmed slot is the
+    // docs/specs/done/config-reconciliation.md, "Migration" -> "A missing/absent confirmed slot is the
     // one bootstrap path").
     std::shared_ptr<NvsStore> deviceConfigNvs;
     if (bootPlan.slotToLoad) {

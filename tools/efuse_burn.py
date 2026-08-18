@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Burn or read back the hardware identity eFuse record described in
-docs/specs/Hardware-Version-in-eFuse.md.
+docs/specs/done/Hardware-Version-in-eFuse.md.
 
 Wraps `espefuse burn-block-data`, following the same "shell out to the ESP-IDF
 tool" approach as scripts/gen_config_nvs.py. Requires IDF_PATH to be set

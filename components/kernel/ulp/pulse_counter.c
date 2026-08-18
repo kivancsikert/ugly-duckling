@@ -10,7 +10,7 @@
  * Configuration is written to RTC slow memory by the main CPU before starting the coprocessor.
  * Counts are read from RTC slow memory by the main CPU at any time (lock-free).
  *
- * See docs/ULP-PulseCounter.md for design rationale.
+ * See docs/specs/done/ULP-PulseCounter.md for design rationale.
  */
 
 #include <stdint.h>

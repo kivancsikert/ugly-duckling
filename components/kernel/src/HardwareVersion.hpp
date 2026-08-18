@@ -11,7 +11,7 @@
 
 namespace cornucopia::ugly_duckling::kernel {
 
-// See docs/specs/Hardware-Version-in-eFuse.md for the full design rationale.
+// See docs/specs/done/Hardware-Version-in-eFuse.md for the full design rationale.
 
 constexpr uint16_t HW_EFUSE_MAGIC = 0x5544;    // 'UD'
 constexpr uint16_t HW_EFUSE_FMT_VERSION = 0x0001;

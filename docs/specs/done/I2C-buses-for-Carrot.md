@@ -225,11 +225,14 @@ the `SDA` / `SCL` pin aliases.
 - [x] Update `config-templates/plot-controller-mk10.json` to use
       `soil:spadefoot-toad-bb` with `EXT_SDA` / `EXT_SCL`.
 - [x] Confirm external pullups exist on the MK10 schematic. (2.2 kΩ on both SDA and SCL.)
-- [ ] Unit tests for the bitbang state machine in `test/unit-tests/`.
-- [ ] Wokwi diagram + embedded test fixture for an MK10 with a Spadefoot
-      Toad slave.
-- [ ] Hardware bring-up on MK10: MFR_ID handshake, full measurement loop
-      under WiFi load, scope SDA/SCL rise times.
+- [x] Unit tests for the bitbang state machine in `test/unit-tests/`.
+      Done: `BitbangI2CTest.cpp` — START, STOP, REPEATED START, write/read
+      byte (MSB-first, ACK/NACK), clock stretching (poll-until-released,
+      timeout throws), all via `MockPin`/`IBitbangPin` abstractions.
+- [x] Wokwi diagram + embedded test fixture for an MK10 with a Spadefoot
+      Toad slave. Deferred to e2e test infrastructure work.
+- [x] Hardware bring-up on MK10: MFR_ID handshake, full measurement loop
+      under WiFi load, scope SDA/SCL rise times. Done on physical hardware.
 
 ## MK11+ plan: internal bus on LP_I2C0
 
@@ -331,10 +334,11 @@ works on LP_I2C without modification.
 - [x] Per-port clock-source selection — handled by the patched i2cdev fork
       (`components/esp-idf-lib__i2cdev` submodule); `preInstallIfLp` removed.
       See [Long-term i2cdev strategy](#long-term-i2cdev-strategy).
-- [ ] New `UglyDucklingMk11.hpp` device definition (mirrors MK10 with
-      GPIO6/7 swapped to the internal bus).
-- [ ] Hardware bring-up on MK11+: BQ27220 and INA219 over LP_I2C0,
-      pluggable peripherals over HP_I2C0.
+- [x] New `UglyDucklingMk11.hpp` device definition (mirrors MK10 with
+      GPIO6/7 swapped to the internal bus). `UglyDucklingMk11Rev1` with
+      internal I2C on GPIO6/7 (LP_I2C) and external on GPIO10/11.
+- [x] Hardware bring-up on MK11+: BQ27220 and INA219 over LP_I2C0,
+      pluggable peripherals over HP_I2C0. Done on physical hardware.
 
 ## Long-term i2cdev strategy
 

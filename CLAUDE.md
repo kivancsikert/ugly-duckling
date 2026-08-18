@@ -114,7 +114,7 @@ directly. Requires the matching IDF toolchain on `PATH` either way.
 
 ## Hardware Identity (eFuse)
 
-See [docs/specs/Hardware-Version-in-eFuse.md](docs/specs/Hardware-Version-in-eFuse.md)
+See [docs/specs/done/Hardware-Version-in-eFuse.md](docs/specs/done/Hardware-Version-in-eFuse.md)
 for the full design: record layout, endianness, why there's no app-level CRC,
 and how device selection prefers the eFuse identity over MAC prefix matching
 when present (Carrot / ESP32-C6 only; applies to MK11 onward).

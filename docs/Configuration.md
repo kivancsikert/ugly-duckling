@@ -3,7 +3,7 @@
 How a device's configuration is stored, applied, and reconciled with the server. This document
 describes the current firmware implementation. For the full protocol design and rationale (server
 side, wire formats, phased rollout), see
-[`specs/config-reconciliation.md`](specs/config-reconciliation.md) — that document also tracks what
+[`specs/done/config-reconciliation.md`](specs/done/config-reconciliation.md) — that document also tracks what
 is and isn't built yet via its progress checklist; this one describes what's actually running.
 
 ## Concepts
@@ -131,7 +131,7 @@ configuration at all yet:
   storage model existed, has no `config-state` namespace (or one with `confirmed` absent) at all. It
   boots with defaults and no functions — identically to an empty slot — and reconciles from scratch:
   an empty `SYNC` prompts the server to re-push the full configuration set (see
-  docs/specs/config-reconciliation.md, "Migration" → "A missing/absent `confirmed` slot is the one
+  docs/specs/done/config-reconciliation.md, "Migration" → "A missing/absent `confirmed` slot is the one
   bootstrap path"). There is no migration path from an older storage shape; this is the only bootstrap.
 
 ## The confirmed/requested state machine

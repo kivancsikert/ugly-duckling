@@ -35,7 +35,7 @@ def main():
     # Generate NVS CSV with compact JSON values. Device/function configuration is deliberately not
     # seeded here: a freshly generated partition has no confirmed slot, so the device boots exactly
     # like an empty slot (defaults, no functions) and reconciles the full set from the server via the
-    # empty-SYNC bootstrap (docs/specs/config-reconciliation.md, "Migration" -> "A missing/absent
+    # empty-SYNC bootstrap (docs/specs/done/config-reconciliation.md, "Migration" -> "A missing/absent
     # confirmed slot is the one bootstrap path").
     csv_content = io.StringIO()
     writer = csv.writer(csv_content, quoting=csv.QUOTE_MINIMAL)

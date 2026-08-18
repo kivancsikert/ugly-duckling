@@ -40,7 +40,7 @@ Each platform produces a single firmware binary that covers all models on that p
 The correct model is selected at runtime, preferring a hardware identity record burned
 into eFuse at board test (Carrot / MK11 onward) and falling back to the device's MAC
 address prefix when that record isn't present — see
-[docs/specs/Hardware-Version-in-eFuse.md](docs/specs/Hardware-Version-in-eFuse.md) for
+[docs/specs/done/Hardware-Version-in-eFuse.md](docs/specs/done/Hardware-Version-in-eFuse.md) for
 the eFuse record layout, the burn/verify CLI, and why MAC-only detection stopped being
 reliable once MK11 shipped with MAC ranges overlapping MK10's.
 
@@ -270,7 +270,7 @@ tools/efuse_burn.py identity --port /dev/ttyUSB0 --hw-gen 11 --hw-rev 0 --mfr-id
 tools/efuse_burn.py show --port /dev/ttyUSB0
 ```
 
-See [docs/specs/Hardware-Version-in-eFuse.md](docs/specs/Hardware-Version-in-eFuse.md)
+See [docs/specs/done/Hardware-Version-in-eFuse.md](docs/specs/done/Hardware-Version-in-eFuse.md)
 for the record layout and design rationale.
 
 ### Monitoring
