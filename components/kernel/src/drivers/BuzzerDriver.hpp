@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <memory>
+#include <mutex>
 
 #include <esp_timer.h>
 
@@ -68,6 +69,7 @@ public:
      * restarted with the new duration.
      */
     void buzz(milliseconds duration, double duty = 0.5) {
+        std::lock_guard<std::mutex> lock(mutex);
         esp_timer_stop(stopTimer);
 
         enableHandle.acquire();
@@ -85,6 +87,7 @@ public:
 
 private:
     void stop() {
+        std::lock_guard<std::mutex> lock(mutex);
         channel.write(0);
         enableHandle.release();
         sleepLock.reset();
@@ -93,6 +96,7 @@ private:
     static constexpr uint32_t BUZZER_FREQ = 2700;
     static constexpr ledc_timer_bit_t BUZZER_RES = LEDC_TIMER_8_BIT;
 
+    std::mutex mutex;
     PwmPin& channel;
     SharedEnable::Handle enableHandle;
     esp_timer_handle_t stopTimer = nullptr;
