@@ -186,7 +186,7 @@ static void startDevice() {
     auto pendingConfigRejection = std::make_shared<std::optional<RejectionCode>>();
 
     // Firmware rejection: same pattern as pendingConfigRejection, but for a failed firmware
-    // download/install (docs/specs/firmware-update-via-sync-update.md, "Rejection reporting").
+    // download/install (docs/specs/done/firmware-update-via-sync-update.md, "Rejection reporting").
     // Populated here from performPendingHttpUpdateIfNecessary()'s return value, consumed once
     // by the first SYNC this boot publishes.
     auto pendingFirmwareRejection = std::make_shared<std::optional<RejectionCode>>();

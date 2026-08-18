@@ -16,7 +16,7 @@ using namespace cornucopia::ugly_duckling::kernel::config;
 /**
  * @brief Publishes `sync` (NoRetain, QoS 2): the manifest of fingerprints/requestedAt the device
  * currently holds, plus the firmware identity (`platform`, `version`) the server needs for
- * firmware reconciliation (docs/specs/firmware-update-via-sync-update.md).
+ * firmware reconciliation (docs/specs/done/firmware-update-via-sync-update.md).
  */
 void publishSync(
     const std::shared_ptr<MqttRoot>& mqttRoot,

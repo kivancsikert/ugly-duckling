@@ -133,7 +133,7 @@ ConfigUpdateResult applyConfigUpdate(
 
 /**
  * Each UPDATE can carry a `configurations` entry (config reconciliation, docs/Configuration.md)
- * and/or a `firmware` entry (firmware reconciliation, docs/specs/firmware-update-via-sync-update.md).
+ * and/or a `firmware` entry (firmware reconciliation, docs/specs/done/firmware-update-via-sync-update.md).
  * The handler processes them in order -- config first, firmware second -- and picks a single
  * terminal action:
  *   - **Firmware present**: `HttpUpdater::startUpdate()` persists the URL and schedules a delayed

@@ -28,7 +28,7 @@ using namespace cornucopia::ugly_duckling::kernel::config;
  * first SYNC published after boot, alongside BOOT (docs/Configuration.md, "Rejection reporting")
  * -- it is consumed (reset to nullopt) right here, so a later SYNC in the same boot session doesn't
  * repeat it. `pendingFirmwareRejection` works the same way for a failed firmware download/install
- * (docs/specs/firmware-update-via-sync-update.md, "Rejection reporting").
+ * (docs/specs/done/firmware-update-via-sync-update.md, "Rejection reporting").
  */
 void publishSync(
     const std::shared_ptr<MqttRoot>& mqttRoot,

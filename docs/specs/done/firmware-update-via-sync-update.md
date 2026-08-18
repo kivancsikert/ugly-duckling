@@ -1,7 +1,6 @@
 # Mass Firmware Updates — firmware side (`firmware` in `SYNC`/`UPDATE`, OTA trigger, rejection)
 
-> Status: **`firmware` in SYNC/UPDATE, download triggering, and download-failure rejection are
-> implemented (exit criteria 1–6). OTA rollback (exit criteria 7–9) is next.** This is the
+> Status: **All exit criteria implemented** (#613). This is the
 > firmware counterpart to the
 > server/UX-owning spec in the app repo,
 > [`cornucopia-app/docs/specs/firmware-update-en-masse.md`](https://github.com/cornucopia-machines/cornucopia-app/blob/main/docs/specs/firmware-update-en-masse.md)
@@ -349,26 +348,26 @@ Following this codebase's established tiering:
 
 ## Exit criteria
 
-- [ ] Every `SYNC` includes `firmware: {platform, version}`.
-- [ ] An `UPDATE` with a valid, new `firmware.url` triggers `HttpUpdater::startUpdate()` — including
+- [x] Every `SYNC` includes `firmware: {platform, version}`.
+- [x] An `UPDATE` with a valid, new `firmware.url` triggers `HttpUpdater::startUpdate()` — including
       when `configurations` is empty or has nothing new (i.e. not swallowed by `registerUpdateHandler`'s
       existing early returns). One with a `firmware.version` matching the currently-running version
       is a no-op; a malformed entry is logged and ignored without blocking the `configurations` half
       of the same `UPDATE`.
-- [ ] A device-changed `UPDATE` that also carries a new firmware entry reboots exactly once into the
+- [x] A device-changed `UPDATE` that also carries a new firmware entry reboots exactly once into the
       new config, then downloads and installs firmware on the following boot (no double reboot).
-- [ ] A functions-only `UPDATE` that also carries a new firmware entry hot-reloads live, then starts
+- [x] A functions-only `UPDATE` that also carries a new firmware entry hot-reloads live, then starts
       the firmware download without waiting for a reconnect.
-- [ ] A failed download/install reports `RejectionCode::Internal` once, on `SYNC`'s
+- [x] A failed download/install reports `RejectionCode::Internal` once, on `SYNC`'s
       `firmware.rejection` (and `BOOT`'s `firmwareRejection`), then clears it — a later `SYNC`/`BOOT`
       in the same boot session doesn't repeat it.
-- [ ] The legacy `commands/update` command and its `responses/update` behavior are unchanged.
-- [ ] A firmware image that flashes but crash-loops (or hangs before `kernelReady`) reverts
+- [x] The legacy `commands/update` command and its `responses/update` behavior are unchanged.
+- [x] A firmware image that flashes but crash-loops (or hangs before `kernelReady`) reverts
       automatically to the previous partition, with no operator intervention.
-- [ ] The boot that follows an automatic rollback reports `RejectionCode::Internal` once, on that
+- [x] The boot that follows an automatic rollback reports `RejectionCode::Internal` once, on that
       `SYNC`'s `firmware.rejection` (and that `BOOT`'s `firmwareRejection`) — same fields, same
       once-only semantics as a failed download/install — via `esp_ota_invalidate_inactive_ota_data_slot()`,
       not a new NVS marker, then doesn't repeat it on later boots.
-- [ ] A crash report for a boot that immediately follows a rollback blames the version that actually
+- [x] A crash report for a boot that immediately follows a rollback blames the version that actually
       crashed (read from the failed partition), not the version rolled back to; a crash report with
       no accompanying rollback blames the current, live `firmwareVersion`.
