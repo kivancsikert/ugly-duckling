@@ -4,8 +4,8 @@
 #include <memory>
 
 #include <BatteryManager.hpp>
-#include <Concurrent.hpp>
 #include <PowerManager.hpp>
+#include <Queue.hpp>
 #include <Telemetry.hpp>
 #include <Watchdog.hpp>
 #include <drivers/BleDriver.hpp>

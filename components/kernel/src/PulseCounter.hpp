@@ -8,10 +8,10 @@
 #include <driver/gpio.h>
 #include <esp_sleep.h>
 
-#include <Concurrent.hpp>
 #include <EspException.hpp>
 #include <Log.hpp>
 #include <Pin.hpp>
+#include <Queue.hpp>
 
 using namespace std::chrono;
 

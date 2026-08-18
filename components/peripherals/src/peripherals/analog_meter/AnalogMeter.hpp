@@ -3,11 +3,11 @@
 #include <chrono>
 #include <utility>
 
-#include <Concurrent.hpp>
 #include <Log.hpp>
 #include <MovingAverage.hpp>
 #include <Named.hpp>
 #include <Pin.hpp>
+#include <Queue.hpp>
 #include <Task.hpp>
 #include <config/Configuration.hpp>
 #include <mqtt/MqttDriver.hpp>

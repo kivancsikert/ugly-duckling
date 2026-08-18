@@ -7,9 +7,9 @@
 #include <esp_sleep.h>
 #include <esp_timer.h>
 
-#include <Concurrent.hpp>
 #include <EspException.hpp>
 #include <Log.hpp>
+#include <Queue.hpp>
 #include <Task.hpp>
 #include <Telemetry.hpp>
 

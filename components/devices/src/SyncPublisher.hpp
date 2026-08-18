@@ -3,8 +3,8 @@
 #include <memory>
 #include <optional>
 
-#include <Concurrent.hpp>
 #include <KernelStatus.hpp>
+#include <Queue.hpp>
 #include <config/ConfigState.hpp>
 #include <functions/Function.hpp>
 #include <mqtt/MqttRoot.hpp>

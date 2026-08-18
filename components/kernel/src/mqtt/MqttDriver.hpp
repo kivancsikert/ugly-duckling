@@ -11,9 +11,9 @@
 #include <esp_event.h>
 #include <mqtt_client.h>
 
-#include <Concurrent.hpp>
 #include <Log.hpp>
 #include <Overloaded.hpp>
+#include <Queue.hpp>
 #include <State.hpp>
 #include <Task.hpp>
 #include <config/Configuration.hpp>

@@ -3,8 +3,8 @@
 #include <chrono>
 #include <vector>
 
-#include <Concurrent.hpp>
 #include <PulseCounter.hpp>
+#include <Queue.hpp>
 #include <Telemetry.hpp>
 
 #include <peripherals/Peripheral.hpp>

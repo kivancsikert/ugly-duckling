@@ -8,8 +8,8 @@
 #include <driver/gpio.h>
 #include <hal/gpio_types.h>
 
-#include <Concurrent.hpp>
 #include <Pin.hpp>
+#include <Queue.hpp>
 #include <Task.hpp>
 
 using namespace std::chrono;

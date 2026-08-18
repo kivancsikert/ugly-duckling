@@ -2,10 +2,10 @@
 #include "mqtt/MqttRoot.hpp"
 #include "BatteryManager.hpp"
 #include "PowerManager.hpp"
+#include "Queue.hpp"
 #include "drivers/WiFiDriver.hpp"
 #include "drivers/BleDriver.hpp"
 #include "Telemetry.hpp"
-#include "Concurrent.hpp"
 #include "Task.hpp"
 #include "mqtt/MqttDriver.hpp"
 #include <TelemetryTask.hpp>

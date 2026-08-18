@@ -4,8 +4,8 @@
 #include <memory>
 #include <string>
 
-#include <Concurrent.hpp>
 #include <NvsStore.hpp>
+#include <Queue.hpp>
 #include <config/ConfigStateStore.hpp>
 #include <drivers/LedDriver.hpp>
 #include <functions/Function.hpp>
