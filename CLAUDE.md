@@ -82,6 +82,19 @@ Quick reference:
 - Types: `PascalCase` — functions/methods: `camelCase` — macros/constants: `UPPER_SNAKE`.
 - Only remove existing comments if they became obsolete, outdated, or meaningless in the context of the new code. Preserve comments that explain intent, constraints, or non-obvious behavior.
 
+Quick reference — run clang-tidy locally (requires a prior build for the compile commands DB):
+
+```sh
+. tools/activate_idf.sh carrot   # or spinach
+run-clang-tidy -p build-carrot/clang -header-filter="$(pwd)/(main|components)/" \
+  $(find main components -type f -name '*.cpp' -not -path '*/test/*' -not -path '*/build-carrot/*')
+```
+
+Add `-fix` to auto-apply fixes; since `.clang-tidy` sets `WarningsAsErrors: "*"`,
+fixes won't apply unless you temporarily change it to `WarningsAsErrors: ""` (restore
+after the run). Tidy must be run per platform — each target sees only its own
+`#ifdef` branches, so both carrot and spinach runs are needed for full coverage.
+
 ## Wokwi Simulation
 
 See [wokwi/README.md](wokwi/README.md) for diagrams, custom chip authoring (I2C skeleton, callback contract, endianness), build commands, and I2C library interoperability notes.
