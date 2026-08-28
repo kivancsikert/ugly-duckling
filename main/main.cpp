@@ -8,7 +8,7 @@
 
 #include <esp_log.h>
 
-#if defined(CONFIG_IDF_TARGET_ESP32S3)
+#ifdef CONFIG_IDF_TARGET_ESP32S3
 
 #include <devices/UglyDucklingMk5.hpp>
 #include <devices/UglyDucklingMk6.hpp>
@@ -16,7 +16,7 @@
 #include <devices/UglyDucklingMk8.hpp>
 #include <devices/UglyDucklingMk9.hpp>
 
-#elif defined(CONFIG_IDF_TARGET_ESP32C6)
+#elifdef CONFIG_IDF_TARGET_ESP32C6
 
 #include <devices/UglyDucklingMk10.hpp>
 #include <devices/UglyDucklingMk11.hpp>
@@ -41,7 +41,7 @@ static void startDeviceBasedOnHardware() {
         ESP_LOGI("device", "No hardware identity eFuse record found — hardware version is unknown (expected for MK10 and earlier)");
     }
 
-#if defined(CONFIG_IDF_TARGET_ESP32S3)
+#ifdef CONFIG_IDF_TARGET_ESP32S3
 #if defined(MK5_REV2)
     startDevice<UglyDucklingMk5>();
 #elif defined(MK6_REV1)
@@ -100,12 +100,12 @@ static void startDeviceBasedOnHardware() {
         return;
     }
 #endif
-#elif defined(CONFIG_IDF_TARGET_ESP32C6)
-#if defined(MK10_REV1)
+#elifdef CONFIG_IDF_TARGET_ESP32C6
+#ifdef MK10_REV1
     startDevice<UglyDucklingMk10Rev1>();
-#elif defined(MK11_REV1)
+#elifdef MK11_REV1
     startDevice<UglyDucklingMk11Rev1>();
-#elif defined(MK12_REV1)
+#elifdef MK12_REV1
     startDevice<UglyDucklingMk12Rev1>();
 #else
     // Prefer the eFuse-burned hardware identity over MAC matching when it's

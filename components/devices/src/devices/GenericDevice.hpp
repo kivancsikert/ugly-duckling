@@ -16,10 +16,10 @@ public:
         : DeviceDefinition({
               .model = "generic",
               .revision = 1,
-#if defined(CONFIG_IDF_TARGET_ESP32S3)
+#ifdef CONFIG_IDF_TARGET_ESP32S3
               .boot = GPIO_NUM_0,
               .status = GPIO_NUM_48,
-#elif defined(CONFIG_IDF_TARGET_ESP32C6)
+#elifdef CONFIG_IDF_TARGET_ESP32C6
               .boot = GPIO_NUM_9,
               .status = GPIO_NUM_8,
 #else
