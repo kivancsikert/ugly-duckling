@@ -87,7 +87,7 @@ public:
         return delta;
     }
 
-    uint32_t reset() override {
+    uint32_t resetCount() override {
         if (ulp_started == 0U) {
             // ULP not started yet, so no new pulses have been counted since lastSeen
             return 0;

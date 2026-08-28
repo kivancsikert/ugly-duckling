@@ -61,7 +61,7 @@ public:
             if (elapsed.count() > 0) {
                 lastMeasurement = now;
 
-                uint32_t pulses = counter->reset();
+                uint32_t pulses = counter->resetCount();
 
                 if (pulses > 0) {
                     std::scoped_lock lock(updateMutex);

@@ -59,7 +59,6 @@ Checks:
   - -portability-avoid-pragma-once
   - -portability-template-virtual-member-function
   - readability-*
-  - -readability-ambiguous-smartptr-reset-call
   - -readability-identifier-length
   - -readability-magic-numbers
   - -readability-use-anyofallof
