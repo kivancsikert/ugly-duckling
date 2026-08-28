@@ -40,7 +40,7 @@ private:
 
         std::string assembledMessage;
         {
-            std::lock_guard<std::mutex> lock(partialMessageMutex);
+            std::scoped_lock lock(partialMessageMutex);
             if (message[message.length() - 1] != '\n') {
                 partialMessage += message;
                 return 0;
@@ -106,7 +106,7 @@ private:
     static std::string renderMessage(const char* format, va_list args) {
         int length;
         {
-            std::lock_guard<std::mutex> lock(bufferMutex);
+            std::scoped_lock lock(bufferMutex);
             length = vsnprintf(buffer, BUFFER_SIZE, format, args);
             if (length < 0) {
                 return "<Encoding error>";

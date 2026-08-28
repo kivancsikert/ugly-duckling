@@ -67,7 +67,7 @@ public:
             SwitchStateChange stateChange = switchStateInterrupts.take();
             std::shared_ptr<SwitchState> state;
             {
-                std::lock_guard<std::mutex> lock(switchStatesMutex);
+                std::scoped_lock lock(switchStatesMutex);
                 auto it = switchStates.find(stateChange.gpio);
                 if (it == switchStates.end()) {
                     LOGTE(SWITCH, "Switch state change for unknown GPIO %d", stateChange.gpio);
@@ -119,7 +119,7 @@ public:
             config.onDisengaged,
             config.debounceTime);
         {
-            std::lock_guard<std::mutex> lock(switchStatesMutex);
+            std::scoped_lock lock(switchStatesMutex);
             switchStates.emplace(config.pin->getGpio(), switchState);
         }
 

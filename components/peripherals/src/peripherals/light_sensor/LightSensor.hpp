@@ -36,7 +36,7 @@ public:
     }
 
     Lux getLightLevel() override {
-        std::lock_guard<std::mutex> lock(updateAverageMutex);
+        std::scoped_lock lock(updateAverageMutex);
         return level.getAverage();
     }
 
@@ -51,7 +51,7 @@ protected:
         Task::loop(name, 3072, [this](Task& task) {
             auto currentLevel = readLightLevel();
             {
-                std::lock_guard<std::mutex> lock(updateAverageMutex);
+                std::scoped_lock lock(updateAverageMutex);
                 level.record(currentLevel);
             }
             task.delayUntil(measurementFrequency);

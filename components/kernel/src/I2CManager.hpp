@@ -174,7 +174,7 @@ public:
     }
 
     std::shared_ptr<I2CBus> getBusFor(const InternalPinPtr& sda, const InternalPinPtr& scl) {
-        std::lock_guard<std::mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         for (auto bus : buses) {
             if (bus->sda == sda && bus->scl == scl) {
                 LOGTV(I2C, "Using previously registered I2C bus #%d for SDA: %s, SCL: %s",

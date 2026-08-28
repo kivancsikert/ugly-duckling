@@ -29,7 +29,7 @@ public:
     }
 
     void updateIfNecessary() {
-        std::lock_guard<std::recursive_mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         auto now = steady_clock::now();
         if (lastMeasurement && now - *lastMeasurement < interval) {
             return;

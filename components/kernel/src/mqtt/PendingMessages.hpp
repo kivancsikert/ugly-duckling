@@ -77,7 +77,7 @@ public:
             return;
         }
 
-        std::lock_guard<std::mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         messages[messageId] = pending;
     }
 
@@ -88,7 +88,7 @@ public:
 
         PendingMessagePtr pending;
         {
-            std::lock_guard<std::mutex> lock(mutex);
+            std::scoped_lock lock(mutex);
             auto it = messages.find(messageId);
             if (it == messages.end()) {
                 return false;
@@ -103,7 +103,7 @@ public:
     void clear() {
         std::unordered_map<int, PendingMessagePtr> abandoned;
         {
-            std::lock_guard<std::mutex> lock(mutex);
+            std::scoped_lock lock(mutex);
             abandoned = std::move(messages);
             messages.clear();
         }
