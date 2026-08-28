@@ -63,7 +63,6 @@ Checks:
   - -readability-ambiguous-smartptr-reset-call
   - -readability-identifier-length
   - -readability-magic-numbers
-  - -readability-math-missing-parentheses
   - -readability-use-anyofallof
 
 CheckOptions:

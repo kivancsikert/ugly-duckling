@@ -286,7 +286,7 @@ private:
             const double dtInFractionalMinutes = static_cast<double>(dtInMillis) / 60000.0;
             const double prev = std::isnan(lastMoisture) ? telemetry.moisture : lastMoisture;
             const double slopeInst = (telemetry.moisture - prev) / (dtInFractionalMinutes > 0.0 ? dtInFractionalMinutes : 1.0);
-            telemetry.slope = settings.alphaSlope * slopeInst + (1.0 - settings.alphaSlope) * telemetry.slope;
+            telemetry.slope = (settings.alphaSlope * slopeInst) + ((1.0 - settings.alphaSlope) * telemetry.slope);
         }
 
         LOGTV(SCHEDULING, "Moisture: %.1f%% (raw: %.1f%%), Slope: %.2f%%/min",
@@ -411,7 +411,7 @@ private:
         if (dMoisture > 0.2) {
             const auto oldGain = telemetry.gain;
             const double observedGain = dMoisture / dVolume;    // % per liter, K_obs
-            telemetry.gain = (1.0 - settings.alphaGain) * telemetry.gain + settings.alphaGain * observedGain;
+            telemetry.gain = ((1.0 - settings.alphaGain) * telemetry.gain) + (settings.alphaGain * observedGain);
             LOGTI(SCHEDULING, "Updating model, gain changed from %.2f%%/L to %.2f%%/L (%.1f L delivered, observed gain %.2f%%/L)",
                 oldGain, telemetry.gain, volumeDelivered, observedGain);
         }
