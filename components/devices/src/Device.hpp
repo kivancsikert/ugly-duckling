@@ -229,7 +229,7 @@ static void startDevice() {
     // reboot immediately, never reaching the `boot`/`sync` publishes below for this failed attempt.
     // A hard crash before reaching this point is caught on the *next* boot instead, since the
     // pending -> attempted transition was already persisted above, before this attempt started.
-    if (boot.bootPlan.strict) {
+    if (boot.bootPlan.strict && boot.bootPlan.slotToLoad) {
         bool success = (runtime.initState == InitState::Success);
         ConfigState outcome = recordStrictBootOutcome(boot.configState, *boot.bootPlan.slotToLoad, success, RejectionCode::Internal);
         boot.configStateStore->save(outcome);

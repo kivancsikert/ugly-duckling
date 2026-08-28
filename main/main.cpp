@@ -42,19 +42,19 @@ static void startDeviceBasedOnHardware() {
     }
 
 #ifdef CONFIG_IDF_TARGET_ESP32S3
-#if defined(MK5_REV2)
+#ifdef MK5_REV2
     startDevice<UglyDucklingMk5>();
-#elif defined(MK6_REV1)
+#elifdef MK6_REV1
     startDevice<UglyDucklingMk6Rev1>();
-#elif defined(MK6_REV2)
+#elifdef MK6_REV2
     startDevice<UglyDucklingMk6Rev2>();
-#elif defined(MK6_REV3)
+#elifdef MK6_REV3
     startDevice<UglyDucklingMk6Rev3>();
-#elif defined(MK7_REV1)
+#elifdef MK7_REV1
     startDevice<UglyDucklingMk7>();
-#elif defined(MK8_REV1)
+#elifdef MK8_REV1
     startDevice<UglyDucklingMk8Rev1>();
-#elif defined(MK9_REV1)
+#elifdef MK9_REV1
     startDevice<UglyDucklingMk9Rev1>();
 #else
     // MK5 Rev2
