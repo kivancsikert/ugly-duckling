@@ -356,7 +356,7 @@ public:
 
 protected:
     void transportWriteByte(uint8_t cmd) override {
-        std::lock_guard<std::mutex> lock(bbMutex);
+        std::scoped_lock lock(bbMutex);
         bus.start();
         if (!bus.writeByteGetAck(static_cast<uint8_t>((bbAddress << 1) | 0x00))) {
             bus.stop();
@@ -370,7 +370,7 @@ protected:
     }
 
     uint16_t transportReadWord(uint8_t cmd) override {
-        std::lock_guard<std::mutex> lock(bbMutex);
+        std::scoped_lock lock(bbMutex);
         bus.start();
         if (!bus.writeByteGetAck(static_cast<uint8_t>((bbAddress << 1) | 0x00))) {
             bus.stop();
@@ -392,7 +392,7 @@ protected:
     }
 
     std::vector<uint8_t> transportReadBytes(uint8_t cmd, size_t n) override {
-        std::lock_guard<std::mutex> lock(bbMutex);
+        std::scoped_lock lock(bbMutex);
         bus.start();
         if (!bus.writeByteGetAck(static_cast<uint8_t>((bbAddress << 1) | 0x00))) {
             bus.stop();

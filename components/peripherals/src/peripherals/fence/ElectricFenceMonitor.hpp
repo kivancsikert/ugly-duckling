@@ -57,7 +57,7 @@ public:
         Task::loop(name, 3072, [this, measurementFrequency](Task& task) {
             uint16_t lastVoltage = 0;
             for (auto& pin : pins) {
-                uint32_t count = pin.counter->reset();
+                uint32_t count = pin.counter->resetCount();
 
                 if (count > 0) {
                     lastVoltage = std::max(pin.voltage, lastVoltage);

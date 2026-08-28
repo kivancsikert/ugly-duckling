@@ -40,7 +40,7 @@ struct PulseCounterConfig {
 class PulseCounter {
 public:
     virtual uint32_t getCount() const = 0;
-    virtual uint32_t reset() = 0;
+    virtual uint32_t resetCount() = 0;
     virtual PinPtr getPin() const = 0;
     virtual ~PulseCounter() = default;
 
@@ -103,7 +103,7 @@ public:
         return count;
     }
 
-    uint32_t reset() override {
+    uint32_t resetCount() override {
         uint32_t count = edgeCount.exchange(0);
         LOGTV(PULSE, "Counted %" PRIu32 " pulses and cleared on pin %s",
             count, pin->getName().c_str());

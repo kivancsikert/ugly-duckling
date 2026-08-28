@@ -150,7 +150,7 @@ public:
     }
 
     bool transitionTo(std::optional<TargetState> target) override {
-        std::lock_guard<std::mutex> lock(stateMutex);
+        std::scoped_lock lock(stateMutex);
         if (this->targetState == target) {
             return false;
         }
@@ -159,12 +159,12 @@ public:
     }
 
     std::optional<DoorState> getState() override {
-        std::lock_guard<std::mutex> lock(stateMutex);
+        std::scoped_lock lock(stateMutex);
         return lastState;
     }
 
     void populateTelemetry(JsonObject& telemetry) {
-        std::lock_guard<std::mutex> lock(stateMutex);
+        std::scoped_lock lock(stateMutex);
         if (lastState) {
             telemetry["state"] = *lastState;
         }
@@ -214,7 +214,7 @@ private:
             }
 
             if (currentState != lastState) {
-                std::lock_guard<std::mutex> lock(stateMutex);
+                std::scoped_lock lock(stateMutex);
                 lastState = currentState;
                 shouldPublishTelemetry = true;
             }
@@ -238,7 +238,7 @@ private:
                             }
                         },
                         [&](const ConfigureSpec& arg) {
-                            std::lock_guard<std::mutex> lock(stateMutex);
+                            std::scoped_lock lock(stateMutex);
                             TargetState newTargetState = calculateEffectiveTargetState(arg.targetState, currentState);
 
                             if (!targetState || *targetState != newTargetState) {

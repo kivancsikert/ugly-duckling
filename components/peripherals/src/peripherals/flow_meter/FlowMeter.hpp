@@ -61,10 +61,10 @@ public:
             if (elapsed.count() > 0) {
                 lastMeasurement = now;
 
-                uint32_t pulses = counter->reset();
+                uint32_t pulses = counter->resetCount();
 
                 if (pulses > 0) {
-                    std::lock_guard<std::mutex> lock(updateMutex);
+                    std::scoped_lock lock(updateMutex);
                     double currentVolume = pulses / this->qFactor / 60.0F;
                     LOGV("Counted %" PRIu32 " pulses, %.2f l/min, %.2f l",
                         pulses, currentVolume / (elapsed.count() / 1000.0F / 60.0F), currentVolume);
@@ -77,12 +77,12 @@ public:
     }
 
     double getVolume() override {
-        std::lock_guard<std::mutex> lock(updateMutex);
+        std::scoped_lock lock(updateMutex);
         return getVolumeAndReset();
     }
 
     void populateTelemetry(JsonObject& json) {
-        std::lock_guard<std::mutex> lock(updateMutex);
+        std::scoped_lock lock(updateMutex);
         populateTelemetryUnderLock(json);
     }
 

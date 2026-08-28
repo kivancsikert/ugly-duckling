@@ -69,7 +69,7 @@ public:
      * restarted with the new duration.
      */
     void buzz(milliseconds duration, double duty = 0.5) {
-        std::lock_guard<std::mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         esp_timer_stop(stopTimer);
 
         enableHandle.acquire();
@@ -87,7 +87,7 @@ public:
 
 private:
     void stop() {
-        std::lock_guard<std::mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         channel.write(0);
         enableHandle.release();
         sleepLock.reset();

@@ -13,7 +13,7 @@
 #include <chrono>
 #include <string>
 
-#if defined(CONFIG_IDF_TARGET_ESP32S2)
+#ifdef CONFIG_IDF_TARGET_ESP32S2
 // Apparently on ESP32S2 things start to break down if we go below 80 MHz
 #define MIN_CPU_FREQ_MHZ 80
 #elif defined(CONFIG_IDF_TARGET_ESP32S3) || defined(CONFIG_IDF_TARGET_ESP32C6)

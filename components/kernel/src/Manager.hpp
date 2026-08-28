@@ -113,7 +113,7 @@ public:
 
     template <typename T>
     std::shared_ptr<T> getInstance(const std::string& name) const {
-        std::lock_guard<std::recursive_mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         auto it = instances.find(name);
         if (it != instances.end()) {
             auto instance = it->second.template tryGet<T>();
@@ -126,7 +126,7 @@ public:
     }
 
     void shutdown() {
-        std::lock_guard<std::recursive_mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         if (state == State::Stopped) {
             return;
         }
@@ -150,7 +150,7 @@ public:
         const std::string& name,
         const std::string& type,
         const std::function<Handle(const FactoryT&)>& make) {
-        std::lock_guard<std::recursive_mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         if (state == State::Stopped) {
             throw std::runtime_error("Not creating " + managed + " because the manager is stopped");
         }

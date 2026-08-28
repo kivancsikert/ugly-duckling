@@ -117,14 +117,14 @@ public:
 
 private:
     void handleAcquired() {
-        std::lock_guard<std::mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         if (++activeCount == 1) {
             actuate(true);
         }
     }
 
     void handleReleased() {
-        std::lock_guard<std::mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         if (--activeCount == 0) {
             actuate(false);
         }

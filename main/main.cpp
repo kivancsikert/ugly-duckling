@@ -8,7 +8,7 @@
 
 #include <esp_log.h>
 
-#if defined(CONFIG_IDF_TARGET_ESP32S3)
+#ifdef CONFIG_IDF_TARGET_ESP32S3
 
 #include <devices/UglyDucklingMk5.hpp>
 #include <devices/UglyDucklingMk6.hpp>
@@ -16,7 +16,7 @@
 #include <devices/UglyDucklingMk8.hpp>
 #include <devices/UglyDucklingMk9.hpp>
 
-#elif defined(CONFIG_IDF_TARGET_ESP32C6)
+#elifdef CONFIG_IDF_TARGET_ESP32C6
 
 #include <devices/UglyDucklingMk10.hpp>
 #include <devices/UglyDucklingMk11.hpp>
@@ -31,8 +31,7 @@
 using namespace cornucopia::ugly_duckling::devices;
 using namespace cornucopia::ugly_duckling::kernel;
 
-namespace {
-void startDeviceBasedOnHardware() {
+static void startDeviceBasedOnHardware() {
     const auto& hardwareVersion = getHardwareVersion();
     if (hardwareVersion.has_value()) {
         ESP_LOGI("device", "Hardware identity (eFuse): generation %d, revision %d, manufacturer 0x%04x, batch %llu, serial %llu",
@@ -42,20 +41,20 @@ void startDeviceBasedOnHardware() {
         ESP_LOGI("device", "No hardware identity eFuse record found — hardware version is unknown (expected for MK10 and earlier)");
     }
 
-#if defined(CONFIG_IDF_TARGET_ESP32S3)
-#if defined(MK5_REV2)
+#ifdef CONFIG_IDF_TARGET_ESP32S3
+#ifdef MK5_REV2
     startDevice<UglyDucklingMk5>();
-#elif defined(MK6_REV1)
+#elifdef MK6_REV1
     startDevice<UglyDucklingMk6Rev1>();
-#elif defined(MK6_REV2)
+#elifdef MK6_REV2
     startDevice<UglyDucklingMk6Rev2>();
-#elif defined(MK6_REV3)
+#elifdef MK6_REV3
     startDevice<UglyDucklingMk6Rev3>();
-#elif defined(MK7_REV1)
+#elifdef MK7_REV1
     startDevice<UglyDucklingMk7>();
-#elif defined(MK8_REV1)
+#elifdef MK8_REV1
     startDevice<UglyDucklingMk8Rev1>();
-#elif defined(MK9_REV1)
+#elifdef MK9_REV1
     startDevice<UglyDucklingMk9Rev1>();
 #else
     // MK5 Rev2
@@ -101,12 +100,12 @@ void startDeviceBasedOnHardware() {
         return;
     }
 #endif
-#elif defined(CONFIG_IDF_TARGET_ESP32C6)
-#if defined(MK10_REV1)
+#elifdef CONFIG_IDF_TARGET_ESP32C6
+#ifdef MK10_REV1
     startDevice<UglyDucklingMk10Rev1>();
-#elif defined(MK11_REV1)
+#elifdef MK11_REV1
     startDevice<UglyDucklingMk11Rev1>();
-#elif defined(MK12_REV1)
+#elifdef MK12_REV1
     startDevice<UglyDucklingMk12Rev1>();
 #else
     // Prefer the eFuse-burned hardware identity over MAC matching when it's
@@ -150,7 +149,6 @@ void startDeviceBasedOnHardware() {
     ESP_LOGW("device", "Unrecognized MAC address %s — falling back to generic device", getMacAddress().c_str());
     startDevice<GenericDevice>();
 }
-}    // namespace
 
 extern "C" void app_main() {
 #ifdef UD_DEBUG
