@@ -5,7 +5,9 @@ Checks:
   - -cert-err58-cpp
   - -cert-dcl58-cpp
   - clang-analyzer-*
+  - -clang-analyzer-core.StackAddressEscape # False positive in ArduinoJson's JsonDocument move constructor
   - -clang-analyzer-cplusplus.NewDeleteLeaks # False positives from ArduinoJson placement new and std::function internals
+  - -clang-analyzer-security.ArrayBound # False positive in ArduinoJson's parseNumber
   - concurrency-*
   - cppcoreguidelines-*
   - -cppcoreguidelines-avoid-c-arrays
@@ -44,20 +46,26 @@ Checks:
   - -misc-const-correctness
   - -misc-definitions-in-headers
   - -misc-non-private-member-variables-in-classes
+  - -misc-use-anonymous-namespace # Contradicts llvm-prefer-static-over-anonymous-namespace
   - -misc-unused-parameters # Unfortunately this doesn't understand the _name convention
   - modernize-*
   - -modernize-avoid-c-arrays
   - -modernize-pass-by-value
   - -modernize-use-nodiscard
+  - -modernize-use-scoped-lock
   - -modernize-use-std-print
   - -modernize-use-trailing-return-type
   - performance-*
   - portability-*
+  - -portability-avoid-pragma-once
   - -portability-template-virtual-member-function
   - readability-*
+  - -readability-ambiguous-smartptr-reset-call
   - -readability-identifier-length
   - -readability-magic-numbers
+  - -readability-math-missing-parentheses
   - -readability-use-anyofallof
+  - -readability-use-concise-preprocessor-directives
 
 CheckOptions:
   readability-function-cognitive-complexity.Threshold: 500

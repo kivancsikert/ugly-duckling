@@ -31,8 +31,7 @@
 using namespace cornucopia::ugly_duckling::devices;
 using namespace cornucopia::ugly_duckling::kernel;
 
-namespace {
-void startDeviceBasedOnHardware() {
+static void startDeviceBasedOnHardware() {
     const auto& hardwareVersion = getHardwareVersion();
     if (hardwareVersion.has_value()) {
         ESP_LOGI("device", "Hardware identity (eFuse): generation %d, revision %d, manufacturer 0x%04x, batch %llu, serial %llu",
@@ -150,7 +149,6 @@ void startDeviceBasedOnHardware() {
     ESP_LOGW("device", "Unrecognized MAC address %s — falling back to generic device", getMacAddress().c_str());
     startDevice<GenericDevice>();
 }
-}    // namespace
 
 extern "C" void app_main() {
 #ifdef UD_DEBUG
