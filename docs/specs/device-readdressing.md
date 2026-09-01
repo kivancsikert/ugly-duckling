@@ -15,6 +15,7 @@ pushes a new network-config (with the `id` field and fresh certs) via the existi
 protocol, and the firmware applies it through the two-slot config mechanism.
 
 The firmware needs to:
+
 1. Migrate old network-config from the NVS `config` namespace into the config slot system
 2. Use the `id` field from network-config to choose the topic root
 3. Use the `id` field for the MQTT client ID
@@ -31,9 +32,11 @@ request.
       Report the skipped firmware update as a `FailedPrecondition` (code 9) rejection via the
       existing `firmware.rejection` field in the next SYNC message. The config changes in the same
       UPDATE message (if any) are still processed normally.
-- [ ] The server sees the `FailedPrecondition` rejection and retries the firmware update on a
+
+      The server sees the `FailedPrecondition` rejection and retries the firmware update on a
       subsequent SYNC once the config settles.
-- [ ] This is defense-in-depth — the server should also avoid pushing firmware to devices with
+
+      This is defense-in-depth — the server should also avoid pushing firmware to devices with
       pending config, but the firmware enforces the invariant independently.
 
 ## Changes
@@ -73,15 +76,17 @@ config mechanism so SYNC/UPDATE can manage it. The precondition above guarantees
 - [ ] If `id` is absent: use the legacy topic root
       `{location}/devices/ugly-duckling/{instance}/...` (backward compatible — the device hasn't
       been migrated yet).
-- [ ] The topic root selection happens once at boot (or reconnect). The `id` is read from the
-      same config slot data used for host/port/certs.
+
+The topic root selection happens once at boot (or reconnect). The `id` is read from the same
+config slot data used for host/port/certs.
 
 ### 3. MQTT client ID
 
 - [ ] If the config has an `id` field (non-empty string): use the `id` as the MQTT client ID
       (e.g. `2N4GcBkr7ER`).
 - [ ] If `id` is absent: use the legacy client ID format (`ugly-duckling-{macAddress}`).
-- [ ] The client ID is determined at the same time as the topic root, from the same config.
+
+The client ID is determined at the same time as the topic root, from the same config.
 
 ### 4. Network-config in SYNC manifest
 
@@ -89,8 +94,8 @@ config mechanism so SYNC/UPDATE can manage it. The precondition above guarantees
       The value is the fingerprint from the `network` envelope in the config slot.
 - [ ] `filterUpdate()` must include the network fingerprint in `heldFingerprints` so that
       no-op network updates are filtered out.
-- [ ] This is reported on every SYNC (boot, reconnect, post-UPDATE), same as other config
-      entries.
+
+This is reported on every SYNC (boot, reconnect, post-UPDATE), same as other config entries.
 
 ### 5. Network-config in UPDATE
 
@@ -98,13 +103,13 @@ config mechanism so SYNC/UPDATE can manage it. The precondition above guarantees
       alongside device-config and function-config entries: write it to the requested config slot.
 - [ ] Add a `ConfigUpdateResult::NetworkChanged` variant. A network-config change triggers a
       reboot (same as `DeviceChanged`), since the MQTT connection parameters change.
-- [ ] A network-config change can share a requested slot with device-config and/or function-config
-      changes. The all-or-nothing slot rollback is safe regardless of the combination: the confirmed
-      slot always holds a consistent, known-good state. If the slot fails, the server re-delivers
-      each config type through its own mechanism.
-- [ ] After reboot, the two-slot mechanism's strict apply runs: if the new config slot applies
-      successfully → commit as confirmed; if it fails → revert to the old confirmed slot and
-      reboot.
+
+A network-config change can share a requested slot with device-config and/or function-config
+changes. The all-or-nothing slot rollback is safe regardless of the combination: the confirmed
+slot always holds a consistent, known-good state. If the slot fails, the server re-delivers each
+config type through its own mechanism. After reboot, the two-slot mechanism's strict apply runs:
+if the new config slot applies successfully → commit as confirmed; if it fails → revert to the
+old confirmed slot and reboot.
 
 > **Known limitation — network rollback gap:** The current strict-boot mechanism validates
 > device/function initialization, not MQTT connectivity. A bad network-config (wrong host, expired
@@ -118,6 +123,7 @@ config mechanism so SYNC/UPDATE can manage it. The precondition above guarantees
 The new network-config delivered via UPDATE has a different shape than the old one:
 
 **Old (in NVS `config` namespace):**
+
 ```jsonc
 {
   "host": "mqtt.cornucopia-machines.eu",
@@ -127,11 +133,12 @@ The new network-config delivered via UPDATE has a different shape than the old o
   "ntp": { "host": "pool.ntp.org" },
   "serverCert": ["..."],
   "clientCert": ["..."],
-  "clientKey": ["..."]
+  "clientKey": ["..."],
 }
 ```
 
 **New (in config slot, via UPDATE):**
+
 ```jsonc
 {
   "id": "2N4GcBkr7ER",
@@ -140,16 +147,17 @@ The new network-config delivered via UPDATE has a different shape than the old o
   "ntp": { "host": "pool.ntp.org" },
   "serverCert": ["..."],
   "clientCert": ["..."],
-  "clientKey": ["..."]
+  "clientKey": ["..."],
 }
 ```
 
 - [ ] `id` is a new field — used for topic root selection and MQTT client ID.
 - [ ] `instance` and `location` are **removed** — they were only needed for the old topic root.
       The firmware must handle their absence gracefully (they won't be in the new config).
-- [ ] The old network-config (migrated to the confirmed slot) still has `instance`/`location`;
-      the firmware uses them for the old topic root until the UPDATE replaces the config.
-- [ ] `host`, `port`, `ntp`, `serverCert`, `clientCert`, `clientKey` are unchanged in semantics.
+
+The old network-config (migrated to the confirmed slot) still has `instance`/`location`; the
+firmware uses them for the old topic root until the UPDATE replaces the config. `host`, `port`,
+`ntp`, `serverCert`, `clientCert`, `clientKey` are unchanged in semantics.
 
 ### 7. Documentation
 
