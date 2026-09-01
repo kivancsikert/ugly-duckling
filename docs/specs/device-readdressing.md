@@ -168,10 +168,11 @@ firmware uses them for the old topic root until the UPDATE replaces the config. 
 
 ### 8. Follow-up: remove legacy support
 
-- [ ] Open an issue to remove pre-reconciled network-config support and the old MQTT topic once all
+- [x] Open an issue to remove pre-reconciled network-config support and the old MQTT topic once all
       devices are migrated (Phase 2 cleanup in the app-side spec). Covers: bootstrap migration code,
       NVS `config` namespace cleanup, legacy topic root fallback, `id`-absent branches in
       `selectTopicRoot()` / `selectClientId()`, and `instance`/`location` in `NetworkConfig`.
+      → [#629](https://github.com/cornucopia-machines/ugly-duckling-firmware/issues/629)
 
 ## Testing
 
