@@ -161,9 +161,9 @@ firmware uses them for the old topic root until the UPDATE replaces the config. 
 
 ### 7. Documentation
 
-- [ ] Update [`docs/Configuration.md`](../Configuration.md) — document that network-config is now
+- [x] Update [`docs/Configuration.md`](../Configuration.md) — document that network-config is now
       part of the two-slot config system, the `network` manifest entry, and the bootstrap migration
-- [ ] Add the new topic root format (`d/{id}/...`) to any docs that reference the MQTT topic
+- [x] Add the new topic root format (`d/{id}/...`) to any docs that reference the MQTT topic
       structure
 
 ### 8. Follow-up: remove legacy support
