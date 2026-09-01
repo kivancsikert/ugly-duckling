@@ -220,7 +220,7 @@ static void startDevice() {
         deviceDefinition, boot.deviceConfig, boot.deviceConfigNvs, shutdownManager,
         boot.confirmedFingerprint, boot.confirmedRequestedAt);
 
-    registerUpdateHandler(mqttRoot, boot.confirmedFingerprint, runtime.functionRegistry, boot.configStateStore, syncTriggerQueue, configNvs, firmwareVersion);
+    registerUpdateHandler(mqttRoot, boot.confirmedFingerprint, runtime.functionRegistry, boot.configStateStore, syncTriggerQueue, configNvs, firmwareVersion, pendingFirmwareRejection);
     initSyncTask(mqttRoot, syncTriggerQueue, states, runtime.functionRegistry, runtime.deviceManifestEntry, pendingConfigRejection, pendingFirmwareRejection, firmwareVersion);
 
     // Booting a `requested` set is strict (docs/Configuration.md, "The confirmed/requested state

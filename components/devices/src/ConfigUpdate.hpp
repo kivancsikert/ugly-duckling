@@ -37,6 +37,12 @@ ConfigUpdateResult applyConfigUpdate(
 
 /**
  * @brief Subscribes to `update` (NoRetain, QoS 2) -- the combined config + firmware inbound path.
+ *
+ * Firmware updates are only started when the config state is fully confirmed (no pending
+ * `requested`). If a firmware entry is present but a config request is still in flight, the
+ * firmware entry is skipped and a `FailedPrecondition` rejection is reported via
+ * `pendingFirmwareRejection` on the next SYNC. Config changes in the same UPDATE are processed
+ * normally regardless.
  */
 void registerUpdateHandler(
     const std::shared_ptr<MqttRoot>& mqttRoot,
@@ -45,4 +51,5 @@ void registerUpdateHandler(
     const std::shared_ptr<ConfigStateStore>& configStateStore,
     const std::shared_ptr<CopyQueue<bool>>& syncTriggerQueue,
     const std::shared_ptr<NvsStore>& nvs,
-    const std::string& firmwareVersion);
+    const std::string& firmwareVersion,
+    const std::shared_ptr<std::optional<RejectionCode>>& pendingFirmwareRejection);

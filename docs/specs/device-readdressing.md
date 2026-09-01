@@ -27,7 +27,7 @@ A firmware upgrade may only be applied when the config state is fully confirmed 
 pre-existing configuration lives in the confirmed slot and there is no pending or attempted
 request.
 
-- [ ] In the UPDATE handler, skip the firmware entry if `configState.requested` is present.
+- [x] In the UPDATE handler, skip the firmware entry if `configState.requested` is present.
       Report the skipped firmware update as a `FailedPrecondition` (code 9) rejection via the
       existing `firmware.rejection` field in the next SYNC message. The config changes in the same
       UPDATE message (if any) are still processed normally.
@@ -159,6 +159,26 @@ The new network-config delivered via UPDATE has a different shape than the old o
       structure
 
 ## Testing
+
+### Unit tests (native Catch2, `test/unit-tests/`)
+
+- [x] **Firmware decision — precondition** (`FirmwareUpdateDecisionTest`): `decideFirmwareUpdate`
+      returns URL when no pending config request; skips (with `skippedDueToPendingConfig`) when
+      config request is in flight; returns no-op when firmware entry is absent or version matches,
+      regardless of config state
+- [ ] **Topic root selection** (`NetworkConnectionTest` or similar): pure function — `id` present
+      → `d/{id}`, absent → legacy `{location}/devices/ugly-duckling/{instance}/…`
+- [ ] **Client ID selection** (same test file): pure function — `id` present → `id` value, absent
+      → `ugly-duckling-{macAddress}`
+- [ ] **Network config parsing**: both old shape (with `instance`/`location`, no `id`) and new
+      shape (with `id`, no `instance`/`location`) parse correctly; missing fields handled
+      gracefully
+- [ ] **Network fingerprint in `filterUpdate`** (`UpdateFilterTest`): `network` in
+      `heldFingerprints` skips matching fingerprints and keeps mismatches
+- [ ] **Network entry triggers reboot** (`UpdateFilterTest`): `filterUpdate` treats a changed
+      `network` entry like `device` — sets the flag that causes the handler to reboot
+
+### Integration tests (Wokwi embedded / e2e)
 
 - [ ] **Bootstrap migration:** device with old-format NVS network-config boots with new firmware →
       config migrates to confirmed slot with sentinel fingerprint `"unsynced"` → old NVS key is

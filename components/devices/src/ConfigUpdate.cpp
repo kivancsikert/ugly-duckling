@@ -17,6 +17,7 @@
 
 #include <exception>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -151,11 +152,20 @@ void registerUpdateHandler(
     const std::shared_ptr<ConfigStateStore>& configStateStore,
     const std::shared_ptr<CopyQueue<bool>>& syncTriggerQueue,
     const std::shared_ptr<NvsStore>& nvs,
-    const std::string& firmwareVersion) {
-    mqttRoot->subscribe("update", QoS::ExactlyOnce, [deviceConfirmedFingerprint, functionRegistry, configStateStore, syncTriggerQueue, nvs, firmwareVersion](const std::string&, const JsonObject& request) {
-        auto firmwareUrl = parseFirmwareUpdate(request["firmware"], firmwareVersion);
-        if (firmwareUrl) {
-            LOGI("Firmware update available, will download from %s", firmwareUrl->c_str());
+    const std::string& firmwareVersion,
+    const std::shared_ptr<std::optional<RejectionCode>>& pendingFirmwareRejection) {
+    mqttRoot->subscribe("update", QoS::ExactlyOnce, [deviceConfirmedFingerprint, functionRegistry, configStateStore, syncTriggerQueue, nvs, firmwareVersion, pendingFirmwareRejection](const std::string&, const JsonObject& request) {
+        // Firmware decision: parse the entry, then enforce the "clean config state" precondition
+        // (docs/specs/device-readdressing.md, "Precondition"). A firmware upgrade is suppressed
+        // when a config request is still in flight; the server retries once the config settles.
+        ConfigState preUpdateState = configStateStore->load();
+        auto firmwareDecision = decideFirmwareUpdate(request["firmware"], firmwareVersion, preUpdateState.requested.has_value());
+        if (firmwareDecision.url) {
+            LOGI("Firmware update available, will download from %s", firmwareDecision.url->c_str());
+        } else if (firmwareDecision.skippedDueToPendingConfig) {
+            LOGW("Skipping firmware update: config state has a pending request (status=%d)",
+                static_cast<int>(preUpdateState.requested->status));
+            *pendingFirmwareRejection = RejectionCode::FailedPrecondition;
         } else if (!request["firmware"].isNull()) {
             LOGD("Firmware entry present but no action needed (malformed or already current)");
         }
@@ -164,8 +174,8 @@ void registerUpdateHandler(
 
         // Single terminal action: firmware download (with its own delayed reboot) takes priority
         // and subsumes any config-driven reboot; without firmware, the config result decides.
-        if (firmwareUrl) {
-            HttpUpdater::startUpdate(*firmwareUrl, nvs);
+        if (firmwareDecision.url) {
+            HttpUpdater::startUpdate(*firmwareDecision.url, nvs);
             return;
         }
         switch (configResult) {
@@ -177,6 +187,11 @@ void registerUpdateHandler(
                 syncTriggerQueue->overwrite(true);
                 break;
             case ConfigUpdateResult::NoChanges:
+                // If firmware was skipped due to pending config but there are no config changes,
+                // trigger a SYNC anyway so the FailedPrecondition rejection reaches the server.
+                if (firmwareDecision.skippedDueToPendingConfig) {
+                    syncTriggerQueue->overwrite(true);
+                }
                 break;
         }
     });
