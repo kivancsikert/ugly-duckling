@@ -160,5 +160,6 @@ TEST_CASE("bootstrap migration: no old config and no slot entry results in empty
     REQUIRE_FALSE(legacyNvs->getJson("network-config", empty));
 
     // The manifest entry stays empty (both fingerprint and requestedAt are empty strings), and
-    // the device will use default NetworkConfig values (legacy topic root from MAC address).
+    // the device will use default NetworkConfig values (hostname falls back to MAC address at
+    // the call site; topic root falls back to the legacy format with an empty instance).
 }

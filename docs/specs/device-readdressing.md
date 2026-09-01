@@ -82,8 +82,8 @@ config slot data used for host/port/certs.
 
 ### 3. MQTT client ID
 
-- [x] If the config has an `id` field (non-empty string): use the `id` as the MQTT client ID
-      (e.g. `2N4GcBkr7ER`).
+- [x] If the config has an `id` field (non-empty string): use `ugly-duckling-{id}` as the MQTT
+      client ID (e.g. `ugly-duckling-2N4GcBkr7ER`).
 - [x] If `id` is absent: use the legacy client ID format (`ugly-duckling-{macAddress}`).
 
 The client ID is determined at the same time as the topic root, from the same config.

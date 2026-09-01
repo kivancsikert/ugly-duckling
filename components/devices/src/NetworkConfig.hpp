@@ -35,15 +35,23 @@ struct NetworkConfig : MqttDriver::Config {
         return (location.get().empty() ? "" : location.get() + "/") + "devices/ugly-duckling/" + instance.get();
     }
 
-    std::string getHostname() const {
+    std::string getHostname(const std::string& macAddress = "") const {
         const auto& idValue = id.get();
         if (!idValue.empty()) {
             return idValue;
         }
         // TODO(legacy-v1-topics): remove instance-based hostname fallback
-        std::string hostname = instance.get();
+        const auto& instanceValue = instance.get();
+        if (!instanceValue.empty()) {
+            std::string hostname = instanceValue;
+            std::ranges::replace(hostname, ':', '-');
+            std::erase(hostname, '?');
+            return hostname;
+        }
+        // Ultimate fallback: sanitized MAC address (for fresh devices that have never received
+        // any config — the BLE advertised name and log identity need something identifiable)
+        std::string hostname = macAddress;
         std::ranges::replace(hostname, ':', '-');
-        std::erase(hostname, '?');
         return hostname;
     }
 };

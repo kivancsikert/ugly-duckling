@@ -112,14 +112,14 @@ static void startDevice() {
     LOGI("Initializing ugly duckling firmware version %s on %s with hostname '%s' and MAC address %s",
         firmwareVersion.c_str(),
         modelWithRevision.c_str(),
-        networkConfig->getHostname().c_str(),
+        networkConfig->getHostname(macAddress).c_str(),
         macAddress.c_str());
 
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
     auto states = std::make_shared<ModuleStates>();
     KernelStatusTask::init(statusLed, states);
 
-    auto ble = initBle(boot.deviceConfig, networkConfig->getHostname(), "Ugly Duckling " + modelWithRevision, firmwareVersion, macAddress);
+    auto ble = initBle(boot.deviceConfig, networkConfig->getHostname(macAddress), "Ugly Duckling " + modelWithRevision, firmwareVersion, macAddress);
 
     auto telemetryPublishQueue = std::make_shared<CopyQueue<bool>>("telemetry-publish", 1);
     auto telemetryPublisher = std::make_shared<TelemetryPublisher>(telemetryPublishQueue);
@@ -283,7 +283,7 @@ static void startDevice() {
         duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count() / 1000.0,
         firmwareVersion.c_str(),
         modelWithRevision.c_str(),
-        networkConfig->getHostname().c_str(),
+        networkConfig->getHostname(macAddress).c_str(),
         wifi->getIp().value_or("<no-ip>").c_str(),
         wifi->getSsid().value_or("<no-ssid>").c_str(),
         duration_cast<seconds>(system_clock::now().time_since_epoch()).count());

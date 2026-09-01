@@ -83,9 +83,16 @@ DeviceBootConfig loadDeviceBootConfig() {
  * Bootstrap migration + network config loading (docs/specs/device-readdressing.md, "Bootstrap
  * migration" and "NVS cleanup").
  *
- * The precondition guarantee (no pending `requested` on first boot with this firmware) means
- * slotNvs always points at the confirmed slot here -- writing the migrated network entry directly
- * into it is safe.
+ * The migration writes the network entry directly into slotNvs, which is bootPlan.slotToLoad.
+ * This is safe because slotToLoad is always the confirmed slot when the migration runs:
+ *
+ *  - The spec's precondition (section "Precondition: clean config state before firmware upgrade")
+ *    guarantees no pending `requested` on first boot with this firmware. Two independent guards
+ *    enforce this: (1) the server avoids pushing firmware to devices with pending config, and
+ *    (2) decideFirmwareUpdate() skips the firmware entry when configState.requested is present.
+ *  - With no pending `requested`, decideBootPlan() returns slotToLoad = confirmed.
+ *  - The migration only runs once (when the confirmed slot has no `network` entry), so it
+ *    cannot trigger on a later boot where a `requested` might be pending.
  */
 std::shared_ptr<NetworkConfig> loadNetworkConfig(
     const std::shared_ptr<NvsStore>& legacyConfigNvs,
