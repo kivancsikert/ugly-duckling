@@ -185,9 +185,9 @@ firmware uses them for the old topic root until the UPDATE replaces the config. 
       `{location}/devices/ugly-duckling/{instance}/…` (inlined in `NetworkConfig::getTopicRoot()`)
 - [x] **Client ID selection**: `id` present → `ugly-duckling-{id}`, absent →
       `ugly-duckling-{macAddress}` (inlined in `startDevice()`)
-- [ ] **Network config parsing**: both old shape (with `instance`/`location`, no `id`) and new
-      shape (with `id`, no `instance`/`location`) parse correctly; missing fields handled
-      gracefully
+- [x] **Network config parsing** (`NetworkConfigTest`, embedded): both old shape (with
+      `instance`/`location`, no `id`) and new shape (with `id`, no `instance`/`location`) parse
+      correctly; topic root, hostname, and missing-field handling verified
 - [x] **Network fingerprint in `filterUpdate`** (`UpdateFilterTest`): `network` in
       `heldFingerprints` skips matching fingerprints and keeps mismatches
 - [x] **Network entry triggers reboot** (`UpdateFilterTest`): `filterUpdate` treats a changed
@@ -209,8 +209,9 @@ firmware uses them for the old topic root until the UPDATE replaces the config. 
       slot → connects on old topic → SYNCs with rejection
 - [ ] **Firmware update deferred on pending config:** UPDATE with firmware + config changes →
       config staged, firmware skipped → after config settles, firmware delivered on next UPDATE
-- [ ] **Missing instance/location:** new network-config without `instance`/`location` fields →
-      firmware handles gracefully (uses `id` for topic, doesn't try to read missing fields)
+- [x] **Missing instance/location** (`NetworkConfigTest`, embedded): new network-config without
+      `instance`/`location` fields → firmware handles gracefully (uses `id` for topic, doesn't
+      try to read missing fields)
 
 ## Migration sequence (how this interacts with the server)
 

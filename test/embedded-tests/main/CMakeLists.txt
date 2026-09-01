@@ -6,5 +6,6 @@ idf_component_register(
         test-support
 
         kernel-test
+        devices-test
     WHOLE_ARCHIVE
 )

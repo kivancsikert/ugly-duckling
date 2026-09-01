@@ -109,10 +109,9 @@ static void startDevice() {
          "   \\___/ \\__, |_|\\__, | |____/ \\__,_|\\___|_|\\_\\_|_|_| |_|\\__, |\n"
          "         |___/   |___/                                    |___/ %s\n",
         firmwareVersion.c_str());
-    LOGI("Initializing ugly duckling firmware version %s on %s instance '%s' with hostname '%s' and MAC address %s",
+    LOGI("Initializing ugly duckling firmware version %s on %s with hostname '%s' and MAC address %s",
         firmwareVersion.c_str(),
         modelWithRevision.c_str(),
-        networkConfig->instance.get().c_str(),
         networkConfig->getHostname().c_str(),
         macAddress.c_str());
 
@@ -280,11 +279,10 @@ static void startDevice() {
     // PENDING_VERIFY and will automatically revert if the device resets.
     confirmFirmwareValid();
 
-    LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
+    LOGI("Device ready in %.2f s (kernel version %s on %s with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
         duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count() / 1000.0,
         firmwareVersion.c_str(),
         modelWithRevision.c_str(),
-        networkConfig->instance.get().c_str(),
         networkConfig->getHostname().c_str(),
         wifi->getIp().value_or("<no-ip>").c_str(),
         wifi->getSsid().value_or("<no-ssid>").c_str(),

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <MacAddress.hpp>
 #include <drivers/RtcDriver.hpp>
 #include <mqtt/MqttDriver.hpp>
 
@@ -18,12 +17,13 @@ using namespace cornucopia::ugly_duckling::kernel::mqtt;
  *   - **New** (post-migration, via UPDATE):               has `id`,                  no `instance`/`location`.
  *
  * Both parse correctly — missing fields fall back to their defaults. The `id` field drives
- * topic root selection (`getTopicRoot()`) and MQTT client ID (see `startDevice()`).
+ * topic root selection (`getTopicRoot()`), hostname, and MQTT client ID (see `startDevice()`).
+ * The `instance` and `location` fields are only used as legacy fallbacks when `id` is absent.
  */
 struct NetworkConfig : MqttDriver::Config {
     Property<std::string> id { this, "id" };
     // TODO(legacy-v1-topics): remove instance and location once all devices use id-based topics
-    Property<std::string> instance { this, "instance", getMacAddress() };
+    Property<std::string> instance { this, "instance" };
     Property<std::string> location { this, "location" };
     NamedConfigurationEntry<RtcDriver::Config> ntp { this, "ntp" };
 
