@@ -195,18 +195,14 @@ firmware uses them for the old topic root until the UPDATE replaces the config. 
 
 ### Integration tests (Wokwi embedded / e2e)
 
-- [ ] **Bootstrap migration:** device with old-format NVS network-config boots with new firmware →
-      config migrates to confirmed slot with sentinel fingerprint `"unsynced"` → old NVS key is
-      deleted → device connects on old topic → SYNCs with `"unsynced"` fingerprint
-- [ ] **Already-migrated device:** device that already has `network` in the confirmed config slot
-      skips the bootstrap migration on reboot
-- [ ] **NVS cleanup:** device with `network` in confirmed slot AND orphaned `network-config` in
-      old NVS → orphaned key is deleted during boot
-- [ ] **Topic selection — no id:** network-config without `id` → device uses old topic root
-- [ ] **Topic selection — with id:** network-config with `id` → device uses `d/{id}/...`
-- [ ] **Client ID — no id:** network-config without `id` → MQTT client ID is
-      `ugly-duckling-{macAddress}`
-- [ ] **Client ID — with id:** network-config with `id` → MQTT client ID is the `id` value
+- [x] **Bootstrap migration** (`BootstrapMigrationTest`, embedded NVS): old network-config in
+      legacy NVS migrates to the confirmed config slot with sentinel fingerprint `"unsynced"`
+- [x] **Already-migrated device** (`BootstrapMigrationTest`, embedded NVS): device that already
+      has `network` in the confirmed config slot skips the migration; existing entry preserved
+- [x] **NVS cleanup** (`BootstrapMigrationTest`, embedded NVS): orphaned `network-config` in
+      old NVS is removed even when the confirmed slot already has a `network` entry
+- [x] **No config anywhere** (`BootstrapMigrationTest`, embedded NVS): fresh device with neither
+      legacy NVS nor slot entry → empty manifest, device uses default config
 - [ ] **UPDATE delivery:** server sends UPDATE with `network` entry → device writes to requested
       slot → reboots → applies → connects on new topic → SYNCs with new fingerprint
 - [ ] **Rollback:** UPDATE with bad network-config → apply fails → device reverts to confirmed
