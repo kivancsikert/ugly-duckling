@@ -13,8 +13,10 @@ namespace cornucopia::ugly_duckling::kernel {
 
 using config::ConfigEnvelope;
 
-// Key of the device configuration entry within an `update` message's `configurations` object.
+// Keys of the device and network configuration entries within an `update` message's
+// `configurations` object.
 inline const std::string DEVICE_CONFIGURATION_NAME = "device";
+inline const std::string NETWORK_CONFIGURATION_NAME = "network";
 
 struct ChangedConfiguration {
     std::string name;
@@ -24,12 +26,15 @@ struct ChangedConfiguration {
 /**
  * @brief Result of filtering an incoming `update` message against the fingerprints the device
  * currently holds (docs/Configuration.md, "BOOT, SYNC, UPDATE").
- * `deviceChanged` reflects whether the "device" entry survived the filter, which is what decides
- * reboot vs. hot-reload.
+ * `deviceChanged` and `networkChanged` reflect whether the respective entries survived the filter;
+ * either one triggers a reboot rather than a hot-reload, since both affect boot-time state (device
+ * configuration defines peripherals/functions; network configuration defines MQTT connection
+ * parameters).
  */
 struct FilteredUpdate {
     std::vector<ChangedConfiguration> changed;
     bool deviceChanged = false;
+    bool networkChanged = false;
 };
 
 /**
@@ -52,6 +57,8 @@ inline FilteredUpdate filterUpdate(JsonObjectConst configurations, const std::un
 
         if (name == DEVICE_CONFIGURATION_NAME) {
             result.deviceChanged = true;
+        } else if (name == NETWORK_CONFIGURATION_NAME) {
+            result.networkChanged = true;
         }
         result.changed.push_back({ std::move(name), std::move(envelope) });
     }

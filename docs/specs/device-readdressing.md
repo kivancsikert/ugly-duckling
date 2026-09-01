@@ -47,33 +47,33 @@ On first boot after the firmware upgrade, the old network-config must move into 
 config mechanism so SYNC/UPDATE can manage it. The precondition above guarantees that
 `configState.confirmed` points to a valid slot with no pending request.
 
-- [ ] On boot, check if the confirmed config slot already has a `network` entry.
-- [ ] If not, read network-config from the old NVS `config` namespace (`network-config` key).
-- [ ] Create a config envelope with the old config data and the **sentinel fingerprint
+- [x] On boot, check if the confirmed config slot already has a `network` entry.
+- [x] If not, read network-config from the old NVS `config` namespace (`network-config` key).
+- [x] Create a config envelope with the old config data and the **sentinel fingerprint
       `"unsynced"`**. The sentinel is intentional: the config slot system echoes server-assigned
       fingerprints — the old network-config was never part of this system and has no real
       fingerprint. When the device SYNCs with `"unsynced"`, the server sees an unrecognized
       fingerprint with no pending `requested` and generates a new network-config on demand.
-- [ ] Write the envelope into the **confirmed** config slot as the `network` entry. This is a
+- [x] Write the envelope into the **confirmed** config slot as the `network` entry. This is a
       direct write into the confirmed slot's NVS namespace (adding a `"network"` blob alongside
       the existing `"device"` blob), not a staged update — the old config already worked, so
       confirming it is safe.
-- [ ] This migration must complete **before** the firmware reads network-config to establish the
+- [x] This migration must complete **before** the firmware reads network-config to establish the
       MQTT connection. Boot sequence: migrate old NVS → read confirmed slot → extract
       network-config → connect to MQTT → SYNC.
 
 #### NVS cleanup
 
-- [ ] On every boot, if the confirmed config slot has a `network` entry, delete any lingering
+- [x] On every boot, if the confirmed config slot has a `network` entry, delete any lingering
       `network-config` key from the old NVS `config` namespace (best-effort). This ensures
       orphaned keys from interrupted migrations eventually get cleaned up.
 
 ### 2. Topic root selection
 
-- [ ] Read network-config from the `network` entry in the confirmed config slot.
-- [ ] If the config has an `id` field (non-empty string): use `d/{id}/...` as the MQTT topic root
+- [x] Read network-config from the `network` entry in the confirmed config slot.
+- [x] If the config has an `id` field (non-empty string): use `d/{id}/...` as the MQTT topic root
       (e.g. `d/2N4GcBkr7ER/boot`, `d/2N4GcBkr7ER/sync`, etc.).
-- [ ] If `id` is absent: use the legacy topic root
+- [x] If `id` is absent: use the legacy topic root
       `{location}/devices/ugly-duckling/{instance}/...` (backward compatible — the device hasn't
       been migrated yet).
 
@@ -82,26 +82,26 @@ config slot data used for host/port/certs.
 
 ### 3. MQTT client ID
 
-- [ ] If the config has an `id` field (non-empty string): use the `id` as the MQTT client ID
+- [x] If the config has an `id` field (non-empty string): use the `id` as the MQTT client ID
       (e.g. `2N4GcBkr7ER`).
-- [ ] If `id` is absent: use the legacy client ID format (`ugly-duckling-{macAddress}`).
+- [x] If `id` is absent: use the legacy client ID format (`ugly-duckling-{macAddress}`).
 
 The client ID is determined at the same time as the topic root, from the same config.
 
 ### 4. Network-config in SYNC manifest
 
-- [ ] Include a `network` entry in the SYNC manifest, alongside `device` and function entries.
+- [x] Include a `network` entry in the SYNC manifest, alongside `device` and function entries.
       The value is the fingerprint from the `network` envelope in the config slot.
-- [ ] `filterUpdate()` must include the network fingerprint in `heldFingerprints` so that
+- [x] `filterUpdate()` must include the network fingerprint in `heldFingerprints` so that
       no-op network updates are filtered out.
 
 This is reported on every SYNC (boot, reconnect, post-UPDATE), same as other config entries.
 
 ### 5. Network-config in UPDATE
 
-- [ ] When the UPDATE message includes a `network` entry in its `configurations` map, handle it
+- [x] When the UPDATE message includes a `network` entry in its `configurations` map, handle it
       alongside device-config and function-config entries: write it to the requested config slot.
-- [ ] Add a `ConfigUpdateResult::NetworkChanged` variant. A network-config change triggers a
+- [x] Add a `ConfigUpdateResult::NetworkChanged` variant. A network-config change triggers a
       reboot (same as `DeviceChanged`), since the MQTT connection parameters change.
 
 A network-config change can share a requested slot with device-config and/or function-config
@@ -151,8 +151,8 @@ The new network-config delivered via UPDATE has a different shape than the old o
 }
 ```
 
-- [ ] `id` is a new field — used for topic root selection and MQTT client ID.
-- [ ] `instance` and `location` are **removed** — they were only needed for the old topic root.
+- [x] `id` is a new field — used for topic root selection and MQTT client ID.
+- [x] `instance` and `location` are **removed** — they were only needed for the old topic root.
       The firmware must handle their absence gracefully (they won't be in the new config).
 
 The old network-config (migrated to the confirmed slot) still has `instance`/`location`; the
@@ -166,6 +166,13 @@ firmware uses them for the old topic root until the UPDATE replaces the config. 
 - [ ] Add the new topic root format (`d/{id}/...`) to any docs that reference the MQTT topic
       structure
 
+### 8. Follow-up: remove legacy support
+
+- [ ] Open an issue to remove pre-reconciled network-config support and the old MQTT topic once all
+      devices are migrated (Phase 2 cleanup in the app-side spec). Covers: bootstrap migration code,
+      NVS `config` namespace cleanup, legacy topic root fallback, `id`-absent branches in
+      `selectTopicRoot()` / `selectClientId()`, and `instance`/`location` in `NetworkConfig`.
+
 ## Testing
 
 ### Unit tests (native Catch2, `test/unit-tests/`)
@@ -174,16 +181,16 @@ firmware uses them for the old topic root until the UPDATE replaces the config. 
       returns URL when no pending config request; skips (with `skippedDueToPendingConfig`) when
       config request is in flight; returns no-op when firmware entry is absent or version matches,
       regardless of config state
-- [ ] **Topic root selection** (`NetworkConnectionTest` or similar): pure function — `id` present
-      → `d/{id}`, absent → legacy `{location}/devices/ugly-duckling/{instance}/…`
-- [ ] **Client ID selection** (same test file): pure function — `id` present → `id` value, absent
-      → `ugly-duckling-{macAddress}`
+- [x] **Topic root selection**: `id` present → `d/{id}`, absent → legacy
+      `{location}/devices/ugly-duckling/{instance}/…` (inlined in `NetworkConfig::getTopicRoot()`)
+- [x] **Client ID selection**: `id` present → `ugly-duckling-{id}`, absent →
+      `ugly-duckling-{macAddress}` (inlined in `startDevice()`)
 - [ ] **Network config parsing**: both old shape (with `instance`/`location`, no `id`) and new
       shape (with `id`, no `instance`/`location`) parse correctly; missing fields handled
       gracefully
-- [ ] **Network fingerprint in `filterUpdate`** (`UpdateFilterTest`): `network` in
+- [x] **Network fingerprint in `filterUpdate`** (`UpdateFilterTest`): `network` in
       `heldFingerprints` skips matching fingerprints and keeps mismatches
-- [ ] **Network entry triggers reboot** (`UpdateFilterTest`): `filterUpdate` treats a changed
+- [x] **Network entry triggers reboot** (`UpdateFilterTest`): `filterUpdate` treats a changed
       `network` entry like `device` — sets the flag that causes the handler to reboot
 
 ### Integration tests (Wokwi embedded / e2e)

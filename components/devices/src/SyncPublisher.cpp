@@ -1,6 +1,7 @@
 #include "KernelStatus.hpp"
 #include "Queue.hpp"
 #include "Task.hpp"
+#include "config/ConfigManifestEntry.hpp"
 #include "config/ConfigState.hpp"
 #include "functions/Function.hpp"
 #include "functions/FunctionConfigTracker.hpp"
@@ -33,7 +34,8 @@ using namespace cornucopia::ugly_duckling::kernel::config;
 void publishSync(
     const std::shared_ptr<MqttRoot>& mqttRoot,
     const std::shared_ptr<FunctionRegistry>& functionRegistry,
-    const FunctionManifestEntry& deviceManifestEntry,
+    const ConfigManifestEntry& deviceManifestEntry,
+    const ConfigManifestEntry& networkManifestEntry,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingConfigRejection,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingFirmwareRejection,
     const std::string& firmwareVersion) {
@@ -43,10 +45,11 @@ void publishSync(
     *pendingFirmwareRejection = std::nullopt;
     mqttRoot->publish(
         "sync",
-        [functionRegistry, deviceManifestEntry, configRejection, firmwareRejection, firmwareVersion](JsonObject& json) {
+        [functionRegistry, deviceManifestEntry, networkManifestEntry, configRejection, firmwareRejection, firmwareVersion](JsonObject& json) {
             auto configurations = json["configurations"].to<JsonObject>();
             auto manifest = functionRegistry->manifest();
             manifest[DEVICE_CONFIGURATION_NAME] = deviceManifestEntry;
+            manifest[NETWORK_CONFIGURATION_NAME] = networkManifestEntry;
             writeSyncManifest(configurations, manifest);
             if (configRejection) {
                 json["rejection"] = static_cast<int>(*configRejection);
@@ -82,14 +85,15 @@ void initSyncTask(
     const std::shared_ptr<CopyQueue<bool>>& syncTriggerQueue,
     const std::shared_ptr<ModuleStates>& states,
     const std::shared_ptr<FunctionRegistry>& functionRegistry,
-    const FunctionManifestEntry& deviceManifestEntry,
+    const ConfigManifestEntry& deviceManifestEntry,
+    const ConfigManifestEntry& networkManifestEntry,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingConfigRejection,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingFirmwareRejection,
     const std::string& firmwareVersion) {
-    Task::loop("sync", 4096, [mqttRoot, syncTriggerQueue, states, functionRegistry, deviceManifestEntry, pendingConfigRejection, pendingFirmwareRejection, firmwareVersion](Task&) {
+    Task::loop("sync", 4096, [mqttRoot, syncTriggerQueue, states, functionRegistry, deviceManifestEntry, networkManifestEntry, pendingConfigRejection, pendingFirmwareRejection, firmwareVersion](Task&) {
         syncTriggerQueue->take();
         states->kernelReady.awaitSet();
         syncTriggerQueue->clear();
-        publishSync(mqttRoot, functionRegistry, deviceManifestEntry, pendingConfigRejection, pendingFirmwareRejection, firmwareVersion);
+        publishSync(mqttRoot, functionRegistry, deviceManifestEntry, networkManifestEntry, pendingConfigRejection, pendingFirmwareRejection, firmwareVersion);
     });
 }

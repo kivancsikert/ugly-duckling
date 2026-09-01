@@ -21,7 +21,8 @@ using namespace cornucopia::ugly_duckling::kernel::config;
 void publishSync(
     const std::shared_ptr<MqttRoot>& mqttRoot,
     const std::shared_ptr<FunctionRegistry>& functionRegistry,
-    const FunctionManifestEntry& deviceManifestEntry,
+    const ConfigManifestEntry& deviceManifestEntry,
+    const ConfigManifestEntry& networkManifestEntry,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingConfigRejection,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingFirmwareRejection,
     const std::string& firmwareVersion);
@@ -34,7 +35,8 @@ void initSyncTask(
     const std::shared_ptr<CopyQueue<bool>>& syncTriggerQueue,
     const std::shared_ptr<ModuleStates>& states,
     const std::shared_ptr<FunctionRegistry>& functionRegistry,
-    const FunctionManifestEntry& deviceManifestEntry,
+    const ConfigManifestEntry& deviceManifestEntry,
+    const ConfigManifestEntry& networkManifestEntry,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingConfigRejection,
     const std::shared_ptr<std::optional<RejectionCode>>& pendingFirmwareRejection,
     const std::string& firmwareVersion);

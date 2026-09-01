@@ -102,8 +102,7 @@ std::shared_ptr<MqttRoot> initMqtt(const std::shared_ptr<ModuleStates>& states, 
     // NetworkConfig inherits from MqttDriver::Config, so we can upcast
     auto mqttConfig = std::static_pointer_cast<MqttDriver::Config>(networkConfig);
     auto mqtt = std::make_shared<MqttDriver>(states->networkReady, mqttConfig, clientId, mqttReady);
-    const std::string& location = networkConfig->location.get();
-    return std::make_shared<MqttRoot>(mqtt, (location.empty() ? "" : location + "/") + "devices/ugly-duckling/" + networkConfig->instance.get());
+    return std::make_shared<MqttRoot>(mqtt, networkConfig->getTopicRoot());
 }
 
 std::shared_ptr<BleDriver> initBle(

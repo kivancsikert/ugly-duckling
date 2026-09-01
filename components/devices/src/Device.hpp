@@ -70,17 +70,18 @@ static void startDevice() {
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
 
-    auto configNvs = std::make_shared<NvsStore>("config");
+    auto legacyConfigNvs = std::make_shared<NvsStore>("config");
 
     LOGTV(NVS, "NVS configurations:");
-    configNvs->list([](const std::string& key) {
+    legacyConfigNvs->list([](const std::string& key) {
         LOGTV(NVS, " - %s", key.c_str());
     });
 
-    JsonDocument networkConfigRaw;
-    auto networkConfig = loadConfigFromNvs<NetworkConfig>(configNvs, "network-config", networkConfigRaw);
-
     auto boot = loadDeviceBootConfig();
+
+    // Network config: bootstrap-migrate from old NVS if needed, then load from the
+    // confirmed config slot (docs/specs/device-readdressing.md, "Bootstrap migration").
+    auto networkConfig = loadNetworkConfig(legacyConfigNvs, boot.configNvs, boot.networkManifestEntry);
 
     const std::string modelWithRevision = deviceDefinition->model + " (rev" + std::to_string(deviceDefinition->revision) + ")";
 
@@ -164,7 +165,8 @@ static void startDevice() {
 #endif
 
     // Init MQTT connection
-    auto clientId = "ugly-duckling-" + macAddress;
+    // TODO(legacy-v1-topics): remove fallback and the macAddress parameter
+    auto clientId = "ugly-duckling-" + (networkConfig->id.get().empty() ? macAddress : networkConfig->id.get());
     auto mqttRoot = initMqtt(states, clientId, networkConfig, states->mqttReady);
     MqttLog::init(boot.deviceConfig->publishLogs.get(), logRecords, mqttRoot);
     registerBasicCommands(mqttRoot);
@@ -192,8 +194,8 @@ static void startDevice() {
     auto pendingFirmwareRejection = std::make_shared<std::optional<RejectionCode>>();
 
     // Handle any pending HTTP update (will reboot if update was required and was successful)
-    registerHttpUpdateCommand(mqttRoot, configNvs);
-    auto firmwareDownloadRejection = HttpUpdater::performPendingHttpUpdateIfNecessary(configNvs, wifi, watchdog, firmwareVersion);
+    registerHttpUpdateCommand(mqttRoot, legacyConfigNvs);
+    auto firmwareDownloadRejection = HttpUpdater::performPendingHttpUpdateIfNecessary(legacyConfigNvs, wifi, watchdog, firmwareVersion);
 
     // Detect whether the bootloader rolled back from a failed OTA partition. This and a failed
     // download cannot co-occur: a failed download never writes a new partition, so there's nothing
@@ -217,11 +219,11 @@ static void startDevice() {
     states->rtcInSync.awaitSet();
 
     auto runtime = initDeviceRuntime(i2c, mqttRoot, switches, telemetryPublisher,
-        deviceDefinition, boot.deviceConfig, boot.deviceConfigNvs, shutdownManager,
-        boot.confirmedFingerprint, boot.confirmedRequestedAt);
+        deviceDefinition, boot.deviceConfig, boot.configNvs, shutdownManager,
+        boot.deviceManifestEntry);
 
-    registerUpdateHandler(mqttRoot, boot.confirmedFingerprint, runtime.functionRegistry, boot.configStateStore, syncTriggerQueue, configNvs, firmwareVersion, pendingFirmwareRejection);
-    initSyncTask(mqttRoot, syncTriggerQueue, states, runtime.functionRegistry, runtime.deviceManifestEntry, pendingConfigRejection, pendingFirmwareRejection, firmwareVersion);
+    registerUpdateHandler(mqttRoot, boot.deviceManifestEntry.fingerprint, boot.networkManifestEntry.fingerprint, runtime.functionRegistry, boot.configStateStore, syncTriggerQueue, legacyConfigNvs, firmwareVersion, pendingFirmwareRejection);
+    initSyncTask(mqttRoot, syncTriggerQueue, states, runtime.functionRegistry, runtime.deviceManifestEntry, boot.networkManifestEntry, pendingConfigRejection, pendingFirmwareRejection, firmwareVersion);
 
     // Booting a `requested` set is strict (docs/Configuration.md, "The confirmed/requested state
     // machine"): unlike `confirmed` (or the empty-slot default), which boots best-effort regardless
