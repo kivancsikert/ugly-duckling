@@ -229,9 +229,9 @@ static void startDevice() {
     // reboot immediately, never reaching the `boot`/`sync` publishes below for this failed attempt.
     // A hard crash before reaching this point is caught on the *next* boot instead, since the
     // pending -> attempted transition was already persisted above, before this attempt started.
-    if (boot.bootPlan.strict && boot.bootPlan.slotToLoad) {
+    if (boot.bootPlan.strict) {
         bool success = (runtime.initState == InitState::Success);
-        ConfigState outcome = recordStrictBootOutcome(boot.configState, *boot.bootPlan.slotToLoad, success, RejectionCode::Internal);
+        ConfigState outcome = recordStrictBootOutcome(boot.configState, boot.bootPlan.slotToLoad, success, RejectionCode::Internal);
         boot.configStateStore->save(outcome);
         if (!success) {
             LOGE("Requested configuration failed to apply (state=%d); reverting and rebooting",
@@ -241,7 +241,7 @@ static void startDevice() {
         }
         boot.configState = outcome;
         LOGI("Requested configuration applied successfully; committed slot '%s' as confirmed",
-            toString(*boot.bootPlan.slotToLoad).c_str());
+            toString(boot.bootPlan.slotToLoad).c_str());
     }
 
     // A rejection recorded by this boot's revert (or an earlier one still unreported) is echoed on

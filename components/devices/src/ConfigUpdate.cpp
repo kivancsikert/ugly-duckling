@@ -60,18 +60,13 @@ ConfigUpdateResult applyConfigUpdate(
     // Gather the full set the device is currently confirmed/running as, so the free slot ends
     // up self-contained: every entry not touched by this UPDATE is copied verbatim, and
     // stageDeviceUpdate() overwrites the rest. A confirmed slot is always fully self-contained
-    // (device + every live function) -- reading it is unconditional. With no confirmed slot at
-    // all, the baseline is simply empty: the very first UPDATE a fresh device ever gets is
-    // necessarily device-changed (no function can exist without a device configuration defining
-    // it), so `update.changed` alone already carries everything needed.
+    // (device + every live function) -- reading it is unconditional.
     ConfigState state = configStateStore->load();
+    auto confirmedNvs = std::make_shared<NvsStore>("config-" + toString(state.confirmed.value_or(ConfigSlot::A)));
     std::unordered_map<std::string, ConfigEnvelope> currentConfigurations;
-    if (state.confirmed) {
-        auto confirmedNvs = std::make_shared<NvsStore>("config-" + toString(*state.confirmed));
-        currentConfigurations[DEVICE_CONFIGURATION_NAME] = StoredConfig(confirmedNvs, DEVICE_CONFIGURATION_NAME).configEnvelope();
-        for (const auto& [name, entry] : manifest) {
-            currentConfigurations[name] = StoredConfig(confirmedNvs, name).configEnvelope();
-        }
+    currentConfigurations[DEVICE_CONFIGURATION_NAME] = StoredConfig(confirmedNvs, DEVICE_CONFIGURATION_NAME).configEnvelope();
+    for (const auto& [name, entry] : manifest) {
+        currentConfigurations[name] = StoredConfig(confirmedNvs, name).configEnvelope();
     }
 
     StagedUpdate staged = stageDeviceUpdate(state, currentConfigurations, update.changed);

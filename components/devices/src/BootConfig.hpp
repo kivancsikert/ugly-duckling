@@ -22,7 +22,7 @@ struct DeviceBootConfig {
     std::shared_ptr<ConfigStateStore> configStateStore;
     ConfigState configState;
     BootPlan bootPlan;
-    std::shared_ptr<NvsStore> deviceConfigNvs;    // null when no confirmed slot
+    std::shared_ptr<NvsStore> deviceConfigNvs;
     std::shared_ptr<DeviceConfiguration> deviceConfig;
     std::string confirmedFingerprint;
     std::string confirmedRequestedAt;

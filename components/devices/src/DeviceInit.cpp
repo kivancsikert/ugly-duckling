@@ -64,8 +64,7 @@ DeviceRuntimeInit initDeviceRuntime(
     };
     // Function configuration lives in the same namespace as the device document (deviceConfigNvs,
     // "config-<slot>") -- there is no separate function-cfg namespace any more (docs/Configuration.md,
-    // "Storage: envelopes and slots"). Null only when there's no confirmed slot at all, in which case
-    // deviceConfig->functions is empty too, so no function is ever created against it.
+    // "Storage: envelopes and slots").
     auto functionRegistry = std::make_shared<FunctionRegistry>(deviceConfigNvs, functionServices);
     shutdownManager->registerShutdownListener([functionRegistry]() {
         functionRegistry->shutdown();

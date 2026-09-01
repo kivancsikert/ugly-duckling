@@ -13,9 +13,9 @@ namespace cornucopia::ugly_duckling::kernel::config {
  * (docs/Configuration.md, "The confirmed/requested state machine").
  */
 struct BootPlan {
-    // nullopt means "no confirmed slot": boot with device/function defaults, exactly as an empty
-    // NVS slot does today.
-    std::optional<ConfigSlot> slotToLoad;
+    // Which slot to load device/function configuration from. Always valid -- the caller
+    // (loadDeviceBootConfig) guarantees state.confirmed is set before calling decideBootPlan().
+    ConfigSlot slotToLoad = ConfigSlot::A;
     // true only when slotToLoad is a `requested` set being attempted for the first time this boot
     // -- any apply error is a detected failure (see recordStrictBootOutcome). false means
     // best-effort.
@@ -32,15 +32,23 @@ struct BootPlan {
 /**
  * @brief Implements the state table from docs/Configuration.md, "The confirmed/requested state
  * machine":
- * - no `requested` -> load `confirmed` (or nothing, if absent), best-effort.
+ * - no `requested` -> load `confirmed`, best-effort.
  * - `requested` == pending -> mark attempted, load it strictly.
  * - `requested` == attempted (a crash left it applying) or rejected (a previous revert's cleanup
  *   didn't finish) -> both are a detected failure: revert to `confirmed`, drop `requested`, and
  *   record a rejection if one isn't already stored (never clobber an unreported one).
+ *
+ * @pre `state.confirmed` must be set. loadDeviceBootConfig() guarantees this by initializing an
+ * empty confirmed slot when none exists (a fresh device, or one migrating from pre-Phase-3
+ * firmware).
  */
 inline BootPlan decideBootPlan(const ConfigState& state) {
+    // Belt-and-suspenders default: if confirmed is somehow absent despite the precondition,
+    // behave the same as an empty slot A (the boot-time initializer's default).
+    ConfigSlot confirmed = state.confirmed.value_or(ConfigSlot::A);
+
     if (!state.requested) {
-        return { .slotToLoad = state.confirmed, .strict = false, .crashRecoveryCheckpoint = std::nullopt };
+        return { .slotToLoad = confirmed, .strict = false, .crashRecoveryCheckpoint = std::nullopt };
     }
 
     const RequestedConfig& requested = *state.requested;
@@ -57,12 +65,12 @@ inline BootPlan decideBootPlan(const ConfigState& state) {
                 next.rejection = RejectionCode::Internal;
             }
             next.requested.reset();
-            return { .slotToLoad = state.confirmed, .strict = false, .crashRecoveryCheckpoint = next };
+            return { .slotToLoad = confirmed, .strict = false, .crashRecoveryCheckpoint = next };
         }
     }
     // Unreachable, but keeps this a well-formed function for compilers that don't see the switch
     // above as exhaustive.
-    return { .slotToLoad = state.confirmed, .strict = false, .crashRecoveryCheckpoint = std::nullopt };
+    return { .slotToLoad = confirmed, .strict = false, .crashRecoveryCheckpoint = std::nullopt };
 }
 
 /**

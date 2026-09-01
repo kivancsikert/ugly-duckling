@@ -13,11 +13,9 @@ namespace cornucopia::ugly_duckling::kernel::config {
 
 /**
  * @brief Owns reading/writing the device's ConfigState in NVS (docs/Configuration.md,
- * "Storage: envelopes and slots"). load() returns a default (all-absent) ConfigState when the namespace/key
- * doesn't exist yet -- which is what makes a missing `config-state` namespace equivalent to "no
- * confirmed slot" for free, whether because this is a fresh device or because it last booted
- * pre-Phase-3 firmware (see *Migration* -> "A missing/absent confirmed slot is the one bootstrap
- * path": deliberately not a migration of the old single-envelope layout).
+ * "Storage: envelopes and slots"). load() returns a default (all-absent) ConfigState when the
+ * namespace/key doesn't exist yet. loadDeviceBootConfig() initializes `confirmed` to slot A on
+ * the very first boot, so subsequent load() calls always see a confirmed slot.
  */
 class ConfigStateStore {
 public:

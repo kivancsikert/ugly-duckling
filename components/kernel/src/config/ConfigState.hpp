@@ -63,10 +63,10 @@ struct RequestedConfig {
  * @brief The device's whole reconciliation state: which slot is last-known-good, which (if any)
  * is staged and how far it got, and any rejection still awaiting report on the next `BOOT` (and
  * that boot's next `SYNC`).
- * Default-constructed (every field absent) means "no confirmed slot" -- the same state as a
- * `config-state` namespace that doesn't exist yet, whether because this is a fresh device or
- * because it last booted pre-Phase-3 firmware (docs/Configuration.md, "The confirmed/requested
- * state machine"): deliberately not a migration of the old single-envelope layout.
+ * Default-constructed (every field absent) represents a virgin `config-state` namespace (fresh
+ * device or pre-Phase-3 firmware). `loadDeviceBootConfig()` guarantees `confirmed` is always set
+ * before any downstream code runs -- a missing confirmed is initialized to slot A at boot (see
+ * BootConfig.cpp), so downstream code never sees `confirmed == nullopt`.
  */
 struct ConfigState {
     std::optional<ConfigSlot> confirmed;

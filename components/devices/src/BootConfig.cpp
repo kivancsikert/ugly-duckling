@@ -26,10 +26,23 @@ DeviceBootConfig loadDeviceBootConfig() {
     auto configStateNvs = std::make_shared<NvsStore>("config-state");
     auto configStateStore = std::make_shared<ConfigStateStore>(configStateNvs);
     ConfigState configState = configStateStore->load();
+
+    // Guarantee: a confirmed slot always exists. A fresh device (or one migrating from
+    // pre-Phase-3 firmware) starts with an empty slot A -- defaults, no functions -- and
+    // reconciles from scratch via an empty SYNC prompting the server to re-push everything (see
+    // docs/specs/done/config-reconciliation.md, "Migration"). The slot itself is empty (no device
+    // or function entries in NVS), but having the pointer means downstream code never has to
+    // branch on "no slot at all" vs "empty slot".
+    if (!configState.confirmed) {
+        configState.confirmed = ConfigSlot::A;
+        configStateStore->save(configState);
+        LOGI("No confirmed config slot found; initialized empty slot 'a'");
+    }
+
     BootPlan bootPlan = decideBootPlan(configState);
 
     LOGD("Booting from slot '%s', strict: %s, crash recovery checkpoint to persist: %s",
-        bootPlan.slotToLoad ? toString(*bootPlan.slotToLoad).c_str() : "(none)",
+        toString(bootPlan.slotToLoad).c_str(),
         bootPlan.strict ? "true" : "false",
         bootPlan.crashRecoveryCheckpoint ? "true" : "false");
 
@@ -40,27 +53,17 @@ DeviceBootConfig loadDeviceBootConfig() {
 
     // Device configuration is stored as a verbatim envelope like any other reconciled
     // configuration (docs/Configuration.md, "Storage: envelopes and slots"), so its fingerprint is
-    // available to the `update` handler without recomputing anything. There is no flat/unslotted
-    // storage any more: a device with no confirmed slot (a freshly minted device, or one migrating
-    // from before this firmware) boots exactly like an empty slot -- defaults, no functions -- and
-    // reconciles from scratch via an empty SYNC prompting the server to re-push everything (see
-    // docs/specs/done/config-reconciliation.md, "Migration" -> "A missing/absent confirmed slot is the
-    // one bootstrap path").
-    std::shared_ptr<NvsStore> deviceConfigNvs;
-    if (bootPlan.slotToLoad) {
-        deviceConfigNvs = std::make_shared<NvsStore>("config-" + toString(*bootPlan.slotToLoad));
-    }
+    // available to the `update` handler without recomputing anything.
+    auto deviceConfigNvs = std::make_shared<NvsStore>("config-" + toString(bootPlan.slotToLoad));
     auto deviceConfig = std::make_shared<DeviceConfiguration>();
     std::string confirmedFingerprint;
     std::string confirmedRequestedAt;
-    if (deviceConfigNvs) {
-        StoredConfig deviceStoredConfig(deviceConfigNvs, DEVICE_CONFIGURATION_NAME);
-        if (deviceStoredConfig.hasValue()) {
-            JsonDocument deviceConfigRaw = deviceStoredConfig.data();
-            deviceConfig->load(deviceConfigRaw.as<JsonObject>());
-            confirmedFingerprint = deviceStoredConfig.fingerprint();
-            confirmedRequestedAt = deviceStoredConfig.requestedAt();
-        }
+    StoredConfig deviceStoredConfig(deviceConfigNvs, DEVICE_CONFIGURATION_NAME);
+    if (deviceStoredConfig.hasValue()) {
+        JsonDocument deviceConfigRaw = deviceStoredConfig.data();
+        deviceConfig->load(deviceConfigRaw.as<JsonObject>());
+        confirmedFingerprint = deviceStoredConfig.fingerprint();
+        confirmedRequestedAt = deviceStoredConfig.requestedAt();
     }
 
     return {
