@@ -1,5 +1,7 @@
 #pragma once
 
+#include <config/ConfigManifestEntry.hpp>
+
 #include <ArduinoJson.h>
 
 #include <functional>
@@ -10,16 +12,11 @@
 
 namespace cornucopia::ugly_duckling::functions {
 
+using cornucopia::ugly_duckling::kernel::config::ConfigManifestEntry;
+
 // Applies a verbatim config body (already parsed out of a ConfigEnvelope) to a live function
 // instance. Empty for functions that don't implement HasConfig<TConfig>.
 using ConfigureFn = std::function<void(JsonObjectConst)>;
-
-// One SYNC manifest entry: the fingerprint and requestedAt stamp of the configuration a function
-// is currently running, echoed verbatim from the envelope that was last successfully applied.
-struct FunctionManifestEntry {
-    std::string fingerprint;
-    std::string requestedAt;
-};
 
 /**
  * @brief In-memory name -> {configureFn, fingerprint} bookkeeping at the heart of FunctionRegistry
@@ -52,10 +49,10 @@ public:
     }
 
     // name -> {fingerprint, requestedAt} for every recorded entry, straight from in-memory state.
-    std::unordered_map<std::string, FunctionManifestEntry> manifest() const {
-        std::unordered_map<std::string, FunctionManifestEntry> result;
+    std::unordered_map<std::string, ConfigManifestEntry> manifest() const {
+        std::unordered_map<std::string, ConfigManifestEntry> result;
         for (const auto& [name, entry] : entries) {
-            result.emplace(name, FunctionManifestEntry { .fingerprint = entry.fingerprint, .requestedAt = entry.requestedAt });
+            result.emplace(name, ConfigManifestEntry { .fingerprint = entry.fingerprint, .requestedAt = entry.requestedAt });
         }
         return result;
     }
@@ -74,7 +71,7 @@ private:
 // {fingerprint, requestedAt} (docs/Configuration.md, "BOOT, SYNC, UPDATE"). Pure JSON construction
 // with no NVS/MQTT dependency, so it's unit-testable independent of FunctionRegistry; Device.hpp's
 // publishSync() is the sole caller.
-inline void writeSyncManifest(JsonObject& configurations, const std::unordered_map<std::string, FunctionManifestEntry>& manifest) {
+inline void writeSyncManifest(JsonObject& configurations, const std::unordered_map<std::string, ConfigManifestEntry>& manifest) {
     for (const auto& [name, entry] : manifest) {
         auto configurationEntry = configurations[name].to<JsonObject>();
         configurationEntry["fingerprint"] = entry.fingerprint;

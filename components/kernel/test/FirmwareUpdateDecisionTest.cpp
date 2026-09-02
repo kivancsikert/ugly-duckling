@@ -77,3 +77,38 @@ TEST_CASE("parseFirmwareUpdate ignores requestedAt without failing") {
     REQUIRE(result.has_value());
     REQUIRE(*result == "https://r2.example.com/firmware.bin");
 }
+
+// --- decideFirmwareUpdate: precondition enforcement ---
+
+TEST_CASE("decideFirmwareUpdate proceeds when no pending config request") {
+    auto doc = makeFirmwareEntry("0.50.2", "https://r2.example.com/firmware.bin");
+    auto decision = decideFirmwareUpdate(doc.as<JsonObjectConst>(), "0.50.1", false);
+
+    REQUIRE(decision.url.has_value());
+    REQUIRE(*decision.url == "https://r2.example.com/firmware.bin");
+    REQUIRE_FALSE(decision.skippedDueToPendingConfig);
+}
+
+TEST_CASE("decideFirmwareUpdate skips when config request is pending") {
+    auto doc = makeFirmwareEntry("0.50.2", "https://r2.example.com/firmware.bin");
+    auto decision = decideFirmwareUpdate(doc.as<JsonObjectConst>(), "0.50.1", true);
+
+    REQUIRE_FALSE(decision.url.has_value());
+    REQUIRE(decision.skippedDueToPendingConfig);
+}
+
+TEST_CASE("decideFirmwareUpdate returns no-op when firmware entry is absent, regardless of config state") {
+    JsonDocument doc;
+    auto decision = decideFirmwareUpdate(doc.as<JsonObjectConst>(), "0.50.1", true);
+
+    REQUIRE_FALSE(decision.url.has_value());
+    REQUIRE_FALSE(decision.skippedDueToPendingConfig);
+}
+
+TEST_CASE("decideFirmwareUpdate returns no-op when version matches, regardless of config state") {
+    auto doc = makeFirmwareEntry("0.50.1", "https://r2.example.com/firmware.bin");
+    auto decision = decideFirmwareUpdate(doc.as<JsonObjectConst>(), "0.50.1", true);
+
+    REQUIRE_FALSE(decision.url.has_value());
+    REQUIRE_FALSE(decision.skippedDueToPendingConfig);
+}

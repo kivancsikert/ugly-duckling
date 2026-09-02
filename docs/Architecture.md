@@ -102,8 +102,11 @@ The `scheduling` component contains independent scheduling strategies used by `P
 
 ## MQTT topic structure
 
+The device's MQTT topic root depends on whether it has been re-addressed (see
+[`specs/device-readdressing.md`](specs/device-readdressing.md)):
+
 ```
-/devices/ugly-duckling/$INSTANCE/          ← device root
+d/$ID/                                     ← device root (re-addressed devices)
     boot                                   ← boot announcement, diagnostics
     sync                                   ← fingerprint manifest of applied config
     update                                 ← incoming configuration
@@ -111,6 +114,8 @@ The `scheduling` component contains independent scheduling strategies used by `P
     commands/$COMMAND                      ← retained command messages
     responses/$COMMAND                     ← command responses
 ```
+
+Legacy devices still pending migration use `/devices/ugly-duckling/$INSTANCE/` as the topic root.
 
 See [Configuration.md](Configuration.md) for how `boot`/`sync`/`update` reconcile configuration.
 

@@ -27,7 +27,7 @@ using namespace cornucopia::ugly_duckling::peripherals;
 struct DeviceRuntimeInit {
     std::shared_ptr<FunctionRegistry> functionRegistry;
     std::shared_ptr<TelemetryCollector> telemetryCollector;
-    FunctionManifestEntry deviceManifestEntry;
+    ConfigManifestEntry deviceManifestEntry;
     InitState initState = InitState::Success;
     JsonDocument peripheralsInitDoc;
     JsonDocument functionsInitDoc;
@@ -45,7 +45,6 @@ DeviceRuntimeInit initDeviceRuntime(
     const std::shared_ptr<TelemetryPublisher>& telemetryPublisher,
     const std::shared_ptr<DeviceDefinition>& deviceDefinition,
     const std::shared_ptr<DeviceConfiguration>& deviceConfig,
-    const std::shared_ptr<NvsStore>& deviceConfigNvs,
+    const std::shared_ptr<NvsStore>& configNvs,
     const std::shared_ptr<ShutdownManager>& shutdownManager,
-    const std::string& confirmedFingerprint,
-    const std::string& confirmedRequestedAt);
+    const ConfigManifestEntry& deviceManifestEntry);

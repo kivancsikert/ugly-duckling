@@ -4,15 +4,6 @@
 using namespace cornucopia::ugly_duckling::kernel;
 using namespace cornucopia::ugly_duckling::kernel::config;
 
-TEST_CASE("decideBootPlan: no config-state at all loads nothing, best-effort") {
-    ConfigState state;
-    BootPlan plan = decideBootPlan(state);
-
-    REQUIRE_FALSE(plan.slotToLoad.has_value());
-    REQUIRE_FALSE(plan.strict);
-    REQUIRE_FALSE(plan.crashRecoveryCheckpoint.has_value());
-}
-
 TEST_CASE("decideBootPlan: confirmed only, no requested, loads confirmed best-effort") {
     ConfigState state { .confirmed = ConfigSlot::A };
     BootPlan plan = decideBootPlan(state);
@@ -35,17 +26,6 @@ TEST_CASE("decideBootPlan: pending requested is loaded strictly and marked attem
     REQUIRE(plan.crashRecoveryCheckpoint->confirmed == ConfigSlot::A);
     REQUIRE(plan.crashRecoveryCheckpoint->requested->slot == ConfigSlot::B);
     REQUIRE(plan.crashRecoveryCheckpoint->requested->status == RequestedConfigStatus::Attempted);
-}
-
-TEST_CASE("decideBootPlan: pending requested with no confirmed slot yet (first-ever requested set)") {
-    ConfigState state {
-        .requested = RequestedConfig { .slot = ConfigSlot::B, .status = RequestedConfigStatus::Pending },
-    };
-    BootPlan plan = decideBootPlan(state);
-
-    REQUIRE(plan.slotToLoad == ConfigSlot::B);
-    REQUIRE(plan.strict);
-    REQUIRE_FALSE(plan.crashRecoveryCheckpoint->confirmed.has_value());
 }
 
 TEST_CASE("decideBootPlan: attempted requested (crash mid-boot) reverts to confirmed and records a rejection") {
@@ -74,16 +54,6 @@ TEST_CASE("decideBootPlan: rejected requested (revert cleanup didn't finish) is 
     REQUIRE_FALSE(plan.strict);
     REQUIRE_FALSE(plan.crashRecoveryCheckpoint->requested.has_value());
     REQUIRE(plan.crashRecoveryCheckpoint->rejection == RejectionCode::Internal);
-}
-
-TEST_CASE("decideBootPlan: attempted requested with no confirmed slot reverts to no confirmed slot") {
-    ConfigState state {
-        .requested = RequestedConfig { .slot = ConfigSlot::B, .status = RequestedConfigStatus::Attempted },
-    };
-    BootPlan plan = decideBootPlan(state);
-
-    REQUIRE_FALSE(plan.slotToLoad.has_value());
-    REQUIRE_FALSE(plan.strict);
 }
 
 TEST_CASE("decideBootPlan: an already-recorded rejection is never clobbered by a later revert") {

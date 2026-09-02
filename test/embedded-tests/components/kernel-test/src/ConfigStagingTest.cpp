@@ -177,36 +177,9 @@ TEST_CASE("staging into a free slot that already holds a matching entry skips re
     REQUIRE(reloadedValve1.data()["openDuration"].as<int>() == -1);
 }
 
-TEST_CASE("staging the very first device-changed update (no confirmed slot yet) picks slot A") {
-    ensureNvsFlashInitialized();
-
-    auto stateNvs = std::make_shared<NvsStore>("stg-state");
-    stateNvs->eraseAll();
-    auto slotANvs = std::make_shared<NvsStore>("stg-a");
-    slotANvs->eraseAll();
-
-    // A freshly-minted device (or one migrating from before this firmware) has no config-state
-    // namespace at all -- there's no flat/unslotted storage to fall back to.
-    ConfigStateStore configStateStore(stateNvs);
-    REQUIRE_FALSE(configStateStore.load().confirmed.has_value());
-
-    JsonDocument deviceBody;
-    deviceBody["publishInterval"] = 60;
-    std::vector<ChangedConfiguration> changed = {
-        { DEVICE_CONFIGURATION_NAME, ConfigEnvelope(deviceBody.as<JsonVariantConst>(), "device-fp-1", "2026-07-30T12:00:00Z") },
-    };
-
-    StagedUpdate staged = stageDeviceUpdate(configStateStore.load(), {}, changed);
-    REQUIRE(staged.slot == ConfigSlot::A);
-
-    StoredConfig(slotANvs, DEVICE_CONFIGURATION_NAME).store(staged.configurations.at(DEVICE_CONFIGURATION_NAME));
-    configStateStore.save(staged.nextState);
-
-    ConfigState reloadedState = ConfigStateStore(stateNvs).load();
-    REQUIRE_FALSE(reloadedState.confirmed.has_value());
-    REQUIRE(reloadedState.requested->slot == ConfigSlot::A);
-    REQUIRE(reloadedState.requested->status == RequestedConfigStatus::Pending);
-}
+// The "no confirmed slot yet" test case was removed: loadDeviceBootConfig() now guarantees
+// confirmed = A at boot (see commit dfbfce6d), so stageDeviceUpdate() always sees a confirmed
+// slot and the no-confirmed-slot scenario is dead code.
 
 // Exercises the real-NVS sequence registerUpdateHandler() runs for a functions-only UPDATE
 // (docs/Configuration.md, "Applying a functions-only UPDATE"): stage into the free slot, mark

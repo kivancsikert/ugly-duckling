@@ -52,22 +52,29 @@ Both the model and revision are reported in boot logs and in the MQTT `init` mes
 
 ## Network configuration
 
-Network configuration is stored under the `network-config` key in NVS (the `config` namespace).
-It includes both the device identity and the MQTT broker settings:
+Network configuration is part of the two-slot config system — the `network` entry in the
+confirmed config slot alongside `device` and function entries. It is managed by the server via
+`SYNC`/`UPDATE`, just like the other configurations (see
+[`docs/Configuration.md`](docs/Configuration.md)).
+
+The current network-config shape (delivered via `UPDATE`):
 
 ```jsonc
 {
-  "instance": "chicken-door", // the instance name, defaults to MAC address
-  "location": "my-garden", // the name of the location the device is installed at
+  "id": "2N4GcBkr7ER", // unique device ID, used for MQTT topic root (d/{id}/...) and client ID
   "host": "...", // broker host name
   "port": 1883, // broker port, defaults to 1883
-  "clientId": "chicken-door", // client ID, defaults to "ugly-duckling-$instance" if omitted
   "queueSize": 16, // MQTT message queue size, defaults to 16
   "ntp": {
     "host": "pool.ntp.org", // NTP server host name, optional
   },
 }
 ```
+
+Legacy devices that haven't been re-addressed yet may still have the old network-config shape
+with `instance` and `location` fields instead of `id`. See
+[`docs/specs/device-readdressing.md`](docs/specs/device-readdressing.md) for the migration
+design.
 
 Ugly Duckling supports TLS-encrypted MQTT connections using client-side certificates.
 To enable this, the following parameters must be present in the network config:
@@ -122,8 +129,9 @@ freshly flashed or erased device boots with none and reconciles the full set fro
 }
 ```
 
-Devices communicate using the topic `/devices/ugly-duckling/$DEVICE_INSTANCE`, or `$DEVICE_ROOT` for short.
-For example, during boot, the device will publish a message to `/devices/ugly-duckling/$DEVICE_INSTANCE/init`, or `$DEVICE_ROOT/init` for short.
+Devices communicate using their MQTT topic root: `d/$ID` for re-addressed devices, or
+`/devices/ugly-duckling/$DEVICE_INSTANCE` for legacy devices still pending migration. We refer to
+this as `$DEVICE_ROOT`. For example, during boot, the device publishes to `$DEVICE_ROOT/boot`.
 
 Peripherals communicate using the topic `$DEVICE_ROOT/peripheral/$PERIPHERAL_NAME`, or `$PERIPHERAL_ROOT` for short.
 

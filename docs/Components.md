@@ -38,8 +38,10 @@ graph TD
 
   An example of a _device_ is an Ugly Duckling PCB, placed in the field, connected to whatever externals.
 
-  The device publishes telemetry, and receives configuration and commands under `/devices/ugly-duckling/$INSTANCE`.
-  This is called the **device topic**, and we'll refer to it as `...` further down.
+  The device publishes telemetry, and receives configuration and commands under its **device
+  topic** — `d/$ID` for re-addressed devices, or `/devices/ugly-duckling/$INSTANCE` for legacy
+  devices (see [`specs/device-readdressing.md`](specs/device-readdressing.md)). We'll refer to
+  the device topic as `...` further down.
 
 * A **peripheral** is an external physical element that is connected to the _device._
 

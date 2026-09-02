@@ -60,6 +60,7 @@ void publishBootMessage(
             json["model"] = deviceDefinition->model;
             json["revision"] = deviceDefinition->revision;
             json["platform"] = UD_PLATFORM;
+            // TODO(legacy-v1-topics): stop sending instance once the server no longer reads it
             json["instance"] = networkConfig->instance.get();
             json["mac"] = macAddress;
             if (hardwareVersion.has_value()) {

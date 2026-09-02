@@ -8,18 +8,18 @@ is and isn't built yet via its progress checklist; this one describes what's act
 
 ## Concepts
 
-- **Device configuration** and **function configuration** are each a **reconciled configuration**:
-  a JSON body the server authored, identified by an opaque **fingerprint** token. The firmware
-  never computes or reinterprets a fingerprint — it only stores and echoes back whatever the server
-  sent, so a serialization difference between server and firmware can never cause the two to
-  disagree about whether a configuration has changed.
+- **Device configuration**, **function configuration**, and **network configuration** are each a
+  **reconciled configuration**: a JSON body the server authored, identified by an opaque
+  **fingerprint** token. The firmware never computes or reinterprets a fingerprint — it only stores
+  and echoes back whatever the server sent, so a serialization difference between server and
+  firmware can never cause the two to disagree about whether a configuration has changed.
 - Each configuration is persisted as an **envelope**: `{data, fingerprint, requestedAt}`, with
   `data` kept byte-for-byte verbatim. See [`ConfigEnvelope`](../components/kernel/src/config/ConfigEnvelope.hpp)
   / [`StoredConfig`](../components/kernel/src/config/StoredConfig.hpp).
-- The device holds up to two full configuration sets (device configuration + every function) at
-  once, in interchangeable **slots** named `a`/`b`. A small **`config-state`** record says which
-  slot is **`confirmed`** (last-known-good, what the device actually boots and runs) and, while a
-  new set is being tried, which slot is **`requested`** and how far it's gotten. See
+- The device holds up to two full configuration sets (device + network + every function) at once,
+  in interchangeable **slots** named `a`/`b`. A small **`config-state`** record says which slot is
+  **`confirmed`** (last-known-good, what the device actually boots and runs) and, while a new set
+  is being tried, which slot is **`requested`** and how far it's gotten. See
   [`ConfigState`](../components/kernel/src/config/ConfigState.hpp) /
   [`ConfigStateStore`](../components/kernel/src/config/ConfigStateStore.hpp).
 - Applying `confirmed` at boot is **best-effort**: a peripheral or function that fails to apply is
@@ -31,14 +31,16 @@ is and isn't built yet via its progress checklist; this one describes what's act
 
 ## BOOT, SYNC, UPDATE
 
-All three sit directly under the device's MQTT root (`.../devices/ugly-duckling/$INSTANCE`),
-alongside but independent of `commands`/`responses`.
+All three sit directly under the device's MQTT topic root. For devices that have been
+re-addressed (network-config has an `id` field), this is `d/{id}/...`; for legacy devices still
+pending migration, it's `.../devices/ugly-duckling/$INSTANCE`. See
+[`specs/device-readdressing.md`](specs/device-readdressing.md) for the migration design.
 
 | Topic | Direction | Retention / QoS | Carries |
 | --- | --- | --- | --- |
 | `boot` | device → server | `NoRetain`, `QoS 2` | Diagnostics: model/revision/platform, reset/wakeup reason, boot count, per-peripheral/function apply errors, and (see *Rejection reporting* below) a rejection code, if one is pending. **No configuration bodies.** |
-| `sync` | device → server | `NoRetain`, `QoS 2` | The fingerprint manifest of what the device has **applied and booted with** — the `device` document plus every function — proof-of-apply, not proof-of-receipt. Built from live in-memory state, never re-derived from NVS. Also carries a rejection code (see *Rejection reporting* below) on the first `SYNC` published after a revert, alongside `BOOT`. |
-| `update` | server → device | `NoRetain`, `QoS 2` | New configuration: `{configurations: {device: envelope, <function>: envelope, ...}}`. |
+| `sync` | device → server | `NoRetain`, `QoS 2` | The fingerprint manifest of what the device has **applied and booted with** — `device`, `network`, and every function — proof-of-apply, not proof-of-receipt. Built from live in-memory state, never re-derived from NVS. Also carries a rejection code (see *Rejection reporting* below) on the first `SYNC` published after a revert, alongside `BOOT`. |
+| `update` | server → device | `NoRetain`, `QoS 2` | New configuration: `{configurations: {device: envelope, network: envelope, <function>: envelope, ...}}`. |
 
 - **`BOOT`** is published once per boot, from [`startDevice()`](../components/devices/src/Device.hpp)
   (`mqttRoot->publish("boot", ...)`), unconditionally as soon as peripherals/functions finish
@@ -67,9 +69,10 @@ alongside but independent of `commands`/`responses`.
   the free slot's previous occupant often already holds the right envelope for anything that hasn't
   changed across the last two staged sets, and there's no reason to pay a flash write to re-persist
   it. `requested` is then marked `pending` for that slot. From there the two cases diverge:
-  - **Device configuration changed** → reboot. The boot sequence (*The confirmed/requested state
-    machine*, below) re-derives everything, including which functions exist, from the staged slot,
-    strictly.
+  - **Device or network configuration changed** → reboot. The boot sequence (*The
+    confirmed/requested state machine*, below) re-derives everything, including which functions
+    exist, from the staged slot, strictly. A network-config change triggers a reboot because the
+    MQTT connection parameters (host, port, certs, topic root) change.
   - **Only function configuration(s) changed** → hot-reload live, without a reboot on the happy
     path (*Applying a functions-only UPDATE*, below).
 
@@ -116,23 +119,48 @@ matching the device-changed path's semantics.
 
 ## Storage: envelopes and slots
 
-Every configuration is a `StoredConfig`-backed envelope, keyed by name (`device`, or a function
-name) within an `NvsStore` namespace. `StoredConfig` never parses `data` into a typed object — it's
-opaque bytes as far as storage is concerned; parsing is a separate step done by the caller.
+Every configuration is a `StoredConfig`-backed envelope, keyed by name (`device`, `network`, or a
+function name) within an `NvsStore` namespace. `StoredConfig` never parses `data` into a typed
+object — it's opaque bytes as far as storage is concerned; parsing is a separate step done by the
+caller.
 
 There is no flat/unslotted layout — every device runs on the slotted layout, or has no confirmed
 configuration at all yet:
 
-- **Slotted:** `config-a`/`config-b` hold the device document (key `device`) and every function
-  (key = function name) together, in the same namespace, so a slot is one self-contained unit — a
-  boot loads exactly one slot and never merges across namespaces. A separate `config-state`
-  namespace (key `state`) holds the `ConfigState` record described above.
+- **Slotted:** `config-a`/`config-b` hold the device document (key `device`), the network
+  document (key `network`), and every function (key = function name) together, in the same
+  namespace, so a slot is one self-contained unit — a boot loads exactly one slot and never merges
+  across namespaces. A separate `config-state` namespace (key `state`) holds the `ConfigState`
+  record described above.
 - **No confirmed slot:** a freshly minted device, or one that last booted firmware from before this
   storage model existed, has no `config-state` namespace (or one with `confirmed` absent) at all. It
   boots with defaults and no functions — identically to an empty slot — and reconciles from scratch:
   an empty `SYNC` prompts the server to re-push the full configuration set (see
   docs/specs/done/config-reconciliation.md, "Migration" → "A missing/absent `confirmed` slot is the one
   bootstrap path"). There is no migration path from an older storage shape; this is the only bootstrap.
+
+### Bootstrap migration: NVS `config` namespace → config slot
+
+Devices upgrading from firmware that stored network-config in the legacy NVS `config` namespace
+(key `network-config`) go through a one-time bootstrap migration on first boot. The migration
+runs before the MQTT connection is established:
+
+1. If the confirmed config slot already has a `network` entry → skip (already migrated).
+2. Otherwise, read network-config from the old NVS `config` namespace.
+3. Wrap it in an envelope with the sentinel fingerprint `"unsynced"` — the old config was never
+   part of the reconciliation system and has no real fingerprint.
+4. Write the envelope directly into the confirmed slot as the `network` entry.
+
+The sentinel fingerprint `"unsynced"` is intentional: when the device SYNCs with it, the server
+sees an unrecognized fingerprint with no pending `requested` and generates a new network-config
+on demand, migrating the device to the new config shape (with an `id` field for the new topic
+root).
+
+On every boot, any lingering `network-config` key in the old NVS `config` namespace is deleted
+(best-effort), whether or not the migration actually ran — this cleans up after interrupted
+migrations.
+
+See [`specs/device-readdressing.md`](specs/device-readdressing.md) for the full migration design.
 
 ## The confirmed/requested state machine
 

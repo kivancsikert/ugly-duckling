@@ -26,8 +26,7 @@ struct StagedUpdate {
 };
 
 /**
- * @brief Computes the free slot (whichever isn't `confirmed`, or slot A if there is no confirmed
- * slot yet -- the very first staged set a device ever gets) and the full envelope set to persist
+ * @brief Computes the free slot (whichever isn't `confirmed`) and the full envelope set to persist
  * there: every entry in `currentConfigurations` (the device plus every live function, as currently
  * confirmed/running) is copied verbatim, then `changed` overwrites the entries the UPDATE actually
  * touched -- so the destination slot ends up self-contained, exactly as a slot must be, without the
@@ -36,12 +35,14 @@ struct StagedUpdate {
  * decideBootPlan() on the next boot takes it from there (or, for a functions-only change applied
  * live without a reboot, the caller reaches the same commit/reject decision directly via
  * recordStrictBootOutcome() -- see docs/Configuration.md, "Applying a functions-only UPDATE").
+ *
+ * @pre `state.confirmed` must be set (guaranteed by loadDeviceBootConfig at boot).
  */
 inline StagedUpdate stageDeviceUpdate(
     const ConfigState& state,
     const std::unordered_map<std::string, ConfigEnvelope>& currentConfigurations,
     const std::vector<ChangedConfiguration>& changed) {
-    ConfigSlot slot = state.confirmed ? otherSlot(*state.confirmed) : ConfigSlot::A;
+    ConfigSlot slot = otherSlot(state.confirmed.value_or(ConfigSlot::A));
 
     std::unordered_map<std::string, ConfigEnvelope> merged = currentConfigurations;
     for (const auto& entry : changed) {

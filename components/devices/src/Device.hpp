@@ -70,17 +70,18 @@ static void startDevice() {
     ESP_ERROR_CHECK(heap_trace_init_standalone(trace_record, NUM_RECORDS));
 #endif
 
-    auto configNvs = std::make_shared<NvsStore>("config");
+    auto legacyConfigNvs = std::make_shared<NvsStore>("config");
 
     LOGTV(NVS, "NVS configurations:");
-    configNvs->list([](const std::string& key) {
+    legacyConfigNvs->list([](const std::string& key) {
         LOGTV(NVS, " - %s", key.c_str());
     });
 
-    JsonDocument networkConfigRaw;
-    auto networkConfig = loadConfigFromNvs<NetworkConfig>(configNvs, "network-config", networkConfigRaw);
-
     auto boot = loadDeviceBootConfig();
+
+    // Network config: bootstrap-migrate from old NVS if needed, then load from the
+    // confirmed config slot (docs/specs/device-readdressing.md, "Bootstrap migration").
+    auto networkConfig = loadNetworkConfig(legacyConfigNvs, boot.configNvs, boot.networkManifestEntry);
 
     const std::string modelWithRevision = deviceDefinition->model + " (rev" + std::to_string(deviceDefinition->revision) + ")";
 
@@ -108,18 +109,17 @@ static void startDevice() {
          "   \\___/ \\__, |_|\\__, | |____/ \\__,_|\\___|_|\\_\\_|_|_| |_|\\__, |\n"
          "         |___/   |___/                                    |___/ %s\n",
         firmwareVersion.c_str());
-    LOGI("Initializing ugly duckling firmware version %s on %s instance '%s' with hostname '%s' and MAC address %s",
+    LOGI("Initializing ugly duckling firmware version %s on %s with hostname '%s' and MAC address %s",
         firmwareVersion.c_str(),
         modelWithRevision.c_str(),
-        networkConfig->instance.get().c_str(),
-        networkConfig->getHostname().c_str(),
+        networkConfig->getHostname(macAddress).c_str(),
         macAddress.c_str());
 
     auto statusLed = std::make_shared<LedDriver>("status", deviceDefinition->statusPin);
     auto states = std::make_shared<ModuleStates>();
     KernelStatusTask::init(statusLed, states);
 
-    auto ble = initBle(boot.deviceConfig, networkConfig->getHostname(), "Ugly Duckling " + modelWithRevision, firmwareVersion, macAddress);
+    auto ble = initBle(boot.deviceConfig, networkConfig->getHostname(macAddress), "Ugly Duckling " + modelWithRevision, firmwareVersion, macAddress);
 
     auto telemetryPublishQueue = std::make_shared<CopyQueue<bool>>("telemetry-publish", 1);
     auto telemetryPublisher = std::make_shared<TelemetryPublisher>(telemetryPublishQueue);
@@ -164,7 +164,8 @@ static void startDevice() {
 #endif
 
     // Init MQTT connection
-    auto clientId = "ugly-duckling-" + macAddress;
+    // TODO(legacy-v1-topics): remove fallback and the macAddress parameter
+    auto clientId = "ugly-duckling-" + (networkConfig->id.get().empty() ? macAddress : networkConfig->id.get());
     auto mqttRoot = initMqtt(states, clientId, networkConfig, states->mqttReady);
     MqttLog::init(boot.deviceConfig->publishLogs.get(), logRecords, mqttRoot);
     registerBasicCommands(mqttRoot);
@@ -192,8 +193,8 @@ static void startDevice() {
     auto pendingFirmwareRejection = std::make_shared<std::optional<RejectionCode>>();
 
     // Handle any pending HTTP update (will reboot if update was required and was successful)
-    registerHttpUpdateCommand(mqttRoot, configNvs);
-    auto firmwareDownloadRejection = HttpUpdater::performPendingHttpUpdateIfNecessary(configNvs, wifi, watchdog, firmwareVersion);
+    registerHttpUpdateCommand(mqttRoot, legacyConfigNvs);
+    auto firmwareDownloadRejection = HttpUpdater::performPendingHttpUpdateIfNecessary(legacyConfigNvs, wifi, watchdog, firmwareVersion);
 
     // Detect whether the bootloader rolled back from a failed OTA partition. This and a failed
     // download cannot co-occur: a failed download never writes a new partition, so there's nothing
@@ -217,11 +218,11 @@ static void startDevice() {
     states->rtcInSync.awaitSet();
 
     auto runtime = initDeviceRuntime(i2c, mqttRoot, switches, telemetryPublisher,
-        deviceDefinition, boot.deviceConfig, boot.deviceConfigNvs, shutdownManager,
-        boot.confirmedFingerprint, boot.confirmedRequestedAt);
+        deviceDefinition, boot.deviceConfig, boot.configNvs, shutdownManager,
+        boot.deviceManifestEntry);
 
-    registerUpdateHandler(mqttRoot, boot.confirmedFingerprint, runtime.functionRegistry, boot.configStateStore, syncTriggerQueue, configNvs, firmwareVersion);
-    initSyncTask(mqttRoot, syncTriggerQueue, states, runtime.functionRegistry, runtime.deviceManifestEntry, pendingConfigRejection, pendingFirmwareRejection, firmwareVersion);
+    registerUpdateHandler(mqttRoot, boot.deviceManifestEntry.fingerprint, boot.networkManifestEntry.fingerprint, runtime.functionRegistry, boot.configStateStore, syncTriggerQueue, legacyConfigNvs, firmwareVersion, pendingFirmwareRejection);
+    initSyncTask(mqttRoot, syncTriggerQueue, states, runtime.functionRegistry, runtime.deviceManifestEntry, boot.networkManifestEntry, pendingConfigRejection, pendingFirmwareRejection, firmwareVersion);
 
     // Booting a `requested` set is strict (docs/Configuration.md, "The confirmed/requested state
     // machine"): unlike `confirmed` (or the empty-slot default), which boots best-effort regardless
@@ -229,9 +230,9 @@ static void startDevice() {
     // reboot immediately, never reaching the `boot`/`sync` publishes below for this failed attempt.
     // A hard crash before reaching this point is caught on the *next* boot instead, since the
     // pending -> attempted transition was already persisted above, before this attempt started.
-    if (boot.bootPlan.strict && boot.bootPlan.slotToLoad) {
+    if (boot.bootPlan.strict) {
         bool success = (runtime.initState == InitState::Success);
-        ConfigState outcome = recordStrictBootOutcome(boot.configState, *boot.bootPlan.slotToLoad, success, RejectionCode::Internal);
+        ConfigState outcome = recordStrictBootOutcome(boot.configState, boot.bootPlan.slotToLoad, success, RejectionCode::Internal);
         boot.configStateStore->save(outcome);
         if (!success) {
             LOGE("Requested configuration failed to apply (state=%d); reverting and rebooting",
@@ -241,7 +242,7 @@ static void startDevice() {
         }
         boot.configState = outcome;
         LOGI("Requested configuration applied successfully; committed slot '%s' as confirmed",
-            toString(*boot.bootPlan.slotToLoad).c_str());
+            toString(boot.bootPlan.slotToLoad).c_str());
     }
 
     // A rejection recorded by this boot's revert (or an earlier one still unreported) is echoed on
@@ -278,12 +279,11 @@ static void startDevice() {
     // PENDING_VERIFY and will automatically revert if the device resets.
     confirmFirmwareValid();
 
-    LOGI("Device ready in %.2f s (kernel version %s on %s instance '%s' with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
+    LOGI("Device ready in %.2f s (kernel version %s on %s with hostname '%s' and IP '%s', SSID '%s', current time is %lld)",
         duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count() / 1000.0,
         firmwareVersion.c_str(),
         modelWithRevision.c_str(),
-        networkConfig->instance.get().c_str(),
-        networkConfig->getHostname().c_str(),
+        networkConfig->getHostname(macAddress).c_str(),
         wifi->getIp().value_or("<no-ip>").c_str(),
         wifi->getSsid().value_or("<no-ssid>").c_str(),
         duration_cast<seconds>(system_clock::now().time_since_epoch()).count());

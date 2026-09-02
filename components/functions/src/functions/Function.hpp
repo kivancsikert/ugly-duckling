@@ -177,7 +177,7 @@ public:
 
     // name -> {fingerprint, requestedAt} for every live function, straight from in-memory state --
     // never re-reading NVS, so it reflects what actually applied.
-    std::unordered_map<std::string, FunctionManifestEntry> manifest() const {
+    std::unordered_map<std::string, ConfigManifestEntry> manifest() const {
         return tracker.manifest();
     }
 

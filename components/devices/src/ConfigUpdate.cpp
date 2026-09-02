@@ -17,6 +17,7 @@
 
 #include <exception>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -35,6 +36,7 @@ using namespace cornucopia::ugly_duckling::kernel::config;
 ConfigUpdateResult applyConfigUpdate(
     JsonObjectConst configurations,
     const std::string& deviceConfirmedFingerprint,
+    const std::string& networkConfirmedFingerprint,
     const std::shared_ptr<FunctionRegistry>& functionRegistry,
     const std::shared_ptr<ConfigStateStore>& configStateStore) {
 
@@ -49,6 +51,7 @@ ConfigUpdateResult applyConfigUpdate(
         heldFingerprints[name] = entry.fingerprint;
     }
     heldFingerprints[DEVICE_CONFIGURATION_NAME] = deviceConfirmedFingerprint;
+    heldFingerprints[NETWORK_CONFIGURATION_NAME] = networkConfirmedFingerprint;
 
     FilteredUpdate update = filterUpdate(configurations, heldFingerprints);
     if (update.changed.empty()) {
@@ -59,18 +62,17 @@ ConfigUpdateResult applyConfigUpdate(
     // Gather the full set the device is currently confirmed/running as, so the free slot ends
     // up self-contained: every entry not touched by this UPDATE is copied verbatim, and
     // stageDeviceUpdate() overwrites the rest. A confirmed slot is always fully self-contained
-    // (device + every live function) -- reading it is unconditional. With no confirmed slot at
-    // all, the baseline is simply empty: the very first UPDATE a fresh device ever gets is
-    // necessarily device-changed (no function can exist without a device configuration defining
-    // it), so `update.changed` alone already carries everything needed.
+    // (device + every live function) -- reading it is unconditional.
     ConfigState state = configStateStore->load();
+    auto confirmedNvs = std::make_shared<NvsStore>("config-" + toString(state.confirmed.value_or(ConfigSlot::A)));
     std::unordered_map<std::string, ConfigEnvelope> currentConfigurations;
-    if (state.confirmed) {
-        auto confirmedNvs = std::make_shared<NvsStore>("config-" + toString(*state.confirmed));
-        currentConfigurations[DEVICE_CONFIGURATION_NAME] = StoredConfig(confirmedNvs, DEVICE_CONFIGURATION_NAME).configEnvelope();
-        for (const auto& [name, entry] : manifest) {
-            currentConfigurations[name] = StoredConfig(confirmedNvs, name).configEnvelope();
-        }
+    currentConfigurations[DEVICE_CONFIGURATION_NAME] = StoredConfig(confirmedNvs, DEVICE_CONFIGURATION_NAME).configEnvelope();
+    StoredConfig networkStored(confirmedNvs, NETWORK_CONFIGURATION_NAME);
+    if (networkStored.hasValue()) {
+        currentConfigurations[NETWORK_CONFIGURATION_NAME] = networkStored.configEnvelope();
+    }
+    for (const auto& [name, entry] : manifest) {
+        currentConfigurations[name] = StoredConfig(confirmedNvs, name).configEnvelope();
     }
 
     StagedUpdate staged = stageDeviceUpdate(state, currentConfigurations, update.changed);
@@ -83,10 +85,12 @@ ConfigUpdateResult applyConfigUpdate(
     }
     configStateStore->save(staged.nextState);
 
-    if (update.deviceChanged) {
-        LOGI("Device configuration changed via update, staged into slot '%s'",
+    if (update.deviceChanged || update.networkChanged) {
+        auto resultType = update.deviceChanged ? ConfigUpdateResult::DeviceChanged : ConfigUpdateResult::NetworkChanged;
+        LOGI("%s configuration changed via update, staged into slot '%s'",
+            update.deviceChanged ? "Device" : "Network",
             toString(staged.slot).c_str());
-        return ConfigUpdateResult::DeviceChanged;
+        return resultType;
     }
 
     // Functions-only: hot-reload instead of rebooting, but through the same
@@ -147,29 +151,40 @@ ConfigUpdateResult applyConfigUpdate(
 void registerUpdateHandler(
     const std::shared_ptr<MqttRoot>& mqttRoot,
     const std::string& deviceConfirmedFingerprint,
+    const std::string& networkConfirmedFingerprint,
     const std::shared_ptr<FunctionRegistry>& functionRegistry,
     const std::shared_ptr<ConfigStateStore>& configStateStore,
     const std::shared_ptr<CopyQueue<bool>>& syncTriggerQueue,
     const std::shared_ptr<NvsStore>& nvs,
-    const std::string& firmwareVersion) {
-    mqttRoot->subscribe("update", QoS::ExactlyOnce, [deviceConfirmedFingerprint, functionRegistry, configStateStore, syncTriggerQueue, nvs, firmwareVersion](const std::string&, const JsonObject& request) {
-        auto firmwareUrl = parseFirmwareUpdate(request["firmware"], firmwareVersion);
-        if (firmwareUrl) {
-            LOGI("Firmware update available, will download from %s", firmwareUrl->c_str());
+    const std::string& firmwareVersion,
+    const std::shared_ptr<std::optional<RejectionCode>>& pendingFirmwareRejection) {
+    mqttRoot->subscribe("update", QoS::ExactlyOnce, [deviceConfirmedFingerprint, networkConfirmedFingerprint, functionRegistry, configStateStore, syncTriggerQueue, nvs, firmwareVersion, pendingFirmwareRejection](const std::string&, const JsonObject& request) {
+        // Firmware decision: parse the entry, then enforce the "clean config state" precondition
+        // (docs/specs/device-readdressing.md, "Precondition"). A firmware upgrade is suppressed
+        // when a config request is still in flight; the server retries once the config settles.
+        ConfigState preUpdateState = configStateStore->load();
+        auto firmwareDecision = decideFirmwareUpdate(request["firmware"], firmwareVersion, preUpdateState.requested.has_value());
+        if (firmwareDecision.url) {
+            LOGI("Firmware update available, will download from %s", firmwareDecision.url->c_str());
+        } else if (firmwareDecision.skippedDueToPendingConfig) {
+            LOGW("Skipping firmware update: config state has a pending request (status=%d)",
+                static_cast<int>(preUpdateState.requested->status));
+            *pendingFirmwareRejection = RejectionCode::FailedPrecondition;
         } else if (!request["firmware"].isNull()) {
             LOGD("Firmware entry present but no action needed (malformed or already current)");
         }
 
-        auto configResult = applyConfigUpdate(request["configurations"], deviceConfirmedFingerprint, functionRegistry, configStateStore);
+        auto configResult = applyConfigUpdate(request["configurations"], deviceConfirmedFingerprint, networkConfirmedFingerprint, functionRegistry, configStateStore);
 
         // Single terminal action: firmware download (with its own delayed reboot) takes priority
         // and subsumes any config-driven reboot; without firmware, the config result decides.
-        if (firmwareUrl) {
-            HttpUpdater::startUpdate(*firmwareUrl, nvs);
+        if (firmwareDecision.url) {
+            HttpUpdater::startUpdate(*firmwareDecision.url, nvs);
             return;
         }
         switch (configResult) {
             case ConfigUpdateResult::DeviceChanged:
+            case ConfigUpdateResult::NetworkChanged:
             case ConfigUpdateResult::FunctionsFailed:
                 delayedRestart();
                 break;
@@ -177,6 +192,11 @@ void registerUpdateHandler(
                 syncTriggerQueue->overwrite(true);
                 break;
             case ConfigUpdateResult::NoChanges:
+                // If firmware was skipped due to pending config but there are no config changes,
+                // trigger a SYNC anyway so the FailedPrecondition rejection reaches the server.
+                if (firmwareDecision.skippedDueToPendingConfig) {
+                    syncTriggerQueue->overwrite(true);
+                }
                 break;
         }
     });

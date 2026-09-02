@@ -73,3 +73,31 @@ TEST_CASE("filterUpdate does not flag deviceChanged when only functions differ")
     REQUIRE(result.changed[0].name == "valve1");
     REQUIRE_FALSE(result.deviceChanged);
 }
+
+TEST_CASE("filterUpdate skips network entry whose fingerprint matches heldFingerprints") {
+    auto doc = makeConfigurations({ { "network", "fp-net" }, { "valve1", "fp-new" } });
+    auto result = filterUpdate(doc.as<JsonObjectConst>(), { { "network", "fp-net" }, { "valve1", "fp-old" } });
+
+    REQUIRE(result.changed.size() == 1);
+    REQUIRE(result.changed[0].name == "valve1");
+    REQUIRE_FALSE(result.networkChanged);
+}
+
+TEST_CASE("filterUpdate flags networkChanged when the 'network' entry survives the filter") {
+    auto doc = makeConfigurations({ { "network", "fp-net-new" }, { "valve1", "fp-1" } });
+    auto result = filterUpdate(doc.as<JsonObjectConst>(), { { "network", "fp-net-old" }, { "valve1", "fp-1" } });
+
+    REQUIRE(result.changed.size() == 1);
+    REQUIRE(result.changed[0].name == "network");
+    REQUIRE(result.networkChanged);
+    REQUIRE_FALSE(result.deviceChanged);
+}
+
+TEST_CASE("filterUpdate flags both deviceChanged and networkChanged when both differ") {
+    auto doc = makeConfigurations({ { "device", "fp-dev-new" }, { "network", "fp-net-new" } });
+    auto result = filterUpdate(doc.as<JsonObjectConst>(), { { "device", "fp-dev-old" }, { "network", "fp-net-old" } });
+
+    REQUIRE(result.changed.size() == 2);
+    REQUIRE(result.deviceChanged);
+    REQUIRE(result.networkChanged);
+}

@@ -5,18 +5,17 @@
 #include "PwmManager.hpp"
 #include "ShutdownManager.hpp"
 #include "Telemetry.hpp"
+#include "config/ConfigManifestEntry.hpp"
 #include "devices/DeviceConfiguration.hpp"
 #include "devices/DeviceDefinition.hpp"
 #include "drivers/SwitchManager.hpp"
 #include "functions/Function.hpp"
-#include "functions/FunctionConfigTracker.hpp"
 #include "mqtt/MqttRoot.hpp"
 #include "peripherals/Peripheral.hpp"
 #include <DeviceInit.hpp>
 #include <Log.hpp>
 
 #include <memory>
-#include <string>
 #include <utility>
 
 using namespace cornucopia::ugly_duckling::devices;
@@ -31,10 +30,9 @@ DeviceRuntimeInit initDeviceRuntime(
     const std::shared_ptr<TelemetryPublisher>& telemetryPublisher,
     const std::shared_ptr<DeviceDefinition>& deviceDefinition,
     const std::shared_ptr<DeviceConfiguration>& deviceConfig,
-    const std::shared_ptr<NvsStore>& deviceConfigNvs,
+    const std::shared_ptr<NvsStore>& configNvs,
     const std::shared_ptr<ShutdownManager>& shutdownManager,
-    const std::string& confirmedFingerprint,
-    const std::string& confirmedRequestedAt) {
+    const ConfigManifestEntry& deviceManifestEntry) {
 
     auto peripheralsNvs = std::make_shared<NvsStore>("perf-state");
     auto pulseCounterManager = std::make_shared<PulseCounterManager>();
@@ -62,19 +60,14 @@ DeviceRuntimeInit initDeviceRuntime(
         .peripherals = peripheralManager,
         .telemetryPublisher = telemetryPublisher,
     };
-    // Function configuration lives in the same namespace as the device document (deviceConfigNvs,
-    // "config-<slot>") -- there is no separate function-cfg namespace any more (docs/Configuration.md,
-    // "Storage: envelopes and slots"). Null only when there's no confirmed slot at all, in which case
-    // deviceConfig->functions is empty too, so no function is ever created against it.
-    auto functionRegistry = std::make_shared<FunctionRegistry>(deviceConfigNvs, functionServices);
+    // Function configuration lives in the same config slot NVS namespace ("config-<slot>") as the
+    // device document -- there is no separate function-cfg namespace (docs/Configuration.md,
+    // "Storage: envelopes and slots").
+    auto functionRegistry = std::make_shared<FunctionRegistry>(configNvs, functionServices);
     shutdownManager->registerShutdownListener([functionRegistry]() {
         functionRegistry->shutdown();
     });
     deviceDefinition->registerFunctionFactories(functionRegistry);
-    FunctionManifestEntry deviceManifestEntry {
-        .fingerprint = confirmedFingerprint,
-        .requestedAt = confirmedRequestedAt,
-    };
 
     InitState initState = InitState::Success;
 

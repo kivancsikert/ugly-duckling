@@ -17,19 +17,6 @@ ConfigEnvelope makeEnvelope(const std::string& value, const std::string& fingerp
 
 }    // namespace
 
-TEST_CASE("stageDeviceUpdate: no confirmed slot yet stages into slot A") {
-    ConfigState state;
-    std::unordered_map<std::string, ConfigEnvelope> current;
-    std::vector<ChangedConfiguration> changed = { { "device", makeEnvelope("new-device", "fp-device-new") } };
-
-    StagedUpdate staged = stageDeviceUpdate(state, current, changed);
-
-    REQUIRE(staged.slot == ConfigSlot::A);
-    REQUIRE(staged.nextState.requested->slot == ConfigSlot::A);
-    REQUIRE(staged.nextState.requested->status == RequestedConfigStatus::Pending);
-    REQUIRE_FALSE(staged.nextState.confirmed.has_value());
-}
-
 TEST_CASE("stageDeviceUpdate: picks the slot that isn't confirmed") {
     ConfigState stateA { .confirmed = ConfigSlot::A };
     StagedUpdate stagedFromA = stageDeviceUpdate(stateA, {}, {});
