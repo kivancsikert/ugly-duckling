@@ -142,8 +142,7 @@ The new network-config delivered via UPDATE has a different shape than the old o
 ```jsonc
 {
   "id": "2N4GcBkr7ER",
-  "host": "mqtt.cornucopia-machines.eu",
-  "port": 8883,
+  "url": "mqtts://mqtt.cornucopia-machines.eu:8883",
   "ntp": { "host": "pool.ntp.org" },
   "serverCert": ["..."],
   "clientCert": ["..."],
@@ -152,12 +151,13 @@ The new network-config delivered via UPDATE has a different shape than the old o
 ```
 
 - [x] `id` is a new field — used for topic root selection and MQTT client ID.
+- [x] `url` is a broker URI that encodes scheme, host, port, and path in one string. The scheme
+      selects the transport (`mqtt://` TCP, `mqtts://` TLS, `ws://` WebSocket, `wss://` WSS).
 - [x] `instance` and `location` are **removed** — they were only needed for the old topic root.
       The firmware must handle their absence gracefully (they won't be in the new config).
 
 The old network-config (migrated to the confirmed slot) still has `instance`/`location`; the
-firmware uses them for the old topic root until the UPDATE replaces the config. `host`, `port`,
-`ntp`, `serverCert`, `clientCert`, `clientKey` are unchanged in semantics.
+firmware uses them for the old topic root until the UPDATE replaces the config.
 
 ### 7. Documentation
 

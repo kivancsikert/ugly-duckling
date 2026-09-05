@@ -72,7 +72,7 @@ pending migration, it's `.../devices/ugly-duckling/$INSTANCE`. See
   - **Device or network configuration changed** → reboot. The boot sequence (*The
     confirmed/requested state machine*, below) re-derives everything, including which functions
     exist, from the staged slot, strictly. A network-config change triggers a reboot because the
-    MQTT connection parameters (host, port, certs, topic root) change.
+    MQTT connection parameters (url, certs, topic root) change.
   - **Only function configuration(s) changed** → hot-reload live, without a reboot on the happy
     path (*Applying a functions-only UPDATE*, below).
 
