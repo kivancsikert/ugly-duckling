@@ -79,7 +79,7 @@ public:
         const std::string& clientId,
         StateSource& ready)
         : networkReady(networkReady)
-        , configUrl(config->url.get())
+        , url(config->url.get())
         , configHostname(config->host.get())
         , configPort(config->port.get())
         , configServerCert(joinStrings(config->serverCert.get()))
@@ -126,25 +126,29 @@ public:
     }
 
     void configMqttClient(esp_mqtt_client_config_t& config) {
-        if (!configUrl.empty()) {
-            // URI mode: the esp_mqtt_client parses scheme, host, port, and path from the URI
-            url = configUrl;
-        } else if (!configHostname.empty()) {
-            // Legacy host/port mode (deprecated)
-            hostname = configHostname;
-            port = configPort;
-        } else {
+        if (url.empty()) {
+            if (!configHostname.empty()) {
+                // Legacy host/port mode (deprecated)
+                hostname = configHostname;
+                port = configPort;
+            } else {
 #ifdef WOKWI
 #ifdef WOKWI_MQTT_HOST
-            hostname = WOKWI_MQTT_HOST;
+                hostname = WOKWI_MQTT_HOST;
 #else
-            hostname = "host.wokwi.internal";
+                hostname = "host.wokwi.internal";
 #endif
-            port = 1883;
+                port = 1883;
 #else
-            throw std::runtime_error("No MQTT server specified in configuration");
+                throw std::runtime_error("No MQTT server specified in configuration");
 #endif
+            }
         }
+
+        // Computed once, used for all log messages
+        serverAddress = url.empty()
+            ? hostname + ":" + std::to_string(port)
+            : url;
 
         config = {
             .broker {
@@ -189,16 +193,9 @@ public:
             .outbox {},
         };
 
-        if (!url.empty()) {
-            LOGTD(MQTT, "server: %s, client ID is '%s'",
-                url.c_str(),
-                config.credentials.client_id);
-        } else {
-            LOGTD(MQTT, "server: %s:%" PRIu32 ", client ID is '%s'",
-                config.broker.address.hostname,
-                config.broker.address.port,
-                config.credentials.client_id);
-        }
+        LOGTD(MQTT, "server: %s, client ID is '%s'",
+            serverAddress.c_str(),
+            config.credentials.client_id);
 
         if (!configServerCert.empty()) {
             if (url.empty()) {
@@ -491,13 +488,8 @@ private:
         }
         mqttConfig.session.disable_clean_session = !startCleanSession;
         esp_mqtt_set_config(client, &mqttConfig);
-        if (!url.empty()) {
-            LOGTI(MQTT, "Connecting to %s, clean session: %d",
-                url.c_str(), startCleanSession);
-        } else {
-            LOGTI(MQTT, "Connecting to %s:%" PRIu32 ", clean session: %d",
-                mqttConfig.broker.address.hostname, mqttConfig.broker.address.port, startCleanSession);
-        }
+        LOGTI(MQTT, "Connecting to %s, clean session: %d",
+            serverAddress.c_str(), startCleanSession);
         ESP_ERROR_CHECK(esp_mqtt_client_start(client));
         clientRunning = true;
     }
@@ -533,11 +525,7 @@ private:
     void handleMqttEvent(int eventId, esp_mqtt_event_handle_t event) {
         switch (eventId) {
             case MQTT_EVENT_BEFORE_CONNECT: {
-                if (!url.empty()) {
-                    LOGTD(MQTT, "Connecting to MQTT server %s", url.c_str());
-                } else {
-                    LOGTD(MQTT, "Connecting to MQTT server %s:%" PRIu32, hostname.c_str(), port);
-                }
+                LOGTD(MQTT, "Connecting to MQTT server %s", serverAddress.c_str());
                 break;
             }
             case MQTT_EVENT_CONNECTED: {
@@ -756,7 +744,7 @@ private:
 
     State& networkReady;
 
-    const std::string configUrl;
+    const std::string url;
     const std::string configHostname;
     const unsigned int configPort;
     const std::string configServerCert;
@@ -766,7 +754,7 @@ private:
 
     StateSource& ready;
 
-    std::string url;
+    std::string serverAddress;
     std::string hostname;
     uint32_t port {};
     esp_mqtt_client_handle_t client;

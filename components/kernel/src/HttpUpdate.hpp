@@ -31,6 +31,14 @@ public:
     }
 
     static std::optional<config::RejectionCode> performPendingHttpUpdateIfNecessary(const std::shared_ptr<NvsStore>& nvs, const std::shared_ptr<WiFiDriver>& wifi, std::shared_ptr<Watchdog> watchdog, const std::string& firmwareVersion) {
+        // If a previous update attempt crashed (marker survived the reboot),
+        // report the failure so the server knows not to re-send the same update.
+        if (nvs->contains(UPDATE_FAILED_KEY)) {
+            nvs->remove(UPDATE_FAILED_KEY);
+            LOGTE(UPDATE, "Previous firmware update crashed, rejecting");
+            return config::RejectionCode::Internal;
+        }
+
         // Do we need to update?
         if (!nvs->contains(UPDATE_KEY)) {
             LOGTV(UPDATE, "No pending update found, not updating");
@@ -49,15 +57,17 @@ public:
             return config::RejectionCode::Internal;
         }
 
-        HttpUpdater updater(std::move(watchdog), firmwareVersion);
+        HttpUpdater updater(nvs, std::move(watchdog), firmwareVersion);
         return updater.performPendingHttpUpdate(url, wifi);
     }
 
     static constexpr const char* UPDATE_KEY = "pending-update";
+    static constexpr const char* UPDATE_FAILED_KEY = "update-failed";
 
 private:
-    HttpUpdater(std::shared_ptr<Watchdog> watchdog, const std::string& firmwareVersion)
-        : watchdog(std::move(watchdog))
+    HttpUpdater(const std::shared_ptr<NvsStore>& nvs, std::shared_ptr<Watchdog> watchdog, const std::string& firmwareVersion)
+        : nvs(nvs)
+        , watchdog(std::move(watchdog))
         , firmwareVersion(firmwareVersion) {
     }
 
@@ -85,15 +95,24 @@ private:
         esp_https_ota_config_t otaConfig = {};
         otaConfig.http_config = &httpConfig;
 
+        // Mark that an update is being attempted. If the device crashes
+        // during esp_https_ota(), this marker survives and triggers a
+        // rejection on the next boot so the server stops retrying.
+        nvs->set(UPDATE_FAILED_KEY, url);
+
         esp_err_t ret = esp_https_ota(&otaConfig);
+
+        // Clear the crash marker — we got here without crashing
+        nvs->remove(UPDATE_FAILED_KEY);
+
         if (ret == ESP_OK) {
             LOGTI(UPDATE, "Update succeeded, restarting...");
             delayedRestart();
-        } else {
-            LOGTE(UPDATE, "Update failed (%s), continuing with regular boot",
-                esp_err_to_name(ret));
-            return config::RejectionCode::Internal;
+            return std::nullopt;
         }
+        LOGTE(UPDATE, "Update failed (%s), continuing with regular boot",
+            esp_err_to_name(ret));
+        return config::RejectionCode::Internal;
     }
 
     static esp_err_t httpEventHandler(esp_http_client_event_t* event) {
@@ -147,6 +166,7 @@ private:
         return ESP_OK;
     }
 
+    const std::shared_ptr<NvsStore> nvs;
     const std::shared_ptr<Watchdog> watchdog;
     const std::string firmwareVersion;
     size_t downloaded = 0;
