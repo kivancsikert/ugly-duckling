@@ -1,0 +1,3 @@
+[submodule "datasheets"]
+	path = datasheets
+	url = ../datasheets.git
